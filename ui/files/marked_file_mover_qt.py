@@ -124,8 +124,8 @@ class MarkedFileMover(SmartDialog):
         """Create or focus the MarkedFiles dialog. Returns the instance."""
         if MarkedFileMover._current_window is not None:
             try:
-                if MarkedFileMover._current_window.isVisible():
-                    win = MarkedFileMover._current_window
+                win = MarkedFileMover._current_window
+                if win.isVisible():
                     win.setWindowTitle(_("Move {0} Marked File(s)").format(len(MarkedFiles.file_marks)))
                     win.setWindowOpacity(1.0)
                     win.raise_()
@@ -133,6 +133,12 @@ class MarkedFileMover(SmartDialog):
                     return win
             except Exception:
                 MarkedFileMover._current_window = None
+            else:
+                # Closed / hidden instance still parented to *master* — drop it before
+                # constructing another or orphaned dialogs accumulate (same as modal leaks).
+                old = MarkedFileMover._current_window
+                MarkedFileMover._current_window = None
+                old.deleteLater()
 
         window = MarkedFileMover(
             master,
@@ -166,6 +172,7 @@ class MarkedFileMover(SmartDialog):
             title=_("Move {0} Marked File(s)").format(len(MarkedFiles.file_marks)),
             geometry=geometry,
         )
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         MarkedFileMover._current_window = self
 
         self._is_gui = is_gui

@@ -119,6 +119,9 @@ class PasswordDialog(SmartDialog):
         self.setFixedSize(width, height)
         self.setWindowFlags(self.windowFlags() | Qt.WindowType.Dialog)
         self.setModal(True)
+        # Without this, each prompt stays a hidden child of *master* after exec()
+        # returns — hundreds of dialogs accumulate and slow / destabilize the UI.
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
 
         self.setStyleSheet(AppStyle.get_stylesheet())
         self.setup_ui()

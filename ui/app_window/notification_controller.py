@@ -94,6 +94,9 @@ class NotificationController:
             | Qt.WindowType.Tool
             | Qt.WindowType.WindowDoesNotAcceptFocus,
         )
+        # Top-level widget with no parent: close() alone only hides; without this,
+        # every toast stays in memory (same class of leak as modal dialogs).
+        toast_widget.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         # Explicitly avoid activation/focus stealing when showing toast.
         toast_widget.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
         toast_widget.setFixedSize(width, height)
@@ -130,10 +133,10 @@ class NotificationController:
             except Exception:
                 pass
 
-        # Auto-destruct after the specified time
+        # Auto-destruct after the specified time (WA_DeleteOnClose makes close() delete)
         QTimer.singleShot(
             time_in_seconds * 1000,
-            lambda: toast_widget.close() if toast_widget else None,
+            lambda tw=toast_widget: tw.close(),
         )
 
     # ------------------------------------------------------------------

@@ -255,6 +255,7 @@ class FastDirectoryPickerDialog(SmartDialog):
         )
         self.setModal(True)
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
 
         self.selected_directory = ""
         self._current_directory = ""

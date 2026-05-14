@@ -1,8 +1,8 @@
 """
 PySide6 port of utils/help_and_config.py -- HelpAndConfig window.
 
-Displays keyboard shortcut reference tables (Main Window, Image Details,
-Go To File) and editable config settings inside a scrollable dialog.
+Displays keyboard shortcut reference tables (Main Window, Move Marks window,
+Image Details, Go To File) and editable config settings inside a scrollable dialog.
 """
 
 from __future__ import annotations
@@ -79,7 +79,6 @@ class HelpAndConfig(SmartDialog):
             "Ctrl+F": _("Open Favorites window"),
             "Ctrl+G": _("Open Go to file window"),
             "Ctrl+H": _("Hide/show sidebar"),
-            "Ctrl+H*": _("Open hotkeys window (*when marks window open)"),
             "Ctrl+J": _("Open content filters window"),
             "Ctrl+K": _("Open marks window (no GUI)"),
             "Ctrl+M": _("Open marks window"),
@@ -132,6 +131,49 @@ class HelpAndConfig(SmartDialog):
         }
 
         self._add_help_table(main_help, col_0_width)
+
+        # ==============================================================
+        # Move Marks window (separate context — chords override main window)
+        # ==============================================================
+        self._add_divider()
+        self._add_section_title(_("Move Marks Window Shortcuts"))
+
+        marks_scope = QLabel(
+            _("These shortcuts apply when the Move Marks dialog has keyboard focus "
+              "(Ctrl+M full window, or Ctrl+K minimal). They take priority over the "
+              "same keys in the main window while this dialog is active."),
+        )
+        marks_scope.setWordWrap(True)
+        marks_scope.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        marks_scope.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        marks_scope.setContentsMargins(0, 0, 0, 8)
+        marks_scope.setStyleSheet(
+            f"color: {AppStyle.FG_COLOR}; background: {AppStyle.BG_COLOR};"
+        )
+        self._grid.addWidget(marks_scope, self._row, 0, 1, 2)
+        self._row += 1
+        self._help_labels.append(marks_scope)
+
+        marks_help: dict[str, str] = {
+            _("Command"): _("Description"),
+            "Escape": _("Close Move Marks window"),
+            "Enter": _("Move marked files to inferred target (filtered row, filter text, or last used)"),
+            "Shift+Enter": _("Copy marked files instead of move"),
+            "Ctrl+Enter": _("Choose destination folder, then move or copy"),
+            "Alt+Enter": _("Move or copy using the penultimate marks action target"),
+            "Shift+Delete": _("Delete all marked files"),
+            "Ctrl+T": _("Arm permanent mark target (next Move/Copy sets the permanent action)"),
+            "Ctrl+Shift+O": _("Sort filtered target directories by CLIP embedding (GUI mode only)"),
+            "Ctrl+H": _("Open hotkey actions configuration (password)"),
+            "Page Up / Page Down": _("Rotate the filtered target list in chunks"),
+            "Up / Down": _("Rotate the filtered target list one row (GUI updates the list)"),
+            "Backspace": _("Remove last character from target name filter"),
+            _("Letter keys"): _("Filter target directories by name (both window modes)"),
+            "Right Click": _("Test marked files in directory (use Ctrl/Alt/Shift for variants)"),
+            "Mouse Wheel Click": _("Delete all marked files"),
+        }
+
+        self._add_help_table(marks_help, col_0_width)
 
         # ==============================================================
         # Image Details Shortcuts

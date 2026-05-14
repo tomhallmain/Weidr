@@ -210,13 +210,13 @@ class MarkedFileMover(SmartDialog):
         QShortcut(QKeySequence("Shift+Delete"), self).activated.connect(
             self._delete_marked_files
         )
-        QShortcut(QKeySequence("Shift+C"), self).activated.connect(
-            self._clear_marks
-        )
         QShortcut(QKeySequence("Ctrl+T"), self).activated.connect(
             self._set_permanent_mark_target
         )
-        QShortcut(QKeySequence("Ctrl+S"), self).activated.connect(
+        # Deliberately not Ctrl+S: that is the global slideshow toggle; a window-level
+        # Ctrl+S shortcut here stole the chord and fired sort unintentionally. Use a
+        # distinct tri-modifier chord (Ctrl+Shift+O is unused globally).
+        QShortcut(QKeySequence("Ctrl+Shift+O"), self).activated.connect(
             self._sort_target_dirs_by_embedding
         )
         QShortcut(QKeySequence("Ctrl+H"), self).activated.connect(
@@ -559,10 +559,6 @@ class MarkedFileMover(SmartDialog):
         self._app_actions.refresh(removed_files=removed_files if self._app_mode != Mode.BROWSE else [])
         self.close_windows()
 
-    def _clear_marks(self) -> None:
-        MarkedFiles.clear_file_marks(self._app_actions.toast)
-        self.close_windows()
-
     def _remove_single_target(self, target_dir: str) -> None:
         """Remove a single directory from the target list."""
         if target_dir in MarkedFiles.mark_target_dirs:
@@ -644,6 +640,22 @@ class MarkedFileMover(SmartDialog):
         self._app_actions.toast(_("Recording next mark target and action."))
 
     def _sort_target_dirs_by_embedding(self) -> None:
+        """Reorder filtered targets by CLIP similarity (current image vs preset texts)."""
+        if not self._is_gui:
+            return
+        if len(self._filtered_target_dirs) < 2:
+            return
+
+        pivot_image = self._current_image
+        if not pivot_image or not isinstance(pivot_image, str) or not os.path.isfile(
+            pivot_image
+        ):
+            logger.debug(
+                "Sort by embedding skipped: invalid current image path (%r)",
+                pivot_image,
+            )
+            return
+
         from compare.compare_embeddings_clip import CompareEmbeddingClip
 
         embedding_texts: dict[str, str] = {}
@@ -652,16 +664,22 @@ class MarkedFileMover(SmartDialog):
             if embedding_text is not None and embedding_text.strip() != "":
                 embedding_texts[d] = embedding_text
 
+        if not embedding_texts:
+            logger.debug(
+                "Sort by embedding skipped: no filtered targets matched text "
+                "embedding search presets"
+            )
+            return
+
         similarities = CompareEmbeddingClip.single_text_compare(
-            self._single_image, embedding_texts
+            pivot_image, embedding_texts
         )
         self._filtered_target_dirs = [
             dirpath
             for dirpath, _ in sorted(similarities.items(), key=lambda x: -x[1])
         ]
         self._is_sorted_by_embedding = True
-        if self._is_gui:
-            self._rebuild_directory_rows()
+        self._rebuild_directory_rows()
         self._app_actions.toast(
             _("Sorted directories by embedding comparison.")
         )

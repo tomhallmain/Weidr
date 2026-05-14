@@ -16,6 +16,7 @@ from typing import Callable, Optional
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QCheckBox, QGridLayout, QHBoxLayout, QLabel, QLineEdit,
     QListWidget, QPushButton, QVBoxLayout, QWidget,
 )
@@ -135,6 +136,7 @@ class DirectoryProfileWindow(SmartDialog):
         dir_area = QHBoxLayout()
 
         self._dir_list = QListWidget()
+        self._dir_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self._dir_list.setStyleSheet(
             f"QListWidget {{ background: {AppStyle.BG_COLOR}; "
             f"color: {AppStyle.FG_COLOR}; }}"
@@ -265,10 +267,26 @@ class DirectoryProfileWindow(SmartDialog):
                 logger.error(f"Invalid directory: {new_directory}")
 
     def _remove_directory(self) -> None:
-        idx = self._dir_list.currentRow()
-        if idx < 0 or idx >= len(self._profile.directories):
+        rows = {self._dir_list.row(item) for item in self._dir_list.selectedItems()}
+        if not rows:
+            cur = self._dir_list.currentRow()
+            if cur < 0 or cur >= len(self._profile.directories):
+                return
+            rows = {cur}
+        n_dirs = len(self._profile.directories)
+        valid_rows = {r for r in rows if 0 <= r < n_dirs}
+        if not valid_rows:
             return
-        del self._profile.directories[idx]
+        if len(valid_rows) > 1:
+            ok = self._app_actions.alert(
+                _("Remove Directories"),
+                _("Remove {0} selected directories from this profile?").format(len(valid_rows)),
+                kind="askokcancel",
+            )
+            if not ok:
+                return
+        for idx in sorted(valid_rows, reverse=True):
+            del self._profile.directories[idx]
         self._refresh_directory_list()
 
     def _clear_all_directories(self) -> None:

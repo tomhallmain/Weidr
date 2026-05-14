@@ -49,6 +49,7 @@ bounded over time.
 from __future__ import annotations
 
 import os
+import sys
 import time
 from typing import Any, Callable, Dict, Generic, Iterable, Iterator, Optional, Tuple, TypeVar
 
@@ -95,6 +96,11 @@ def get_file_bucket_for_media(media_path: str) -> "FileKeyedInvalidationCache[An
 
 def iter_file_buckets() -> Iterator[Tuple[str, "FileKeyedInvalidationCache[Any]"]]:
     return iter(_file_buckets.items())
+
+
+def estimate_file_buckets_map_overhead_bytes() -> int:
+    """Rough ``sys.getsizeof`` for the module-level bucket map (keys are references only)."""
+    return sys.getsizeof(_file_buckets)
 
 
 def install_file_bucket(media_key: str, bucket: "FileKeyedInvalidationCache[Any]") -> None:
@@ -241,6 +247,27 @@ class FileKeyedInvalidationCache(Generic[T]):
 
     def peek_value(self) -> Optional[T]:
         return self._value if self._has_entry else None
+
+    def has_cached_entry(self) -> bool:
+        """True if this bucket currently holds a prevalidation row (value may be ``None``)."""
+        return self._has_entry
+
+    def estimated_footprint_bytes(self) -> int:
+        """Shallow ``sys.getsizeof`` sum for introspection / UI stats (approximate)."""
+        n = sys.getsizeof(self)
+        n += sys.getsizeof(self._path_mtimes)
+        for pk, pt in self._path_mtimes.items():
+            n += sys.getsizeof(pk) + sys.getsizeof(pt)
+        sig = self._signature
+        if sig is not None:
+            n += sys.getsizeof(sig)
+        val = self._value
+        if val is not None:
+            n += sys.getsizeof(val)
+        n += sys.getsizeof(self._cached_at_unix)
+        n += sys.getsizeof(self._epoch_at_set)
+        n += sys.getsizeof(self._has_entry)
+        return n
 
     def snapshot_for_persistence(self) -> Optional[Dict[str, Any]]:
         if not self._has_entry:

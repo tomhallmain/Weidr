@@ -358,6 +358,13 @@ class PrevalidationsTab(QWidget):
         self._clear_pv_btn = QPushButton(_("Clear prevalidations"))
         self._clear_pv_btn.clicked.connect(self._clear_all)
         pv_title_row.addWidget(self._clear_pv_btn)
+        clear_pv_cache_btn = QPushButton(_("Clear prevalidation cache"))
+        clear_pv_cache_btn.setToolTip(
+            _("Discard cached prevalidation outcomes (this session and on disk).\n"
+              "Rules, profiles, and lookaheads are not changed; media will be re-evaluated.")
+        )
+        clear_pv_cache_btn.clicked.connect(self._clear_prevalidation_result_cache_only)
+        pv_title_row.addWidget(clear_pv_cache_btn)
         self._clear_current_dir_cb = QCheckBox("")
         self._clear_current_dir_cb.setToolTip(
             _("When checked, the clear button evicts only the cached results\n"
@@ -368,6 +375,11 @@ class PrevalidationsTab(QWidget):
         self._update_clear_dir_label()
         pv_title_row.addStretch()
         root.addLayout(pv_title_row)
+
+        self._pv_cache_stats_lbl = QLabel()
+        self._pv_cache_stats_lbl.setWordWrap(True)
+        self._pv_cache_stats_lbl.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
+        root.addWidget(self._pv_cache_stats_lbl)
 
         # -- Enable prevalidations checkbox --------------------------------
         self._enable_pv_cb = QCheckBox(_("Enable Prevalidations"))
@@ -394,6 +406,7 @@ class PrevalidationsTab(QWidget):
         self._refresh_lh_listbox()
         self._refresh_prof_listbox()
         self._rebuild_pv_rows()
+        self._update_prevalidation_cache_stats_label()
 
     # ------------------------------------------------------------------
     # Lookahead management
@@ -863,6 +876,7 @@ class PrevalidationsTab(QWidget):
                 "Prevalidation cache: evicting results for current directory: %s", base_dir
             )
             ClassifierActionsManager.invalidate_for_directories({base_dir})
+            self._update_prevalidation_cache_stats_label()
             return
         ClassifierActionsManager.prevalidations.clear()
         self._filtered.clear()
@@ -870,9 +884,16 @@ class PrevalidationsTab(QWidget):
         ClassifierActionsManager.clear_prevalidation_result_cache()
         self._rebuild_supporting_state()
 
+    def _clear_prevalidation_result_cache_only(self) -> None:
+        """Clear stored prevalidation outcomes; keep rules and refresh move exclusions."""
+        logger.info("Prevalidation cache: full eviction — manual clear from prevalidations tab")
+        ClassifierActionsManager.clear_prevalidation_result_cache()
+        self._rebuild_supporting_state()
+
     def showEvent(self, event) -> None:  # noqa: N802
         super().showEvent(event)
         self._update_clear_dir_label()
+        self._update_prevalidation_cache_stats_label()
 
     def refresh(self) -> None:
         self._filtered = ClassifierActionsManager.prevalidations[:]
@@ -880,10 +901,31 @@ class PrevalidationsTab(QWidget):
         self._refresh_prof_listbox()
         self._rebuild_pv_rows()
         self._update_clear_dir_label()
+        self._update_prevalidation_cache_stats_label()
 
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+    @staticmethod
+    def _format_approx_bytes(num_bytes: int) -> str:
+        if num_bytes < 1024:
+            return f"{num_bytes} B"
+        if num_bytes < 1024 * 1024:
+            return f"{num_bytes / 1024:.1f} KiB"
+        return f"{num_bytes / (1024 * 1024):.1f} MiB"
+
+    def _update_prevalidation_cache_stats_label(self) -> None:
+        if not hasattr(self, "_pv_cache_stats_lbl"):
+            return
+        est_bytes, n_items, n_dirs = ClassifierActionsManager.get_prevalidation_cache_statistics()
+        self._pv_cache_stats_lbl.setText(
+            _("Prevalidation cache stats: ~{memory} — {items} items — {directories} directories").format(
+                memory=self._format_approx_bytes(est_bytes),
+                items=n_items,
+                directories=n_dirs,
+            )
+        )
+
     @staticmethod
     def _section_label(text: str) -> QLabel:
         lbl = QLabel(text)

@@ -12,6 +12,7 @@ import hashlib
 import json
 import math
 import os
+import sys
 import threading
 import time
 from typing import Dict, List, Optional
@@ -23,6 +24,7 @@ from files.directory_profile import DirectoryProfile
 from lib.file_invalidation_cache import (
     DEFAULT_STALE_ENTRY_MAX_AGE_SECONDS,
     FileKeyedInvalidationCache,
+    estimate_file_buckets_map_overhead_bytes,
     evacuate_buckets_for_directories,
     evacuate_stale_file_buckets,
     get_file_bucket_for_media,
@@ -1391,6 +1393,35 @@ class ClassifierActionsManager:
     @staticmethod
     def clear_prevalidation_result_cache() -> None:
         ClassifierActionsManager._invalidate_after_prevalidation_policy_change()
+
+    @staticmethod
+    def get_prevalidation_cache_statistics() -> tuple[int, int, int]:
+        """
+        Approximate in-memory footprint of the session dict plus file buckets,
+        and counts of unique cached media paths and their parent directories.
+
+        Returns:
+            ``(estimated_bytes, n_cached_media_paths, n_parent_directories)``
+        """
+        total = sys.getsizeof(ClassifierActionsManager.prevalidated_cache)
+        for path, val in ClassifierActionsManager.prevalidated_cache.items():
+            total += sys.getsizeof(path) + sys.getsizeof(val)
+
+        total += estimate_file_buckets_map_overhead_bytes()
+        for media_key, bucket in iter_file_buckets():
+            total += sys.getsizeof(media_key) + bucket.estimated_footprint_bytes()
+
+        norm_paths: set[str] = set()
+        for path in ClassifierActionsManager.prevalidated_cache:
+            norm_paths.add(FileKeyedInvalidationCache._path_key(path))
+        for media_key, bucket in iter_file_buckets():
+            if bucket.has_cached_entry():
+                norm_paths.add(media_key)
+
+        n_items = len(norm_paths)
+        parent_dirs = {os.path.dirname(p) for p in norm_paths if p}
+        n_dirs = len(parent_dirs)
+        return total, n_items, n_dirs
 
     @staticmethod
     def invalidate_for_directories(directories: set[str]) -> None:

@@ -508,8 +508,9 @@ class ClassifierAction:
     def _is_dynamic_media_path(self, media_path: str) -> bool:
         media_path_lower = media_path.lower()
         is_video = config.enable_videos and is_video_path_by_extension(media_path)
+        is_gif = config.enable_gifs and media_path_lower.endswith(".gif")
         is_pdf = config.enable_pdfs and media_path_lower.endswith(".pdf")
-        return is_video or is_pdf
+        return is_video or is_gif or is_pdf
 
     def run_on_media_path(
         self,
@@ -1486,6 +1487,7 @@ class ClassifierActionsManager:
         path_lower = path.lower()
         return (
             (config.enable_videos and is_video_path_by_extension(path))
+            or (config.enable_gifs and path_lower.endswith(".gif"))
             or (config.enable_pdfs and path_lower.endswith(".pdf"))
         )
 

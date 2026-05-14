@@ -55,8 +55,14 @@ from utils.media_utils import is_video_path_by_extension
 
 logger = get_logger("frame_cache")
 
+
+def _stats_media_type_for_sampled_video_path(media_path: str) -> str:
+    """``media_type`` value stored in :attr:`FrameCache.media_stats_cache` for debug / UI."""
+    return "gif" if media_path.lower().endswith(".gif") else "video"
+
+
 # Bumps sample cache keys when extraction semantics change (invalidates in-memory entries).
-_VIDEO_SAMPLE_CACHE_REV = "pyav1"
+_VIDEO_SAMPLE_CACHE_REV = "pyav2_gif_dynamic"
 
 
 def _stable_media_path_hash(media_path: str) -> str:
@@ -636,7 +642,7 @@ class FrameCache:
                 if duration_seconds is None and fps > 0 and total_frames > 0:
                     duration_seconds = total_frames / fps
                 cls.media_stats_cache[video_path] = {
-                    "media_type": "video",
+                    "media_type": _stats_media_type_for_sampled_video_path(video_path),
                     "total_items": total_frames if total_frames > 0 else None,
                     "duration_seconds": duration_seconds,
                     "fps": fps if fps > 0 else None,
@@ -668,7 +674,7 @@ class FrameCache:
             if fps and fps > 0 and total_frames > 0:
                 duration_seconds = total_frames / fps
             cls.media_stats_cache[video_path] = {
-                "media_type": "video",
+                "media_type": _stats_media_type_for_sampled_video_path(video_path),
                 "total_items": total_frames if total_frames > 0 else None,
                 "duration_seconds": duration_seconds,
                 "fps": fps if fps > 0 else None,
@@ -710,8 +716,9 @@ class FrameCache:
         """
         media_path_lower = media_path.lower()
         is_video = config.enable_videos and is_video_path_by_extension(media_path)
+        is_gif = config.enable_gifs and media_path_lower.endswith(".gif")
         is_pdf = media_path_lower.endswith(".pdf") and config.enable_pdfs and has_imported_pypdfium2
-        if not is_video and not is_pdf:
+        if not is_video and not is_gif and not is_pdf:
             p = cls.get_image_path(media_path)
             return 1, iter([p])
 
@@ -731,7 +738,7 @@ class FrameCache:
             cached = cls.sampled_cache[cache_key]
             return len(cached), iter(cached)
 
-        if is_video:
+        if is_video or is_gif:
             try:
                 file_size_mb = os.path.getsize(media_path) / (1024 * 1024)
             except OSError:
@@ -774,8 +781,9 @@ class FrameCache:
         sampled_paths = list(path_iter)
         media_path_lower = media_path.lower()
         is_video = config.enable_videos and is_video_path_by_extension(media_path)
+        is_gif = config.enable_gifs and media_path_lower.endswith(".gif")
         is_pdf = media_path_lower.endswith(".pdf") and config.enable_pdfs and has_imported_pypdfium2
-        if len(sampled_paths) == 0 and (is_video or is_pdf):
+        if len(sampled_paths) == 0 and (is_video or is_gif or is_pdf):
             sampled_paths = [media_path]
             try:
                 ratio = float(sample_ratio)
@@ -850,7 +858,7 @@ class FrameCache:
         if duration_seconds is None and fps > 0 and total_frames > 0:
             duration_seconds = total_frames / fps
         cls.media_stats_cache[video_path] = {
-            "media_type": "video",
+            "media_type": _stats_media_type_for_sampled_video_path(video_path),
             "total_items": total_frames if total_frames > 0 else None,
             "duration_seconds": duration_seconds,
             "fps": fps if fps > 0 else None,
@@ -1022,7 +1030,7 @@ class FrameCache:
             if fps and fps > 0 and total_frames > 0:
                 duration_seconds = total_frames / fps
             cls.media_stats_cache[video_path] = {
-                "media_type": "video",
+                "media_type": _stats_media_type_for_sampled_video_path(video_path),
                 "total_items": total_frames if total_frames > 0 else None,
                 "duration_seconds": duration_seconds,
                 "fps": fps if fps > 0 else None,
@@ -1184,7 +1192,7 @@ class FrameCache:
         Return lightweight metadata useful for debug logging.
 
         Keys:
-            - media_type: "video", "pdf", or "other"
+            - media_type: "video", "gif", "pdf", or "other"
             - total_items: total frames/pages when known
             - duration_seconds: video duration when available, else None
             - fps: video fps when available, else None

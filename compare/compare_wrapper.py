@@ -163,7 +163,7 @@ class CompareWrapper:
 
     def _run_dynamic_prevalidation_with_spinner(self, image_path):
         """
-        Run prevalidation for dynamic media (video/PDF) on a worker QThread so
+        Run prevalidation for dynamic media (video/GIF/PDF) on a worker QThread so
         the main-thread event loop keeps processing — allowing the spinner badge
         to animate during the (potentially expensive) frame-sampling loop.
 

@@ -376,7 +376,7 @@ class WindowLauncher:
         from PySide6.QtWidgets import QApplication
         from files.marked_files import MarkedFiles
 
-        # Same sidebar badge as dynamic (video/PDF) prevalidation on navigate
+        # Same sidebar badge as dynamic (video/GIF/PDF) prevalidation on navigate
         # (compare_wrapper._run_dynamic_prevalidation_with_spinner); here the work
         # runs on the main thread with processEvents, so the spinner still animates.
         self._app.app_actions.start_loading_spinner(force=True)

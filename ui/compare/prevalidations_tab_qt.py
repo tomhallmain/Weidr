@@ -876,6 +876,17 @@ class PrevalidationsTab(QWidget):
             ClassifierActionsManager.invalidate_for_directories({base_dir})
             self._update_prevalidation_cache_stats_label()
             return
+        if not self._app_actions.alert(
+            _("Confirm Clear Prevalidations"),
+            _(
+                "Remove all prevalidation rules? Cached outcomes for this session "
+                "will also be cleared.\n\nThis cannot be undone."
+            ),
+            kind="askokcancel",
+            severity="high",
+            master=self,
+        ):
+            return
         ClassifierActionsManager.prevalidations.clear()
         self._filtered.clear()
         logger.info("Prevalidation cache: full eviction — all prevalidations cleared")

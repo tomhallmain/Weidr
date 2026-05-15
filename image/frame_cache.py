@@ -443,6 +443,22 @@ class FrameCache:
         return None
 
     @classmethod
+    def get_any_cached_sampled_frame(cls, media_path: str) -> Optional[str]:
+        """Return the first valid JPEG from any cached sample set for *media_path*.
+
+        Scans all sampled_cache entries whose key starts with the media path,
+        so callers don't need to know which sample ratio was used.  Returns
+        None when nothing is cached yet or every cached path no longer exists.
+        """
+        prefix = media_path + "|"
+        for key, paths in cls.sampled_cache.items():
+            if key.startswith(prefix):
+                for p in paths:
+                    if p.lower().endswith((".jpg", ".jpeg")) and os.path.isfile(p):
+                        return p
+        return None
+
+    @classmethod
     def get_cached_sampled_frame_paths_if_any(
         cls, media_path: str, sample_ratio: float
     ) -> Optional[List[str]]:
@@ -951,6 +967,7 @@ class FrameCache:
             first_real_frame: Optional[str] = None
             inline_check_done = False
             frames_pseudostatic: Optional[bool] = None
+            is_single_frame = False
             try:
                 for path in cls._iter_pyav_video_sample_paths(
                     video_path,
@@ -984,12 +1001,17 @@ class FrameCache:
                             if len(real) >= 2:
                                 frames_pseudostatic = _frames_are_visually_pseudostatic(real)
                         elif first_real_frame is not None:
-                            # Only one real frame was ever decoded (e.g. buffer-deadlock
-                            # videos that yield exactly 1 frame then die) — pseudostatic.
+                            # Only one real frame was ever decoded (buffer-deadlock / broken
+                            # stream).  Mark it pseudostatic AND flag it as a single-frame
+                            # stream so callers can distinguish this from visually-inferred
+                            # pseudostatic videos.
                             frames_pseudostatic = True
+                            is_single_frame = True
                     if frames_pseudostatic is not None:
                         stats = dict(cls.media_stats_cache.get(video_path) or {})
                         stats["frames_are_pseudostatic"] = frames_pseudostatic
+                        if is_single_frame:
+                            stats["single_frame_stream"] = True
                         cls.media_stats_cache[video_path] = stats
                 if completed:
                     cls.sampled_cache[cache_key] = accumulated
@@ -1169,6 +1191,7 @@ class FrameCache:
             first_real_frame: Optional[str] = None
             inline_check_done = False
             frames_pseudostatic: Optional[bool] = None
+            is_single_frame = False
             try:
                 for path in cls._iter_opencv_video_sample_paths(
                     cap,
@@ -1198,9 +1221,12 @@ class FrameCache:
                                 frames_pseudostatic = _frames_are_visually_pseudostatic(real)
                         elif first_real_frame is not None:
                             frames_pseudostatic = True
+                            is_single_frame = True
                     if frames_pseudostatic is not None:
                         stats = dict(cls.media_stats_cache.get(video_path) or {})
                         stats["frames_are_pseudostatic"] = frames_pseudostatic
+                        if is_single_frame:
+                            stats["single_frame_stream"] = True
                         cls.media_stats_cache[video_path] = stats
                 cap.release()
                 if completed:
@@ -1344,6 +1370,20 @@ class FrameCache:
                 pass
 
         return bool(stats.get("frames_are_pseudostatic", False))
+
+    @classmethod
+    def is_single_frame_stream(cls, media_path: str) -> bool:
+        """True only when video sampling yielded exactly one real frame.
+
+        Distinguishes broken/buffer-deadlock streams (where the decoder dies
+        after the first frame) from videos whose sampled frames merely happen
+        to look visually identical.  Only set when stream_frame_samples ran
+        with detect_pseudostatic=True and the single-frame path was triggered.
+        """
+        stats = cls.media_stats_cache.get(media_path)
+        if not stats:
+            return False
+        return bool(stats.get("single_frame_stream", False))
 
     @classmethod
     def _stream_pdf_sample_pages(

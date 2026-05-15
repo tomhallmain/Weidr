@@ -27,6 +27,7 @@ from ui.app_style import AppStyle
 from ui.app_window.media_controls_overlay import MediaControlsOverlay, OVERLAY_HEIGHT
 from utils.config import config
 from utils.logging_setup import get_logger
+from image.frame_cache import FrameCache
 from utils.media_utils import is_video_for_display, is_video_path_by_extension, is_video_container_signature
 from utils.utils import Utils
 from utils.translations import I18N
@@ -63,6 +64,12 @@ except ImportError:
 
 
 _MATROSKA_EXTENSIONS = {".webm", ".mkv", ".mka", ".mks"}
+
+# Minimum wall-clock seconds that must elapse before a VLC State.Ended is
+# treated as a real end for slideshow advancement.  Prevents buffer-deadlock
+# videos (which report Ended in milliseconds with zero playback time) from
+# causing the slideshow to blow past them instantly.
+_VLC_INSTANT_END_MIN_SECONDS = 1.0
 
 # Matroska paths where video_stop() previously timed out, indicating a missing
 # Cues element.  show_video() skips VLC and shows a placeholder for these paths
@@ -269,6 +276,7 @@ class MediaFrame(QFrame):
 
         self._image = None  # QImage or PIL Image when loaded
         self._video_ui = None  # VideoUI when showing video
+        self._video_started_monotonic: float = 0.0
         self._current_pixmap = None  # keep reference
 
         layout = QVBoxLayout(self)
@@ -810,6 +818,17 @@ class MediaFrame(QFrame):
         # Video dispatch: use VLC if available, otherwise show placeholder
         if is_video_for_display(path):
             if _VLC_AVAILABLE and self.vlc_media_player:
+                # Broken single-frame stream (buffer-deadlock): show the one
+                # extractable frame as a static image and let VLC handle audio
+                # + end-of-file in the background without painting over it.
+                # Not applied to visually-inferred pseudostatic videos, which
+                # may change outside the sampled windows.
+                if FrameCache.is_single_frame_stream(path):
+                    frame_path = FrameCache.get_any_cached_sampled_frame(path)
+                    if frame_path:
+                        self._show_image_in_view(frame_path)
+                        self.show_video(path, freeze_frame=True)
+                        return
                 self.show_video(path)
             else:
                 self._show_placeholder(_("Video: ") + os.path.basename(path))
@@ -833,35 +852,48 @@ class MediaFrame(QFrame):
         else:
             self._apply_image_scale_mode()
 
-    def show_video(self, path):
-        """Play video in this frame (VLC embeds via winId())."""
+    def show_video(self, path, freeze_frame: bool = False):
+        """Play video in this frame (VLC embeds via winId()).
+
+        When freeze_frame is True the caller has already displayed a static
+        image; VLC plays audio only (video output suppressed via :no-video)
+        and drives end-of-file detection without painting over the graphics
+        view.  clear() and graphics-view teardown are skipped.
+        """
         if not _VLC_AVAILABLE or not self.vlc_media_player:
             return
         if not is_video_path_by_extension(path) and not is_video_container_signature(path):
             return
-        self.clear()
-        self._graphics_view.set_interaction_enabled(False)
-        self._graphics_view.reset_interaction()
+        if not freeze_frame:
+            self.clear()
+            self._graphics_view.set_interaction_enabled(False)
+            self._graphics_view.reset_interaction()
         has_video = _probe_has_video_stream(path)
         has_cues = path not in _matroska_missing_cues_paths
         self._video_ui = VideoUI(path, has_video=has_video, has_cues=has_cues)
         self.path = path
-        # For normal video: attach a window handle so libvlc renders into this widget.
-        # For audio-only: skip the window handle to avoid the libvlc video-output deadlock.
-        if has_video:
+        # Normal video: attach window handle so libvlc renders into this widget.
+        # Audio-only or freeze_frame: skip window handle — no video surface needed.
+        if has_video and not freeze_frame:
             self.ensure_video_frame()
         self.vlc_media = self.vlc_instance.media_new(path)
+        if freeze_frame:
+            # Suppress VLC video decode/output so it doesn't paint over the
+            # static frame.  Audio track and end-of-file signalling still work.
+            self.vlc_media.add_option(":no-video")
         self.vlc_media_player.set_media(self.vlc_media)
+        self._video_started_monotonic = time.monotonic()
         if self.vlc_media_player.play() == -1:
             raise Exception("Failed to play video")
-        if has_video:
-            self._graphics_view.hide()
-            self._placeholder_label.hide()
-        else:
-            # Audio-only container: no window handle → no video output needed.
-            self._graphics_view.hide()
-            self._placeholder_label.setText(_("Audio: ") + os.path.basename(path))
-            self._placeholder_label.show()
+        if not freeze_frame:
+            if has_video:
+                self._graphics_view.hide()
+                self._placeholder_label.hide()
+            else:
+                # Audio-only container: no window handle → no video output needed.
+                self._graphics_view.hide()
+                self._placeholder_label.setText(_("Audio: ") + os.path.basename(path))
+                self._placeholder_label.show()
         self._controls_overlay.set_audio_controls_visible(True)
         # VLC renders into the native window handle and may set a busy cursor
         # at the OS level.  Force an arrow cursor so the user doesn't see a
@@ -1059,7 +1091,15 @@ class MediaFrame(QFrame):
         if not _VLC_AVAILABLE or not isinstance(self._video_ui, VideoUI) or not self.vlc_media_player:
             return False
         try:
-            return self.vlc_media_player.get_state() == vlc.State.Ended
+            if self.vlc_media_player.get_state() != vlc.State.Ended:
+                return False
+            # Guard against buffer-deadlock videos that enter Ended state in
+            # milliseconds with zero playback time — without this they would
+            # blow through the slideshow instantly.  Legitimate short videos
+            # advance via the cur_ms >= dur_ms - tolerance path before this
+            # fires, so the guard only holds truly broken/instant-end videos.
+            elapsed = time.monotonic() - self._video_started_monotonic
+            return elapsed >= _VLC_INSTANT_END_MIN_SECONDS
         except Exception:
             return False
 

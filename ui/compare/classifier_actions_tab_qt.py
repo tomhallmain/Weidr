@@ -5,7 +5,8 @@ Tab-page QWidget listing classifier actions with buttons for add / modify /
 delete / copy / run, plus batch validation controls.
 
 Non-UI imports:
-  - ClassifierAction, ClassifierActionsManager
+  - ClassifierAction from compare.classifier_action
+  - ClassifierActionsManager from compare.classifier_actions_manager
     from compare.classifier_actions_manager (reuse policy)
   - DirectoryProfile from compare.directory_profile (reuse policy)
 """
@@ -22,7 +23,8 @@ from PySide6.QtWidgets import (
     QPushButton, QScrollArea, QVBoxLayout, QWidget,
 )
 
-from compare.classifier_actions_manager import ClassifierAction, ClassifierActionsManager
+from compare.classifier_action import ClassifierAction
+from compare.classifier_actions_manager import ClassifierActionsManager
 from files.directory_profile import DirectoryProfile
 from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle

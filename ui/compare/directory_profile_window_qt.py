@@ -21,7 +21,8 @@ from PySide6.QtWidgets import (
     QListWidget, QPushButton, QVBoxLayout, QWidget,
 )
 
-from compare.classifier_actions_manager import ClassifierActionsManager, Prevalidation
+from compare.classifier_action import Prevalidation
+from compare.classifier_actions_manager import ClassifierActionsManager
 from files.directory_profile import DirectoryProfile
 from lib.fast_directory_picker_qt import get_existing_directory
 from lib.multi_display_qt import SmartDialog

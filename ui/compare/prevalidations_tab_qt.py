@@ -9,8 +9,8 @@ Contains two classes:
     directory-profile management sections.
 
 Non-UI imports:
-  - Prevalidation, ClassifierActionsManager
-    from compare.classifier_actions_manager (reuse policy)
+  - Prevalidation from compare.classifier_action
+  - ClassifierActionsManager from compare.classifier_actions_manager
   - Lookahead from compare.lookahead (reuse policy)
   - DirectoryProfile from compare.directory_profile (reuse policy)
 
@@ -89,10 +89,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
-from compare.classifier_actions_manager import (
-    Prevalidation,
-    ClassifierActionsManager,
-)
+from compare.classifier_action import Prevalidation
+from compare.classifier_actions_manager import ClassifierActionsManager
 from files.directory_profile import DirectoryProfile
 from compare.lookahead import Lookahead
 from ui.compare.classifier_management_window_qt import ClassifierActionModifyWindow

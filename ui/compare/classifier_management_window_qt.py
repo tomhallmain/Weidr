@@ -8,8 +8,9 @@ Contains two classes:
     ClassifierActionsTab and PrevalidationsTab.
 
 Non-UI imports:
-  - ClassifierAction, ClassifierActionsManager
-    from compare.classifier_actions_manager (reuse policy)
+  - ClassifierAction, Prevalidation, ImageClassifierClassificationMode
+    from compare.classifier_action
+  - ClassifierActionsManager from compare.classifier_actions_manager
   - image_classifier_manager
     from image.image_classifier_manager (reuse policy)
 """
@@ -27,11 +28,12 @@ from PySide6.QtWidgets import (
     QPushButton, QScrollArea, QSlider, QTabWidget, QVBoxLayout, QWidget,
 )
 
-from compare.classifier_actions_manager import (
+from compare.classifier_action import (
     ClassifierAction,
-    ClassifierActionsManager,
     ImageClassifierClassificationMode,
+    Prevalidation,
 )
+from compare.classifier_actions_manager import ClassifierActionsManager
 from image.image_classifier_manager import image_classifier_manager
 from lib.fast_directory_picker_qt import get_existing_directory
 from lib.multi_display_qt import SmartDialog
@@ -74,7 +76,6 @@ class ClassifierActionModifyWindow(SmartDialog):
     ) -> None:
         # Defaults based on type
         if window_title is None:
-            from compare.classifier_actions_manager import Prevalidation
             if isinstance(classifier_action, Prevalidation):
                 window_title = _("Modify Prevalidation")
                 name_label_text = _("Prevalidation Name")

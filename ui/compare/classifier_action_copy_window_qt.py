@@ -6,8 +6,8 @@ Intermediary dialog for copying ClassifierAction and Prevalidation objects
 into new instances of either type.
 
 Non-UI imports:
-  - ClassifierAction, Prevalidation, ClassifierActionsManager
-    from compare.classifier_actions_manager (reuse policy)
+  - ClassifierAction, Prevalidation from compare.classifier_action
+  - ClassifierActionsManager from compare.classifier_actions_manager
 """
 
 from __future__ import annotations
@@ -21,11 +21,8 @@ from PySide6.QtWidgets import (
     QPushButton, QWidget,
 )
 
-from compare.classifier_actions_manager import (
-    ClassifierAction,
-    Prevalidation,
-    ClassifierActionsManager,
-)
+from compare.classifier_action import ClassifierAction, Prevalidation
+from compare.classifier_actions_manager import ClassifierActionsManager
 from lib.multi_display_qt import SmartDialog
 from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle

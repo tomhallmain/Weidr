@@ -32,7 +32,7 @@ from lib.loading_spinner_qt import LoadingSpinnerBadge
 from lib.scroll_frame_qt import ScrollFrame
 from lib.tooltip_qt import create_tooltip
 from utils.config import config
-from utils.constants import Mode, SortBy
+from utils.constants import Mode, Sort, SortBy
 from utils.logging_setup import get_logger
 from utils.translations import I18N
 
@@ -121,14 +121,28 @@ class SidebarPanel(QWidget):
         self.inclusion_pattern.returnPressed.connect(self._on_set_file_filter)
         self._scroll.add_widget(self.inclusion_pattern)
 
-        # Sort by
+        # Sort by + sort direction (same row)
         self._add_label(_("Browsing mode - Sort by"))
+        sort_row = QWidget(self)
+        sort_row_layout = QHBoxLayout(sort_row)
+        sort_row_layout.setContentsMargins(0, 0, 0, 0)
+        sort_row_layout.setSpacing(4)
+
         self.sort_by_choice = QComboBox(self)
         for text in SortBy.members():
             self.sort_by_choice.addItem(text)
         self.sort_by_choice.setCurrentText(config.sort_by.get_text())
         self.sort_by_choice.currentTextChanged.connect(self._on_sort_by_changed)
-        self._scroll.add_widget(self.sort_by_choice)
+        sort_row_layout.addWidget(self.sort_by_choice, 3)
+
+        self.sort_direction_choice = QComboBox(self)
+        self.sort_direction_choice.addItem(Sort.ASC.get_text())
+        self.sort_direction_choice.addItem(Sort.DESC.get_text())
+        self.sort_direction_choice.setEnabled(config.sort_by != SortBy.RANDOMIZE)
+        self.sort_direction_choice.currentTextChanged.connect(self._on_sort_changed)
+        sort_row_layout.addWidget(self.sort_direction_choice, 1)
+
+        self._scroll.add_widget(sort_row)
 
         # Checkboxes
         self.recursive_check = QCheckBox(_("Recurse subdirectories"), self)
@@ -420,12 +434,25 @@ class SidebarPanel(QWidget):
     def _on_sort_by_changed(self, text: str) -> None:
         """Handle sort-by dropdown change."""
         try:
-            self._app.file_browser.set_sort_by(SortBy.get(text))
+            new_sort_by = SortBy.get(text)
+            self._app.file_browser.set_sort_by(new_sort_by)
             self._app.file_browser.refresh()
+            self.sort_direction_choice.setEnabled(new_sort_by != SortBy.RANDOMIZE)
             if self._app.mode == Mode.BROWSE:
                 self._app.media_navigator.show_next_media()
         except Exception as e:
             logger.error(f"Error changing sort: {e}")
+
+    def _on_sort_changed(self, text: str) -> None:
+        """Handle sort-direction dropdown change."""
+        try:
+            sort = Sort.DESC if text == Sort.DESC.get_text() else Sort.ASC
+            self._app.file_browser.set_sort(sort)
+            self._app.file_browser.refresh()
+            if self._app.mode == Mode.BROWSE:
+                self._app.media_navigator.show_next_media()
+        except Exception as e:
+            logger.error(f"Error changing sort direction: {e}")
 
     def _on_set_file_filter(self) -> None:
         """Handle inclusion pattern entry Return key."""
@@ -501,3 +528,9 @@ class SidebarPanel(QWidget):
         self.sort_by_choice.blockSignals(True)
         self.sort_by_choice.setCurrentText(text)
         self.sort_by_choice.blockSignals(False)
+
+    def set_sort_value(self, text: str) -> None:
+        """Programmatically set the sort-direction combo without triggering the signal."""
+        self.sort_direction_choice.blockSignals(True)
+        self.sort_direction_choice.setCurrentText(text)
+        self.sort_direction_choice.blockSignals(False)

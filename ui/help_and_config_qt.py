@@ -250,6 +250,18 @@ class HelpAndConfig(SmartDialog):
         self._le_slideshow_interval = self._add_entry_row(
             _("Slideshow Interval (sec)"), str(config.slideshow_interval_seconds),
         )
+        self._le_slideshow_video_cap = self._add_entry_row(
+            _("Slideshow video sec (0=interval; >0=max; <0=full clip/VLC)"),
+            str(config.slideshow_dynamic_video_max_seconds),
+        )
+        self._le_slideshow_gif_cap = self._add_entry_row(
+            _("Slideshow GIF/WebP sec (0=interval; >0=max; <0=one full loop)"),
+            str(config.slideshow_dynamic_gif_max_seconds),
+        )
+        self._le_slideshow_pdf_pages = self._add_entry_row(
+            _("Slideshow PDF pages (0=interval; N>0=N×interval; N<0=file page count×interval)"),
+            str(config.slideshow_dynamic_pdf_max_pages),
+        )
         self._le_file_check_interval = self._add_entry_row(
             _("File Check Interval (sec)"), str(config.file_check_interval_seconds),
         )

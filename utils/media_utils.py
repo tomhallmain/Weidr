@@ -1,12 +1,12 @@
 """
 Shared helpers for classifying video (and related) media paths.
 
-Centralizes extension checks and container signature sniffing so UI, cache, and
-file operations stay consistent.
+Centralizes extension checks, container sniffing, and a few shared media helpers.
 """
 
 from __future__ import annotations
 
+import functools
 import os
 
 from utils.config import config
@@ -142,3 +142,34 @@ def is_video_file(path: str) -> bool:
         return False
     ext = os.path.splitext(path)[1].lower()
     return ext in set(get_video_extensions())
+
+
+@functools.lru_cache(maxsize=128)
+def _pdf_page_count_cached(path: str, mtime_ns: int) -> int:
+    try:
+        import pypdfium2 as pdfium  # type: ignore[import-untyped]
+    except ImportError:
+        return 0
+    try:
+        pdf = pdfium.PdfDocument(path)
+        try:
+            return max(0, len(pdf))
+        finally:
+            close = getattr(pdf, "close", None)
+            if callable(close):
+                close()
+    except Exception:
+        return 0
+
+
+def get_pdf_page_count(path: str) -> int:
+    """Page count for a PDF file, or 0 if missing/unreadable (callers gate on config flags)."""
+    if not path or not path.lower().endswith(".pdf"):
+        return 0
+    if not os.path.isfile(path):
+        return 0
+    try:
+        mtime_ns = int(os.stat(path).st_mtime_ns)
+    except OSError:
+        return 0
+    return _pdf_page_count_cached(os.path.normcase(os.path.abspath(path)), mtime_ns)

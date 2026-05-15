@@ -1217,6 +1217,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             WindowManager.unregister(self)
             self.file_check_config.end_filecheck()
             self.slideshow_config.end_slideshows()
+            self.media_navigator.stop_slideshow_timers()
         else:
             # Primary window: clean up global resources and store all caches
             from utils.notification_manager import notification_manager

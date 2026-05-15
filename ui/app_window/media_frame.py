@@ -1043,6 +1043,40 @@ class MediaFrame(QFrame):
     def has_time_based_media(self) -> bool:
         return isinstance(self._video_ui, VideoUI) or (self._gif_movie is not None and self._gif_is_animated)
 
+    def is_slideshow_animated_raster_active(self) -> bool:
+        """True when an animated GIF/WebP is playing (slideshow poll uses this)."""
+        return self._gif_movie is not None and self._gif_is_animated
+
+    def slideshow_vlc_time_ms(self) -> tuple[int, int]:
+        """VLC playback (position_ms, duration_ms); (0, 0) when not on an embedded VLC track."""
+        if not _VLC_AVAILABLE or not isinstance(self._video_ui, VideoUI) or not self.vlc_media_player:
+            return (0, 0)
+        duration_ms = max(int(self.vlc_media_player.get_length() or 0), 0)
+        current_ms = max(int(self.vlc_media_player.get_time() or 0), 0)
+        return (current_ms, duration_ms)
+
+    def slideshow_vlc_has_ended(self) -> bool:
+        if not _VLC_AVAILABLE or not isinstance(self._video_ui, VideoUI) or not self.vlc_media_player:
+            return False
+        try:
+            return self.vlc_media_player.get_state() == vlc.State.Ended
+        except Exception:
+            return False
+
+    def slideshow_vlc_natural_dwell_supported(self) -> bool:
+        """True when VLC can drive intrinsic-length dwell for the current video."""
+        return bool(
+            _VLC_AVAILABLE
+            and isinstance(self._video_ui, VideoUI)
+            and self.vlc_media_player
+        )
+
+    def slideshow_animated_total_duration_ms(self) -> int:
+        """Total duration of the active animated GIF/WebP timeline, or 0."""
+        if not self.is_slideshow_animated_raster_active():
+            return 0
+        return max(int(self._gif_total_duration_ms), 0)
+
     def save_media_screenshot(self, output_path: str) -> tuple[bool, str]:
         """Save screenshot for active time-based media (video or animated GIF)."""
         if not output_path:

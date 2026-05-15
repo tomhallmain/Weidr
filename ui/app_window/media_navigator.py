@@ -11,11 +11,17 @@ toggle_image_view, get_active_media_filepath, toggle_slideshow.
 from __future__ import annotations
 
 import os
+import time
 import traceback
 from typing import TYPE_CHECKING, Optional
 
 from PySide6.QtCore import QTimer
 
+from ui.app_window.slideshow_dynamic_policy import (
+    should_advance_slideshow_poll,
+    skip_classic_slideshow_primary_tick,
+    slideshow_poll_should_run,
+)
 from utils.config import config
 from utils.constants import Direction, Mode
 from utils.logging_setup import get_logger
@@ -51,6 +57,10 @@ class MediaNavigator:
         self._mf = media_frame
         self._slideshow_timer = QTimer(self._app)
         self._slideshow_timer.timeout.connect(self._on_slideshow_tick)
+        self._slideshow_dynamic_poll_timer = QTimer(self._app)
+        self._slideshow_dynamic_poll_timer.setInterval(250)
+        self._slideshow_dynamic_poll_timer.timeout.connect(self._on_slideshow_dynamic_poll_tick)
+        self._slideshow_media_started_monotonic: Optional[float] = None
 
     # ==================================================================
     # Navigation
@@ -404,6 +414,9 @@ class MediaNavigator:
         )
         self._app.prev_img_path = self._app.img_path
         self._app.img_path = image_path
+        self._slideshow_media_started_monotonic = time.monotonic()
+        self._sync_slideshow_dynamic_poll_timer()
+        self._restart_classic_slideshow_primary_timer_if_running()
 
         text = basename if relative_filepath == "" else relative_filepath + "\n" + basename
         if extra_text is not None:
@@ -423,6 +436,8 @@ class MediaNavigator:
         self._mf.clear()
         self._app.sidebar_panel.update_current_image_label("")
         self._app.img_path = None
+        self._slideshow_media_started_monotonic = None
+        self._slideshow_dynamic_poll_timer.stop()
 
     def show_searched_image(self) -> None:
         """
@@ -465,6 +480,16 @@ class MediaNavigator:
     # ==================================================================
     # Slideshow
     # ==================================================================
+    def _restart_classic_slideshow_primary_timer_if_running(self) -> None:
+        """Reset the main interval so the next auto-advance is a full interval away."""
+        if not self._app.slideshow_config.slideshow_running:
+            return
+        interval_sec = float(self._app.slideshow_config.interval_seconds)
+        if interval_sec <= 0:
+            interval_sec = 7.0
+        interval_ms = max(1, int(interval_sec * 1000))
+        self._slideshow_timer.start(interval_ms)
+
     def toggle_slideshow(self, event=None) -> None:
         """
         Toggle the slideshow on or off.
@@ -475,24 +500,55 @@ class MediaNavigator:
         self._app.slideshow_config.toggle_slideshow()
         if self._app.slideshow_config.show_new_images:
             message = _("Slideshow for new images started")
-            self._slideshow_timer.stop()
+            self.stop_slideshow_timers()
         elif self._app.slideshow_config.slideshow_running:
             message = _("Slideshow started")
-            interval_ms = max(1, int(self._app.slideshow_config.interval_seconds * 1000))
-            self._slideshow_timer.start(interval_ms)
+            self._slideshow_media_started_monotonic = time.monotonic()
+            self._restart_classic_slideshow_primary_timer_if_running()
+            self._sync_slideshow_dynamic_poll_timer()
         else:
             message = _("Slideshows ended")
-            self._slideshow_timer.stop()
+            self.stop_slideshow_timers()
         self._app.notification_ctrl.toast(message)
+
+    def stop_slideshow_timers(self) -> None:
+        """Stop classic slideshow timers (e.g. when slideshow ends from sidebar or window close)."""
+        self._slideshow_timer.stop()
+        self._slideshow_dynamic_poll_timer.stop()
+
+    def _sync_slideshow_dynamic_poll_timer(self) -> None:
+        if not self._app.slideshow_config.slideshow_running:
+            self._slideshow_dynamic_poll_timer.stop()
+            return
+        path = self._app.img_path
+        if slideshow_poll_should_run(self._mf, path):
+            if not self._slideshow_dynamic_poll_timer.isActive():
+                self._slideshow_dynamic_poll_timer.start()
+        else:
+            self._slideshow_dynamic_poll_timer.stop()
+
+    def _on_slideshow_dynamic_poll_tick(self) -> None:
+        if not self._app.slideshow_config.slideshow_running:
+            self._slideshow_dynamic_poll_timer.stop()
+            return
+        path = self._app.img_path
+        if not path:
+            return
+        if should_advance_slideshow_poll(self._mf, path, self._slideshow_media_started_monotonic):
+            self.show_next_media()
 
     def _on_slideshow_tick(self) -> None:
         """Advance slideshow when classic slideshow mode is active."""
         if not self._app.slideshow_config.slideshow_running:
-            self._slideshow_timer.stop()
+            self.stop_slideshow_timers()
             return
         base_dir = self._app.get_base_dir()
-        if base_dir and base_dir != "":
-            self.show_next_media()
+        if not base_dir or base_dir == "":
+            return
+        path = self._app.img_path
+        if skip_classic_slideshow_primary_tick(self._mf, path):
+            return
+        self.show_next_media()
 
     # ==================================================================
     # Queries

@@ -100,7 +100,8 @@ class FileActionsWindow(SmartDialog):
         header.addStretch()
 
         search_btn = QPushButton(_("Search Image"))
-        search_btn.clicked.connect(self._search_for_active_image)
+        # clicked emits bool(checked); ignore so it is never passed as image_path.
+        search_btn.clicked.connect(lambda _checked=False: self._search_for_active_image())
         header.addWidget(search_btn)
 
         clear_btn = QPushButton(_("Clear History"))
@@ -491,6 +492,8 @@ class FileActionsWindow(SmartDialog):
     # Search for active image
     # ==================================================================
     def _search_for_active_image(self, image_path: str | None = None) -> None:
+        if image_path is not None and not isinstance(image_path, str):
+            image_path = None
         if image_path is None:
             image_path = self._app_actions.get_active_media_filepath()
             if image_path is None:

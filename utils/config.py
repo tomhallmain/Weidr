@@ -63,6 +63,10 @@ class Config:
         self.print_settings = True
         self.show_toasts = True
         self.slideshow_interval_seconds = 7
+        # Video/GIF: seconds; PDF: page budget. See slideshow_dynamic_policy. Default -1 = intrinsic.
+        self.slideshow_dynamic_video_max_seconds = -1.0
+        self.slideshow_dynamic_gif_max_seconds = -1.0
+        self.slideshow_dynamic_pdf_max_pages = -1
         self.file_check_interval_seconds = 10
         self.file_check_skip_if_n_files_over = 5000
         self.large_image_dim_threshold_px = 5000
@@ -216,6 +220,7 @@ class Config:
                             "color_diff_threshold",
                             "file_counter_limit",
                             "slideshow_interval_seconds",
+                            "slideshow_dynamic_pdf_max_pages",
                             "file_check_interval_seconds",
                             "file_check_skip_if_n_files_over",
                             "large_image_dim_threshold_px",
@@ -238,7 +243,9 @@ class Config:
                             "large_image_preview_overscan",
                             "large_image_hq_downscale_ratio_threshold",
                             "large_image_promotion_min_free_ram_gb",
-                            "large_image_promotion_available_ram_fraction")
+                            "large_image_promotion_available_ram_fraction",
+                            "slideshow_dynamic_video_max_seconds",
+                            "slideshow_dynamic_gif_max_seconds")
 
             self.file_types = list(self.image_types)
             if self.enable_videos:
@@ -526,6 +533,20 @@ class Config:
                 "Set to 0 to disable size-based scaling, or use a value >= 10.",
                 size_mb,
             )
+        for attr, label in (
+            ("slideshow_dynamic_video_max_seconds", "slideshow_dynamic_video_max_seconds"),
+            ("slideshow_dynamic_gif_max_seconds", "slideshow_dynamic_gif_max_seconds"),
+        ):
+            val = float(getattr(self, attr))
+            if val < 0:
+                continue
+            if 0 < val < 0.25:
+                logger.warning(
+                    "Config value %s=%r is very short for slideshow dynamic media. "
+                    "Slides may advance almost immediately.",
+                    label,
+                    val,
+                )
 
     def validate_and_set_directory(self, key, override=False):
         loc = key if override else self.dict[key]

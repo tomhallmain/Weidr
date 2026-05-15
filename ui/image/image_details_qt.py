@@ -1309,9 +1309,7 @@ class ImageDetails(SmartDialog):
     def set_temp_media_canvas(
         master, media_path: str, app_actions
     ) -> None:
-        with Image.open(media_path) as image:
-            width = min(700, image.size[0])
-            height = int(image.size[1] * width / image.size[0])
+        width, height = ImageDetails._get_temp_canvas_dimensions(media_path)
         canvas = TempImageWindow(
             parent=master,
             title=media_path,
@@ -1320,6 +1318,31 @@ class ImageDetails(SmartDialog):
         )
         canvas.show()
         ImageDetails.temp_media_canvas = canvas
+
+    @staticmethod
+    def _get_temp_canvas_dimensions(
+        media_path: str, max_width: int = 700
+    ) -> tuple[int, int]:
+        """Return (width, height) for TempImageWindow sizing.
+
+        Tries QImageReader (fast, no external library) then PIL for static
+        images.  Falls back to a sensible default for video, PDF, and other
+        media that PIL cannot identify.
+        """
+        from PySide6.QtGui import QImageReader
+        reader = QImageReader(media_path)
+        size = reader.size()
+        if size.isValid() and size.width() > 0 and size.height() > 0:
+            w = min(max_width, size.width())
+            return w, max(1, int(size.height() * w / size.width()))
+        try:
+            with Image.open(media_path) as image:
+                if image.size[0] > 0 and image.size[1] > 0:
+                    w = min(max_width, image.size[0])
+                    return w, max(1, int(image.size[1] * w / image.size[0]))
+        except Exception:
+            pass
+        return 800, 600
 
     # ── Downstream related images ─────────────────────────────────
 

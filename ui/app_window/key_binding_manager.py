@@ -83,6 +83,7 @@ class KeyBindingManager:
         from ui.image.image_details_qt import ImageDetails
         from ui.app_window.window_manager import WindowManager
         from utils.constants import ImageGenerationType, Mode
+        from files.file_action import FileAction
 
         # ==============================================================
         # Navigation (arrow keys, Home/End, PgUp/PgDown)
@@ -143,6 +144,12 @@ class KeyBindingManager:
             "Shift+K",
             lambda: ImageDetails.open_temp_image_canvas(
                 app, MarkedFiles.last_moved_image, app.app_actions
+            ),
+        )
+        self._bind(
+            "Ctrl+Shift+K",
+            lambda: ImageDetails.open_temp_image_canvas(
+                app, FileAction.get_last_auto_file(), app.app_actions
             ),
         )
 

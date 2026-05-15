@@ -114,6 +114,7 @@ class HelpAndConfig(SmartDialog):
             "Right Click": _("Open context menu"),
             "Shift+J": _("Run content filters for all files in the current directory"),
             "Shift+K": _("View last moved image mark"),
+            "Ctrl+Shift+K": _("View last system-moved image"),
             "Shift+L": _("Toggle content filters"),
             "Shift+M": _("Add or remove a mark for current image"),
             "Shift+N": _("Add all marks between most recently set and current selected inclusive, or all marks in current group"),

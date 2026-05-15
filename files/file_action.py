@@ -67,13 +67,13 @@ class FileAction():
         FileAction.setup_hotkey_actions()
 
     @staticmethod
-    def get_history_action(start_index=0, exclude_auto=True):
+    def get_history_action(start_index=0, auto=False):
         # Get a previous action that is not equivalent to the permanent action if possible.
         action = None
         seen_actions = []
         for i in range(len(FileAction.action_history)):
             action = FileAction.action_history[i]
-            is_returnable_action = action != FileAction.permanent_action and not (exclude_auto and action.auto)
+            is_returnable_action = action != FileAction.permanent_action and (auto is None or action.auto == auto)
             if not is_returnable_action or action in seen_actions:
                 start_index += 1
             seen_actions.append(action)
@@ -83,6 +83,12 @@ class FileAction():
             if is_returnable_action:
                 break
         return action
+
+    @staticmethod
+    def get_last_auto_file() -> Optional[str]:
+        """Return the output path of the most recent system-initiated file action, or None."""
+        action = FileAction.get_history_action(auto=True)
+        return action.new_files[0] if action and action.new_files else None
 
 
     @staticmethod

@@ -62,6 +62,11 @@ class TempImageWindow(SmartWindow):
         self._media_frame.set_fill_canvas(False)
         layout.addWidget(self._media_frame)
 
+        self._media_frame.seek_requested.connect(self._media_frame.video_seek_ms)
+        self._media_frame.play_pause_requested.connect(self._media_frame.video_toggle_pause)
+        self._media_frame.volume_requested.connect(self._media_frame.set_volume)
+        self._media_frame.mute_requested.connect(self._media_frame.toggle_mute)
+
         self._bind_shortcuts()
 
     # -- shortcuts -------------------------------------------------

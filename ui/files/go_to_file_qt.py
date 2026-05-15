@@ -513,7 +513,7 @@ class GoToFile(SmartDialog):
         last_moved = MarkedFiles.last_moved_image
         if not last_moved:
             action = FileActionsWindow.get_history_action(
-                start_index=0, exclude_auto=True
+                start_index=0, auto=False
             )
             if (
                 action

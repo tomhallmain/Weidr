@@ -679,6 +679,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             # Restore per-directory settings from cache (read before compare/directory work)
             recursive = base_cache.get(new_dir, "recursive", default_val=False)
             sort_by_text = base_cache.get(new_dir, "sort_by", default_val=None)
+            sort_text = base_cache.get(new_dir, "sort", default_val=None)
             compare_mode_text = base_cache.get(new_dir, "compare_mode", default_val=None)
 
             # Clear stale compare if the directory changed
@@ -697,8 +698,18 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
                     sb = SortBy.get(sort_by_text) if isinstance(sort_by_text, str) else sort_by_text
                     self.file_browser.sort_by = sb
                     self.sidebar_panel.set_sort_by_value(sb.get_text())
+                    self.sidebar_panel.sort_direction_choice.setEnabled(sb != SortBy.RANDOMIZE)
                 except Exception as e:
                     logger.error(f"Error setting stored sort by: {e}")
+
+            if sort_text:
+                try:
+                    from utils.constants import Sort
+                    sort = Sort.DESC if sort_text == Sort.DESC.get_text() else Sort.ASC
+                    self.file_browser.sort = sort
+                    self.sidebar_panel.set_sort_value(sort.get_text())
+                except Exception as e:
+                    logger.error(f"Error setting stored sort direction: {e}")
 
             # Apply directory to file browser
             self.sidebar_panel.update_base_dir_display(new_dir)

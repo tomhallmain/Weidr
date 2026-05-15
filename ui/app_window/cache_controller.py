@@ -118,6 +118,7 @@ class CacheController:
 
             app_info_cache.set(base_dir, "recursive", self._fb.is_recursive())
             app_info_cache.set(base_dir, "sort_by", self._fb.get_sort_by().get_text())
+            app_info_cache.set(base_dir, "sort", self._fb.sort.get_text())
             app_info_cache.set(
                 base_dir, "compare_mode",
                 self._app.compare_manager.get_primary_mode_name(),

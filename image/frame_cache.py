@@ -2,6 +2,7 @@ import hashlib
 import os
 import tempfile
 import asyncio
+from dataclasses import dataclass
 from typing import Dict, Iterator, List, Optional, Tuple
 
 import cv2
@@ -54,6 +55,17 @@ from utils.constants import CompareMediaType
 from utils.media_utils import is_video_path_by_extension
 
 logger = get_logger("frame_cache")
+
+
+@dataclass
+class MediaStats:
+    """Lightweight metadata stored in :attr:`FrameCache.media_stats_cache` per media path."""
+    media_type: str = "other"               # "video", "gif", "pdf", or "other"
+    total_items: Optional[int] = None       # total frames (video/GIF) or pages (PDF)
+    duration_seconds: Optional[float] = None
+    fps: Optional[float] = None
+    frames_are_pseudostatic: Optional[bool] = None  # None = not yet tested
+    single_frame_stream: bool = False       # True only for broken single-frame streams
 
 
 def _stats_media_type_for_sampled_video_path(media_path: str) -> str:
@@ -422,7 +434,7 @@ class FrameCache:
     temporary_directory = tempfile.TemporaryDirectory(prefix="tmp_comp_frames")
     cache: Dict[str, str] = {}  # Maps media_path to cached image path
     sampled_cache: Dict[str, List[str]] = {}  # Maps media_path|sample_ratio to sampled frame paths
-    media_stats_cache: Dict[str, Dict[str, Optional[float]]] = {}  # Maps media_path to lightweight stats
+    media_stats_cache: Dict[str, MediaStats] = {}  # Maps media_path to lightweight stats
 
     @classmethod
     def _write_cv2_jpeg(cls, frame: np.ndarray, path: str) -> Optional[str]:
@@ -574,12 +586,9 @@ class FrameCache:
             logger.info(f"Extracting first page from PDF: {pdf_path}")
             pdf = pdfium.PdfDocument(pdf_path)
             if len(pdf) > 0:
-                cls.media_stats_cache[pdf_path] = {
-                    "media_type": "pdf",
-                    "total_items": len(pdf),
-                    "duration_seconds": None,
-                    "fps": None,
-                }
+                cls.media_stats_cache[pdf_path] = MediaStats(
+                    media_type="pdf", total_items=len(pdf)
+                )
                 page = pdf[0]
                 # Use a higher scale for better quality
                 image = page.render(scale=4).to_pil()
@@ -702,12 +711,12 @@ class FrameCache:
                 duration_seconds = duration_s
                 if duration_seconds is None and fps > 0 and total_frames > 0:
                     duration_seconds = total_frames / fps
-                cls.media_stats_cache[video_path] = {
-                    "media_type": _stats_media_type_for_sampled_video_path(video_path),
-                    "total_items": total_frames if total_frames > 0 else None,
-                    "duration_seconds": duration_seconds,
-                    "fps": fps if fps > 0 else None,
-                }
+                cls.media_stats_cache[video_path] = MediaStats(
+                    media_type=_stats_media_type_for_sampled_video_path(video_path),
+                    total_items=total_frames if total_frames > 0 else None,
+                    duration_seconds=duration_seconds,
+                    fps=fps if fps > 0 else None,
+                )
                 if config.debug2:
                     frame = _pyav_first_substantive_bgr(video_path)
                 else:
@@ -734,12 +743,12 @@ class FrameCache:
             duration_seconds = None
             if fps and fps > 0 and total_frames > 0:
                 duration_seconds = total_frames / fps
-            cls.media_stats_cache[video_path] = {
-                "media_type": _stats_media_type_for_sampled_video_path(video_path),
-                "total_items": total_frames if total_frames > 0 else None,
-                "duration_seconds": duration_seconds,
-                "fps": fps if fps > 0 else None,
-            }
+            cls.media_stats_cache[video_path] = MediaStats(
+                media_type=_stats_media_type_for_sampled_video_path(video_path),
+                total_items=total_frames if total_frames > 0 else None,
+                duration_seconds=duration_seconds,
+                fps=fps if fps > 0 else None,
+            )
             if config.debug2:
                 ok, frame = _first_substantive_frame(cap, video_path=video_path)
             else:
@@ -798,14 +807,15 @@ class FrameCache:
         if cache_key in cls.sampled_cache:
             cached = cls.sampled_cache[cache_key]
             if detect_pseudostatic:
-                stats = cls.media_stats_cache.get(media_path) or {}
-                if "frames_are_pseudostatic" not in stats:
+                cached_stats = cls.media_stats_cache.get(media_path)
+                if cached_stats is None or cached_stats.frames_are_pseudostatic is None:
                     real = [p for p in cached if p.lower().endswith((".jpg", ".jpeg"))]
                     if len(real) >= 2:
                         is_pseudo = _frames_are_visually_pseudostatic(real)
-                        stats = dict(stats)
-                        stats["frames_are_pseudostatic"] = is_pseudo
-                        cls.media_stats_cache[media_path] = stats
+                        if cached_stats is None:
+                            cached_stats = MediaStats()
+                            cls.media_stats_cache[media_path] = cached_stats
+                        cached_stats.frames_are_pseudostatic = is_pseudo
             return len(cached), iter(cached)
 
         if is_video or is_gif:
@@ -932,12 +942,12 @@ class FrameCache:
         duration_seconds = duration_s
         if duration_seconds is None and fps > 0 and total_frames > 0:
             duration_seconds = total_frames / fps
-        cls.media_stats_cache[video_path] = {
-            "media_type": _stats_media_type_for_sampled_video_path(video_path),
-            "total_items": total_frames if total_frames > 0 else None,
-            "duration_seconds": duration_seconds,
-            "fps": fps if fps > 0 else None,
-        }
+        cls.media_stats_cache[video_path] = MediaStats(
+            media_type=_stats_media_type_for_sampled_video_path(video_path),
+            total_items=total_frames if total_frames > 0 else None,
+            duration_seconds=duration_seconds,
+            fps=fps if fps > 0 else None,
+        )
         effective_frames = _apply_duration_cap(total_frames, fps, duration_seconds, max_duration_seconds)
         if effective_frames < total_frames and not suppress_cap_log:
             logger.debug(
@@ -1008,11 +1018,13 @@ class FrameCache:
                             frames_pseudostatic = True
                             is_single_frame = True
                     if frames_pseudostatic is not None:
-                        stats = dict(cls.media_stats_cache.get(video_path) or {})
-                        stats["frames_are_pseudostatic"] = frames_pseudostatic
+                        mstats = cls.media_stats_cache.get(video_path)
+                        if mstats is None:
+                            mstats = MediaStats()
+                            cls.media_stats_cache[video_path] = mstats
+                        mstats.frames_are_pseudostatic = frames_pseudostatic
                         if is_single_frame:
-                            stats["single_frame_stream"] = True
-                        cls.media_stats_cache[video_path] = stats
+                            mstats.single_frame_stream = True
                 if completed:
                     cls.sampled_cache[cache_key] = accumulated
 
@@ -1142,12 +1154,12 @@ class FrameCache:
             duration_seconds = None
             if fps and fps > 0 and total_frames > 0:
                 duration_seconds = total_frames / fps
-            cls.media_stats_cache[video_path] = {
-                "media_type": _stats_media_type_for_sampled_video_path(video_path),
-                "total_items": total_frames if total_frames > 0 else None,
-                "duration_seconds": duration_seconds,
-                "fps": fps if fps > 0 else None,
-            }
+            cls.media_stats_cache[video_path] = MediaStats(
+                media_type=_stats_media_type_for_sampled_video_path(video_path),
+                total_items=total_frames if total_frames > 0 else None,
+                duration_seconds=duration_seconds,
+                fps=fps if fps > 0 else None,
+            )
             effective_frames = _apply_duration_cap(total_frames, fps, duration_seconds, max_duration_seconds)
             if effective_frames < total_frames and not suppress_cap_log:
                 logger.debug(
@@ -1223,11 +1235,13 @@ class FrameCache:
                             frames_pseudostatic = True
                             is_single_frame = True
                     if frames_pseudostatic is not None:
-                        stats = dict(cls.media_stats_cache.get(video_path) or {})
-                        stats["frames_are_pseudostatic"] = frames_pseudostatic
+                        mstats = cls.media_stats_cache.get(video_path)
+                        if mstats is None:
+                            mstats = MediaStats()
+                            cls.media_stats_cache[video_path] = mstats
+                        mstats.frames_are_pseudostatic = frames_pseudostatic
                         if is_single_frame:
-                            stats["single_frame_stream"] = True
-                        cls.media_stats_cache[video_path] = stats
+                            mstats.single_frame_stream = True
                 cap.release()
                 if completed:
                     cls.sampled_cache[cache_key] = accumulated
@@ -1327,25 +1341,9 @@ class FrameCache:
             )
 
     @classmethod
-    def get_dynamic_media_stats(cls, media_path: str) -> Dict[str, Optional[float]]:
-        """
-        Return lightweight metadata useful for debug logging.
-
-        Keys:
-            - media_type: "video", "gif", "pdf", or "other"
-            - total_items: total frames/pages when known
-            - duration_seconds: video duration when available, else None
-            - fps: video fps when available, else None
-        """
-        if media_path in cls.media_stats_cache:
-            return cls.media_stats_cache[media_path]
-
-        return {
-            "media_type": "other",
-            "total_items": None,
-            "duration_seconds": None,
-            "fps": None,
-        }
+    def get_dynamic_media_stats(cls, media_path: str) -> Optional[MediaStats]:
+        """Return lightweight metadata useful for debug logging, or None if not yet cached."""
+        return cls.media_stats_cache.get(media_path)
 
     @classmethod
     def is_pseudostatic_dynamic_media(cls, media_path: str) -> bool:
@@ -1358,18 +1356,11 @@ class FrameCache:
         Requires stream_frame_samples to have fully consumed its iterator for media_path.
         """
         stats = cls.media_stats_cache.get(media_path)
-        if not stats:
+        if stats is None:
             return False
-
-        total = stats.get("total_items")
-        if total is not None:
-            try:
-                if int(total) <= 1:
-                    return True
-            except (TypeError, ValueError):
-                pass
-
-        return bool(stats.get("frames_are_pseudostatic", False))
+        if stats.total_items is not None and stats.total_items <= 1:
+            return True
+        return bool(stats.frames_are_pseudostatic)
 
     @classmethod
     def is_single_frame_stream(cls, media_path: str) -> bool:
@@ -1381,9 +1372,7 @@ class FrameCache:
         with detect_pseudostatic=True and the single-frame path was triggered.
         """
         stats = cls.media_stats_cache.get(media_path)
-        if not stats:
-            return False
-        return bool(stats.get("single_frame_stream", False))
+        return stats is not None and stats.single_frame_stream
 
     @classmethod
     def _stream_pdf_sample_pages(
@@ -1398,12 +1387,9 @@ class FrameCache:
         try:
             pdf = pdfium.PdfDocument(pdf_path)
             total_pages = len(pdf)
-            cls.media_stats_cache[pdf_path] = {
-                "media_type": "pdf",
-                "total_items": total_pages,
-                "duration_seconds": None,
-                "fps": None,
-            }
+            cls.media_stats_cache[pdf_path] = MediaStats(
+                media_type="pdf", total_items=total_pages
+            )
             page_indices = cls._compute_sample_indices(
                 total_items=total_pages,
                 sample_ratio=sample_ratio,

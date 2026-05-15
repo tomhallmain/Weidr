@@ -548,9 +548,9 @@ class ClassifierAction:
                     if callable(close_m):
                         close_m()
                 if config.debug:
-                    media_type = stats["media_type"] if stats else "dynamic"
-                    total_items = stats["total_items"] if stats else None
-                    duration_seconds = stats["duration_seconds"] if stats else None
+                    media_type = stats.media_type if stats else "dynamic"
+                    total_items = stats.total_items if stats else None
+                    duration_seconds = stats.duration_seconds if stats else None
                     logger.debug(
                         "Dynamic prevalidation summary | action=%s media=%s type=%s "
                         "sample_idx=%s/%s tested=%s positives=%s required=%s met=%s reached_last=%s "

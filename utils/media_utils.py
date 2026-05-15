@@ -173,3 +173,17 @@ def get_pdf_page_count(path: str) -> int:
     except OSError:
         return 0
     return _pdf_page_count_cached(os.path.normcase(os.path.abspath(path)), mtime_ns)
+
+
+def is_classifier_dynamic_media_path(path: str) -> bool:
+    """True when *path* is an existing video, GIF, or PDF file with that type enabled in config."""
+    if not path or not os.path.isfile(path):
+        return False
+    lower = path.lower()
+    if config.enable_videos and is_video_path_by_extension(path):
+        return True
+    if config.enable_gifs and lower.endswith(".gif"):
+        return True
+    if config.enable_pdfs and lower.endswith(".pdf"):
+        return True
+    return False

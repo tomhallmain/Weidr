@@ -20,7 +20,7 @@ from image.image_data_extractor import image_data_extractor
 from image.frame_cache import FrameCache
 from image.image_ops import ImageOps
 from utils.config import config
-from utils.media_utils import is_video_path_by_extension
+from utils.media_utils import is_classifier_dynamic_media_path
 from utils.constants import ActionType, ClassifierActionType
 from utils.logging_setup import get_logger
 from utils.running_tasks_registry import start_thread
@@ -61,7 +61,8 @@ class ClassifierAction:
                  image_classifier_name="", image_classifier_selected_categories=[], 
                  classification_mode=ImageClassifierClassificationMode.SELECTED_CATEGORIES,
                  use_embedding=True, use_image_classifier=False, use_prompts=False, use_blacklist=False,
-                 is_active=True, use_prototype=False, prototype_directory="", 
+                 use_pseudostatic_dynamic_media=False,
+                 is_active=True, use_prototype=False, prototype_directory="",
                  negative_prototype_directory="", negative_prototype_lambda=0.5,
                  dynamic_content_sample_ratio=0.1, dynamic_content_positive_ratio=0.1,
                  _last_used_profile=None, lookahead_names=[],
@@ -88,6 +89,7 @@ class ClassifierAction:
         self.use_image_classifier = use_image_classifier
         self.use_prompts = use_prompts
         self.use_blacklist = use_blacklist
+        self.use_pseudostatic_dynamic_media = bool(use_pseudostatic_dynamic_media)
         self.use_prototype = use_prototype  # Whether to use embedding prototype
         self.prototype_directory = prototype_directory  # Directory containing sample images for positive prototype
         self.negative_prototype_directory = negative_prototype_directory  # Directory containing sample images for negative prototype
@@ -486,13 +488,6 @@ class ClassifierAction:
         )
         return is_match
 
-    def _is_dynamic_media_path(self, media_path: str) -> bool:
-        media_path_lower = media_path.lower()
-        is_video = config.enable_videos and is_video_path_by_extension(media_path)
-        is_gif = config.enable_gifs and media_path_lower.endswith(".gif")
-        is_pdf = config.enable_pdfs and media_path_lower.endswith(".pdf")
-        return is_video or is_gif or is_pdf
-
     def run_on_media_path(
         self,
         media_path,
@@ -503,9 +498,11 @@ class ClassifierAction:
     ) -> Optional[ClassifierActionType]:
         if not self.can_run:
             return None
-        if self._is_dynamic_media_path(media_path):
+        if is_classifier_dynamic_media_path(media_path):
             planned_slots, sample_iter = FrameCache.stream_frame_samples(
-                media_path, sample_ratio=self.dynamic_content_sample_ratio
+                media_path,
+                sample_ratio=self.dynamic_content_sample_ratio,
+                detect_pseudostatic=self.use_pseudostatic_dynamic_media,
             )
             if planned_slots > 0:
                 stats = FrameCache.get_dynamic_media_stats(media_path) if config.debug else None
@@ -571,7 +568,11 @@ class ClassifierAction:
                         total_items,
                         f"{duration_seconds:.2f}" if isinstance(duration_seconds, (int, float)) else "n/a",
                     )
-                if threshold_met:
+                pseudostatic_match = (
+                    self.use_pseudostatic_dynamic_media
+                    and FrameCache.is_pseudostatic_dynamic_media(media_path)
+                )
+                if threshold_met or pseudostatic_match:
                     return self.run_action(
                         media_path,
                         hide_callback,
@@ -779,8 +780,18 @@ class ClassifierAction:
             raise Exception('Classifier action name is None or empty')
         
         # Check if at least one validation type is enabled
-        if not (self.use_embedding or self.use_image_classifier or self.use_prompts or self.use_blacklist or self.use_prototype):
-            raise Exception("At least one validation type (embedding, image classifier, prompts, prompts blacklist, or prototype) must be enabled.")
+        if not (
+            self.use_embedding
+            or self.use_image_classifier
+            or self.use_prompts
+            or self.use_blacklist
+            or self.use_prototype
+            or self.use_pseudostatic_dynamic_media
+        ):
+            raise Exception(
+                "At least one validation type (embedding, image classifier, prompts, "
+                "prompts blacklist, prototype, or pseudo-static dynamic media) must be enabled."
+            )
         
         # Validate prototype settings if enabled
         if self.use_prototype:
@@ -900,6 +911,7 @@ class ClassifierAction:
             "use_image_classifier": self.use_image_classifier,
             "use_prompts": self.use_prompts,
             "use_blacklist": self.use_blacklist,
+            "use_pseudostatic_dynamic_media": self.use_pseudostatic_dynamic_media,
             "use_prototype": self.use_prototype,
             "prototype_directory": self.prototype_directory,
             "negative_prototype_directory": self.negative_prototype_directory,
@@ -932,6 +944,8 @@ class ClassifierAction:
             d['use_prompts'] = False
         if 'use_blacklist' not in d:
             d['use_blacklist'] = False
+        if 'use_pseudostatic_dynamic_media' not in d:
+            d['use_pseudostatic_dynamic_media'] = False
         if 'is_active' not in d:
             d['is_active'] = True
         if 'use_prototype' not in d:
@@ -1011,7 +1025,9 @@ class ClassifierAction:
             validation_types.append(_("prompts"))
         if self.use_prototype:
             validation_types.append(_("prototype"))
-        
+        if self.use_pseudostatic_dynamic_media:
+            validation_types.append(_("pseudo-static dynamic media"))
+
         if validation_types:
             # Build the description parts
             description_parts = []
@@ -1048,15 +1064,17 @@ class Prevalidation(ClassifierAction):
                  image_classifier_name="", image_classifier_selected_categories=[], 
                  classification_mode=ImageClassifierClassificationMode.SELECTED_CATEGORIES,
                  use_embedding=True, use_image_classifier=False, use_prompts=False, use_blacklist=False,
-                 lookahead_names=[], profile_name=None, use_prototype=False, prototype_directory="", 
+                 use_pseudostatic_dynamic_media=False,
+                 lookahead_names=[], profile_name=None, use_prototype=False, prototype_directory="",
                  negative_prototype_directory="", negative_prototype_lambda=0.5,
                  dynamic_content_sample_ratio=0.1, dynamic_content_positive_ratio=0.1,
                  _last_used_profile=None, can_run: bool = True, initialization_error: Optional[str] = None):
         # Pass all parameters including prototype settings to parent ClassifierAction
-        super().__init__(name, positives, negatives, threshold, 
-                        text_embedding_threshold, prototype_threshold, action, action_modifier, 
+        super().__init__(name, positives, negatives, threshold,
+                        text_embedding_threshold, prototype_threshold, action, action_modifier,
                         image_classifier_name, image_classifier_selected_categories, classification_mode,
                         use_embedding, use_image_classifier, use_prompts, use_blacklist,
+                        use_pseudostatic_dynamic_media,
                         is_active, use_prototype, prototype_directory,
                         negative_prototype_directory, negative_prototype_lambda,
                         dynamic_content_sample_ratio, dynamic_content_positive_ratio,
@@ -1207,6 +1225,8 @@ class Prevalidation(ClassifierAction):
             d['use_prompts'] = False
         if 'use_blacklist' not in d:
             d['use_blacklist'] = False
+        if 'use_pseudostatic_dynamic_media' not in d:
+            d['use_pseudostatic_dynamic_media'] = False
         if 'use_prototype' not in d:
             d['use_prototype'] = False
         if 'prototype_directory' not in d:

@@ -64,6 +64,11 @@ def _stats_media_type_for_sampled_video_path(media_path: str) -> str:
 # Bumps sample cache keys when extraction semantics change (invalidates in-memory entries).
 _VIDEO_SAMPLE_CACHE_REV = "pyav2_gif_dynamic"
 
+# Only emit a sampling-incomplete WARNING when this fraction of planned targets are missing.
+# Small gaps (e.g. 1-2 frames past end-of-stream) are normal and silenced; large gaps
+# (e.g. 19/20 from a buffer-deadlock video) are worth surfacing.
+_SAMPLING_WARN_MISSING_RATIO = 0.5
+
 
 def _stable_media_path_hash(media_path: str) -> str:
     """Deterministic ASCII-safe name component from absolute media path (for temp output files)."""
@@ -180,6 +185,46 @@ def _is_likely_decoder_blank(frame: np.ndarray) -> bool:
     std_m = float(stddev[0, 0])
     peak = float(np.max(gray))
     return peak < 6.0 and mean_m < 2.5 and std_m < 3.0
+
+
+def _frames_are_visually_pseudostatic(
+    frame_paths: List[str],
+    diff_threshold: float = 0.03,
+) -> bool:
+    """True if every checked pair of JPEG frame paths appears visually identical.
+
+    Checks up to three spread pairs via mean absolute pixel difference on
+    64×64 thumbnails.  Returns False as soon as any pair exceeds
+    *diff_threshold* (fraction of 255 per channel).  Requires at least two
+    actual JPEG paths.
+    """
+    jpg_paths = [p for p in frame_paths if p.lower().endswith((".jpg", ".jpeg"))]
+    if len(jpg_paths) < 2:
+        return False
+
+    n = len(jpg_paths)
+    pairs: List[Tuple[int, int]] = [(0, 1)]
+    if n > 2:
+        pairs.append((0, n - 1))
+    if n > 3:
+        pairs.append((n // 2, n - 1))
+
+    seen: set = set()
+    for i, j in pairs:
+        key = (min(i, j), max(i, j))
+        if key in seen:
+            continue
+        seen.add(key)
+        img1 = cv2.imread(jpg_paths[i])
+        img2 = cv2.imread(jpg_paths[j])
+        if img1 is None or img2 is None:
+            return False
+        t1 = cv2.resize(img1, (64, 64)).astype(np.float32)
+        t2 = cv2.resize(img2, (64, 64)).astype(np.float32)
+        if np.abs(t1 - t2).mean() / 255.0 >= diff_threshold:
+            return False
+
+    return True
 
 
 def _read_frame_via_imageio(video_path: str, frame_index: int) -> Optional[np.ndarray]:
@@ -698,7 +743,7 @@ class FrameCache:
 
     @classmethod
     def stream_frame_samples(
-        cls, media_path: str, sample_ratio: float = 0.1
+        cls, media_path: str, sample_ratio: float = 0.1, detect_pseudostatic: bool = False
     ) -> Tuple[int, Iterator[str]]:
         """
         Lazily produce sampled frame paths for video/GIF/PDF (or a single still path).
@@ -736,6 +781,15 @@ class FrameCache:
 
         if cache_key in cls.sampled_cache:
             cached = cls.sampled_cache[cache_key]
+            if detect_pseudostatic:
+                stats = cls.media_stats_cache.get(media_path) or {}
+                if "frames_are_pseudostatic" not in stats:
+                    real = [p for p in cached if p.lower().endswith((".jpg", ".jpeg"))]
+                    if len(real) >= 2:
+                        is_pseudo = _frames_are_visually_pseudostatic(real)
+                        stats = dict(stats)
+                        stats["frames_are_pseudostatic"] = is_pseudo
+                        cls.media_stats_cache[media_path] = stats
             return len(cached), iter(cached)
 
         if is_video or is_gif:
@@ -760,6 +814,7 @@ class FrameCache:
                 max_duration_seconds=effective_duration,
                 suppress_cap_log=size_cap_logged,
                 cache_key=cache_key,
+                detect_pseudostatic=detect_pseudostatic,
             )
         return cls._stream_pdf_sample_pages(
             media_path,
@@ -804,6 +859,7 @@ class FrameCache:
         max_duration_seconds: float,
         suppress_cap_log: bool,
         cache_key: str,
+        detect_pseudostatic: bool = False,
     ) -> Tuple[int, Iterator[str]]:
         if has_imported_pyav:
             try:
@@ -815,6 +871,7 @@ class FrameCache:
                     max_duration_seconds=max_duration_seconds,
                     suppress_cap_log=suppress_cap_log,
                     cache_key=cache_key,
+                    detect_pseudostatic=detect_pseudostatic,
                 )
             except Exception as e:
                 logger.warning(
@@ -830,6 +887,7 @@ class FrameCache:
             max_duration_seconds=max_duration_seconds,
             suppress_cap_log=suppress_cap_log,
             cache_key=cache_key,
+            detect_pseudostatic=detect_pseudostatic,
         )
 
     @classmethod
@@ -842,6 +900,7 @@ class FrameCache:
         max_duration_seconds: float,
         suppress_cap_log: bool,
         cache_key: str,
+        detect_pseudostatic: bool = False,
     ) -> Tuple[int, Iterator[str]]:
         assert av is not None
         total_frames, fps, duration_s = _pyav_video_stats(video_path)
@@ -889,18 +948,49 @@ class FrameCache:
         def gen() -> Iterator[str]:
             accumulated: List[str] = []
             completed = False
+            first_real_frame: Optional[str] = None
+            inline_check_done = False
+            frames_pseudostatic: Optional[bool] = None
             try:
-                yield from cls._iter_pyav_video_sample_paths(
+                for path in cls._iter_pyav_video_sample_paths(
                     video_path,
                     frame_indices,
                     media_hash,
                     accumulated,
-                )
+                ):
+                    yield path
+                    # Inline short-circuit: compare frames 0 and 1 as soon as available.
+                    # If they differ we know immediately the video is not pseudostatic.
+                    # Only runs when the caller opted in via detect_pseudostatic.
+                    if detect_pseudostatic and not inline_check_done and path.lower().endswith((".jpg", ".jpeg")):
+                        if first_real_frame is None:
+                            first_real_frame = path
+                        else:
+                            inline_check_done = True
+                            if not _frames_are_visually_pseudostatic([first_real_frame, path]):
+                                frames_pseudostatic = False
                 if len(accumulated) == 0:
                     accumulated.append(video_path)
                     yield video_path
                 completed = True
             finally:
+                # Runs on natural exhaustion AND on early close() — ensures pseudostatic
+                # status is stored even when the consumer exits before the last frame.
+                if detect_pseudostatic:
+                    if frames_pseudostatic is None:
+                        if inline_check_done:
+                            # First two frames were identical; confirm with a spread check.
+                            real = [p for p in accumulated if p.lower().endswith((".jpg", ".jpeg"))]
+                            if len(real) >= 2:
+                                frames_pseudostatic = _frames_are_visually_pseudostatic(real)
+                        elif first_real_frame is not None:
+                            # Only one real frame was ever decoded (e.g. buffer-deadlock
+                            # videos that yield exactly 1 frame then die) — pseudostatic.
+                            frames_pseudostatic = True
+                    if frames_pseudostatic is not None:
+                        stats = dict(cls.media_stats_cache.get(video_path) or {})
+                        stats["frames_are_pseudostatic"] = frames_pseudostatic
+                        cls.media_stats_cache[video_path] = stats
                 if completed:
                     cls.sampled_cache[cache_key] = accumulated
 
@@ -1003,7 +1093,7 @@ class FrameCache:
         finally:
             container.close()
 
-        if want:
+        if want and len(want) / len(targets) >= _SAMPLING_WARN_MISSING_RATIO:
             logger.warning(
                 "Video sampling incomplete for %s — missing %s/%s indices (decoder ended or scan cap)",
                 video_path,
@@ -1021,6 +1111,7 @@ class FrameCache:
         max_duration_seconds: float,
         suppress_cap_log: bool,
         cache_key: str,
+        detect_pseudostatic: bool = False,
     ) -> Tuple[int, Iterator[str]]:
         cap = _open_video_capture(video_path)
         try:
@@ -1075,19 +1166,42 @@ class FrameCache:
         def gen() -> Iterator[str]:
             accumulated: List[str] = []
             completed = False
+            first_real_frame: Optional[str] = None
+            inline_check_done = False
+            frames_pseudostatic: Optional[bool] = None
             try:
-                yield from cls._iter_opencv_video_sample_paths(
+                for path in cls._iter_opencv_video_sample_paths(
                     cap,
                     video_path,
                     frame_indices,
                     media_hash,
                     accumulated,
-                )
+                ):
+                    yield path
+                    if detect_pseudostatic and not inline_check_done and path.lower().endswith((".jpg", ".jpeg")):
+                        if first_real_frame is None:
+                            first_real_frame = path
+                        else:
+                            inline_check_done = True
+                            if not _frames_are_visually_pseudostatic([first_real_frame, path]):
+                                frames_pseudostatic = False
                 if len(accumulated) == 0:
                     accumulated.append(video_path)
                     yield video_path
                 completed = True
             finally:
+                if detect_pseudostatic:
+                    if frames_pseudostatic is None:
+                        if inline_check_done:
+                            real = [p for p in accumulated if p.lower().endswith((".jpg", ".jpeg"))]
+                            if len(real) >= 2:
+                                frames_pseudostatic = _frames_are_visually_pseudostatic(real)
+                        elif first_real_frame is not None:
+                            frames_pseudostatic = True
+                    if frames_pseudostatic is not None:
+                        stats = dict(cls.media_stats_cache.get(video_path) or {})
+                        stats["frames_are_pseudostatic"] = frames_pseudostatic
+                        cls.media_stats_cache[video_path] = stats
                 cap.release()
                 if completed:
                     cls.sampled_cache[cache_key] = accumulated
@@ -1178,7 +1292,7 @@ class FrameCache:
             want.discard(idx)
             idx += 1 + extra
 
-        if want:
+        if want and len(want) / len(targets) >= _SAMPLING_WARN_MISSING_RATIO:
             logger.warning(
                 "Video sampling incomplete for %s — missing %s/%s indices (decoder ended or scan cap)",
                 video_path,
@@ -1206,6 +1320,30 @@ class FrameCache:
             "duration_seconds": None,
             "fps": None,
         }
+
+    @classmethod
+    def is_pseudostatic_dynamic_media(cls, media_path: str) -> bool:
+        """True if the media was determined to be pseudo-static after stream_frame_samples ran.
+
+        Returns True when:
+        - total_items (frames or pages) is known and <= 1, OR
+        - all sampled frames were visually identical (content comparison during streaming)
+
+        Requires stream_frame_samples to have fully consumed its iterator for media_path.
+        """
+        stats = cls.media_stats_cache.get(media_path)
+        if not stats:
+            return False
+
+        total = stats.get("total_items")
+        if total is not None:
+            try:
+                if int(total) <= 1:
+                    return True
+            except (TypeError, ValueError):
+                pass
+
+        return bool(stats.get("frames_are_pseudostatic", False))
 
     @classmethod
     def _stream_pdf_sample_pages(

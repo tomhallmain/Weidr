@@ -185,6 +185,14 @@ class ClassifierActionModifyWindow(SmartDialog):
         grid.addWidget(self._use_prototype_cb, row, 1)
         row += 1
 
+        self._use_pseudostatic_dynamic_cb = QCheckBox(
+            _("Match pseudo-static dynamic media (video/GIF/PDF with no meaningful variation)")
+        )
+        self._use_pseudostatic_dynamic_cb.setChecked(ca.use_pseudostatic_dynamic_media)
+        self._use_pseudostatic_dynamic_cb.stateChanged.connect(self._update_ui_for_validation_types)
+        grid.addWidget(self._use_pseudostatic_dynamic_cb, row, 1)
+        row += 1
+
         # -- Text Embedding Threshold -------------------------------------
         self._text_thresh_lbl = self._lbl(_("Text Embedding Threshold"))
         grid.addWidget(self._text_thresh_lbl, row, 0, Qt.AlignLeft)
@@ -484,6 +492,7 @@ class ClassifierActionModifyWindow(SmartDialog):
         ca.use_image_classifier = self._use_classifier_cb.isChecked()
         ca.use_prompts = self._use_prompts_cb.isChecked()
         ca.use_prototype = self._use_prototype_cb.isChecked()
+        ca.use_pseudostatic_dynamic_media = self._use_pseudostatic_dynamic_cb.isChecked()
 
         ca.action = ClassifierActionType.get_action(
             self._action_combo.currentText()

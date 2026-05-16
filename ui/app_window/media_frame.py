@@ -318,8 +318,11 @@ class MediaFrame(QFrame):
             self.vlc_media_player = self.vlc_instance.media_player_new()
             self.vlc_media_player.video_set_mouse_input(False)
             self.vlc_media_player.video_set_key_input(False)
-            self._vlc_eq = vlc.AudioEqualizer()
-            self.vlc_media_player.set_equalizer(self._vlc_eq)
+            if config.media_volume_use_eq:
+                self._vlc_eq = vlc.AudioEqualizer()
+                self.vlc_media_player.set_equalizer(self._vlc_eq)
+            else:
+                self._vlc_eq = None
             self.vlc_media = None
         else:
             self.vlc_instance = None
@@ -1239,26 +1242,48 @@ class MediaFrame(QFrame):
 
     def set_volume(self, volume: int):
         bounded = max(0, min(int(volume), 100))
-        if bounded > 0 and self._last_known_muted:
-            self._last_known_muted = False
-        self._last_known_volume = bounded
-        self._apply_volume_eq()
+        if config.media_volume_use_eq:
+            if bounded > 0 and self._last_known_muted:
+                self._last_known_muted = False
+            self._last_known_volume = bounded
+            self._apply_volume_eq()
+        else:
+            if _VLC_AVAILABLE and self.vlc_media_player:
+                self.vlc_media_player.audio_set_volume(bounded)
+                if bounded > 0 and self.vlc_media_player.audio_get_mute():
+                    self.vlc_media_player.audio_set_mute(False)
+            self._last_known_volume = bounded
+            self._last_known_muted = self.is_muted()
         self._sync_overlay_volume_state(force=True)
 
     def get_volume(self) -> int:
+        if not config.media_volume_use_eq and _VLC_AVAILABLE and self.vlc_media_player:
+            volume = int(self.vlc_media_player.audio_get_volume() or 0)
+            if volume >= 0:
+                return volume
         return self._last_known_volume
 
     def set_mute(self, muted: bool):
         self._last_known_muted = bool(muted)
-        self._apply_volume_eq()
+        if config.media_volume_use_eq:
+            self._apply_volume_eq()
+        elif _VLC_AVAILABLE and self.vlc_media_player:
+            self.vlc_media_player.audio_set_mute(bool(muted))
         self._sync_overlay_volume_state(force=True)
 
     def toggle_mute(self):
-        self._last_known_muted = not self._last_known_muted
-        self._apply_volume_eq()
+        if config.media_volume_use_eq:
+            self._last_known_muted = not self._last_known_muted
+            self._apply_volume_eq()
+        elif _VLC_AVAILABLE and self.vlc_media_player:
+            self.vlc_media_player.audio_toggle_mute()
+        else:
+            self._last_known_muted = not self._last_known_muted
         self._sync_overlay_volume_state(force=True)
 
     def is_muted(self) -> bool:
+        if not config.media_volume_use_eq and _VLC_AVAILABLE and self.vlc_media_player:
+            return bool(self.vlc_media_player.audio_get_mute())
         return self._last_known_muted
 
     def clear(self):
@@ -1431,9 +1456,22 @@ class MediaFrame(QFrame):
             self._update_gif_overlay_progress()
 
     def _sync_overlay_volume_state(self, force: bool = False):
-        """Push per-instance volume state to the overlay controls."""
-        if force:
-            self._controls_overlay.set_volume_state(self._last_known_volume, self._last_known_muted)
+        """Push volume state to the overlay controls.
+
+        In EQ mode the cached _last_known_* values are authoritative, so they
+        are pushed directly.  In global-volume mode VLC state is polled first
+        so the overlay stays in sync with any changes made outside this class.
+        """
+        if config.media_volume_use_eq:
+            if force:
+                self._controls_overlay.set_volume_state(self._last_known_volume, self._last_known_muted)
+        else:
+            volume = self.get_volume()
+            muted = self.is_muted()
+            if force or volume != self._last_known_volume or muted != self._last_known_muted:
+                self._last_known_volume = volume
+                self._last_known_muted = muted
+                self._controls_overlay.set_volume_state(volume, muted)
 
     def get_media_frame_handle(self):
         """Return window id for VLC embedding (muse/playback.py)."""

@@ -137,6 +137,9 @@ class Config:
         self.gimp_gegl_temp_dir = None  # Custom temp directory for GIMP operations
         self.gimp_gegl_auto_cleanup = True  # Automatically clean up temporary files
         self.image_edit_configuration = ImageEditConfiguration()
+        # True = per-instance EQ-based volume (current behaviour).
+        # False = legacy global audio_set_volume (no EQ, shared across instances).
+        self.media_volume_use_eq = True
 
         dict_set = False
         self.config_path = Config.resolve_config_path()
@@ -212,7 +215,8 @@ class Config:
                             "enable_prevalidations",
                             "show_negative_prompt",
                             "large_image_enable_hq_idle_downscale",
-                            "large_image_enable_full_res_promotion")
+                            "large_image_enable_full_res_promotion",
+                            "media_volume_use_eq")
             self.set_values(int,
                             "max_search_results",
                             "file_actions_history_max",

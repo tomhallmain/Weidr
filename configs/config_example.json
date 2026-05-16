@@ -64,6 +64,7 @@
   "video_types": [
     ".mp4", ".mkv", ".webm", ".avi", ".mov", ".wmv", ".flv", ".mpeg", ".m4a"
   ],
+  "media_volume_use_eq": true,
   "enable_videos": true,
   "enable_gifs": true,
   "enable_pdfs": true,

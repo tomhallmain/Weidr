@@ -57,6 +57,8 @@ Run from the project root with `pytest` (requires `pytest` and `pytest-qt` from 
 
 `image_types` defines the allowed file extensions for gathering image files, while `video_types` defines the allowed file extensions for gathering video files - there are only valid if the `enable_videos` setting is enabled.
 
+`media_volume_use_eq` controls how per-instance video volume is applied. When `true` (default), an audio equalizer preamp is used to give each player its own independent volume level. When `false`, the legacy `audio_set_volume` call is used instead, which is global across all players but has no equalizer drawbacks (preamp floor, slight transition delay).
+
 `file_check_interval_seconds` defines the interval between auto-updates to identify recent file changes.
 
 `slideshow_interval_seconds` defines the interval between slideshow transitions.

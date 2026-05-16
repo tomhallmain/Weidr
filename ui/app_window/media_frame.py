@@ -318,10 +318,13 @@ class MediaFrame(QFrame):
             self.vlc_media_player = self.vlc_instance.media_player_new()
             self.vlc_media_player.video_set_mouse_input(False)
             self.vlc_media_player.video_set_key_input(False)
+            self._vlc_eq = vlc.AudioEqualizer()
+            self.vlc_media_player.set_equalizer(self._vlc_eq)
             self.vlc_media = None
         else:
             self.vlc_instance = None
             self.vlc_media_player = None
+            self._vlc_eq = None
             self.vlc_media = None
         self._hung_stop_thread: threading.Thread | None = None
 
@@ -985,6 +988,8 @@ class MediaFrame(QFrame):
             new_player = self.vlc_instance.media_player_new()
             new_player.video_set_mouse_input(False)
             new_player.video_set_key_input(False)
+            if self._vlc_eq is not None:
+                new_player.set_equalizer(self._vlc_eq)
             self.vlc_media_player = new_player
         except Exception:
             self.vlc_media_player = None
@@ -1029,6 +1034,12 @@ class MediaFrame(QFrame):
                 except Exception:
                     pass
             self.vlc_instance = None
+        if _VLC_AVAILABLE and self._vlc_eq is not None:
+            try:
+                self._vlc_eq.release()
+            except Exception:
+                pass
+            self._vlc_eq = None
 
     def video_pause(self):
         if self._gif_movie is not None and self._gif_is_animated:
@@ -1198,39 +1209,56 @@ class MediaFrame(QFrame):
         bounded = max(0, min(int(position_ms), int(duration_ms)))
         self.vlc_media_player.set_time(bounded)
 
+    def _apply_volume_eq(self) -> None:
+        """Apply per-instance volume/mute via equalizer preamp + audio_set_mute.
+
+        audio_set_volume is process-global on WASAPI/DirectSound; the equalizer
+        runs inside each player's own DSP chain, making it the only truly
+        per-player volume control available in-process.
+
+        Volume (1-100) maps to preamp 0 dB → -20 dB using a linear-in-dB taper.
+        Mute is handled solely by audio_set_mute; the equalizer always reflects
+        the current volume level.
+
+        Known limitations:
+        - The equalizer preamp floor is -20 dB (≈10% amplitude), so the slider
+          cannot reduce volume to true silence on its own; vol=0 is still faintly
+          audible. Use the mute control for guaranteed silence.
+        - Applying equalizer changes via set_equalizer() has a slight processing
+          delay inside VLC's DSP chain, causing volume transitions to feel
+          marginally slower than a direct audio_set_volume call would.
+        """
+        if not _VLC_AVAILABLE or self._vlc_eq is None or self.vlc_media_player is None:
+            return
+        vol = self._last_known_volume
+        # Linear-in-dB taper: each 1% step = 0.2 dB, giving uniform perceived loudness change.
+        preamp = (vol / 100.0) * 20.0 - 20.0
+        self._vlc_eq.set_preamp(preamp)
+        self.vlc_media_player.set_equalizer(self._vlc_eq)
+        self.vlc_media_player.audio_set_mute(self._last_known_muted)
+
     def set_volume(self, volume: int):
         bounded = max(0, min(int(volume), 100))
-        if _VLC_AVAILABLE and self.vlc_media_player:
-            self.vlc_media_player.audio_set_volume(bounded)
-            if bounded > 0 and self.vlc_media_player.audio_get_mute():
-                self.vlc_media_player.audio_set_mute(False)
+        if bounded > 0 and self._last_known_muted:
+            self._last_known_muted = False
         self._last_known_volume = bounded
-        self._last_known_muted = self.is_muted()
+        self._apply_volume_eq()
         self._sync_overlay_volume_state(force=True)
 
     def get_volume(self) -> int:
-        if _VLC_AVAILABLE and self.vlc_media_player:
-            volume = int(self.vlc_media_player.audio_get_volume() or 0)
-            if volume >= 0:
-                return volume
         return self._last_known_volume
 
     def set_mute(self, muted: bool):
-        if _VLC_AVAILABLE and self.vlc_media_player:
-            self.vlc_media_player.audio_set_mute(bool(muted))
         self._last_known_muted = bool(muted)
+        self._apply_volume_eq()
         self._sync_overlay_volume_state(force=True)
 
     def toggle_mute(self):
-        if _VLC_AVAILABLE and self.vlc_media_player:
-            self.vlc_media_player.audio_toggle_mute()
-        else:
-            self._last_known_muted = not self._last_known_muted
+        self._last_known_muted = not self._last_known_muted
+        self._apply_volume_eq()
         self._sync_overlay_volume_state(force=True)
 
     def is_muted(self) -> bool:
-        if _VLC_AVAILABLE and self.vlc_media_player:
-            return bool(self.vlc_media_player.audio_get_mute())
         return self._last_known_muted
 
     def clear(self):
@@ -1403,13 +1431,9 @@ class MediaFrame(QFrame):
             self._update_gif_overlay_progress()
 
     def _sync_overlay_volume_state(self, force: bool = False):
-        """Keep overlay mute/volume controls in sync with VLC state."""
-        volume = self.get_volume()
-        muted = self.is_muted()
-        if force or volume != self._last_known_volume or muted != self._last_known_muted:
-            self._last_known_volume = volume
-            self._last_known_muted = muted
-            self._controls_overlay.set_volume_state(volume, muted)
+        """Push per-instance volume state to the overlay controls."""
+        if force:
+            self._controls_overlay.set_volume_state(self._last_known_volume, self._last_known_muted)
 
     def get_media_frame_handle(self):
         """Return window id for VLC embedding (muse/playback.py)."""

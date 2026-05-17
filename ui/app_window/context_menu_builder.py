@@ -225,6 +225,14 @@ class ContextMenuBuilder:
         menu.addSeparator()
 
         menu.addAction(
+            _("Randomize filenames (dry run)"),
+            lambda: app.file_ops_ctrl.run_randomize_filenames_dry_run(),
+        )
+        menu.addAction(
+            _("Randomize filenames (execute)"),
+            lambda: app.file_ops_ctrl.run_randomize_filenames_execute(),
+        )
+        menu.addAction(
             _("Run Refacdir"),
             lambda: app.file_ops_ctrl.run_refacdir(),
         )

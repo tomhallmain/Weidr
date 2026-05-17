@@ -4,7 +4,7 @@ FileOpsController -- delete, hide, copy, and file-manipulation operations.
 Extracted from: delete_image, _handle_delete, delete_current_base_dir,
 hide_current_media, clear_hidden_images, replace_current_image_with_search_image,
 _handle_remove_files_from_groups, open_media_location, open_image_in_gimp,
-copy_media_path, copy_media_basename, run_refacdir, check_files (periodic).
+copy_media_path, copy_media_basename, run_refacdir, randomize filenames, check_files (periodic).
 
 Also owns the periodic file-check timer, which monitors the file system
 for changes and refreshes the file list when needed.
@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import subprocess
 import sys
 import importlib
 from typing import TYPE_CHECKING, Optional
@@ -25,6 +26,7 @@ from ui.auth.password_utils import require_password
 from utils.config import config
 from utils.constants import ActionType, Mode, ProtectedActions, Sort, SortBy
 from utils.logging_setup import get_logger
+from utils.running_tasks_registry import start_thread
 from utils.translations import I18N
 from utils.utils import Utils
 
@@ -36,6 +38,8 @@ if TYPE_CHECKING:
 
 _ = I18N._
 logger = get_logger("file_ops_controller")
+
+_RANDOMIZE_FILENAMES_LOG_BASENAME = "randomize_filenames.log"
 
 
 class FileOpsController:
@@ -928,3 +932,116 @@ class FileOpsController:
         refacdir_client = RefacDirClient()
         refacdir_client.run(self._app.img_path)
         self._app.notification_ctrl.toast(_("Running refacdir"))
+
+    @staticmethod
+    def _randomize_filenames_script_path() -> str:
+        repo_root = os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        )
+        return os.path.join(repo_root, "scripts", "randomize_filenames.py")
+
+    def run_randomize_filenames_dry_run(self, event=None) -> None:
+        """Spawn randomize_filenames.py on the base directory (dry run only)."""
+        self._run_randomize_filenames(execute=False)
+
+    def run_randomize_filenames_execute(self, event=None) -> None:
+        """Spawn randomize_filenames.py on the base directory and apply renames."""
+        self._run_randomize_filenames(execute=True)
+
+    def _run_randomize_filenames(self, *, execute: bool) -> None:
+        base_dir = self._app.get_base_dir()
+        if not base_dir or not os.path.isdir(base_dir):
+            self._app.app_actions.warn(_("No valid base directory for randomize filenames"))
+            return
+
+        script_path = self._randomize_filenames_script_path()
+        if not os.path.isfile(script_path):
+            self._app.app_actions.warn(
+                _("Randomize filenames script not found:\n{0}").format(script_path)
+            )
+            return
+
+        log_path = os.path.join(base_dir, _RANDOMIZE_FILENAMES_LOG_BASENAME)
+        short_dir = Utils.get_relative_dirpath(base_dir, levels=2) or base_dir
+
+        if execute:
+            if not self._app.app_actions.alert(
+                _("Confirm Randomize Filenames"),
+                _(
+                    "Apply filename randomization to all media under the base directory?\n\n"
+                    "{0}\n\n"
+                    "A mapping cache may be written. Some files may be moved to a review "
+                    "folder per cache rules.\n\n"
+                    "You will be asked to confirm again before any files are changed."
+                ).format(base_dir),
+                kind="askokcancel",
+                master=self._app,
+            ):
+                return
+            if not self._app.app_actions.alert(
+                _("Confirm Randomize Filenames — Execute"),
+                _(
+                    "This will rename media files on disk under:\n\n{0}\n\n"
+                    "Output log:\n{1}\n\n"
+                    "This cannot be undone from Weidr. Proceed?"
+                ).format(base_dir, log_path),
+                kind="askokcancel",
+                severity="high",
+                master=self._app,
+            ):
+                return
+        elif not self._app.app_actions.alert(
+            _("Confirm Randomize Filenames (Dry Run)"),
+            _(
+                "Run a dry run (no renames) for all media under the base directory?\n\n"
+                "{0}\n\n"
+                "Log file:\n{1}"
+            ).format(base_dir, log_path),
+            kind="askokcancel",
+            master=self._app,
+        ):
+            return
+
+        cmd = [
+            sys.executable,
+            script_path,
+            base_dir,
+            "--verbose",
+            "--log-file",
+            log_path,
+        ]
+        if execute:
+            cmd.append("--execute")
+
+        def spawn_worker() -> None:
+            creationflags = 0
+            if sys.platform == "win32":
+                creationflags = subprocess.CREATE_NO_WINDOW
+            try:
+                with open(log_path, "a", encoding="utf-8") as _:
+                    pass
+                subprocess.Popen(
+                    cmd,
+                    cwd=base_dir,
+                    stdin=subprocess.DEVNULL,
+                    creationflags=creationflags,
+                )
+            except OSError as e:
+                logger.error("Failed to start randomize_filenames: %s", e)
+                self._app.notification_ctrl.handle_error(
+                    _("Failed to start randomize filenames: {0}").format(e)
+                )
+                return
+
+        start_thread(spawn_worker, use_asyncio=False)
+
+        if execute:
+            self._app.notification_ctrl.toast(
+                _("Randomizing filenames under {0} — see {1}").format(short_dir, log_path)
+            )
+        else:
+            self._app.notification_ctrl.toast(
+                _("Randomize filenames dry run started for {0} — see {1}").format(
+                    short_dir, log_path
+                )
+            )

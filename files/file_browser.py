@@ -165,9 +165,6 @@ class FileBrowser:
 
     def set_sort(self, sort: Sort) -> List[str]:
         self.sort = sort
-        if self.sort == SortBy.RELATED_IMAGE:
-            for f, sf in self._files_cache.items():
-                sf.set_related_image_path()
         return self.get_files()
 
     def current_file(self) -> Optional[str]:

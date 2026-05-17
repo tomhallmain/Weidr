@@ -646,11 +646,6 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
 
         self.cache_ctrl.store_info_cache()
 
-        if self.view_mode == ViewMode.MASONRY:
-            # Show media_frame for spinner/progress during load; view_mode stays
-            # MASONRY so _refresh_masonry_if_active() repopulates when done.
-            self._media_stack.setCurrentIndex(0)
-
         dir_from_sidebar_entry = False
         if base_dir_from_dir_window is not None:
             new_dir = base_dir_from_dir_window
@@ -686,8 +681,10 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         if self._check_large_directory_before_load(new_dir):
             return  # user cancelled
 
-        # Spinner from here through file scan: avoid showing it during early returns,
-        # directory picker, or the large-directory confirmation dialog above.
+        # From here: no more early returns. Hide masonry (if active) and start the
+        # spinner together — both are suppressed during dialogs and cancelled paths.
+        if self.view_mode == ViewMode.MASONRY:
+            self._media_stack.setCurrentIndex(0)
         self._start_base_dir_load_spinner()
         try:
             # Restore per-directory settings from cache (read before compare/directory work)

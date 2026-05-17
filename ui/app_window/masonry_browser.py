@@ -179,10 +179,11 @@ class MasonryTile(QFrame):
         self._img_label.setStyleSheet(f"background-color: {AppStyle.BG_INPUT};")
         inner.addWidget(self._img_label)
 
-        # Filename
+        # Filename — allow more characters for wider tiles (~6 px/char at 10 px font)
         name = os.path.basename(filepath)
-        if len(name) > 30:
-            name = name[:27] + "…"
+        max_chars = max(20, (tile_width - 12) // 6)
+        if len(name) > max_chars:
+            name = name[:max_chars - 1] + "…"
         self._name_label = QLabel(name)
         self._name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._name_label.setStyleSheet(f"color: {AppStyle.FG_COLOR}; font-size: 10px;")
@@ -208,9 +209,8 @@ class MasonryTile(QFrame):
             return
         pixmap = QPixmap.fromImage(qimage)
         w = self._tile_width - 6
-        # Scale down if wider than the tile (may already be scaled by reader)
-        if pixmap.width() > w:
-            pixmap = pixmap.scaledToWidth(w, Qt.TransformationMode.SmoothTransformation)
+        # Always scale to tile width — scales both down and up to fill the cell
+        pixmap = pixmap.scaledToWidth(w, Qt.TransformationMode.SmoothTransformation)
         self._img_label.setPixmap(pixmap)
         # Adjust label height to match the actual thumbnail aspect ratio
         h = max(30, min(pixmap.height(), THUMB_MAX_DIM * 2))

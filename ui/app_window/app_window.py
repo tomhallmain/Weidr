@@ -1169,11 +1169,13 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             self.view_mode = ViewMode.MASONRY
             if hasattr(self.media_frame, "pause_video_if_playing"):
                 self.media_frame.pause_video_if_playing()
-            self.masonry_browser.populate(
-                self.file_browser.get_files(),
-                current_file=self.img_path,
-            )
             self._media_stack.setCurrentIndex(1)
+            # Defer populate by one event-loop tick so the viewport is laid out
+            # and viewport().width() returns the correct value before tile widths
+            # are computed.
+            files = self.file_browser.get_files()
+            current = self.img_path
+            QTimer.singleShot(0, lambda: self.masonry_browser.populate(files, current_file=current))
             self.notification_ctrl.toast(_("Masonry view"))
         else:
             self.view_mode = ViewMode.FULL

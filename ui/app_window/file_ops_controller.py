@@ -940,15 +940,8 @@ class FileOpsController:
         )
         return os.path.join(repo_root, "scripts", "randomize_filenames.py")
 
-    def run_randomize_filenames_dry_run(self, event=None) -> None:
-        """Spawn randomize_filenames.py on the base directory (dry run only)."""
-        self._run_randomize_filenames(execute=False)
-
-    def run_randomize_filenames_execute(self, event=None) -> None:
-        """Spawn randomize_filenames.py on the base directory and apply renames."""
-        self._run_randomize_filenames(execute=True)
-
-    def _run_randomize_filenames(self, *, execute: bool) -> None:
+    def run_randomize_filenames(self, event=None) -> None:
+        """Spawn randomize_filenames.py on the base directory (dry run or execute)."""
         base_dir = self._app.get_base_dir()
         if not base_dir or not os.path.isdir(base_dir):
             self._app.app_actions.warn(_("No valid base directory for randomize filenames"))
@@ -964,41 +957,38 @@ class FileOpsController:
         log_path = os.path.join(base_dir, _RANDOMIZE_FILENAMES_LOG_BASENAME)
         short_dir = Utils.get_relative_dirpath(base_dir, levels=2) or base_dir
 
-        if execute:
-            if not self._app.app_actions.alert(
-                _("Confirm Randomize Filenames"),
-                _(
-                    "Apply filename randomization to all media under the base directory?\n\n"
-                    "{0}\n\n"
-                    "A mapping cache may be written. Some files may be moved to a review "
-                    "folder per cache rules.\n\n"
-                    "You will be asked to confirm again before any files are changed."
-                ).format(base_dir),
-                kind="askokcancel",
-                master=self._app,
-            ):
-                return
-            if not self._app.app_actions.alert(
-                _("Confirm Randomize Filenames — Execute"),
-                _(
-                    "This will rename media files on disk under:\n\n{0}\n\n"
-                    "Output log:\n{1}\n\n"
-                    "This cannot be undone from Weidr. Proceed?"
-                ).format(base_dir, log_path),
-                kind="askokcancel",
-                severity="high",
-                master=self._app,
-            ):
-                return
-        elif not self._app.app_actions.alert(
-            _("Confirm Randomize Filenames (Dry Run)"),
+        btn_dry_run = _("Dry run")
+        btn_execute = _("Execute")
+        choice = self._app.notification_ctrl.alert(
+            _("Randomize Filenames"),
             _(
-                "Run a dry run (no renames) for all media under the base directory?\n\n"
+                "Randomize media filenames under the entire base directory tree.\n\n"
                 "{0}\n\n"
-                "Log file:\n{1}"
+                "Log file:\n{1}\n\n"
+                "Dry run — plan renames only; no files are changed.\n"
+                "Execute — apply renames and update the mapping cache (irreversible)."
             ).format(base_dir, log_path),
             kind="askokcancel",
-            master=self._app,
+            severity="high",
+            buttons=[
+                (btn_dry_run, "action"),
+                (btn_execute, "destructive"),
+                (_("Cancel"), "reject"),
+            ],
+        )
+        if not choice:
+            return
+        execute = choice == btn_execute
+
+        if execute and not self._app.notification_ctrl.alert(
+            _("Confirm Randomize Filenames — Execute"),
+            _(
+                "This will rename media files on disk under:\n\n{0}\n\n"
+                "Output log:\n{1}\n\n"
+                "This cannot be undone from Weidr. Proceed?"
+            ).format(base_dir, log_path),
+            kind="askokcancel",
+            severity="high",
         ):
             return
 

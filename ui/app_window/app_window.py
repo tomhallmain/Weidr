@@ -646,6 +646,11 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
 
         self.cache_ctrl.store_info_cache()
 
+        if self.view_mode == ViewMode.MASONRY:
+            # Show media_frame for spinner/progress during load; view_mode stays
+            # MASONRY so _refresh_masonry_if_active() repopulates when done.
+            self._media_stack.setCurrentIndex(0)
+
         dir_from_sidebar_entry = False
         if base_dir_from_dir_window is not None:
             new_dir = base_dir_from_dir_window
@@ -776,6 +781,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
                 else:
                     self.media_navigator.show_next_media()
                 self.notification_ctrl.set_label_state()
+                self._refresh_masonry_if_active()
             self._sync_media_empty_directory_message()
 
         self.setWindowTitle(self.get_title_from_base_dir(overwrite=True))
@@ -819,6 +825,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             if self.mode == Mode.BROWSE and self.img_path is None and self.file_browser.has_files():
                 self.media_navigator.show_next_media()
             self._sync_media_empty_directory_message()
+            self._refresh_masonry_if_active()
             return
         if self.mode == Mode.BROWSE and self.img_path is None and self.file_browser.has_files():
             # Show the first available item as soon as batches arrive.
@@ -1182,6 +1189,21 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             self._media_stack.setCurrentIndex(0)
             self.media_frame.setFocus()
             self.notification_ctrl.toast(_("Single view"))
+
+    def _refresh_masonry_if_active(self) -> None:
+        """Repopulate the masonry grid if view_mode is MASONRY and reveal it.
+
+        Called after a directory load completes (both incremental and non-incremental
+        paths) so the grid reflects the new file list without forcing the user to
+        re-toggle. The masonry widget retains its viewport size while hidden by the
+        QStackedWidget, so populate() can run synchronously before revealing.
+        """
+        if self.view_mode != ViewMode.MASONRY:
+            return
+        self.masonry_browser.populate(
+            self.file_browser.get_files(), current_file=self.img_path
+        )
+        QTimer.singleShot(0, lambda: self._media_stack.setCurrentIndex(1))
 
     def _on_masonry_tile_activated(self, filepath: str) -> None:
         """Handle a tile click: navigate to the file and return to single view."""

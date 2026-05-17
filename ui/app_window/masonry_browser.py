@@ -53,6 +53,21 @@ THUMB_MAX_DIM = 220
 DEFAULT_COLUMNS = 4
 # Spacing between tiles (px).
 TILE_MARGIN = 6
+# Max concurrent thumbnail decode threads. Kept small to avoid saturating the
+# global pool and to limit concurrent I/O on slow/external drives.
+_THUMB_MAX_THREADS = 4
+
+# Dedicated thread pool for thumbnail decoding — isolated from globalInstance()
+# so we can call clear() on repopulate without affecting other app components.
+_thumb_pool: Optional[QThreadPool] = None
+
+
+def _get_thumb_pool() -> QThreadPool:
+    global _thumb_pool
+    if _thumb_pool is None:
+        _thumb_pool = QThreadPool()
+        _thumb_pool.setMaxThreadCount(_THUMB_MAX_THREADS)
+    return _thumb_pool
 
 
 # ---------------------------------------------------------------------------
@@ -190,10 +205,10 @@ class MasonryTile(QFrame):
         self._name_label.setWordWrap(False)
         inner.addWidget(self._name_label)
 
-        # Kick off async decode
+        # Kick off async decode on the dedicated masonry pool
         loader = _ThumbnailLoader(filepath, THUMB_MAX_DIM)
         loader.signals.loaded.connect(self._on_thumbnail_loaded)
-        QThreadPool.globalInstance().start(loader)
+        _get_thumb_pool().start(loader)
 
     @property
     def filepath(self) -> str:
@@ -297,14 +312,19 @@ class MasonryBrowser(QScrollArea):
         tile_width = self._compute_tile_width()
         capped = filepaths[:TILE_CAP]
 
-        for filepath in capped:
-            col_idx = self._col_heights.index(min(self._col_heights))
-            tile = MasonryTile(filepath, tile_width, parent=self._col_widgets[col_idx])
-            tile.activated.connect(self.tile_activated)
-            self._col_layouts[col_idx].addWidget(tile)
-            self._tiles.append(tile)
-            # Approximate height for placement heuristic (square placeholder + label)
-            self._col_heights[col_idx] += tile_width + 20 + TILE_MARGIN
+        # Suppress intermediate repaints and layout passes during bulk creation.
+        self._canvas.setUpdatesEnabled(False)
+        try:
+            for filepath in capped:
+                col_idx = self._col_heights.index(min(self._col_heights))
+                tile = MasonryTile(filepath, tile_width, parent=self._col_widgets[col_idx])
+                tile.activated.connect(self.tile_activated)
+                self._col_layouts[col_idx].addWidget(tile)
+                self._tiles.append(tile)
+                # Approximate height for placement heuristic (square placeholder + label)
+                self._col_heights[col_idx] += tile_width + 20 + TILE_MARGIN
+        finally:
+            self._canvas.setUpdatesEnabled(True)
 
         self._highlight_current()
         # Defer scroll-to-current until after the layout pass
@@ -327,11 +347,18 @@ class MasonryBrowser(QScrollArea):
         return max(80, usable // self._columns)
 
     def _clear(self) -> None:
-        for tile in self._tiles:
-            tile._cancelled = True
-            tile.setParent(None)  # detaches from column layout immediately
-            tile.deleteLater()
-        self._tiles.clear()
+        # Drop queued-but-not-started tasks before touching the tile list so
+        # cancelled tasks do not race with the new populate() call.
+        _get_thumb_pool().clear()
+        self._canvas.setUpdatesEnabled(False)
+        try:
+            for tile in self._tiles:
+                tile._cancelled = True
+                tile.setParent(None)  # detaches from column layout immediately
+                tile.deleteLater()
+            self._tiles.clear()
+        finally:
+            self._canvas.setUpdatesEnabled(True)
         self._col_heights = [0] * self._columns
 
     def _highlight_current(self) -> None:

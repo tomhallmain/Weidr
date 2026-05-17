@@ -19,7 +19,7 @@ from datetime import datetime
 from typing import Optional
 
 from PySide6.QtCore import Qt, QTimer, Signal, Slot, QThread, QMetaObject
-from PySide6.QtWidgets import QApplication, QHBoxLayout, QSplitter, QWidget, QVBoxLayout, QFrame
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QSplitter, QStackedWidget, QWidget, QVBoxLayout, QFrame
 
 from compare.compare_manager import CompareManager
 from files.file_browser import FileBrowser
@@ -32,6 +32,7 @@ from ui.app_window.context_menu_builder import ContextMenuBuilder
 from ui.app_window.file_marks_controller import FileMarksController
 from ui.app_window.file_ops_controller import FileOpsController
 from ui.app_window.key_binding_manager import KeyBindingManager
+from ui.app_window.masonry_browser import MasonryBrowser
 from ui.app_window.media_frame import MediaFrame
 from ui.app_window.media_navigator import MediaNavigator
 from ui.app_window.notification_controller import NotificationController
@@ -41,7 +42,7 @@ from ui.app_window.window_launcher import WindowLauncher
 from ui.app_window.window_manager import WindowManager
 from utils.app_actions import AppActions
 from utils.config import config, FileCheckConfig, SlideshowConfig, StoreCacheConfig
-from utils.constants import Mode, Direction
+from utils.constants import Mode, Direction, ViewMode
 from utils.logging_setup import get_logger
 from utils.translations import I18N
 from utils.utils import Utils
@@ -157,6 +158,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         # Core state
         # ------------------------------------------------------------------
         self.mode = Mode.BROWSE
+        self.view_mode = ViewMode.FULL
         self.fullscreen = False
         self.delete_lock = False
         self.img_path: Optional[str] = None
@@ -239,17 +241,24 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         self.sidebar_panel = SidebarPanel(parent=self, app_window=self)
         self.splitter.addWidget(self.sidebar_panel)
 
-        # Media frame (right)
+        # Right-side stack: full viewer (index 0) or masonry grid (index 1)
+        self._media_stack = QStackedWidget()
+        self.splitter.addWidget(self._media_stack)
+
         self.media_frame = MediaFrame(parent=self)
-        self.splitter.addWidget(self.media_frame)
+        self._media_stack.addWidget(self.media_frame)   # index 0 — ViewMode.FULL
         self.media_frame.seek_requested.connect(self.seek_media_position)
         self.media_frame.play_pause_requested.connect(self.toggle_media_play_pause)
         self.media_frame.volume_requested.connect(self.set_media_volume)
         self.media_frame.mute_requested.connect(self.toggle_media_mute)
 
-        # Give most space to the media frame
+        self.masonry_browser = MasonryBrowser(parent=self)
+        self._media_stack.addWidget(self.masonry_browser)  # index 1 — ViewMode.MASONRY
+        self.masonry_browser.tile_activated.connect(self._on_masonry_tile_activated)
+
+        # Give most space to the media area
         self.splitter.setStretchFactor(0, 1)  # sidebar
-        self.splitter.setStretchFactor(1, 9)  # media
+        self.splitter.setStretchFactor(1, 9)  # media stack
 
         if not sidebar_visible:
             self.sidebar_panel.setVisible(False)
@@ -1151,6 +1160,35 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             # Ctrl+H does not reopen it at an oversized width.
             QTimer.singleShot(0, self._apply_default_sidebar_width)
 
+    def toggle_masonry_view(self, event=None) -> None:
+        """Toggle between the single-media viewer and the masonry thumbnail grid."""
+        if self.mode != Mode.BROWSE:
+            self.notification_ctrl.toast(_("Masonry view is only available in browse mode."))
+            return
+        if self.view_mode == ViewMode.FULL:
+            self.view_mode = ViewMode.MASONRY
+            if hasattr(self.media_frame, "pause_video_if_playing"):
+                self.media_frame.pause_video_if_playing()
+            self.masonry_browser.populate(
+                self.file_browser.get_files(),
+                current_file=self.img_path,
+            )
+            self._media_stack.setCurrentIndex(1)
+            self.notification_ctrl.toast(_("Masonry view"))
+        else:
+            self.view_mode = ViewMode.FULL
+            self._media_stack.setCurrentIndex(0)
+            self.media_frame.setFocus()
+            self.notification_ctrl.toast(_("Single view"))
+
+    def _on_masonry_tile_activated(self, filepath: str) -> None:
+        """Handle a tile click: navigate to the file and return to single view."""
+        self.file_browser.go_to_file(filepath)
+        self.media_navigator.create_image(filepath)
+        self.view_mode = ViewMode.FULL
+        self._media_stack.setCurrentIndex(0)
+        self.media_frame.setFocus()
+
     def toggle_theme(self, to_theme: Optional[str] = None, do_toast: bool = True) -> None:
         """Switch between dark and light themes."""
         AppStyle.toggle_theme(to_theme)
@@ -1184,8 +1222,13 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
     def wheelEvent(self, event):  # noqa: N802
         """Scroll up/down navigates between images.
 
-        Ignored when Shift is held (reserved for future pan/zoom).
+        In masonry view the QScrollArea consumes wheel events before they reach
+        here, but guard explicitly so stray events don't navigate the file list
+        while the grid is visible.  Shift is reserved for future pan/zoom.
         """
+        if self.view_mode == ViewMode.MASONRY:
+            super().wheelEvent(event)
+            return
         if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
             super().wheelEvent(event)
             return

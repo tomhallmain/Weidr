@@ -366,6 +366,11 @@ class Direction(Enum):
         return backward_value if self == Direction.BACKWARD else -1
 
 
+class ViewMode(Enum):
+    FULL = "full"        # single MediaFrame (default)
+    MASONRY = "masonry"  # thumbnail grid browser
+
+
 class CompareMediaType(Enum):
     """Enumeration of supported media types for comparison."""
     IMAGE = "image"

@@ -125,6 +125,7 @@ class KeyBindingManager:
         self._bind("F11", app.toggle_fullscreen, guarded=False)
         self._bind("Shift+F", app.toggle_fullscreen)
         self._bind("Escape", lambda: app.end_fullscreen() and app.refocus(), guarded=False)
+        self._bind("Ctrl+Shift+G", app.toggle_masonry_view)
 
         # ==============================================================
         # Info / details

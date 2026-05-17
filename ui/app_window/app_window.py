@@ -1200,6 +1200,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         self.masonry_browser.populate(
             self.file_browser.get_files(), current_file=self.img_path
         )
+        self.media_frame.pause_video_if_playing()
         QTimer.singleShot(0, lambda: self._media_stack.setCurrentIndex(1))
 
     def _on_masonry_tile_activated(self, filepath: str) -> None:

@@ -1086,6 +1086,17 @@ class MediaFrame(QFrame):
         else:
             self.video_play()
 
+    def pause_video_if_playing(self) -> bool:
+        """Pause playback if media is currently playing. Returns True if paused."""
+        if self._gif_movie is not None and self._gif_is_animated:
+            if self._gif_movie.state() == QMovie.MovieState.Running:
+                self.video_pause()
+                return True
+        if _VLC_AVAILABLE and self.vlc_media_player and self.vlc_media_player.is_playing():
+            self.video_pause()
+            return True
+        return False
+
     def has_time_based_media(self) -> bool:
         return isinstance(self._video_ui, VideoUI) or (self._gif_movie is not None and self._gif_is_animated)
 

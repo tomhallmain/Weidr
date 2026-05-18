@@ -1000,16 +1000,13 @@ class FileOpsController:
             "--log-file",
             log_path,
         ]
-        if execute:
-            cmd.append("--execute")
+        cmd.append("--execute" if execute else "--dry-run")
 
         def spawn_worker() -> None:
             creationflags = 0
             if sys.platform == "win32":
                 creationflags = subprocess.CREATE_NO_WINDOW
             try:
-                with open(log_path, "a", encoding="utf-8") as _:
-                    pass
                 subprocess.Popen(
                     cmd,
                     cwd=base_dir,

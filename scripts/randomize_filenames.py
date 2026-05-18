@@ -28,7 +28,15 @@ Examples:
    python randomize_files.py "C:\\path\\to\\files" --execute --verbose
 
 5) Use a custom cache file path:
-   python randomize_files.py "C:\\path\\to\\files" --output-json "D:\\maps\\cache.json"
+   python randomize_filenames.py "C:\\path\\to\\files" --output-json "D:\\maps\\cache.json"
+
+6) Defaults from <dir>/randomize_filenames_config.json (CLI flags override):
+   {
+     "verbose": true,
+     "exclude": ["*.tmp"],
+     "log_file": "randomize_filenames.log",
+     "log_append": true
+   }
 
 Dry runs do not write planned renames to the cache. The only exception is pruning invalid keys
 listed in <cache-dir>/files_to_remove_from_mapping.json (a JSON array of basenames and/or full
@@ -54,7 +62,20 @@ from typing import Iterable
 # 32 bytes -> 64 hex chars; vanishing collision risk vs any existing or assigned name.
 _RANDOM_ID_BYTES = 32
 _CACHE_FILENAME = "file_mapping_cache.json"
+_CONFIG_FILENAME = "randomize_filenames_config.json"
 _REMOVAL_LIST_FILENAME = "files_to_remove_from_mapping.json"
+_KNOWN_CONFIG_KEYS = frozenset(
+    {"execute", "verbose", "exclude", "output_json", "log_file", "log_append"}
+)
+# argparse dest -> CLI flags that override the config file when present on argv
+_CONFIG_OVERRIDE_FLAGS: dict[str, tuple[str, ...]] = {
+    "execute": ("--execute", "--dry-run"),
+    "verbose": ("-v", "--verbose"),
+    "exclude": ("--exclude",),
+    "output_json": ("-o", "--output-json"),
+    "log_file": ("--log-file",),
+    "log_append": ("--log-append",),
+}
 _RANDOM_BASENAME_RE = re.compile(r"^[0-9a-f]{64}$")
 _MEDIA_EXTENSIONS = {
     ".3g2",
@@ -134,7 +155,66 @@ _MEDIA_EXTENSIONS = {
 }
 
 
-def setup_logging(verbose: bool, log_file: Path | None = None) -> None:
+def _argv_mentions_flag(argv: list[str], flags: tuple[str, ...]) -> bool:
+    """Return True if any of *flags* appear on *argv* (including --flag=value)."""
+    flag_set = set(flags)
+    i = 0
+    while i < len(argv):
+        tok = argv[i]
+        base = tok.split("=", 1)[0]
+        if base in flag_set:
+            return True
+        i += 1
+    return False
+
+
+def _resolve_config_path(value: str | Path, root: Path) -> Path:
+    p = Path(value).expanduser()
+    return p if p.is_absolute() else (root / p)
+
+
+def load_config_defaults(config_path: Path, root: Path) -> dict:
+    """
+    Parse ``randomize_filenames_config.json`` into :func:`argparse` default kwargs.
+
+    Relative ``output_json`` and ``log_file`` paths are resolved under *root*.
+    """
+    with config_path.open(encoding="utf-8-sig") as f:
+        data = json.load(f)
+    if not isinstance(data, dict):
+        raise ValueError("config root must be a JSON object")
+
+    unknown = set(data.keys()) - _KNOWN_CONFIG_KEYS
+    if unknown:
+        raise ValueError(f"unknown config key(s): {', '.join(sorted(unknown))}")
+
+    out: dict = {}
+    if "execute" in data:
+        out["execute"] = bool(data["execute"])
+    if "verbose" in data:
+        out["verbose"] = bool(data["verbose"])
+    if "exclude" in data:
+        raw_exclude = data["exclude"]
+        if isinstance(raw_exclude, str):
+            raw_exclude = [raw_exclude]
+        if not isinstance(raw_exclude, list) or not all(isinstance(x, str) for x in raw_exclude):
+            raise ValueError('"exclude" must be a string or list of strings')
+        out["exclude"] = list(raw_exclude)
+    if data.get("output_json"):
+        out["output_json"] = _resolve_config_path(data["output_json"], root)
+    if data.get("log_file"):
+        out["log_file"] = _resolve_config_path(data["log_file"], root)
+    if "log_append" in data:
+        out["log_append"] = bool(data["log_append"])
+    return out
+
+
+def setup_logging(
+    verbose: bool,
+    log_file: Path | None = None,
+    *,
+    log_append: bool = False,
+) -> None:
     level = logging.DEBUG if verbose else logging.INFO
     fmt = logging.Formatter("%(levelname)s: %(message)s")
     root = logging.getLogger()
@@ -143,7 +223,9 @@ def setup_logging(verbose: bool, log_file: Path | None = None) -> None:
     if log_file is not None:
         log_file = log_file.resolve()
         log_file.parent.mkdir(parents=True, exist_ok=True)
-        fh = logging.FileHandler(log_file, mode="a", encoding="utf-8")
+        fh = logging.FileHandler(
+            log_file, mode="a" if log_append else "w", encoding="utf-8"
+        )
         fh.setFormatter(fmt)
         root.addHandler(fh)
     stderr_handler = logging.StreamHandler(sys.stderr)
@@ -633,7 +715,7 @@ def try_rename_file(src: Path, dst: Path, *, verbose: bool = False) -> bool:
     return True
 
 
-def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+def _build_argument_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description=(
             "Randomize filenames under DIR (extensions and paths preserved). "
@@ -646,10 +728,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         help="Root directory to walk",
     )
-    p.add_argument(
+    mode = p.add_mutually_exclusive_group()
+    mode.add_argument(
         "--execute",
         action="store_true",
         help="Actually perform renames (default: dry run only)",
+    )
+    mode.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Plan renames only; overrides \"execute\" in the config file",
     )
     p.add_argument(
         "--exclude",
@@ -678,14 +766,150 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--log-file",
         type=Path,
         default=None,
-        help="Append log output to this file (in addition to stderr)",
+        help="Write log output to this file (stderr still used; see --log-append)",
     )
-    return p.parse_args(argv)
+    p.add_argument(
+        "--log-append",
+        action="store_true",
+        help="Append to the log file instead of truncating (config: log_append)",
+    )
+    return p
+
+
+def _config_file_candidate(directory: Path) -> Path:
+    """Path where ``randomize_filenames_config.json`` is expected for *directory*."""
+    expanded = directory.expanduser()
+    if expanded.is_dir():
+        return (expanded.resolve() / _CONFIG_FILENAME)
+    return expanded / _CONFIG_FILENAME
+
+
+def _apply_config_file_values_to_args(
+    args: argparse.Namespace,
+    loaded_from_file: dict,
+    argv_list: list[str],
+) -> None:
+    """Apply config-file fields argparse may not pick up (e.g. ``exclude`` append)."""
+    if "exclude" in loaded_from_file and not _argv_mentions_flag(argv_list, ("--exclude",)):
+        args.exclude = list(loaded_from_file["exclude"])
+    if "log_append" in loaded_from_file and not _argv_mentions_flag(
+        argv_list, ("--log-append",)
+    ):
+        args.log_append = bool(loaded_from_file["log_append"])
+
+
+def _log_config_resolution(args: argparse.Namespace) -> None:
+    """Log whether the per-directory JSON config was checked, found, and applied."""
+    checked: Path | None = getattr(args, "config_checked_path", None)
+    if checked is None:
+        logging.info(
+            "Config: no directory argument; did not look for %s",
+            _CONFIG_FILENAME,
+        )
+        return
+
+    logging.info("Config: checked for %s", checked)
+    used: Path | None = getattr(args, "config_file_used", None)
+    if used is None:
+        logging.info(
+            "Config: file not found; using command-line and built-in defaults only"
+        )
+        return
+
+    logging.info("Config: loaded %s", used)
+    from_file: tuple[str, ...] = getattr(args, "config_keys_from_file", ()) or ()
+    if from_file:
+        logging.info("Config: keys in file: %s", ", ".join(from_file))
+    else:
+        logging.info("Config: file contained no recognized option keys")
+
+    overridden: tuple[str, ...] = getattr(args, "config_keys_overridden_by_cli", ()) or ()
+    if overridden:
+        logging.info(
+            "Config: overridden by command line: %s",
+            ", ".join(overridden),
+        )
+
+    if args.exclude:
+        exclude_source = (
+            "command line"
+            if "exclude" in overridden
+            else "config file"
+            if "exclude" in from_file
+            else "unknown"
+        )
+        logging.info(
+            "Config: active exclude patterns (%s, fnmatch on basenames): %s",
+            exclude_source,
+            args.exclude,
+        )
+    else:
+        logging.info("Config: no exclude patterns active")
+
+    if args.log_file:
+        logging.info(
+            "Config: log file %s will be %s",
+            args.log_file,
+            "appended" if getattr(args, "log_append", False) else "truncated",
+        )
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """
+    Parse CLI arguments.
+
+    If ``<directory>/randomize_filenames_config.json`` exists, its fields become
+    argparse defaults. Any option also passed on the command line overrides the
+    config file value.
+    """
+    argv_list = list(argv if argv is not None else sys.argv[1:])
+
+    pre = argparse.ArgumentParser(add_help=False)
+    pre.add_argument("directory", type=Path, nargs="?")
+    pre_args, _ = pre.parse_known_args(argv_list)
+
+    config_defaults: dict = {}
+    config_path: Path | None = None
+    config_checked_path: Path | None = None
+    if pre_args.directory is not None:
+        root_guess = pre_args.directory.expanduser()
+        config_checked_path = _config_file_candidate(root_guess)
+        if config_checked_path.is_file():
+            config_path = config_checked_path.resolve()
+            root_for_paths = root_guess.resolve() if root_guess.is_dir() else root_guess
+            try:
+                config_defaults = load_config_defaults(config_path, root_for_paths)
+            except (OSError, json.JSONDecodeError, ValueError) as e:
+                raise SystemExit(f"{config_checked_path}: {e}") from e
+
+    loaded_from_file = dict(config_defaults)
+    config_keys_overridden: list[str] = []
+    for dest, flags in _CONFIG_OVERRIDE_FLAGS.items():
+        if dest in config_defaults and _argv_mentions_flag(argv_list, flags):
+            del config_defaults[dest]
+            config_keys_overridden.append(dest)
+
+    p = _build_argument_parser()
+    p.set_defaults(**config_defaults)
+    args = p.parse_args(argv_list)
+    _apply_config_file_values_to_args(args, loaded_from_file, argv_list)
+    if getattr(args, "dry_run", False):
+        args.execute = False
+    args.config_checked_path = config_checked_path
+    args.config_file_used = config_path
+    args.config_keys_from_file = tuple(sorted(loaded_from_file.keys()))
+    args.config_keys_overridden_by_cli = tuple(sorted(config_keys_overridden))
+    return args
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    setup_logging(args.verbose, args.log_file)
+    setup_logging(
+        args.verbose,
+        args.log_file,
+        log_append=bool(getattr(args, "log_append", False)),
+    )
+    _log_config_resolution(args)
 
     root = args.directory
     if not root.is_dir():
@@ -694,8 +918,6 @@ def main(argv: list[str] | None = None) -> int:
 
     root = root.resolve()
     exclude = list(args.exclude)
-    if exclude:
-        logging.info("Exclude patterns: %s", exclude)
 
     out_path = args.output_json or (root / _CACHE_FILENAME)
     removal_path = out_path.parent / _REMOVAL_LIST_FILENAME

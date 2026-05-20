@@ -65,7 +65,7 @@ class FileMarksController:
         Ported from App.add_or_remove_mark.
         """
         if filepath is None:
-            filepath = self._app.img_path
+            filepath = self._app.media_path
         if self._app.delete_lock:
             warning = _("DELETE_LOCK_MARK_STOP")
             self._app.app_actions.warn(warning)
@@ -100,11 +100,11 @@ class FileMarksController:
         Ported from App._add_all_marks_from_last_or_current_group.
         """
         if self._app.mode == Mode.BROWSE:
-            if self._app.img_path in MarkedFiles.file_marks:
+            if self._app.media_path in MarkedFiles.file_marks:
                 return
             self._check_marks()
             files = self._fb.select_series(
-                start_file=MarkedFiles.file_marks[-1], end_file=self._app.img_path
+                start_file=MarkedFiles.file_marks[-1], end_file=self._app.media_path
             )
         else:
             alt_pressed = (
@@ -116,7 +116,7 @@ class FileMarksController:
                 files = list(self._cm.files_matched)
             else:
                 files = self._cm.select_series(
-                    start_file=MarkedFiles.file_marks[-1], end_file=self._app.img_path
+                    start_file=MarkedFiles.file_marks[-1], end_file=self._app.media_path
                 )
 
         for _file in files:
@@ -354,7 +354,7 @@ class FileMarksController:
 
         if image_to_use is None:
             image_to_use = (
-                self._app.img_path
+                self._app.media_path
                 if len(MarkedFiles.file_marks) != 1
                 else MarkedFiles.file_marks[0]
             )

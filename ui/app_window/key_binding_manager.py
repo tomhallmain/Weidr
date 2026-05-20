@@ -269,7 +269,7 @@ class KeyBindingManager:
         self._bind("Ctrl+W", app.window_launcher.open_secondary_compare_window, guarded=False)
         self._bind(
             "Ctrl+A",
-            lambda: app.window_launcher.open_secondary_compare_window(run_compare_image=app.img_path),
+            lambda: app.window_launcher.open_secondary_compare_window(run_compare_media=app.media_path),
             guarded=False,
         )
         self._bind("Ctrl+G", app.window_launcher.open_go_to_file_window, guarded=False)

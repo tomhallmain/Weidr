@@ -81,10 +81,10 @@ class WindowManager:
         cls,
         window_id: Optional[int] = None,
         base_dir: Optional[str] = None,
-        img_path: Optional[str] = None,
+        media_path: Optional[str] = None,
         refocus: bool = False,
         disallow_if_compare_state: bool = False,
-        new_image: bool = False,
+        new_media: bool = False,
     ) -> Optional[AppWindow]:
         """
         Find an open window by id, base_dir, or image path.
@@ -99,14 +99,14 @@ class WindowManager:
                 matched = True
             elif base_dir is not None and win.base_dir == base_dir:
                 matched = True
-            elif img_path is not None and win.img_path == img_path:
+            elif media_path is not None and win.media_path == media_path:
                 matched = True
 
             if not matched:
                 continue
 
-            if img_path is not None:
-                win.media_navigator.go_to_file(search_text=os.path.basename(img_path))
+            if media_path is not None:
+                win.media_navigator.go_to_file(search_text=os.path.basename(media_path))
 
             if refocus:
                 win.refocus()
@@ -115,7 +115,7 @@ class WindowManager:
                 logger.info(f"{cls.get_window_name(win)} has compare state, not returning")
                 return None
 
-            if new_image and win.mode == Mode.BROWSE and (
+            if new_media and win.mode == Mode.BROWSE and (
                 win.file_browser.sort_by == SortBy.CREATION_TIME
                 or win.file_browser.sort_by == SortBy.MODIFY_TIME
             ):
@@ -167,7 +167,7 @@ class WindowManager:
                 if win.base_dir == base_dir:
                     if image_path is not None and image_path != "":
                         if do_search:
-                            win.sidebar_panel.search_img_path_box.setText(image_path)
+                            win.sidebar_panel.search_media_path_box.setText(image_path)
                             win.search_ctrl.set_search()
                         else:
                             win.media_navigator.go_to_file(search_text=image_path)

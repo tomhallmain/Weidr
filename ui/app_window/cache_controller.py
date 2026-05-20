@@ -108,8 +108,8 @@ class CacheController:
             if not self._app.is_secondary():
                 app_info_cache.set_meta("base_dir", base_dir)
 
-            if self._app.img_path and self._app.img_path != "":
-                cursor_media_path = self._app.img_path
+            if self._app.media_path and self._app.media_path != "":
+                cursor_media_path = self._app.media_path
                 if os.path.dirname(cursor_media_path) != base_dir:
                     resolved_media_path = FrameCache.get_media_path_for_cached(cursor_media_path)
                     if resolved_media_path:

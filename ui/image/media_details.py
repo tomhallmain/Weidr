@@ -1286,10 +1286,10 @@ class MediaDetails(SmartWindow):
             if (
                 app_actions.get_window(
                     base_dir=base_dir,
-                    img_path=image_path,
+                    media_path=image_path,
                     refocus=True,
                     disallow_if_compare_state=True,
-                    new_image=True,
+                    new_media=True,
                 )
                 is not None
             ):

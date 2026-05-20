@@ -161,8 +161,8 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         self.view_mode = ViewMode.FULL
         self.fullscreen = False
         self.delete_lock = False
-        self.img_path: Optional[str] = None
-        self.prev_img_path: Optional[str] = None
+        self.media_path: Optional[str] = None
+        self.prev_media_path: Optional[str] = None
         self.search_dir: Optional[str] = None
         self.is_toggled_view_matches = True
         self.direction = Direction.FORWARD
@@ -819,12 +819,12 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             self._stop_base_dir_load_spinner_if_active()
             self.notification_ctrl.set_status_title(None)
             self.notification_ctrl.set_label_state()
-            if self.mode == Mode.BROWSE and self.img_path is None and self.file_browser.has_files():
+            if self.mode == Mode.BROWSE and self.media_path is None and self.file_browser.has_files():
                 self.media_navigator.show_next_media()
             self._sync_media_empty_directory_message()
             self._refresh_masonry_if_active()
             return
-        if self.mode == Mode.BROWSE and self.img_path is None and self.file_browser.has_files():
+        if self.mode == Mode.BROWSE and self.media_path is None and self.file_browser.has_files():
             # Show the first available item as soon as batches arrive.
             self.media_navigator.show_next_media()
         progress_text = self.file_browser.get_incremental_progress_text()
@@ -912,8 +912,8 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         self.set_mode(Mode.BROWSE)
         self.file_browser.refresh()
         self.notification_ctrl.set_label_state()
-        if self.img_path is not None:
-            if not self.media_navigator.go_to_file(search_text=self.img_path, retry_with_delay=1):
+        if self.media_path is not None:
+            if not self.media_navigator.go_to_file(search_text=self.media_path, retry_with_delay=1):
                 self.media_navigator.home()
         self._sync_media_empty_directory_message()
         self.cache_ctrl.store_info_cache()
@@ -1178,7 +1178,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             # and viewport().width() returns the correct value before tile widths
             # are computed.
             files = self.file_browser.get_files()
-            current = self.img_path
+            current = self.media_path
             QTimer.singleShot(0, lambda: self.masonry_browser.populate(files, current_file=current))
             self.notification_ctrl.toast(_("Masonry view"))
         else:
@@ -1198,7 +1198,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         if self.view_mode != ViewMode.MASONRY:
             return
         self.masonry_browser.populate(
-            self.file_browser.get_files(), current_file=self.img_path
+            self.file_browser.get_files(), current_file=self.media_path
         )
         self.media_frame.pause_video_if_playing()
         QTimer.singleShot(0, lambda: self._media_stack.setCurrentIndex(1))

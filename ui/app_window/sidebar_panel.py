@@ -183,12 +183,12 @@ class SidebarPanel(QWidget):
               "Uses embedding similarity to find visually similar media."),
         )
 
-        self.search_img_path_box = AwareEntry(self)
-        self.search_img_path_box.setPlaceholderText(_("Search media path..."))
-        self.search_img_path_box.returnPressed.connect(
+        self.search_media_path_box = AwareEntry(self)
+        self.search_media_path_box.setPlaceholderText(_("Search media path..."))
+        self.search_media_path_box.returnPressed.connect(
             lambda: self._app.search_ctrl.set_search_for_media()
         )
-        self._scroll.add_widget(self.search_img_path_box)
+        self._scroll.add_widget(self.search_media_path_box)
 
         # Negative search image
         self.set_negative_search_btn = self._make_button(
@@ -199,12 +199,12 @@ class SidebarPanel(QWidget):
             self.set_negative_search_btn,
             _("Set a media file to search away from — results will exclude media similar to this."),
         )
-        self.search_img_negative_path_box = AwareEntry(self)
-        self.search_img_negative_path_box.setPlaceholderText(_("Negative search media path..."))
-        self.search_img_negative_path_box.returnPressed.connect(
+        self.search_media_negative_path_box = AwareEntry(self)
+        self.search_media_negative_path_box.setPlaceholderText(_("Negative search media path..."))
+        self.search_media_negative_path_box.returnPressed.connect(
             lambda: self._app.search_ctrl.set_negative_search_for_media()
         )
-        self._scroll.add_widget(self.search_img_negative_path_box)
+        self._scroll.add_widget(self.search_media_negative_path_box)
 
         # Search text (embedding)
         self.search_text_btn = self._make_button(
@@ -524,7 +524,7 @@ class SidebarPanel(QWidget):
         """Handle recursive checkbox toggle."""
         is_recursive = state == Qt.CheckState.Checked.value
         self._app.file_browser.set_recursive(is_recursive)
-        if self._app.mode == Mode.BROWSE and self._app.img_path:
+        if self._app.mode == Mode.BROWSE and self._app.media_path:
             self._app.media_navigator.show_next_media()
         if self._app.mode == Mode.BROWSE:
             self._app.notification_ctrl.set_label_state()

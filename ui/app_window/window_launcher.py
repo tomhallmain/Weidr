@@ -88,7 +88,7 @@ class WindowLauncher:
         self,
         event=None,
         open_gui: bool = True,
-        run_compare_image: Optional[str] = None,
+        run_compare_media: Optional[str] = None,
         extra_callback_args: Optional[list[Any]] = None,
     ) -> None:
         """Open the recent directories window."""
@@ -100,7 +100,7 @@ class WindowLauncher:
                 open_gui,
                 self._app.app_actions,
                 base_dir=self._app.get_base_dir(),
-                run_compare_image=run_compare_image,
+                run_compare_media=run_compare_media,
                 extra_callback_args=extra_callback_args,
             )
             window.show()
@@ -259,7 +259,7 @@ class WindowLauncher:
 
         preset_image_path = True
         if media_path is None:
-            media_path = self._app.img_path
+            media_path = self._app.media_path
             preset_image_path = False
 
         if not media_path:
@@ -320,7 +320,7 @@ class WindowLauncher:
         from ui.image.media_details import MediaDetails
         MediaDetails.show_related_image(
             master=self._app,
-            image_path=self._app.img_path,
+            image_path=self._app.media_path,
             app_actions=self._app.app_actions,
         )
 
@@ -339,18 +339,18 @@ class WindowLauncher:
     # Secondary compare window
     # ------------------------------------------------------------------
     def open_secondary_compare_window(
-        self, event=None, run_compare_image: Optional[str] = None
+        self, event=None, run_compare_media: Optional[str] = None
     ) -> None:
         """Open a new secondary window and optionally start a compare."""
-        if run_compare_image is None:
-            self.open_recent_directory_window(run_compare_image="")
-        elif not os.path.isfile(run_compare_image):
+        if run_compare_media is None:
+            self.open_recent_directory_window(run_compare_media="")
+        elif not os.path.isfile(run_compare_media):
             self._app.notification_ctrl.alert(
-                _("No image selected"),
-                _("No image was selected for comparison"),
+                _("No media selected"),
+                _("No media file was selected for comparison"),
             )
         else:
-            self.open_recent_directory_window(run_compare_image=self._app.img_path)
+            self.open_recent_directory_window(run_compare_media=self._app.media_path)
 
     # ------------------------------------------------------------------
     # Prevalidations (action, not window)

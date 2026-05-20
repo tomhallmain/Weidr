@@ -80,7 +80,7 @@ class MediaNavigator:
         if self._app.mode == Mode.BROWSE:
             start_file = self._fb.current_file()
             previous_file = self._fb.previous_file()
-            if self._app.img_path == previous_file:
+            if self._app.media_path == previous_file:
                 return True  # already at this file (refresh case)
             while self._cm.skip_image(previous_file) and previous_file != start_file:
                 previous_file = self._fb.previous_file()
@@ -104,7 +104,7 @@ class MediaNavigator:
         if self._app.mode == Mode.BROWSE:
             start_file = self._fb.current_file()
             next_file = self._fb.next_file()
-            if self._app.img_path == next_file:
+            if self._app.media_path == next_file:
                 return True  # already at this file (refresh case)
             while self._cm.skip_image(next_file) and next_file != start_file:
                 next_file = self._fb.next_file()
@@ -392,8 +392,8 @@ class MediaNavigator:
 
     def go_to_previous_media(self, event=None) -> None:
         """Navigate back to the previously viewed media file."""
-        if self._app.prev_img_path is not None:
-            self.go_to_file(event=event, search_text=self._app.prev_img_path)
+        if self._app.prev_media_path is not None:
+            self.go_to_file(event=event, search_text=self._app.prev_media_path)
 
     # ==================================================================
     # Display
@@ -412,8 +412,8 @@ class MediaNavigator:
         relative_filepath, basename = Utils.get_relative_dirpath_split(
             self._app.base_dir, image_path
         )
-        self._app.prev_img_path = self._app.img_path
-        self._app.img_path = image_path
+        self._app.prev_media_path = self._app.media_path
+        self._app.media_path = image_path
         self._slideshow_media_started_monotonic = time.monotonic()
         self._sync_slideshow_dynamic_poll_timer()
         self._restart_classic_slideshow_primary_timer_if_running()
@@ -435,7 +435,7 @@ class MediaNavigator:
         """
         self._mf.clear()
         self._app.sidebar_panel.update_current_media_label("")
-        self._app.img_path = None
+        self._app.media_path = None
         self._slideshow_media_started_monotonic = None
         self._slideshow_dynamic_poll_timer.stop()
 
@@ -520,7 +520,7 @@ class MediaNavigator:
         if not self._app.slideshow_config.slideshow_running:
             self._slideshow_dynamic_poll_timer.stop()
             return
-        path = self._app.img_path
+        path = self._app.media_path
         if slideshow_poll_should_run(self._mf, path):
             if not self._slideshow_dynamic_poll_timer.isActive():
                 self._slideshow_dynamic_poll_timer.start()
@@ -531,7 +531,7 @@ class MediaNavigator:
         if not self._app.slideshow_config.slideshow_running:
             self._slideshow_dynamic_poll_timer.stop()
             return
-        path = self._app.img_path
+        path = self._app.media_path
         if not path:
             return
         if should_advance_slideshow_poll(self._mf, path, self._slideshow_media_started_monotonic):
@@ -545,7 +545,7 @@ class MediaNavigator:
         base_dir = self._app.get_base_dir()
         if not base_dir or base_dir == "":
             return
-        path = self._app.img_path
+        path = self._app.media_path
         if skip_classic_slideshow_primary_tick(self._mf, path):
             return
         self.show_next_media()

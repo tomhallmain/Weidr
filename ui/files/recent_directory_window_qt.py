@@ -32,7 +32,7 @@ class RecentDirectoryWindow(DirectoryPickerDialog):
 
     Supports:
       - Selecting a directory to set as base_dir in the current window
-      - Opening a new compare window with a run_compare_image
+      - Opening a new compare window with a run_compare_media
       - Invoking a downstream_callback with extra args
       - Alt+Enter to select the penultimate history directory
       - Non-GUI mode (window hidden, immediate action via Return)
@@ -79,13 +79,13 @@ class RecentDirectoryWindow(DirectoryPickerDialog):
         is_gui: bool,
         app_actions: AppActions,
         base_dir: str = ".",
-        run_compare_image: Optional[str] = None,
+        run_compare_media: Optional[str] = None,
         extra_callback_args: tuple = (None, None),
     ) -> None:
         self._is_gui = is_gui
         self._app_actions = app_actions
         self._base_dir = os.path.normpath(base_dir)
-        self._run_compare_image = run_compare_image
+        self._run_compare_media = run_compare_media
 
         # Parse downstream callback
         if extra_callback_args is None or extra_callback_args[0] is None:
@@ -138,14 +138,14 @@ class RecentDirectoryWindow(DirectoryPickerDialog):
         if self._downstream_callback is not None:
             self._downstream_callback(base_dir=_dir, **self._callback_kwargs)
             RecentDirectories.last_comparison_directory = _dir
-        elif self._run_compare_image is None:
+        elif self._run_compare_media is None:
             self._app_actions.set_base_dir(base_dir_from_dir_window=_dir)
-        elif self._run_compare_image == "":
+        elif self._run_compare_media == "":
             self._app_actions.new_window(base_dir=_dir)
         else:
             self._app_actions.new_window(
                 base_dir=_dir,
-                image_path=self._run_compare_image,
+                image_path=self._run_compare_media,
                 do_search=True,
             )
 

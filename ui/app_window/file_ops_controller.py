@@ -896,7 +896,7 @@ class FileOpsController:
             return
 
         if self._app.delete_lock:
-            filepath = self._app.prev_img_path
+            filepath = self._app.prev_media_path
         else:
             filepath = self._nav.get_active_media_filepath()
 
@@ -930,7 +930,7 @@ class FileOpsController:
         from extensions.refacdir_client import RefacDirClient
 
         refacdir_client = RefacDirClient()
-        refacdir_client.run(self._app.img_path)
+        refacdir_client.run(self._app.media_path)
         self._app.notification_ctrl.toast(_("Running refacdir"))
 
     @staticmethod

@@ -134,12 +134,12 @@ class SearchController:
         """
         image_path = self.get_search_file_path()
         if image_path is None or image_path == "":
-            if self._app.img_path is None:
+            if self._app.media_path is None:
                 self._app.notification_ctrl.handle_error(
                     _("No image selected."), title=_("Invalid Setting")
                 )
-            self._sidebar.search_img_path_box.clear()
-            self._sidebar.search_img_path_box.setText(str(self._app.img_path))
+            self._sidebar.search_media_path_box.clear()
+            self._sidebar.search_media_path_box.setText(str(self._app.media_path))
         self.set_search()
 
     @require_password(ProtectedActions.RUN_SEARCH)
@@ -164,12 +164,12 @@ class SearchController:
         """
         image_path = self.get_negative_search_file_path()
         if image_path is None or image_path == "":
-            if self._app.img_path is None:
+            if self._app.media_path is None:
                 self._app.notification_ctrl.handle_error(
                     _("No image selected."), title=_("Invalid Setting")
                 )
-            self._sidebar.search_img_negative_path_box.clear()
-            self._sidebar.search_img_negative_path_box.setText(str(self._app.img_path))
+            self._sidebar.search_media_negative_path_box.clear()
+            self._sidebar.search_media_negative_path_box.setText(str(self._app.media_path))
         self.set_search()
 
     def set_search(self, event=None) -> None:
@@ -213,7 +213,7 @@ class SearchController:
 
         if image_path is not None and image_path.strip() != "":
             if image_path.startswith(self._app.get_base_dir()):
-                self._sidebar.search_img_path_box.setText(os.path.basename(image_path))
+                self._sidebar.search_media_path_box.setText(os.path.basename(image_path))
             self._app.search_dir = os.path.dirname(image_path)
             args.search_file_path = image_path
             self._cm.search_image_full_path = image_path
@@ -359,7 +359,7 @@ class SearchController:
 
         Ported from App.get_search_file_path.
         """
-        image_path = self._sidebar.search_img_path_box.text().strip()
+        image_path = self._sidebar.search_media_path_box.text().strip()
         if not image_path:
             self._cm.search_image_full_path = None
             return None
@@ -378,7 +378,7 @@ class SearchController:
         """
         Read the negative-search image path from the dedicated sidebar entry.
         """
-        image_path = self._sidebar.search_img_negative_path_box.text().strip()
+        image_path = self._sidebar.search_media_negative_path_box.text().strip()
         if not image_path:
             return None
         search_file = Utils.get_valid_file(self._app.get_base_dir(), image_path)
@@ -451,7 +451,7 @@ class SearchController:
         base_dir = self._app.get_base_dir()
         if filepath.startswith(base_dir):
             filepath = filepath[len(base_dir) + 1 :]
-        self._sidebar.search_img_path_box.setText(filepath)
+        self._sidebar.search_media_path_box.setText(filepath)
         self.set_search()
 
     @require_password(ProtectedActions.RUN_SEARCH)
@@ -491,8 +491,8 @@ class SearchController:
         display_path = filepath
         if filepath.startswith(base_dir):
             display_path = filepath[len(base_dir) + 1 :]
-        self._sidebar.search_img_negative_path_box.clear()
-        self._sidebar.search_img_negative_path_box.setText(display_path)
+        self._sidebar.search_media_negative_path_box.clear()
+        self._sidebar.search_media_negative_path_box.setText(display_path)
         self.set_search()
 
     def next_text_embedding_preset(self, event=None) -> None:
@@ -509,8 +509,8 @@ class SearchController:
             )
             return
 
-        self._sidebar.search_img_path_box.clear()
-        self._sidebar.search_img_negative_path_box.clear()
+        self._sidebar.search_media_path_box.clear()
+        self._sidebar.search_media_negative_path_box.clear()
         self._sidebar.search_text_box.clear()
         self._sidebar.search_text_negative_box.clear()
 
@@ -650,7 +650,7 @@ class SearchController:
             window = WindowManager.get_window(base_dir=base_dir)
 
         image_to_use = (
-            self._app.img_path
+            self._app.media_path
             if len(MarkedFiles.file_marks) != 1
             else MarkedFiles.file_marks[0]
         )
@@ -675,7 +675,7 @@ class SearchController:
     def _get_media_path(self) -> Optional[str]:
         """Get the current media path, falling back to prev if delete-locked."""
         if self._app.delete_lock:
-            image_path = self._app.prev_img_path
+            image_path = self._app.prev_media_path
         else:
             image_path = self._app.media_navigator.get_active_media_filepath()
         if not image_path:

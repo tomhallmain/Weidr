@@ -413,11 +413,7 @@ class SidebarPanel(QWidget):
             btn.deleteLater()
 
     def add_buttons_for_mode(self) -> None:
-        """
-        Add buttons appropriate for the current application mode.
-
-        Ported from App._add_buttons_for_mode.
-        """
+        """Add buttons appropriate for the current application mode."""
         mode = self._app.mode
         if self._app.has_added_buttons_for_mode.get(mode, False):
             return

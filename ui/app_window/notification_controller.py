@@ -73,7 +73,6 @@ class NotificationController:
 
         Creates a frameless overlay widget at the top-right of the parent
         window, which auto-destructs after *time_in_seconds*.
-        Ported from App.toast.
         """
         parent = self._app
 
@@ -153,8 +152,6 @@ class NotificationController:
         """
         Temporarily modify the window title to show a notification message.
         Thread-safe via signals.
-
-        Ported from App.title_notify.
         """
         if not config.show_toasts:
             return
@@ -267,11 +264,7 @@ class NotificationController:
     def set_label_state(
         self, text: Optional[str] = None, group_number: Optional[int] = None, size: int = -1
     ) -> None:
-        """
-        Update the sidebar state label with the current file position info.
-
-        Ported from App._set_label_state.
-        """
+        """Update the sidebar state label with the current file position info."""
         if text is not None:
             self._app.sidebar_panel.update_state_label(text)
             return
@@ -293,11 +286,11 @@ class NotificationController:
         fb = self._app.file_browser
         file_count = fb.count() if fb else 0
         if file_count == 0:
-            label_text = _("No image files found")
+            label_text = _("No media files found")
         elif file_count == 1:
-            label_text = _("1 image file found")
+            label_text = _("1 media file found")
         else:
-            label_text = _("{0} image files found").format(file_count)
+            label_text = _("{0} media files found").format(file_count)
 
         # Check inclusion pattern
         inclusion_text = self._app.sidebar_panel.inclusion_pattern.text().strip()

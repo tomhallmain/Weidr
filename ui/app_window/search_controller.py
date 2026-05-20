@@ -40,11 +40,7 @@ logger = get_logger("search_controller")
 
 
 class ProgressListener:
-    """
-    Adapter that the compare engine calls to report progress.
-
-    Ported from the module-level ProgressListener in app.py.
-    """
+    """Adapter that the compare engine calls to report progress."""
 
     def __init__(self, update_func: Callable[[str, Optional[int]], None]):
         self.update_func = update_func
@@ -61,11 +57,7 @@ class _CompareWorkerSignals(QObject):
 
 
 class _CompareWorker(QThread):
-    """
-    Runs the actual compare function in a background thread.
-
-    Ported from ``App._run_with_progress`` (which used ``start_thread``).
-    """
+    """Runs the actual compare function in a background thread."""
 
     signals = _CompareWorkerSignals()
 
@@ -127,16 +119,12 @@ class SearchController:
     # ==================================================================
     @require_password(ProtectedActions.RUN_SEARCH)
     def set_search_for_media(self, event=None) -> None:
-        """
-        Set search mode to media search.
-
-        Ported from App.set_search_for_image.
-        """
-        image_path = self.get_search_file_path()
-        if image_path is None or image_path == "":
+        """Set search mode to media search."""
+        media_path = self.get_search_file_path()
+        if media_path is None or media_path == "":
             if self._app.media_path is None:
                 self._app.notification_ctrl.handle_error(
-                    _("No image selected."), title=_("Invalid Setting")
+                    _("No media file selected."), title=_("Invalid Setting")
                 )
             self._sidebar.search_media_path_box.clear()
             self._sidebar.search_media_path_box.setText(str(self._app.media_path))
@@ -144,11 +132,7 @@ class SearchController:
 
     @require_password(ProtectedActions.RUN_SEARCH)
     def set_search_for_text(self, event=None) -> None:
-        """
-        Set search mode to text search.
-
-        Ported from App.set_search_for_text.
-        """
+        """Set search mode to text search."""
         search_text = self._sidebar.search_text_box.text()
         search_text_negative = self._sidebar.search_text_negative_box.text()
         if search_text.strip() == "" and search_text_negative.strip() == "":
@@ -162,11 +146,11 @@ class SearchController:
 
         Mirrors ``set_search_for_media`` behavior for the negative media input.
         """
-        image_path = self.get_negative_search_file_path()
-        if image_path is None or image_path == "":
+        media_path = self.get_negative_search_file_path()
+        if media_path is None or media_path == "":
             if self._app.media_path is None:
                 self._app.notification_ctrl.handle_error(
-                    _("No image selected."), title=_("Invalid Setting")
+                    _("No media file selected."), title=_("Invalid Setting")
                 )
             self._sidebar.search_media_negative_path_box.clear()
             self._sidebar.search_media_negative_path_box.setText(str(self._app.media_path))
@@ -174,14 +158,12 @@ class SearchController:
 
     def set_search(self, event=None) -> None:
         """
-        Set the search image or text using the provided UI values.
+        Set the search media or text using the provided UI values.
         Set the mode based on the result.
-
-        Ported from App.set_search.
         """
         args = CompareArgs()
-        image_path = self.get_search_file_path()
-        negative_image_path = self.get_negative_search_file_path()
+        media_path = self.get_search_file_path()
+        negative_media_path = self.get_negative_search_file_path()
         search_text = self._sidebar.search_text_box.text()
         search_text_negative = self._sidebar.search_text_negative_box.text()
 
@@ -191,7 +173,7 @@ class SearchController:
             search_text_negative = None
         args.search_text = search_text
         args.search_text_negative = search_text_negative
-        args.negative_search_file_path = negative_image_path
+        args.negative_search_file_path = negative_media_path
 
         if (
             args.search_text is not None
@@ -203,20 +185,20 @@ class SearchController:
                 _("Compare mode must be set to an embedding mode to search text embeddings"),
             )
 
-        if image_path is not None and not os.path.isfile(image_path):
-            image_path, _filter = QFileDialog.getOpenFileName(
+        if media_path is not None and not os.path.isfile(media_path):
+            media_path, _filter = QFileDialog.getOpenFileName(
                 self._app,
-                _("Select image file"),
+                _("Select media file"),
                 self._app.get_search_dir(),
-                _("Image files") + " (*.jpg *.jpeg *.png *.tiff *.gif)",
+                _("Media files") + " (*.jpg *.jpeg *.png *.tiff *.gif)",
             )
 
-        if image_path is not None and image_path.strip() != "":
-            if image_path.startswith(self._app.get_base_dir()):
-                self._sidebar.search_media_path_box.setText(os.path.basename(image_path))
-            self._app.search_dir = os.path.dirname(image_path)
-            args.search_file_path = image_path
-            self._cm.search_image_full_path = image_path
+        if media_path is not None and media_path.strip() != "":
+            if media_path.startswith(self._app.get_base_dir()):
+                self._sidebar.search_media_path_box.setText(os.path.basename(media_path))
+            self._app.search_dir = os.path.dirname(media_path)
+            args.search_file_path = media_path
+            self._cm.search_image_full_path = media_path
             self._app.media_navigator.show_searched_media()
 
         if args.not_searching():
@@ -237,11 +219,7 @@ class SearchController:
         compare_args: CompareArgs = CompareArgs(),
         find_duplicates: bool = False,
     ) -> None:
-        """
-        Entry point for running a comparison (debounced).
-
-        Ported from App.run_compare.
-        """
+        """Entry point for running a comparison (debounced)."""
         self._pending_compare = lambda: self._debounced_run_compare(
             compare_args, find_duplicates
         )
@@ -250,22 +228,14 @@ class SearchController:
     def _debounced_run_compare(
         self, compare_args: CompareArgs, find_duplicates: bool
     ) -> None:
-        """
-        Actually enqueue the compare after debounce.
-
-        Ported from App._debounced_run_compare.
-        """
+        """Actually enqueue the compare after debounce."""
         if not self._validate_run():
             return
         compare_args.find_duplicates = find_duplicates
         self._run_with_progress(self._run_compare, args=[compare_args])
 
     def _run_with_progress(self, exec_func: Callable, args: list[Any] = []) -> None:
-        """
-        Run *exec_func* in a background thread while showing a progress bar.
-
-        Ported from App._run_with_progress.
-        """
+        """Run *exec_func* in a background thread while showing a progress bar."""
         self._sidebar.start_progress_bar()
 
         worker = _CompareWorker(exec_func, args)
@@ -296,11 +266,7 @@ class SearchController:
         self._img_gen_worker = None
 
     def _run_compare(self, args: CompareArgs = CompareArgs()) -> None:
-        """
-        Execute the comparison logic.
-
-        Ported from App._run_compare.
-        """
+        """Execute the comparison logic."""
         args.base_dir = self._app.get_base_dir()
         args.mode = self._app.mode
         args.recursive = self._fb.recursive
@@ -319,11 +285,7 @@ class SearchController:
         self._cm.run(args)
 
     def _validate_run(self) -> bool:
-        """
-        Validate that the current state allows running a compare.
-
-        Ported from App._validate_run.
-        """
+        """Validate that the current state allows running a compare."""
         base_dir = self._app.get_base_dir()
         if not base_dir or base_dir == "" or base_dir == ".":
             ok = self._app.notification_ctrl.alert(
@@ -339,8 +301,7 @@ class SearchController:
         """
         Thread-safe progress callback invoked by the compare engine.
 
-        Emits the worker's progress signal so the update happens on the
-        main thread.  Ported from App.display_progress.
+        Emits the worker's progress signal so the update happens on the main thread.
         """
         if self._worker is not None:
             self._worker.signals.progress.emit(
@@ -354,18 +315,14 @@ class SearchController:
     # Search helpers
     # ==================================================================
     def get_search_file_path(self) -> Optional[str]:
-        """
-        Read the search image path from the sidebar entry.
-
-        Ported from App.get_search_file_path.
-        """
-        image_path = self._sidebar.search_media_path_box.text().strip()
-        if not image_path:
+        """Read the search media path from the sidebar entry."""
+        media_path = self._sidebar.search_media_path_box.text().strip()
+        if not media_path:
             self._cm.search_image_full_path = None
             return None
-        search_file = Utils.get_valid_file(self._app.get_base_dir(), image_path)
+        search_file = Utils.get_valid_file(self._app.get_base_dir(), media_path)
         if search_file is None:
-            search_file = Utils.get_valid_file(self._app.get_search_dir(), image_path)
+            search_file = Utils.get_valid_file(self._app.get_search_dir(), media_path)
             if search_file is None:
                 self._app.notification_ctrl.handle_error(
                     "Search file is not a valid file for base dir.",
@@ -375,15 +332,13 @@ class SearchController:
         return search_file
 
     def get_negative_search_file_path(self) -> Optional[str]:
-        """
-        Read the negative-search image path from the dedicated sidebar entry.
-        """
-        image_path = self._sidebar.search_media_negative_path_box.text().strip()
-        if not image_path:
+        """Read the negative-search media path from the dedicated sidebar entry."""
+        media_path = self._sidebar.search_media_negative_path_box.text().strip()
+        if not media_path:
             return None
-        search_file = Utils.get_valid_file(self._app.get_base_dir(), image_path)
+        search_file = Utils.get_valid_file(self._app.get_base_dir(), media_path)
         if search_file is None:
-            search_file = Utils.get_valid_file(self._app.get_search_dir(), image_path)
+            search_file = Utils.get_valid_file(self._app.get_search_dir(), media_path)
             if search_file is None:
                 self._app.notification_ctrl.handle_error(
                     "Negative search file is not a valid file for base dir.",
@@ -410,11 +365,7 @@ class SearchController:
 
     @require_password(ProtectedActions.RUN_SEARCH)
     def set_current_media_run_search(self, event=None, base_dir: Optional[str] = None) -> None:
-        """
-        Use the current media file as the search target and run search.
-
-        Ported from App.set_current_image_run_search.
-        """
+        """Use the current media file as the search target and run search."""
         from ui.app_window.window_manager import WindowManager
 
         if base_dir is None:
@@ -431,9 +382,6 @@ class SearchController:
             window = WindowManager.get_window(base_dir=base_dir)
 
         if self._app.mode == Mode.BROWSE:
-            # Alt+key: use a random image
-            # (In Qt, modifier state is not in the event; if needed, a
-            #  separate "random image search" binding can be added.)
             pass
 
         filepath = self._app.media_navigator.get_active_media_filepath()
@@ -443,11 +391,7 @@ class SearchController:
             self._app.notification_ctrl.handle_error(_("Failed to get active media filepath"))
 
     def _set_media_run_search(self, filepath: str) -> None:
-        """
-        Set the search media path and trigger the search.
-
-        Ported from App._set_image_run_search.
-        """
+        """Set the search media path and trigger the search."""
         base_dir = self._app.get_base_dir()
         if filepath.startswith(base_dir):
             filepath = filepath[len(base_dir) + 1 :]
@@ -456,11 +400,7 @@ class SearchController:
 
     @require_password(ProtectedActions.RUN_SEARCH)
     def add_current_media_to_negative_search(self, event=None, base_dir: Optional[str] = None) -> None:
-        """
-        Add the current media file to the negative search list.
-
-        Ported from App.add_current_image_to_negative_search.
-        """
+        """Add the current media file to the negative search list."""
         from ui.app_window.window_manager import WindowManager
 
         filepath = self._app.media_navigator.get_active_media_filepath()
@@ -482,11 +422,7 @@ class SearchController:
             self._app.notification_ctrl.handle_error(_("Failed to get active media filepath"))
 
     def negative_media_search(self, filepath: str) -> None:
-        """
-        Set up a negative media search.
-
-        Ported from App.negative_image_search.
-        """
+        """Set up a negative media search."""
         base_dir = self._app.get_base_dir()
         display_path = filepath
         if filepath.startswith(base_dir):
@@ -496,11 +432,7 @@ class SearchController:
         self.set_search()
 
     def next_text_embedding_preset(self, event=None) -> None:
-        """
-        Cycle to the next text embedding search preset.
-
-        Ported from App.next_text_embedding_preset.
-        """
+        """Cycle to the next text embedding search preset."""
         preset = config.next_text_embedding_search_preset()
         if preset is None:
             self._app.notification_ctrl.alert(
@@ -528,11 +460,7 @@ class SearchController:
     # Image generation
     # ==================================================================
     def trigger_image_generation(self, event=None) -> None:
-        """
-        Open the image generation dialog.
-
-        Ported from App.trigger_image_generation.
-        """
+        """Open the image generation dialog."""
         from ui.image.media_details import MediaDetails
 
         # In Tkinter, shift state was checked from event; in Qt we don't
@@ -548,11 +476,7 @@ class SearchController:
         image_path: Optional[str] = None,
         modify_call: bool = False,
     ) -> None:
-        """
-        Trigger image generation via SD runner.
-
-        Ported from App.run_image_generation.
-        """
+        """Trigger image generation via SD runner."""
         from extensions.sd_runner_client import SDRunnerClient
         from ui.image.media_details import MediaDetails
 
@@ -586,11 +510,7 @@ class SearchController:
     def run_image_generation_on_directory(
         self, event=None, _type: Optional[str] = None, image_path: Optional[str] = None
     ) -> None:
-        """
-        Run image generation on all files in the directory.
-
-        Ported from App.run_image_generation_on_directory.
-        """
+        """Run image generation on all files in the directory."""
         from extensions.sd_runner_client import SDRunnerClient
         from ui.image.media_details import MediaDetails
 
@@ -629,11 +549,7 @@ class SearchController:
     # Related images (cross-window)
     # ==================================================================
     def find_related_media_in_open_window(self, event=None, base_dir: Optional[str] = None) -> None:
-        """
-        Navigate to the next downstream related media file in another window.
-
-        Ported from App.find_related_images_in_open_window.
-        """
+        """Navigate to the next downstream related media file in another window."""
         from ui.files.marked_file_mover_qt import MarkedFiles
         from ui.image.media_details import MediaDetails
         from ui.app_window.window_manager import WindowManager
@@ -675,11 +591,11 @@ class SearchController:
     def _get_media_path(self) -> Optional[str]:
         """Get the current media path, falling back to prev if delete-locked."""
         if self._app.delete_lock:
-            image_path = self._app.prev_media_path
+            media_path = self._app.prev_media_path
         else:
-            image_path = self._app.media_navigator.get_active_media_filepath()
-        if not image_path:
+            media_path = self._app.media_navigator.get_active_media_filepath()
+        if not media_path:
             self._app.notification_ctrl.handle_error(
                 _("Failed to get active media filepath"), title=_("Warning")
             )
-        return image_path
+        return media_path

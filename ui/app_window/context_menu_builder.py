@@ -28,11 +28,7 @@ logger = get_logger("context_menu_builder")
 
 
 class ContextMenuBuilder:
-    """
-    Builds and shows the right-click context menu for the media frame.
-
-    Ported from App.show_context_menu.
-    """
+    """Builds and shows the right-click context menu for the media frame."""
 
     def __init__(self, app_window: AppWindow):
         self._app = app_window

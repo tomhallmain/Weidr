@@ -59,11 +59,7 @@ class FileMarksController:
     def add_or_remove_mark(
         self, event=None, show_toast: bool = True, filepath: Optional[str] = None
     ) -> None:
-        """
-        Toggle a mark on the current (or specified) file.
-
-        Ported from App.add_or_remove_mark.
-        """
+        """Toggle a mark on the current (or specified) file."""
         if filepath is None:
             filepath = self._app.media_path
         if self._app.delete_lock:
@@ -96,8 +92,6 @@ class FileMarksController:
 
         In BROWSE mode, selects files between the last mark and the current image.
         In compare modes, Alt selects all matches; otherwise selects series.
-
-        Ported from App._add_all_marks_from_last_or_current_group.
         """
         if self._app.mode == Mode.BROWSE:
             if self._app.media_path in MarkedFiles.file_marks:
@@ -128,11 +122,7 @@ class FileMarksController:
         )
 
     def go_to_mark(self, event=None) -> None:
-        """
-        Navigate to the next (or previous, if Alt is held) marked file.
-
-        Ported from App.go_to_mark.
-        """
+        """Navigate to the next (or previous, if Alt is held) marked file."""
         self._check_marks()
 
         alt_pressed = (
@@ -157,11 +147,7 @@ class FileMarksController:
             self._nav.go_to_file(search_text=os.path.basename(marked_file))
 
     def copy_marks_list(self, event=None) -> None:
-        """
-        Copy the list of marked files to the clipboard.
-
-        Ported from App.copy_marks_list.
-        """
+        """Copy the list of marked files to the clipboard."""
         clipboard = QApplication.clipboard()
         clipboard.setText(str(MarkedFiles.file_marks))
 
@@ -176,11 +162,7 @@ class FileMarksController:
         override_marks: Optional[list[str]] = None,
         filepath: Optional[str] = None,
     ) -> None:
-        """
-        Open the move-marks window.
-
-        Ported from App.open_move_marks_window.
-        """
+        """Open the move-marks window."""
         if override_marks is None:
             override_marks = []
 
@@ -228,11 +210,7 @@ class FileMarksController:
     # ==================================================================
     @require_password(ProtectedActions.RUN_FILE_ACTIONS)
     def run_previous_marks_action(self, event=None) -> None:
-        """
-        Re-run the previously used marks action.
-
-        Ported from App.run_previous_marks_action.
-        """
+        """Re-run the previously used marks action."""
         if len(MarkedFiles.file_marks) == 0:
             self.add_or_remove_mark(show_toast=False)
         MarkedFiles.run_previous_action(
@@ -241,11 +219,7 @@ class FileMarksController:
 
     @require_password(ProtectedActions.RUN_FILE_ACTIONS)
     def run_penultimate_marks_action(self, event=None) -> None:
-        """
-        Re-run the second-to-last marks action.
-
-        Ported from App.run_penultimate_marks_action.
-        """
+        """Re-run the second-to-last marks action."""
         if len(MarkedFiles.file_marks) == 0:
             self.add_or_remove_mark(show_toast=False)
         MarkedFiles.run_penultimate_action(
@@ -265,11 +239,7 @@ class FileMarksController:
 
     @require_password(ProtectedActions.RUN_FILE_ACTIONS)
     def run_permanent_marks_action(self, event=None) -> None:
-        """
-        Run the permanently-configured marks action.
-
-        Ported from App.run_permanent_marks_action.
-        """
+        """Run the permanently-configured marks action."""
         if len(MarkedFiles.file_marks) == 0:
             self.add_or_remove_mark(show_toast=False)
         MarkedFiles.run_permanent_action(
@@ -283,10 +253,8 @@ class FileMarksController:
         """
         Run the hotkey-bound marks action for the given digit.
 
-        In the Qt port the digit and shift state are captured by the
-        ``KeyBindingManager`` closure rather than extracted from a Tkinter UI event.
-
-        Ported from App.run_hotkey_marks_action.
+        The digit and shift state are captured by the ``KeyBindingManager``
+        closure rather than extracted from a UI event.
         """
         if len(MarkedFiles.file_marks) == 0:
             self.add_or_remove_mark(show_toast=False)
@@ -299,11 +267,7 @@ class FileMarksController:
         )
 
     def _check_marks(self, min_mark_size: int = 1) -> None:
-        """
-        Validate that enough marks exist for the intended operation.
-
-        Ported from App._check_marks.
-        """
+        """Validate that enough marks exist for the intended operation."""
         if len(MarkedFiles.file_marks) < min_mark_size:
             exception_text = _("NO_MARKS_SET").format(
                 len(MarkedFiles.file_marks), min_mark_size
@@ -313,11 +277,7 @@ class FileMarksController:
 
     @require_password(ProtectedActions.RUN_FILE_ACTIONS)
     def revert_last_marks_change(self, event=None) -> None:
-        """
-        Undo the last marks change.
-
-        Ported from App.revert_last_marks_change.
-        """
+        """Undo the last marks change."""
         if not config.use_file_paths_json:
             MarkedFileMover.undo_move_marks(self._app.get_base_dir(), self._app.app_actions)
 
@@ -331,11 +291,7 @@ class FileMarksController:
         base_dir: Optional[str] = None,
         image_to_use: Optional[str] = None,
     ) -> None:
-        """
-        Set marks from downstream related images found in another directory.
-
-        Ported from App.set_marks_from_downstream_related_images.
-        """
+        """Set marks from downstream related images found in another directory."""
         from ui.image.media_details import MediaDetails
         from ui.app_window.window_manager import WindowManager
 

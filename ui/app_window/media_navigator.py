@@ -72,8 +72,6 @@ class MediaNavigator:
         In BROWSE mode, walks backward through the file browser, skipping
         images the compare manager says to skip. In compare modes, delegates
         to ``CompareManager.show_prev_media``.
-
-        Ported from App.show_prev_media.
         """
         self._app.direction = Direction.BACKWARD
 
@@ -94,11 +92,7 @@ class MediaNavigator:
         return self._cm.show_prev_media(show_alert=show_alert)
 
     def show_next_media(self, event=None, show_alert: bool = True) -> bool:
-        """
-        Navigate to the next media file.
-
-        Ported from App.show_next_media.
-        """
+        """Navigate to the next media file."""
         self._app.direction = Direction.FORWARD
 
         if self._app.mode == Mode.BROWSE:
@@ -119,11 +113,7 @@ class MediaNavigator:
         return self._cm.show_next_media(show_alert=show_alert)
 
     def last_chosen_direction_func(self) -> None:
-        """
-        Repeat the last navigation direction.
-
-        Ported from App.last_chosen_direction_func.
-        """
+        """Repeat the last navigation direction."""
         if self._app.direction == Direction.BACKWARD:
             self.show_prev_media()
         elif self._app.direction == Direction.FORWARD:
@@ -132,11 +122,7 @@ class MediaNavigator:
             raise Exception(f"Direction was improperly set. Direction was {self._app.direction}")
 
     def home(self, event=None, last_file: bool = False) -> None:
-        """
-        Jump to the first or last file.
-
-        Ported from App.home.
-        """
+        """Jump to the first or last file."""
         from ui.files.marked_file_mover_qt import MarkedFiles
 
         if self._app.mode == Mode.BROWSE:
@@ -206,11 +192,7 @@ class MediaNavigator:
             self._cm.set_current_group()
 
     def page_up(self, event=None) -> None:
-        """
-        Jump backward by a page of files.
-
-        Ported from App.page_up.
-        """
+        """Jump backward by a page of files."""
         current_image = self.get_active_media_filepath()
         if self._app.mode == Mode.BROWSE:
             prev_file = self._fb.page_up()
@@ -227,11 +209,7 @@ class MediaNavigator:
         self._app.direction = Direction.BACKWARD
 
     def page_down(self, event=None) -> None:
-        """
-        Jump forward by a page of files.
-
-        Ported from App.page_down.
-        """
+        """Jump forward by a page of files."""
         current_image = self.get_active_media_filepath()
         if self._app.mode == Mode.BROWSE:
             next_file = self._fb.page_down()
@@ -264,8 +242,6 @@ class MediaNavigator:
         Searches the current window first, then other open windows. If the
         file is not found anywhere and ``search_text`` is a valid file path,
         opens it in a temporary canvas.
-
-        Ported from App.go_to_file.
         """
         from ui.image.media_details import MediaDetails
         from ui.app_window.window_manager import WindowManager
@@ -362,11 +338,7 @@ class MediaNavigator:
         return False
 
     def go_to_file_by_index(self, index: int) -> bool:
-        """
-        Navigate to a file by its index (1-based) in the file browser.
-
-        Ported from App.go_to_file_by_index.
-        """
+        """Navigate to a file by its index (1-based) in the file browser."""
         if self._app.mode != Mode.BROWSE:
             self._app.notification_ctrl.alert(
                 _("Index navigation not available"),
@@ -402,8 +374,8 @@ class MediaNavigator:
         """
         Show a media file in the main content pane of the UI.
 
-        Ported from App.create_image. Updates the sidebar label, the
-        internal path state, and refreshes the media-details window if open.
+        Updates the sidebar label, the internal path state, and refreshes
+        the media-details window if open.
         """
         if not image_path:
             return
@@ -428,11 +400,7 @@ class MediaNavigator:
             self._app.window_launcher.open_media_details(manually_keyed=False)
 
     def clear_media(self) -> None:
-        """
-        Clear the currently displayed media.
-
-        Ported from App.clear_image.
-        """
+        """Clear the currently displayed media."""
         self._mf.clear()
         self._app.sidebar_panel.update_current_media_label("")
         self._app.media_path = None
@@ -440,11 +408,7 @@ class MediaNavigator:
         self._slideshow_dynamic_poll_timer.stop()
 
     def show_searched_media(self) -> None:
-        """
-        Display the media file found by the last search.
-
-        Ported from App.show_searched_image.
-        """
+        """Display the media file found by the last search."""
         search_path = self._cm.search_image_full_path
         if config.debug:
             logger.debug(f"Search image full path: {search_path}")
@@ -458,11 +422,7 @@ class MediaNavigator:
                 )
 
     def toggle_media_view(self) -> None:
-        """
-        While in search mode, toggle between the search media and the results.
-
-        Ported from App.toggle_image_view.
-        """
+        """While in search mode, toggle between the search media and the results."""
         if self._app.mode != Mode.SEARCH:
             return
 
@@ -494,8 +454,8 @@ class MediaNavigator:
         """
         Toggle the slideshow on or off.
 
-        Ported from App.toggle_slideshow. Uses an internal QTimer for the
-        classic slideshow mode and the file-check timer for "new images" mode.
+        Uses an internal QTimer for the classic slideshow mode and the
+        file-check timer for "new images" mode.
         """
         self._app.slideshow_config.toggle_slideshow()
         if self._app.slideshow_config.show_new_images:
@@ -554,11 +514,7 @@ class MediaNavigator:
     # Queries
     # ==================================================================
     def get_active_media_filepath(self) -> Optional[str]:
-        """
-        Return the path of the currently displayed media file.
-
-        Ported from App.get_active_media_filepath.
-        """
+        """Return the path of the currently displayed media file."""
         # In browse mode, prefer the file_browser cursor
         if self._app.mode == Mode.BROWSE:
             return self._fb.current_file()

@@ -636,9 +636,9 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         """
         Set the base directory and reload files.
 
-        Ported from App.set_base_dir. If *base_dir_from_dir_window* is provided
-        it is used directly; otherwise the sidebar entry is read, and if it is
-        empty the recent-directory window is opened.
+        If *base_dir_from_dir_window* is provided it is used directly; otherwise
+        the sidebar entry is read, and if it is empty the recent-directory window
+        is opened.
         """
         from files.recent_directories import RecentDirectories
         from utils.app_info_cache import app_info_cache as base_cache
@@ -904,11 +904,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             self.media_frame.hide_empty_directory_message()
 
     def return_to_browsing_mode(self, event=None, suppress_toast: bool = False) -> None:
-        """
-        Return to browsing mode, clearing compare state.
-
-        Ported from App.return_to_browsing_mode.
-        """
+        """Return to browsing mode, clearing compare state."""
         self.set_mode(Mode.BROWSE)
         self.file_browser.refresh()
         self.notification_ctrl.set_label_state()
@@ -930,7 +926,6 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         Check if a window has too many files and prompt the user.
 
         Returns True if user cancels, False if user wants to proceed.
-        Ported from App.check_many_files.
         """
         if not window.file_browser.has_confirmed_dir() and window.file_browser.is_slow_total_files(threshold=threshold):
             ok = self.notification_ctrl.alert(
@@ -956,7 +951,6 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         """
         Refresh the file list and update the display.
 
-        Ported from App.refresh.
         When *force* is True, run a full rescan even while incremental directory
         loading is in progress (used after bulk operations such as directory-wide
         prevalidations).

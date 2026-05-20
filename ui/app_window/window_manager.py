@@ -86,11 +86,7 @@ class WindowManager:
         disallow_if_compare_state: bool = False,
         new_media: bool = False,
     ) -> Optional[AppWindow]:
-        """
-        Find an open window by id, base_dir, or image path.
-
-        Ported from App.get_window with full parameter handling.
-        """
+        """Find an open window by id, base_dir, or image path."""
         from files.file_browser import SortBy
 
         for win in cls._windows:
@@ -156,8 +152,8 @@ class WindowManager:
         """
         Open a new secondary AppWindow.
 
-        Ported from App.add_secondary_window. Reuses an existing window
-        for the same base_dir unless ``config.always_open_new_windows`` is set.
+        Reuses an existing window for the same base_dir unless
+        ``config.always_open_new_windows`` is set.
         """
         from ui.app_window.app_window import AppWindow
 
@@ -224,11 +220,7 @@ class WindowManager:
     # ------------------------------------------------------------------
     @classmethod
     def cycle_windows(cls, reverse: bool = False) -> None:
-        """
-        Cycle focus to the next (or previous) open window (round-robin).
-
-        Ported from App.cycle_windows.
-        """
+        """Cycle focus to the next (or previous) open window (round-robin)."""
         if len(cls._windows) <= 1:
             return
 
@@ -260,11 +252,7 @@ class WindowManager:
         allow_current_window: bool = False,
         prefer_compare_window: bool = False,
     ) -> tuple[Optional[AppWindow], list[str]]:
-        """
-        Find another open window or gather all secondary window directories.
-
-        Ported from App.get_other_window_or_self_dir.
-        """
+        """Find another open window or gather all secondary window directories."""
         from ui.files.recent_directory_window_qt import RecentDirectoryWindow
 
         if prefer_compare_window:

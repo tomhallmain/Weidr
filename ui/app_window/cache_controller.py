@@ -46,9 +46,6 @@ class CacheController:
         """
         Load cached application state. Returns the cached base directory
         if one exists, or None.
-
-        Ported from App.load_info_cache -- calls the static loaders on
-        every module that persists data through the app_info_cache.
         """
         try:
             from ui.files.marked_file_mover_qt import MarkedFiles
@@ -84,11 +81,7 @@ class CacheController:
     # Store
     # ------------------------------------------------------------------
     def store_info_cache(self, store_window_state: bool = False) -> None:
-        """
-        Persist current application state to the info cache.
-
-        Ported from App.store_info_cache.
-        """
+        """Persist current application state to the info cache."""
         from ui.files.marked_file_mover_qt import MarkedFiles
         from files.recent_directories import RecentDirectories
         from files.file_action import FileAction
@@ -162,8 +155,6 @@ class CacheController:
         """
         Restore the window geometry from the cached display position.
         Returns True if a position was applied.
-
-        Ported from App.apply_cached_display_position.
         """
         try:
             position_data = app_info_cache.get_display_position()
@@ -209,11 +200,7 @@ class CacheController:
             self._store_cache_timer = None
 
     def _on_periodic_store(self) -> None:
-        """
-        Called on the main thread by QTimer.
-
-        Ported from App.do_periodic_store_cache + App._store_info_cache_main_thread.
-        """
+        """Called on the main thread by QTimer."""
         try:
             self.store_info_cache(store_window_state=True)
         except Exception as e:

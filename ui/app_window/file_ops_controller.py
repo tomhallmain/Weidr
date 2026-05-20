@@ -87,11 +87,7 @@ class FileOpsController:
             self._file_check_timer = None
 
     def _on_file_check(self) -> None:
-        """
-        Called on the main thread by QTimer.
-
-        Ported from App.check_files + App._check_files_main_thread.
-        """
+        """Called on the main thread by QTimer."""
         try:
             if not self._fb.checking_files:
                 return
@@ -111,11 +107,7 @@ class FileOpsController:
     # ==================================================================
     @require_password(ProtectedActions.DELETE_MEDIA)
     def delete_media(self, event=None) -> None:
-        """
-        Delete the currently displayed media file from the filesystem.
-
-        Ported from App.delete_image.
-        """
+        """Delete the currently displayed media file from the filesystem."""
         from files.marked_files import MarkedFiles
 
         if self._app.delete_lock:
@@ -179,11 +171,7 @@ class FileOpsController:
         manual_delete: bool = True,
         is_directory: bool = False,
     ) -> None:
-        """
-        Execute a delete operation on the given file or directory.
-
-        Ported from App._handle_delete.
-        """
+        """Execute a delete operation on the given file or directory."""
         from files.marked_files import MarkedFiles
 
         MarkedFiles.set_delete_lock()  # Undo deleting action is not supported
@@ -248,8 +236,6 @@ class FileOpsController:
         """
         Delete or trash the entire current base directory, with an option to
         move its contents to another directory first.
-
-        Ported from App.delete_current_base_dir.
         """
         from files.marked_files import MarkedFiles
         from files.recent_directories import RecentDirectories
@@ -373,11 +359,7 @@ class FileOpsController:
     # Hide operations
     # ==================================================================
     def hide_current_media(self, event=None, image_path: Optional[str] = None) -> None:
-        """
-        Hide the current media from the file list.
-
-        Ported from App.hide_current_media.
-        """
+        """Hide the current media from the file list."""
         filepath = self._nav.get_active_media_filepath() if image_path is None else image_path
         if filepath is not None and filepath not in self._cm.hidden_images:
             self._cm.hidden_images.append(filepath)
@@ -394,11 +376,7 @@ class FileOpsController:
     # Copy operations
     # ==================================================================
     def copy_media_path(self, filepath: Optional[str] = None) -> None:
-        """
-        Copy the file path to the clipboard.
-
-        Ported from App.copy_media_path.
-        """
+        """Copy the file path to the clipboard."""
         if filepath is None:
             filepath = self._nav.get_active_media_filepath()
         if filepath is None:
@@ -412,11 +390,7 @@ class FileOpsController:
         self._app.notification_ctrl.toast(_("Copied filepath to clipboard"))
 
     def copy_media_basename(self, filepath: Optional[str] = None) -> None:
-        """
-        Copy the file basename to the clipboard.
-
-        Ported from App.copy_media_basename.
-        """
+        """Copy the file basename to the clipboard."""
         if filepath is None:
             filepath = self._nav.get_active_media_filepath()
         if filepath is None:
@@ -667,11 +641,7 @@ class FileOpsController:
     # Replace / group operations
     # ==================================================================
     def replace_current_media_with_search_media(self) -> None:
-        """
-        Overwrite the current media file with the search media file.
-
-        Ported from App.replace_current_image_with_search_image.
-        """
+        """Overwrite the current media file with the search media file."""
         if (
             self._app.mode != Mode.SEARCH
             or len(self._cm.files_matched) == 0
@@ -692,11 +662,7 @@ class FileOpsController:
         self._app.notification_ctrl.toast(_("Moved search image to ") + filepath)
 
     def handle_remove_files_from_groups(self, files: list[str]) -> None:
-        """
-        Remove the given files from compare groups.
-
-        Ported from App._handle_remove_files_from_groups.
-        """
+        """Remove the given files from compare groups."""
         current_image = self._cm.current_match()
         for filepath in files:
             if filepath == self._cm.search_image_full_path:
@@ -719,11 +685,7 @@ class FileOpsController:
     # External file operations
     # ==================================================================
     def open_media_location(self, event=None) -> None:
-        """
-        Open the file's directory in the system file manager.
-
-        Ported from App.open_media_location.
-        """
+        """Open the file's directory in the system file manager."""
         filepath = self._nav.get_active_media_filepath()
         if filepath is not None:
             is_video = self._app.media_frame.pause_video_if_playing() if hasattr(self._app.media_frame, "pause_video_if_playing") else False
@@ -882,11 +844,7 @@ class FileOpsController:
             )
 
     def open_image_in_gimp(self, event=None) -> None:
-        """
-        Open the current image in GIMP.
-
-        Ported from App.open_image_in_gimp.
-        """
+        """Open the current image in GIMP."""
         config.validate_and_find_gimp()
         if not config.gimp_exe_loc:
             self._app.notification_ctrl.handle_error(
@@ -922,11 +880,7 @@ class FileOpsController:
         return self._fb.is_slow_total_files(threshold=1000)
 
     def run_refacdir(self, event=None) -> None:
-        """
-        Run the RefacDir client on the current image.
-
-        Ported from App.run_refacdir.
-        """
+        """Run the RefacDir client on the current image."""
         from extensions.refacdir_client import RefacDirClient
 
         refacdir_client = RefacDirClient()

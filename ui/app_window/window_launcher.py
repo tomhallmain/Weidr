@@ -244,8 +244,7 @@ class WindowLauncher:
         """
         Open the media details / metadata inspector window.
 
-        Ported from App.get_media_details. Manages the singleton
-        MediaDetails window reference stored on AppActions.
+        Manages the singleton MediaDetails window reference stored on AppActions.
         """
         from ui.image.media_details import MediaDetails
 

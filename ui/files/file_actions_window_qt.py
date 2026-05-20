@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from files.file_action import FileAction
-from lib.multi_display_qt import SmartDialog
+from lib.multi_display_qt import SmartWindow
 from ui.app_style import AppStyle
 from utils.app_actions import AppActions
 from utils.app_info_cache import app_info_cache
@@ -42,7 +42,7 @@ logger = get_logger("file_actions_window_qt")
 # ======================================================================
 # FileActionsWindow
 # ======================================================================
-class FileActionsWindow(SmartDialog):
+class FileActionsWindow(SmartWindow):
     """
     Window displaying completed file actions with statistics,
     filter-by-typing, and a paginated action history ("Load More").
@@ -70,11 +70,10 @@ class FileActionsWindow(SmartDialog):
         geometry: str = "900x1400",
     ) -> None:
         super().__init__(
-            parent=app_master,
+            persistent_parent=None,
             position_parent=app_master,
             title=_("File Actions"),
             geometry=geometry,
-            respect_title_bar=True,
         )
         FileActionsWindow._instance = self
         self._app_master = app_master
@@ -133,6 +132,7 @@ class FileActionsWindow(SmartDialog):
 
         # -- keyboard shortcuts -------------------------------------------
         QShortcut(QKeySequence(Qt.Key_Escape), self).activated.connect(self.close)
+        QShortcut(QKeySequence("Shift+Escape"), self).activated.connect(self.close)
         QShortcut(QKeySequence("Shift+A"), self).activated.connect(
             self._search_for_active_image
         )

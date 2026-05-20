@@ -40,7 +40,7 @@ from image.image_data_extractor import image_data_extractor
 from image.image_ops import ImageOps
 from image.video_ops import VideoOps
 from image.smart_crop import Cropper
-from lib.multi_display_qt import SmartDialog
+from lib.multi_display_qt import SmartWindow
 from ui.app_style import AppStyle
 from ui.image.metadata_viewer_window_qt import MetadataViewerWindow
 from ui.image.ocr_text_window_qt import OCRTextWindow
@@ -103,7 +103,7 @@ def truncate_details_label_text(
 # ── ImageDetails ──────────────────────────────────────────────────────
 
 
-class ImageDetails(SmartDialog):
+class ImageDetails(SmartWindow):
     """Image details / actions dialog."""
 
     # -- Class-level state -----------------------------------------
@@ -158,7 +158,7 @@ class ImageDetails(SmartDialog):
         take_focus: bool = True,
     ) -> None:
         super().__init__(
-            parent=parent,
+            persistent_parent=None,
             position_parent=parent,
             title=_("Image details"),
             geometry="700x900",
@@ -457,6 +457,7 @@ class ImageDetails(SmartDialog):
             s.activated.connect(fn)
 
         sc("Escape", self.close_windows)
+        sc("Shift+Escape", self.close_windows)
 
         # Shift+key -- action only
         sc("Shift+C", lambda: self.crop_image())

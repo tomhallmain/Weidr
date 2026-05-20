@@ -431,6 +431,7 @@ class MarkedFileMover(SmartDialog):
             return True
         if not MarkedFiles.is_target_dir_require_gui(target_dir):
             return True
+        self._clear_manual_filter()
         self._app_actions.alert(
             _("Target is locked"),
             _(

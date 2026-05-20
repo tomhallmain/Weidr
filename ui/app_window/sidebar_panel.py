@@ -94,11 +94,16 @@ class SidebarPanel(QWidget):
         self.toggle_theme_btn = self._make_button(
             _("Toggle theme"), lambda: self._app.toggle_theme()
         )
+        create_tooltip(self.toggle_theme_btn, _("Switch between light and dark theme."))
         self._add_spacer()
 
         # Set directory
         self.set_base_dir_btn = self._make_button(
             _("Set directory"), lambda: self._app.set_base_dir()
+        )
+        create_tooltip(
+            self.set_base_dir_btn,
+            _("Set the base directory to browse or run comparisons on."),
         )
 
         self.set_base_dir_box = AwareEntry(self)
@@ -109,6 +114,10 @@ class SidebarPanel(QWidget):
         self.open_directory_notes_btn = self._make_button(
             _("Directory notes"),
             lambda: self._app.window_launcher.open_directory_notes_window(),
+        )
+        create_tooltip(
+            self.open_directory_notes_btn,
+            _("Open and edit notes associated with the current directory."),
         )
         self._add_spacer()
 
@@ -150,7 +159,7 @@ class SidebarPanel(QWidget):
         self.recursive_check.stateChanged.connect(self._on_toggle_recursive)
         self._scroll.add_widget(self.recursive_check)
 
-        self.fill_canvas_check = QCheckBox(_("Image resize to full window"), self)
+        self.fill_canvas_check = QCheckBox(_("Media resize to full window"), self)
         self.fill_canvas_check.setChecked(config.fill_canvas)
         self.fill_canvas_check.stateChanged.connect(self._on_toggle_fill_canvas)
         self._scroll.add_widget(self.fill_canvas_check)
@@ -170,12 +179,12 @@ class SidebarPanel(QWidget):
         )
         create_tooltip(
             self.set_search_btn,
-            _("Set an image file to search for similar images.\n"
-              "Uses embedding similarity to find visually similar images."),
+            _("Set a media file to search for similar media.\n"
+              "Uses embedding similarity to find visually similar media."),
         )
 
         self.search_img_path_box = AwareEntry(self)
-        self.search_img_path_box.setPlaceholderText(_("Search image path..."))
+        self.search_img_path_box.setPlaceholderText(_("Search media path..."))
         self.search_img_path_box.returnPressed.connect(
             lambda: self._app.search_ctrl.set_search_for_image()
         )
@@ -186,8 +195,12 @@ class SidebarPanel(QWidget):
             _("Set negative search file"),
             lambda: self._app.search_ctrl.set_negative_search_for_image(),
         )
+        create_tooltip(
+            self.set_negative_search_btn,
+            _("Set a media file to search away from — results will exclude media similar to this."),
+        )
         self.search_img_negative_path_box = AwareEntry(self)
-        self.search_img_negative_path_box.setPlaceholderText(_("Negative search image path..."))
+        self.search_img_negative_path_box.setPlaceholderText(_("Negative search media path..."))
         self.search_img_negative_path_box.returnPressed.connect(
             lambda: self._app.search_ctrl.set_negative_search_for_image()
         )
@@ -200,8 +213,8 @@ class SidebarPanel(QWidget):
         )
         create_tooltip(
             self.search_text_btn,
-            _("Positive text: Find images similar to this text.\n"
-              "Negative text: Exclude images similar to this text.\n"
+            _("Positive text: Find media similar to this text.\n"
+              "Negative text: Exclude media similar to this text.\n"
               "Both use embedding similarity matching."),
         )
 
@@ -222,23 +235,39 @@ class SidebarPanel(QWidget):
         self._scroll.add_widget(self.search_text_negative_box)
         self._add_spacer()
 
-        # Classifier actions & compare settings buttons
+        # ========== Compare tools =========================================
+        self._add_label(_("Compare tools"))
+
         self.classifier_actions_btn = self._make_button(
             _("Classifier Actions"),
             lambda: self._app.window_launcher.open_classifier_actions_window(),
+        )
+        create_tooltip(
+            self.classifier_actions_btn,
+            _("Configure rules for automatically copying or moving files\n"
+              "based on classifier results."),
         )
         self.hf_model_manager_btn = self._make_button(
             _("Model Manager"),
             lambda: self._app.window_launcher.open_hf_model_manager_window(),
         )
-        self.compare_settings_btn = self._make_button(
-            _("Compare Settings"),
-            lambda: self._app.window_launcher.open_compare_settings_window(),
+        create_tooltip(
+            self.hf_model_manager_btn,
+            _("Manage HuggingFace models used for media embeddings and comparison."),
         )
         self._add_spacer()
 
         # ========== Run context-aware UI ==================================
         self._add_label(_("Compare actions"))
+
+        self.compare_settings_btn = self._make_button(
+            _("Compare Settings"),
+            lambda: self._app.window_launcher.open_compare_settings_window(),
+        )
+        create_tooltip(
+            self.compare_settings_btn,
+            _("Configure settings for media comparison and duplicate detection."),
+        )
 
         # Progress bar (hidden by default)
         self.progress_bar = QProgressBar(self)
@@ -248,26 +277,38 @@ class SidebarPanel(QWidget):
 
         # Compare buttons
         self.run_compare_btn = self._make_button(
-            _("Run image compare"),
+            _("Run media compare"),
             lambda: self._app.search_ctrl.run_compare(),
+        )
+        create_tooltip(
+            self.run_compare_btn,
+            _("Run embedding-based similarity comparison on all media in the directory."),
         )
         self.find_duplicates_btn = self._make_button(
             _("Find duplicates"),
             lambda: self._app.search_ctrl.run_compare(find_duplicates=True),
         )
+        create_tooltip(
+            self.find_duplicates_btn,
+            _("Find duplicate or near-duplicate media in the directory."),
+        )
         self.image_details_btn = self._make_button(
-            _("Image details"),
+            _("Media details"),
             lambda: self._app.window_launcher.open_media_details(),
         )
+        create_tooltip(
+            self.image_details_btn,
+            _("Show detailed metadata and information about the current media file."),
+        )
 
-        # Search current image
+        # Search current media
         self.search_current_image_btn = self._make_button(
-            _("Search current image"),
+            _("Search current media"),
             lambda: self._app.search_ctrl.set_current_image_run_search(),
         )
         create_tooltip(
             self.search_current_image_btn,
-            _("Search for images similar to the currently displayed image.\n"
+            _("Search for media similar to the currently displayed media.\n"
               "Uses embedding similarity matching."),
         )
         self._add_spacer()
@@ -278,17 +319,33 @@ class SidebarPanel(QWidget):
             _("Open media location"),
             lambda: self._app.file_ops_ctrl.open_media_location(),
         )
+        create_tooltip(
+            self.open_media_location_btn,
+            _("Open the folder containing the current file in the system file manager."),
+        )
         self.copy_image_path_btn = self._make_button(
-            _("Copy image path"),
+            _("Copy media path"),
             lambda: self._app.file_ops_ctrl.copy_media_path(),
+        )
+        create_tooltip(
+            self.copy_image_path_btn,
+            _("Copy the full file path of the current media file to the clipboard."),
         )
         self.copy_image_basename_btn = self._make_button(
             _("Copy media basename"),
             lambda: self._app.file_ops_ctrl.copy_media_basename(),
         )
+        create_tooltip(
+            self.copy_image_basename_btn,
+            _("Copy the filename (without directory path) of the current file to the clipboard."),
+        )
         self.delete_image_btn = self._make_button(
             _("---- DELETE ----"),
             lambda: self._app.file_ops_ctrl.delete_image(),
+        )
+        create_tooltip(
+            self.delete_image_btn,
+            _("Permanently delete the current media file from disk."),
         )
         self._add_spacer()
 
@@ -372,12 +429,12 @@ class SidebarPanel(QWidget):
                     and "toggle_image_view_btn" not in self._dynamic_buttons):
                 self.add_button(
                     "toggle_image_view_btn",
-                    "Toggle image view",
+                    "Toggle media view",
                     self._app.media_navigator.toggle_image_view,
                 )
                 self.add_button(
                     "replace_current_image_btn",
-                    "Replace with search image",
+                    "Replace with search media",
                     self._app.file_ops_ctrl.replace_current_image_with_search_image,
                 )
 

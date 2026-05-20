@@ -44,12 +44,13 @@ class TempImageWindow(SmartWindow):
         parent_x = parent.pos().x() if parent is not None else 0
         geo = f"{dimensions}+{parent_x + 50}+0"
         super().__init__(
-            persistent_parent=parent,
+            persistent_parent=None,
             position_parent=parent,
             title=title,
             geometry=geo,
             auto_position=False,
             window_flags=Qt.WindowType.Window,
+            respect_title_bar=True,
         )
         TempImageWindow._instance = self
         self._app_actions = app_actions

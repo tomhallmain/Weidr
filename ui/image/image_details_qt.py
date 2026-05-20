@@ -162,6 +162,7 @@ class ImageDetails(SmartWindow):
             position_parent=parent,
             title=_("Image details"),
             geometry="700x900",
+            respect_title_bar=True,
         )
         self._parent_ref = parent
         self._media_path = media_path

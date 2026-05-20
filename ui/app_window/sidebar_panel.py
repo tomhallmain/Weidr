@@ -155,7 +155,7 @@ class SidebarPanel(QWidget):
 
         # Checkboxes
         self.recursive_check = QCheckBox(_("Recurse subdirectories"), self)
-        self.recursive_check.setChecked(config.image_browse_recursive)
+        self.recursive_check.setChecked(config.browse_recursive)
         self.recursive_check.stateChanged.connect(self._on_toggle_recursive)
         self._scroll.add_widget(self.recursive_check)
 

@@ -57,7 +57,7 @@ class Config:
         self.fill_canvas = False
         self.screenshot_directory = None
         self.save_screenshot_to_same_dir = True
-        self.image_browse_recursive = False
+        self.browse_recursive = False
         self.sidebar_visible = True
         self.image_tagging_enabled = True
         self.print_settings = True
@@ -151,14 +151,7 @@ class Config:
             logger.error(e)
             logger.error("Unable to load config. Ensure config.json file is located in the configs directory of simple-image-comare.")
 
-        # Handle old version config keys
-        if "file_types" in self.dict:
-            self.dict["image_types"] = list(self.dict["file_types"])
-
-        # Backward compatibility: support old key name
-        if "image_classifier_h5_models" in self.dict and "image_classifier_models" not in self.dict:
-            self.dict["image_classifier_models"] = self.dict["image_classifier_h5_models"]
-            logger.info("Migrated 'image_classifier_h5_models' to 'image_classifier_models' for backward compatibility")
+        self._migrate_legacy_keys()
 
         if dict_set:
             self.set_values(None, "trash_folder")
@@ -188,7 +181,7 @@ class Config:
                             "gimp_exe_loc")
             self.set_values(bool,
                             "debug",
-                            "image_browse_recursive",
+                            "browse_recursive",
                             "image_tagging_enabled",
                             "escape_backslash_filepaths",
                             "fill_canvas",
@@ -562,6 +555,17 @@ class Config:
             return loc
         return None
 
+    def _migrate_legacy_keys(self) -> None:
+        """Rename old config keys so the rest of loading can use the current names."""
+        if "file_types" in self.dict:
+            self.dict["image_types"] = list(self.dict["file_types"])
+        if "image_classifier_h5_models" in self.dict and "image_classifier_models" not in self.dict:
+            self.dict["image_classifier_models"] = self.dict["image_classifier_h5_models"]
+            logger.info("Migrated 'image_classifier_h5_models' → 'image_classifier_models'")
+        if "image_browse_recursive" in self.dict and "browse_recursive" not in self.dict:
+            self.dict["browse_recursive"] = self.dict["image_browse_recursive"]
+            logger.info("Migrated 'image_browse_recursive' → 'browse_recursive'")
+
     def set_values(self, type, *names):
         for name in names:
             if type:
@@ -620,7 +624,7 @@ class Config:
             logger.info(f" - Escape backslashes in filepaths when copying")
         if self.fill_canvas:
             logger.info(f" - Expand images to fill canvas")
-        if self.image_browse_recursive:
+        if self.browse_recursive:
             logger.info(f" - Recursive file browsing")
         if self.sd_prompt_reader_loc is not None:
             logger.info(f" - Using stable diffusion prompt reader path at {self.sd_prompt_reader_loc}")

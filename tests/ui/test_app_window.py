@@ -108,7 +108,7 @@ class TestSidebarWidgets:
         assert combo.count() == len(SortBy.members())
 
     def test_recursive_check_reflects_config(self, window):
-        assert window.sidebar_panel.recursive_check.isChecked() == config.image_browse_recursive
+        assert window.sidebar_panel.recursive_check.isChecked() == config.browse_recursive
 
     def test_fill_canvas_check_reflects_config(self, window):
         assert window.sidebar_panel.fill_canvas_check.isChecked() == config.fill_canvas

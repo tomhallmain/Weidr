@@ -185,7 +185,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         # Backend (non-UI) objects -- shared across controllers
         # ------------------------------------------------------------------
         self.file_browser = FileBrowser(
-            recursive=config.image_browse_recursive, sort_by=config.sort_by
+            recursive=config.browse_recursive, sort_by=config.sort_by
         )
         self.compare_manager = CompareManager(master=self)
         self.file_check_config = FileCheckConfig(self.window_id)
@@ -724,7 +724,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
 
             # Apply directory to file browser
             self.sidebar_panel.update_base_dir_display(new_dir)
-            previous_file = base_cache.get(new_dir, "image_cursor")
+            previous_file = base_cache.get(new_dir, "file_cursor") or base_cache.get(new_dir, "image_cursor")
             previous_file_path = (
                 Utils.get_valid_file(new_dir, previous_file)
                 if previous_file and previous_file != ""
@@ -1004,7 +1004,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
                     return
                 has_new_media = False
                 if show_new_media:
-                    has_new_media = self.file_browser.update_cursor_to_new_images()
+                    has_new_media = self.file_browser.update_cursor_to_new_media()
                     if has_new_media:
                         self.media_navigator.show_next_media()
                 if active_media_in_removed:

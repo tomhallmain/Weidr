@@ -20,7 +20,7 @@
   "fill_canvas": false,
   "screenshot_directory": null,
   "save_screenshot_to_same_dir": true,
-  "image_browse_recursive": false,
+  "browse_recursive": false,
   "sidebar_visible": true,
   "image_tagging_enabled": true,
   "print_settings": true,

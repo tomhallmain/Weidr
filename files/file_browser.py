@@ -122,7 +122,7 @@ class FileBrowser:
                     self.file_cursor += direction.get_correction()
         return files
 
-    def update_cursor_to_new_images(self) -> bool:
+    def update_cursor_to_new_media(self) -> bool:
         if len(self._new_files) == 0:
             return False
         with self.cursor_lock:

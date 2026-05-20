@@ -107,7 +107,7 @@ class CacheController:
                     resolved_media_path = FrameCache.get_media_path_for_cached(cursor_media_path)
                     if resolved_media_path:
                         cursor_media_path = resolved_media_path
-                app_info_cache.set(base_dir, "image_cursor", os.path.basename(cursor_media_path))
+                app_info_cache.set(base_dir, "file_cursor", os.path.basename(cursor_media_path))
 
             app_info_cache.set(base_dir, "recursive", self._fb.is_recursive())
             app_info_cache.set(base_dir, "sort_by", self._fb.get_sort_by().get_text())

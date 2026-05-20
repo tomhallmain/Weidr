@@ -533,12 +533,12 @@ class SearchController:
 
         Ported from App.trigger_image_generation.
         """
-        from ui.image.image_details_qt import ImageDetails
+        from ui.image.media_details import MediaDetails
 
         # In Tkinter, shift state was checked from event; in Qt we don't
         # have the event from QShortcut, so always pass False here.
         # A separate Shift-keyed binding can be added if needed.
-        ImageDetails.run_image_generation_static(self._app.app_actions, modify_call=False)
+        MediaDetails.run_image_generation_static(self._app.app_actions, modify_call=False)
 
     @require_password(ProtectedActions.RUN_IMAGE_GENERATION)
     def run_image_generation(
@@ -554,20 +554,20 @@ class SearchController:
         Ported from App.run_image_generation.
         """
         from extensions.sd_runner_client import SDRunnerClient
-        from ui.image.image_details_qt import ImageDetails
+        from ui.image.media_details import MediaDetails
 
         if image_path is None:
             image_path = self._get_media_path()
         if image_path is None:
             return
         if _type is None:
-            _type = ImageDetails.get_image_specific_generation_mode()
+            _type = MediaDetails.get_image_specific_generation_mode()
 
         sd_client = SDRunnerClient()
 
         def _do_run() -> None:
             sd_client.run(_type, image_path, append=modify_call)
-            ImageDetails.previous_image_generation_adapter_path = image_path
+            MediaDetails.previous_image_generation_adapter_path = image_path
 
         worker = _CompareWorker(_do_run, [])
         worker.signals.finished.connect(
@@ -592,7 +592,7 @@ class SearchController:
         Ported from App.run_image_generation_on_directory.
         """
         from extensions.sd_runner_client import SDRunnerClient
-        from ui.image.image_details_qt import ImageDetails
+        from ui.image.media_details import MediaDetails
 
         if image_path is None:
             image_path = self._get_media_path()
@@ -600,7 +600,7 @@ class SearchController:
             return
         directory_path = os.path.dirname(image_path)
         if _type is None:
-            _type = ImageDetails.get_image_specific_generation_mode()
+            _type = MediaDetails.get_image_specific_generation_mode()
 
         sd_client = SDRunnerClient()
 
@@ -608,7 +608,7 @@ class SearchController:
             sd_client.run_on_directory(_type, directory_path)
             # Keep last-generation target path for Ctrl+Enter/Cancel/Revert flows.
             # This may be either a single file path or a directory path.
-            ImageDetails.previous_image_generation_adapter_path = directory_path
+            MediaDetails.previous_image_generation_adapter_path = directory_path
 
         worker = _CompareWorker(_do_run, [])
         worker.signals.finished.connect(
@@ -635,7 +635,7 @@ class SearchController:
         Ported from App.find_related_images_in_open_window.
         """
         from ui.files.marked_file_mover_qt import MarkedFiles
-        from ui.image.image_details_qt import ImageDetails
+        from ui.image.media_details import MediaDetails
         from ui.app_window.window_manager import WindowManager
 
         if base_dir is None:
@@ -658,7 +658,7 @@ class SearchController:
         if self._app.check_many_files(window, action="find related images"):
             return
 
-        next_related_image = ImageDetails.next_downstream_related_image(
+        next_related_image = MediaDetails.next_downstream_related_image(
             image_to_use, base_dir, self._app.app_actions
         )
         if next_related_image is not None:

@@ -208,11 +208,11 @@ class WindowLauncher:
         try:
             from files.marked_files import MarkedFiles
             from ui.files.file_actions_window_qt import FileActionsWindow
-            from ui.image.image_details_qt import ImageDetails
+            from ui.image.media_details import MediaDetails
             window = FileActionsWindow(
                 self._app,
                 self._app.app_actions,
-                ImageDetails.open_temp_image_canvas,
+                MediaDetails.open_temp_image_canvas,
                 MarkedFiles.move_marks_to_dir_static,
             )
             window.show()
@@ -245,17 +245,17 @@ class WindowLauncher:
         Open the media details / metadata inspector window.
 
         Ported from App.get_media_details. Manages the singleton
-        ImageDetails window reference stored on AppActions.
+        MediaDetails window reference stored on AppActions.
         """
-        from ui.image.image_details_qt import ImageDetails
+        from ui.image.media_details import MediaDetails
 
         app_actions = self._app.app_actions
 
         # Close existing window if the session expired
-        if app_actions.image_details_window() is not None:
+        if app_actions.media_details_window() is not None:
             if check_session_expired(ProtectedActions.VIEW_MEDIA_DETAILS):
-                app_actions.image_details_window().close_windows()
-                app_actions.set_image_details_window(None)
+                app_actions.media_details_window().close_windows()
+                app_actions.set_media_details_window(None)
 
         preset_image_path = True
         if media_path is None:
@@ -283,7 +283,7 @@ class WindowLauncher:
             else:
                 index_text = ""
 
-        existing = app_actions.image_details_window()
+        existing = app_actions.media_details_window()
         if existing is not None and not existing.has_closed:
             if existing.do_refresh:
                 existing.update_image_details(media_path, index_text)
@@ -294,21 +294,21 @@ class WindowLauncher:
                 self._app.refocus()
         else:
             try:
-                details_win = ImageDetails(
+                details_win = MediaDetails(
                     self._app, media_path, index_text,
                     app_actions, do_refresh=not preset_image_path,
                     take_focus=manually_keyed,
                 )
                 details_win.show()
-                app_actions.set_image_details_window(details_win)
+                app_actions.set_media_details_window(details_win)
             except Exception as e:
                 self._handle_error(e, "Image Details Error")
 
     @require_password(ProtectedActions.VIEW_MEDIA_DETAILS)
     def copy_prompt(self, event=None) -> None:
         """Copy the AI prompt from the currently viewed image."""
-        from ui.image.image_details_qt import ImageDetails
-        ImageDetails.copy_prompt_no_break_static(
+        from ui.image.media_details import MediaDetails
+        MediaDetails.copy_prompt_no_break_static(
             self._app.media_navigator.get_active_media_filepath(),
             self._app,
             self._app.app_actions,
@@ -317,8 +317,8 @@ class WindowLauncher:
     @require_password(ProtectedActions.VIEW_MEDIA_DETAILS)
     def show_related_media(self, event=None) -> None:
         """Show a related media file to the current one."""
-        from ui.image.image_details_qt import ImageDetails
-        ImageDetails.show_related_image(
+        from ui.image.media_details import MediaDetails
+        MediaDetails.show_related_image(
             master=self._app,
             image_path=self._app.img_path,
             app_actions=self._app.app_actions,

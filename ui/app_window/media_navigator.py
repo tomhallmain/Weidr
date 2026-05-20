@@ -267,7 +267,7 @@ class MediaNavigator:
 
         Ported from App.go_to_file.
         """
-        from ui.image.image_details_qt import ImageDetails
+        from ui.image.media_details import MediaDetails
         from ui.app_window.window_manager import WindowManager
 
         original_search_text = search_text
@@ -340,7 +340,7 @@ class MediaNavigator:
                     closest_sort_by=closest_sort_by,
                 )
                 if found_path:
-                    ImageDetails.open_temp_image_canvas(
+                    MediaDetails.open_temp_image_canvas(
                         master=self._app, image_path=found_path,
                         app_actions=self._app.app_actions, skip_get_window_check=True,
                     )
@@ -348,7 +348,7 @@ class MediaNavigator:
 
         # --- File is a valid path on disk → open in temp canvas ---
         if original_search_text_is_file:
-            ImageDetails.open_temp_image_canvas(
+            MediaDetails.open_temp_image_canvas(
                 master=self._app, image_path=original_search_text,
                 app_actions=self._app.app_actions, skip_get_window_check=True,
             )
@@ -424,7 +424,7 @@ class MediaNavigator:
         self._app.sidebar_panel.update_current_media_label(text)
 
         # Auto-refresh the media details window if it is open
-        if self._app.app_actions.image_details_window() is not None:
+        if self._app.app_actions.media_details_window() is not None:
             self._app.window_launcher.open_media_details(manually_keyed=False)
 
     def clear_media(self) -> None:

@@ -72,8 +72,8 @@ class AppActions:
     def get_master(self):
         return self._master
 
-    def image_details_window(self):
-        return self._actions.get("_image_details_window")
-    
-    def set_image_details_window(self, image_details_window):
-        self._actions["_image_details_window"] = image_details_window
+    def media_details_window(self):
+        return self._actions.get("_media_details_window")
+
+    def set_media_details_window(self, media_details_window):
+        self._actions["_media_details_window"] = media_details_window

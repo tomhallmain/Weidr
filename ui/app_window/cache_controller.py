@@ -54,7 +54,7 @@ class CacheController:
             from ui.files.marked_file_mover_qt import MarkedFiles
             from files.recent_directories import RecentDirectories
             from files.file_action import FileAction
-            from ui.image.image_details_qt import ImageDetails
+            from ui.image.media_details import MediaDetails
             from ui.compare.classifier_management_window_qt import ClassifierManagementWindow
             from ui.files.favorites_window_qt import FavoritesWindow
             from ui.files.go_to_file_qt import GoToFile
@@ -63,7 +63,7 @@ class CacheController:
             MarkedFiles.load_target_dirs()
             RecentDirectories.load_recent_directories()
             FileAction.load_actions()
-            ImageDetails.load_image_generation_mode()
+            MediaDetails.load_image_generation_mode()
             ClassifierManagementWindow.set_prevalidations()
             ClassifierManagementWindow.set_classifier_actions()
             from compare.classifier_actions_manager import ClassifierActionsManager
@@ -92,7 +92,7 @@ class CacheController:
         from ui.files.marked_file_mover_qt import MarkedFiles
         from files.recent_directories import RecentDirectories
         from files.file_action import FileAction
-        from ui.image.image_details_qt import ImageDetails
+        from ui.image.media_details import MediaDetails
         from ui.compare.classifier_management_window_qt import ClassifierManagementWindow
         from ui.files.favorites_window_qt import FavoritesWindow
         from ui.files.go_to_file_qt import GoToFile
@@ -142,7 +142,7 @@ class CacheController:
         RecentDirectories.store_recent_directories()
         MarkedFiles.store_target_dirs()
         FileAction.store_actions()
-        ImageDetails.store_image_generation_mode()
+        MediaDetails.store_image_generation_mode()
         ClassifierManagementWindow.store_prevalidations()
         ClassifierManagementWindow.store_classifier_actions()
         FavoritesWindow.store_favorites()

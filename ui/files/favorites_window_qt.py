@@ -233,10 +233,10 @@ class FavoritesWindow(SmartDialog):
             )
             return
 
-        from ui.image.image_details_qt import ImageDetails
+        from ui.image.media_details import MediaDetails
 
         try:
-            ImageDetails.open_temp_image_canvas(
+            MediaDetails.open_temp_image_canvas(
                 master=self._app_master,
                 image_path=fav,
                 app_actions=self._app_actions,

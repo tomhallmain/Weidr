@@ -80,7 +80,7 @@ class KeyBindingManager:
         """Register all keyboard shortcuts."""
         app = self._app
         from ui.files.marked_file_mover_qt import MarkedFiles, MarkedFileMover
-        from ui.image.image_details_qt import ImageDetails
+        from ui.image.media_details import MediaDetails
         from ui.app_window.window_manager import WindowManager
         from utils.constants import ImageGenerationType, Mode
         from files.file_action import FileAction
@@ -143,13 +143,13 @@ class KeyBindingManager:
         self._bind("Shift+E", app.window_launcher.copy_prompt)
         self._bind(
             "Shift+K",
-            lambda: ImageDetails.open_temp_image_canvas(
+            lambda: MediaDetails.open_temp_image_canvas(
                 app, MarkedFiles.last_moved_image, app.app_actions
             ),
         )
         self._bind(
             "Ctrl+Shift+K",
-            lambda: ImageDetails.open_temp_image_canvas(
+            lambda: MediaDetails.open_temp_image_canvas(
                 app, FileAction.get_last_auto_file(), app.app_actions
             ),
         )
@@ -169,23 +169,23 @@ class KeyBindingManager:
         self._bind("Shift+Z", app.search_ctrl.add_current_media_to_negative_search)
         self._bind(
             "Shift+I",
-            lambda: ImageDetails.run_image_generation_static(app.app_actions),
+            lambda: MediaDetails.run_image_generation_static(app.app_actions),
         )
         self._bind(
             "Shift+Q",
-            lambda: ImageDetails.randomly_modify_image(
+            lambda: MediaDetails.randomly_modify_image(
                 app.media_navigator.get_active_media_filepath(), app.app_actions, app
             ),
         )
         self._bind(
             "Shift+W",
-            lambda: ImageDetails.source_random_prompt(app.file_browser, app, app.app_actions),
+            lambda: MediaDetails.source_random_prompt(app.file_browser, app, app.app_actions),
         )
         self._bind(
             "Ctrl+Return",
             lambda: app.search_ctrl.run_image_generation(
                 _type=ImageGenerationType.LAST_SETTINGS,
-                image_path=ImageDetails.previous_image_generation_adapter_path,
+                image_path=MediaDetails.previous_image_generation_adapter_path,
             ),
             guarded=False,
         )
@@ -193,7 +193,7 @@ class KeyBindingManager:
             "Ctrl+Shift+Return",
             lambda: app.search_ctrl.run_image_generation(
                 _type=ImageGenerationType.CANCEL,
-                image_path=ImageDetails.previous_image_generation_adapter_path,
+                image_path=MediaDetails.previous_image_generation_adapter_path,
             ),
             guarded=False,
         )
@@ -201,7 +201,7 @@ class KeyBindingManager:
             "Ctrl+Alt+Return",
             lambda: app.search_ctrl.run_image_generation(
                 _type=ImageGenerationType.REVERT_TO_SIMPLE_GEN,
-                image_path=ImageDetails.previous_image_generation_adapter_path,
+                image_path=MediaDetails.previous_image_generation_adapter_path,
             ),
             guarded=False,
         )

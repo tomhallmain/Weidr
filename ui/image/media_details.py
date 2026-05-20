@@ -1,8 +1,8 @@
 """
-PySide6 port of image/image_details.py -- ImageDetails.
+PySide6 port of image/image_details.py -- MediaDetails.
 
-Displays image metadata, file info, prompt extraction, and provides
-actions for rotate/crop/flip/enhance/convert/generation/related images.
+Displays media metadata, file info, prompt extraction, and provides
+actions for rotate/crop/flip/enhance/convert/generation/related media.
 
 Non-UI imports (reuse policy):
   - FileBrowser        from files.file_browser
@@ -54,7 +54,7 @@ from utils.translations import I18N
 from utils.utils import Utils, ModifierKey
 
 _ = I18N._
-logger = get_logger("image_details_qt")
+logger = get_logger("media_details")
 
 
 # ── Utility ───────────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ def truncate_details_label_text(
 ) -> str:
     """
     Shorten long prompts for on-screen labels: cap line count, then character length.
-    Copy actions use the untruncated strings stored on :class:`ImageDetails`.
+    Copy actions use the untruncated strings stored on :class:`MediaDetails`.
     """
     if not text:
         return text
@@ -100,10 +100,10 @@ def truncate_details_label_text(
     return out
 
 
-# ── ImageDetails ──────────────────────────────────────────────────────
+# ── MediaDetails ──────────────────────────────────────────────────────
 
 
-class ImageDetails(SmartWindow):
+class MediaDetails(SmartWindow):
     """Image details / actions dialog."""
 
     # -- Class-level state -----------------------------------------
@@ -130,7 +130,7 @@ class ImageDetails(SmartWindow):
     @staticmethod
     def load_image_generation_mode() -> None:
         try:
-            ImageDetails.image_generation_mode = ImageGenerationType.get(
+            MediaDetails.image_generation_mode = ImageGenerationType.get(
                 app_info_cache.get_meta(
                     "image_generation_mode",
                     default_val=ImageGenerationType.CONTROL_NET.value,
@@ -143,7 +143,7 @@ class ImageDetails(SmartWindow):
     def store_image_generation_mode() -> None:
         app_info_cache.set_meta(
             "image_generation_mode",
-            ImageDetails.image_generation_mode.value,
+            MediaDetails.image_generation_mode.value,
         )
 
     # -- Construction ----------------------------------------------
@@ -286,7 +286,7 @@ class ImageDetails(SmartWindow):
         def _header(text: str, r: int, c: int = 0) -> QLabel:
             lbl = QLabel(text)
             lbl.setWordWrap(True)
-            lbl.setMaximumWidth(ImageDetails.COL_0_WIDTH)
+            lbl.setMaximumWidth(MediaDetails.COL_0_WIDTH)
             lbl.setStyleSheet(
                 f"color: {AppStyle.FG_COLOR};"
                 f"background: {AppStyle.BG_COLOR};"
@@ -354,7 +354,7 @@ class ImageDetails(SmartWindow):
         self._lbl_positive = _value(positive_display, row)
         if self._prompt_extraction_failed:
             self._lbl_positive.setStyleSheet(
-                f"color: {ImageDetails._PROMPT_NOT_FOUND_COLOR};"
+                f"color: {MediaDetails._PROMPT_NOT_FOUND_COLOR};"
                 f"background: {AppStyle.BG_COLOR};"
             )
         row += 1
@@ -363,7 +363,7 @@ class ImageDetails(SmartWindow):
         self._lbl_negative = _value(negative_display, row)
         if neg_is_placeholder:
             self._lbl_negative.setStyleSheet(
-                f"color: {ImageDetails._NEGATIVE_HIDDEN_COLOR};"
+                f"color: {MediaDetails._NEGATIVE_HIDDEN_COLOR};"
                 f"background: {AppStyle.BG_COLOR};"
             )
         row += 1
@@ -419,7 +419,7 @@ class ImageDetails(SmartWindow):
         for member in ImageGenerationType:
             self._gen_mode_combo.addItem(member.get_text(), member.value)
         selected_index = self._gen_mode_combo.findData(
-            ImageDetails.image_generation_mode.value
+            MediaDetails.image_generation_mode.value
         )
         if selected_index >= 0:
             self._gen_mode_combo.setCurrentIndex(selected_index)
@@ -652,7 +652,7 @@ class ImageDetails(SmartWindow):
         self._lbl_positive.setText(pos_display)
         if self._prompt_extraction_failed:
             self._lbl_positive.setStyleSheet(
-                f"color: {ImageDetails._PROMPT_NOT_FOUND_COLOR};"
+                f"color: {MediaDetails._PROMPT_NOT_FOUND_COLOR};"
                 f"background: {AppStyle.BG_COLOR};"
             )
         else:
@@ -663,7 +663,7 @@ class ImageDetails(SmartWindow):
         self._lbl_negative.setText(neg_display)
         if neg_is_placeholder:
             self._lbl_negative.setStyleSheet(
-                f"color: {ImageDetails._NEGATIVE_HIDDEN_COLOR};"
+                f"color: {MediaDetails._NEGATIVE_HIDDEN_COLOR};"
                 f"background: {AppStyle.BG_COLOR};"
             )
         else:
@@ -676,9 +676,9 @@ class ImageDetails(SmartWindow):
         self._lbl_related_image.setText(related_image_text)
 
         # Refresh open metadata viewer
-        if ImageDetails.metadata_viewer_window is not None:
-            if ImageDetails.metadata_viewer_window.has_closed:
-                ImageDetails.metadata_viewer_window = None
+        if MediaDetails.metadata_viewer_window is not None:
+            if MediaDetails.metadata_viewer_window.has_closed:
+                MediaDetails.metadata_viewer_window = None
             else:
                 self.show_metadata()
 
@@ -688,7 +688,7 @@ class ImageDetails(SmartWindow):
         positive = self._full_positive_for_copy
         if positive is None:
             positive = self._lbl_positive.text()
-        ImageDetails._copy_prompt_static(
+        MediaDetails._copy_prompt_static(
             positive, self._app_actions, self._prompt_extraction_failed
         )
 
@@ -696,7 +696,7 @@ class ImageDetails(SmartWindow):
         positive = self._full_positive_for_copy
         if positive is None:
             positive = self._lbl_positive.text()
-        ImageDetails._copy_prompt_static(
+        MediaDetails._copy_prompt_static(
             positive,
             self._app_actions,
             self._prompt_extraction_failed,
@@ -710,7 +710,7 @@ class ImageDetails(SmartWindow):
         positive, _neg, _mod, _lor, prompt_extraction_failed = (
             image_data_extractor.get_image_prompts_and_models(image_path)
         )
-        ImageDetails._copy_prompt_static(
+        MediaDetails._copy_prompt_static(
             positive,
             app_actions,
             prompt_extraction_failed,
@@ -734,7 +734,7 @@ class ImageDetails(SmartWindow):
             if remove_emphases:
                 if "BREAK" in positive:
                     positive = positive[positive.index("BREAK") + 6 :]
-                positive = ImageDetails.remove_emphases(positive)
+                positive = MediaDetails.remove_emphases(positive)
             QGuiApplication.clipboard().setText(positive)
             app_actions.toast(_("Copied prompt without BREAK"))
 
@@ -781,7 +781,7 @@ class ImageDetails(SmartWindow):
                     prompt_text = positive
                     if "BREAK" in prompt_text:
                         prompt_text = prompt_text[prompt_text.index("BREAK") + 6:]
-                    prompt_text = ImageDetails.remove_emphases(prompt_text)
+                    prompt_text = MediaDetails.remove_emphases(prompt_text)
                     QGuiApplication.clipboard().setText(prompt_text)
                     filename = os.path.basename(file_path)
                     app_actions.success(
@@ -816,7 +816,7 @@ class ImageDetails(SmartWindow):
             If *True*, open the marks window (no GUI) instead of the
             temp image canvas.
         close : bool
-            If *True*, close this ImageDetails window before refreshing.
+            If *True*, close this MediaDetails window before refreshing.
         """
         if close:
             self.close_windows()
@@ -828,7 +828,7 @@ class ImageDetails(SmartWindow):
                     filepath=new_filepath, open_gui=False
                 )
             else:
-                ImageDetails.open_temp_image_canvas(
+                MediaDetails.open_temp_image_canvas(
                     master=self._parent_ref,
                     image_path=new_filepath,
                     app_actions=self._app_actions,
@@ -849,7 +849,7 @@ class ImageDetails(SmartWindow):
             self.close_windows()
             self._app_actions.refresh()
             self._app_actions.success(_("Cropped image"))
-            ImageDetails.open_temp_image_canvas(
+            MediaDetails.open_temp_image_canvas(
                 master=self._parent_ref,
                 image_path=saved_files[0],
                 app_actions=self._app_actions,
@@ -866,7 +866,7 @@ class ImageDetails(SmartWindow):
         self._handle_action_result(new_filepath, _("Randomly cropped image"))
 
     def random_modification(self) -> None:
-        ImageDetails.randomly_modify_image(
+        MediaDetails.randomly_modify_image(
             self._image_path, self._app_actions, self._parent_ref
         )
 
@@ -879,7 +879,7 @@ class ImageDetails(SmartWindow):
         if os.path.exists(new_filepath):
             app_actions.success(_("Randomly modified image"))
             if master is not None:
-                ImageDetails.open_temp_image_canvas(
+                MediaDetails.open_temp_image_canvas(
                     master=master,
                     image_path=new_filepath,
                     app_actions=app_actions,
@@ -919,13 +919,13 @@ class ImageDetails(SmartWindow):
 
     def _store_aspect_ratio_settings(self, target_ratio: str) -> None:
         app_info_cache.set_meta(
-            ImageDetails.ASPECT_RATIO_SETTINGS_KEY,
+            MediaDetails.ASPECT_RATIO_SETTINGS_KEY,
             {"target_ratio": target_ratio},
         )
 
     def _get_saved_aspect_ratio(self) -> str | None:
         settings = app_info_cache.get_meta(
-            ImageDetails.ASPECT_RATIO_SETTINGS_KEY,
+            MediaDetails.ASPECT_RATIO_SETTINGS_KEY,
             default_val={},
         )
         if isinstance(settings, dict):
@@ -968,7 +968,7 @@ class ImageDetails(SmartWindow):
             return
 
         width, height = self._get_current_dimensions()
-        current_ratio = ImageDetails._ratio_text(width, height)
+        current_ratio = MediaDetails._ratio_text(width, height)
         saved_ratio = self._get_saved_aspect_ratio()
         default_ratio = saved_ratio if saved_ratio is not None else current_ratio
 
@@ -1125,12 +1125,12 @@ class ImageDetails(SmartWindow):
 
     def _show_metadata_window(self, metadata_text: str) -> None:
         path_for_title = self._path_for_metadata_window()
-        mvw = ImageDetails.metadata_viewer_window
+        mvw = MediaDetails.metadata_viewer_window
         if mvw is None or mvw.has_closed:
-            ImageDetails.metadata_viewer_window = MetadataViewerWindow(
+            MediaDetails.metadata_viewer_window = MetadataViewerWindow(
                 self, self._app_actions, metadata_text, path_for_title
             )
-            ImageDetails.metadata_viewer_window.show()
+            MediaDetails.metadata_viewer_window.show()
         else:
             mvw.update_metadata(metadata_text, path_for_title)
 
@@ -1157,13 +1157,13 @@ class ImageDetails(SmartWindow):
             self._app_actions.warn(_("OCR failed: ") + str(e))
 
     def _show_ocr_window(self, ocr_text: str, confidence: float | None) -> None:
-        w = ImageDetails.ocr_text_window
+        w = MediaDetails.ocr_text_window
         if w is None or w.has_closed:
-            ImageDetails.ocr_text_window = OCRTextWindow(
+            MediaDetails.ocr_text_window = OCRTextWindow(
                 self, self._app_actions, ocr_text, self._image_path,
                 confidence=confidence,
             )
-            ImageDetails.ocr_text_window.show()
+            MediaDetails.ocr_text_window.show()
         else:
             w.update_text(ocr_text, self._image_path, confidence)
 
@@ -1175,9 +1175,9 @@ class ImageDetails(SmartWindow):
             return _("(Not available)")
         if self.media_type.is_video():
             return _("(Related image lookup is not available for video)")
-        node_id = ImageDetails.related_image_saved_node_id
+        node_id = MediaDetails.related_image_saved_node_id
         related_image_path, exact_match = (
-            ImageDetails.get_related_image_path(
+            MediaDetails.get_related_image_path(
                 self._image_path, node_id, check_extra_directories=False
             )
         )
@@ -1195,7 +1195,7 @@ class ImageDetails(SmartWindow):
         if self.media_type.is_video():
             self._app_actions.toast(_("Related image is not available for video files"))
             return
-        ImageDetails.show_related_image(
+        MediaDetails.show_related_image(
             self._parent_ref, None, self._image_path, self._app_actions
         )
 
@@ -1206,7 +1206,7 @@ class ImageDetails(SmartWindow):
         check_extra_directories: bool | None = True,
     ) -> tuple[str | None, bool]:
         if node_id is None or node_id == "":
-            node_id = ImageDetails.related_image_saved_node_id
+            node_id = MediaDetails.related_image_saved_node_id
         related_image_path = image_data_extractor.get_related_image_path(
             image_path, node_id
         )
@@ -1258,7 +1258,7 @@ class ImageDetails(SmartWindow):
         if master is None or image_path == "":
             raise Exception("No master or image path given")
         related_image_path, exact_match = (
-            ImageDetails.get_related_image_path(image_path, node_id)
+            MediaDetails.get_related_image_path(image_path, node_id)
         )
         if related_image_path is None or related_image_path == "":
             app_actions.toast(_("(No related image found)"))
@@ -1266,7 +1266,7 @@ class ImageDetails(SmartWindow):
         elif not exact_match:
             app_actions.toast(_(" (Exact Match Not Found)"))
             return
-        ImageDetails.open_temp_image_canvas(
+        MediaDetails.open_temp_image_canvas(
             master=master,
             image_path=related_image_path,
             app_actions=app_actions,
@@ -1294,24 +1294,24 @@ class ImageDetails(SmartWindow):
                 is not None
             ):
                 return
-        if ImageDetails.temp_media_canvas is None:
-            ImageDetails.set_temp_media_canvas(
+        if MediaDetails.temp_media_canvas is None:
+            MediaDetails.set_temp_media_canvas(
                 master, image_path, app_actions
             )
         try:
-            ImageDetails.temp_media_canvas.create_image(image_path)
+            MediaDetails.temp_media_canvas.create_image(image_path)
         except Exception:
             # Re-create the canvas window if the old one was destroyed
-            ImageDetails.set_temp_media_canvas(
+            MediaDetails.set_temp_media_canvas(
                 master, image_path, app_actions
             )
-            ImageDetails.temp_media_canvas.create_image(image_path)
+            MediaDetails.temp_media_canvas.create_image(image_path)
 
     @staticmethod
     def set_temp_media_canvas(
         master, media_path: str, app_actions
     ) -> None:
-        width, height = ImageDetails._get_temp_canvas_dimensions(media_path)
+        width, height = MediaDetails._get_temp_canvas_dimensions(media_path)
         canvas = TempImageWindow(
             parent=master,
             title=media_path,
@@ -1319,7 +1319,7 @@ class ImageDetails(SmartWindow):
             app_actions=app_actions,
         )
         canvas.show()
-        ImageDetails.temp_media_canvas = canvas
+        MediaDetails.temp_media_canvas = canvas
 
     @staticmethod
     def _get_temp_canvas_dimensions(
@@ -1355,19 +1355,19 @@ class ImageDetails(SmartWindow):
         downstream_related_images: list[str] = []
         image_basename = os.path.basename(image_path)
         if (
-            ImageDetails.downstream_related_image_browser.directory
+            MediaDetails.downstream_related_image_browser.directory
             != other_base_dir
         ):
-            ImageDetails.downstream_related_image_browser = FileBrowser(
+            MediaDetails.downstream_related_image_browser = FileBrowser(
                 directory=other_base_dir
             )
-        ImageDetails.downstream_related_image_browser._gather_files()
+        MediaDetails.downstream_related_image_browser._gather_files()
         for path in (
-            ImageDetails.downstream_related_image_browser.filepaths
+            MediaDetails.downstream_related_image_browser.filepaths
         ):
             if path == image_path:
                 continue
-            related, _exact = ImageDetails.get_related_image_path(
+            related, _exact = MediaDetails.get_related_image_path(
                 path, check_extra_directories=None
             )
             if related is not None:
@@ -1381,7 +1381,7 @@ class ImageDetails(SmartWindow):
                     ):
                         # NOTE: relation criteria is intentionally loose
                         downstream_related_images.append(path)
-        ImageDetails.downstream_related_images_cache[key] = (
+        MediaDetails.downstream_related_images_cache[key] = (
             downstream_related_images
         )
 
@@ -1393,20 +1393,20 @@ class ImageDetails(SmartWindow):
         force_refresh: bool = False,
     ):
         key = image_path + "/" + other_base_dir
-        if (force_refresh or key not in ImageDetails.downstream_related_images_cache):
-            ImageDetails.refresh_downstream_related_image_cache(
+        if (force_refresh or key not in MediaDetails.downstream_related_images_cache):
+            MediaDetails.refresh_downstream_related_image_cache(
                 key, image_path, other_base_dir
             )
-            downstream = ImageDetails.downstream_related_images_cache[key]
+            downstream = MediaDetails.downstream_related_images_cache[key]
             toast_text = _("{0} downstream image(s) found.").format(len(downstream))
         else:
-            downstream = ImageDetails.downstream_related_images_cache[key]
+            downstream = MediaDetails.downstream_related_images_cache[key]
             toast_text = _("{0} (cached) downstream image(s) found.").format(len(downstream))
-            if ImageDetails.downstream_related_image_index >= len(downstream):
-                ImageDetails.refresh_downstream_related_image_cache(
+            if MediaDetails.downstream_related_image_index >= len(downstream):
+                MediaDetails.refresh_downstream_related_image_cache(
                     key, image_path, other_base_dir
                 )
-                downstream = ImageDetails.downstream_related_images_cache[key]
+                downstream = MediaDetails.downstream_related_images_cache[key]
                 toast_text = _("{0} downstream image(s) found.").format(len(downstream))
 
         if len(downstream) == 0:
@@ -1423,15 +1423,15 @@ class ImageDetails(SmartWindow):
         image_path: str, other_base_dir: str, app_actions
     ) -> str | None:
         """Find the next image that has been created from the given image."""
-        downstream = ImageDetails.get_downstream_related_images(
+        downstream = MediaDetails.get_downstream_related_images(
             image_path, other_base_dir, app_actions
         )
         if downstream is None:
             return None
-        if ImageDetails.downstream_related_image_index >= len(downstream):
-            ImageDetails.downstream_related_image_index = 0
-        path = downstream[ImageDetails.downstream_related_image_index]
-        ImageDetails.downstream_related_image_index += 1
+        if MediaDetails.downstream_related_image_index >= len(downstream):
+            MediaDetails.downstream_related_image_index = 0
+        path = downstream[MediaDetails.downstream_related_image_index]
+        MediaDetails.downstream_related_image_index += 1
         return path
 
     # ── Image generation ─────────────────────────────────────────
@@ -1439,18 +1439,18 @@ class ImageDetails(SmartWindow):
     def _on_gen_mode_changed(self, _index: int) -> None:
         mode_value = self._gen_mode_combo.currentData()
         if mode_value is not None:
-            ImageDetails.image_generation_mode = ImageGenerationType.get(mode_value)
+            MediaDetails.image_generation_mode = ImageGenerationType.get(mode_value)
 
     def set_image_generation_mode(self, event=None) -> None:
         mode_value = self._gen_mode_combo.currentData()
         if mode_value is not None:
-            ImageDetails.image_generation_mode = ImageGenerationType.get(mode_value)
+            MediaDetails.image_generation_mode = ImageGenerationType.get(mode_value)
 
     def run_image_generation(self, event=None) -> None:
-        ImageDetails.run_image_generation_static(self._app_actions)
+        MediaDetails.run_image_generation_static(self._app_actions)
 
     def run_redo_prompt(self, event=None) -> None:
-        ImageDetails.run_image_generation_static(
+        MediaDetails.run_image_generation_static(
             self._app_actions, _type=ImageGenerationType.REDO_PROMPT
         )
 
@@ -1467,25 +1467,25 @@ class ImageDetails(SmartWindow):
                 _type = ImageGenerationType.LAST_SETTINGS
             app_actions.run_image_generation(
                 _type=_type,
-                image_path=ImageDetails.previous_image_generation_adapter_path,
+                image_path=MediaDetails.previous_image_generation_adapter_path,
                 modify_call=modify_call,
             )
         else:
             if _type is None:
-                _type = ImageDetails.image_generation_mode
+                _type = MediaDetails.image_generation_mode
             app_actions.run_image_generation(
                 _type=_type, modify_call=modify_call
             )
 
     @staticmethod
     def get_image_specific_generation_mode():
-        if ImageDetails.image_generation_mode in [
+        if MediaDetails.image_generation_mode in [
             ImageGenerationType.REDO_PROMPT,
             ImageGenerationType.TAKE_PROMPT,
             ImageGenerationType.CONTROL_NET,
             ImageGenerationType.IP_ADAPTER,
         ]:
-            return ImageDetails.image_generation_mode
+            return MediaDetails.image_generation_mode
         return ImageGenerationType.CONTROL_NET
 
     # ── Tags ─────────────────────────────────────────────────────
@@ -1512,11 +1512,11 @@ class ImageDetails(SmartWindow):
         return self._do_refresh
 
     def close_windows(self, event=None) -> None:
-        self._app_actions.set_image_details_window(None)
+        self._app_actions.set_media_details_window(None)
         self._has_closed = True
         self.close()
 
     def closeEvent(self, event) -> None:  # noqa: N802
-        self._app_actions.set_image_details_window(None)
+        self._app_actions.set_media_details_window(None)
         self._has_closed = True
         super().closeEvent(event)

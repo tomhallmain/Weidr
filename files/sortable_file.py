@@ -41,7 +41,7 @@ class SortableFile:
         self.related_image_path = image_data_extractor.get_related_image_path(self.full_file_path)
         if self.related_image_path is None:
             self.related_image_path = ""
-        # TODO use the related image path cache in ImageDetails to see if THIS related image path has a related image of its own.
+        # TODO use the related image path cache in MediaDetails to see if THIS related image path has a related image of its own.
         # IF it does, then set the related image path key to the higher level related image path + some identifier.
 
     def get_related_image_or_self(self):

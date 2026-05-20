@@ -336,7 +336,7 @@ class FileMarksController:
 
         Ported from App.set_marks_from_downstream_related_images.
         """
-        from ui.image.image_details_qt import ImageDetails
+        from ui.image.media_details import MediaDetails
         from ui.app_window.window_manager import WindowManager
 
         if base_dir is None:
@@ -362,7 +362,7 @@ class FileMarksController:
         if self._app.check_many_files(window, action="find related images"):
             return
 
-        downstream_related_images = ImageDetails.get_downstream_related_images(
+        downstream_related_images = MediaDetails.get_downstream_related_images(
             image_to_use, base_dir, self._app.app_actions, force_refresh=True
         )
         if downstream_related_images is not None:

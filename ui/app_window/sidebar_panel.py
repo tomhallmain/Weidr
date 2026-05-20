@@ -175,7 +175,7 @@ class SidebarPanel(QWidget):
 
         # Search image
         self.set_search_btn = self._make_button(
-            _("Set search file"), lambda: self._app.search_ctrl.set_search_for_image()
+            _("Set search file"), lambda: self._app.search_ctrl.set_search_for_media()
         )
         create_tooltip(
             self.set_search_btn,
@@ -186,14 +186,14 @@ class SidebarPanel(QWidget):
         self.search_img_path_box = AwareEntry(self)
         self.search_img_path_box.setPlaceholderText(_("Search media path..."))
         self.search_img_path_box.returnPressed.connect(
-            lambda: self._app.search_ctrl.set_search_for_image()
+            lambda: self._app.search_ctrl.set_search_for_media()
         )
         self._scroll.add_widget(self.search_img_path_box)
 
         # Negative search image
         self.set_negative_search_btn = self._make_button(
             _("Set negative search file"),
-            lambda: self._app.search_ctrl.set_negative_search_for_image(),
+            lambda: self._app.search_ctrl.set_negative_search_for_media(),
         )
         create_tooltip(
             self.set_negative_search_btn,
@@ -202,7 +202,7 @@ class SidebarPanel(QWidget):
         self.search_img_negative_path_box = AwareEntry(self)
         self.search_img_negative_path_box.setPlaceholderText(_("Negative search media path..."))
         self.search_img_negative_path_box.returnPressed.connect(
-            lambda: self._app.search_ctrl.set_negative_search_for_image()
+            lambda: self._app.search_ctrl.set_negative_search_for_media()
         )
         self._scroll.add_widget(self.search_img_negative_path_box)
 
@@ -304,7 +304,7 @@ class SidebarPanel(QWidget):
         # Search current media
         self.search_current_image_btn = self._make_button(
             _("Search current media"),
-            lambda: self._app.search_ctrl.set_current_image_run_search(),
+            lambda: self._app.search_ctrl.set_current_media_run_search(),
         )
         create_tooltip(
             self.search_current_image_btn,
@@ -341,7 +341,7 @@ class SidebarPanel(QWidget):
         )
         self.delete_image_btn = self._make_button(
             _("---- DELETE ----"),
-            lambda: self._app.file_ops_ctrl.delete_image(),
+            lambda: self._app.file_ops_ctrl.delete_media(),
         )
         create_tooltip(
             self.delete_image_btn,
@@ -430,12 +430,12 @@ class SidebarPanel(QWidget):
                 self.add_button(
                     "toggle_image_view_btn",
                     "Toggle media view",
-                    self._app.media_navigator.toggle_image_view,
+                    self._app.media_navigator.toggle_media_view,
                 )
                 self.add_button(
                     "replace_current_image_btn",
                     "Replace with search media",
-                    self._app.file_ops_ctrl.replace_current_image_with_search_image,
+                    self._app.file_ops_ctrl.replace_current_media_with_search_media,
                 )
 
         elif mode == Mode.GROUP:
@@ -550,14 +550,14 @@ class SidebarPanel(QWidget):
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         if watched is self._scroll.viewport() and event.type() == QEvent.Type.Resize:
-            self._sync_current_image_label_max_width()
+            self._sync_current_media_label_max_width()
         return super().eventFilter(watched, event)
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        self._sync_current_image_label_max_width()
+        self._sync_current_media_label_max_width()
 
-    def _sync_current_image_label_max_width(self) -> None:
+    def _sync_current_media_label_max_width(self) -> None:
         """
         Clamp the filename label to the scroll viewport so unbroken long names
         (hashes, URLs) cannot widen the sidebar column and clip centered buttons.
@@ -570,11 +570,11 @@ class SidebarPanel(QWidget):
         w = max(48, vp.width() - margin)
         self.label_current_media_name.setMaximumWidth(w)
 
-    def update_current_image_label(self, text: str) -> None:
+    def update_current_media_label(self, text: str) -> None:
         """Update the current image name label."""
         self.label_current_media_name.setText(text)
         self.label_current_media_name.setToolTip(text if text else "")
-        self._sync_current_image_label_max_width()
+        self._sync_current_media_label_max_width()
 
     def update_state_label(self, text: str) -> None:
         """Update the file state label (e.g. '5 / 120')."""

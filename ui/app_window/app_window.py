@@ -432,7 +432,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             "set_mode": ts(self.set_mode),
             "is_fullscreen": lambda: self.fullscreen,
             "get_active_media_filepath": self.media_navigator.get_active_media_filepath,
-            "create_image": ts(self.media_navigator.create_image),
+            "create_media": ts(self.media_navigator.create_media),
             "show_next_media": ts(self.media_navigator.show_next_media),
             "play_media": ts(self.play_media),
             "pause_media": ts(self.pause_media),
@@ -1022,7 +1022,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
                     time.sleep(1)
                     self.delete_lock = False
             else:
-                self.media_navigator.clear_image()
+                self.media_navigator.clear_media()
                 self.notification_ctrl.set_label_state()
                 self.notification_ctrl.alert(
                     _("Warning"), _("No files found in directory after refresh."), kind="warning"
@@ -1206,7 +1206,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
     def _on_masonry_tile_activated(self, filepath: str) -> None:
         """Handle a tile click: navigate to the file and return to single view."""
         self.file_browser.go_to_file(filepath)
-        self.media_navigator.create_image(filepath)
+        self.media_navigator.create_media(filepath)
         self.view_mode = ViewMode.FULL
         self._media_stack.setCurrentIndex(0)
         self.media_frame.setFocus()
@@ -1233,7 +1233,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
     def mousePressEvent(self, event):  # noqa: N802
         """Middle mouse button (wheel click) deletes the current image."""
         if event.button() == Qt.MouseButton.MiddleButton:
-            self.file_ops_ctrl.delete_image()
+            self.file_ops_ctrl.delete_media()
             event.accept()
             return
         super().mousePressEvent(event)

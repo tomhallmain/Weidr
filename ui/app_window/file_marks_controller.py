@@ -150,7 +150,7 @@ class FileMarksController:
 
         if self._app.mode == Mode.BROWSE:
             self._fb.go_to_file(marked_file)
-            self._nav.create_image(marked_file)
+            self._nav.create_media(marked_file)
             if len(MarkedFiles.file_marks) == 1:
                 self._app.notification_ctrl.toast(_("Only one marked file set."))
         else:

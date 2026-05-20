@@ -90,7 +90,7 @@ class KeyBindingManager:
         # ==============================================================
         self._bind("Left", app.media_navigator.show_prev_media)
         self._bind("Right", app.media_navigator.show_next_media)
-        self._bind("Shift+Backspace", app.media_navigator.go_to_previous_image)
+        self._bind("Shift+Backspace", app.media_navigator.go_to_previous_media)
         self._bind(
             "Shift+Left",
             lambda: app.compare_manager.show_prev_group(
@@ -113,10 +113,10 @@ class KeyBindingManager:
         # ==============================================================
         self._bind("Shift+O", app.file_ops_ctrl.open_media_location)
         self._bind("Shift+P", app.file_ops_ctrl.open_image_in_gimp)
-        self._bind("Shift+Delete", app.file_ops_ctrl.delete_image)
+        self._bind("Shift+Delete", app.file_ops_ctrl.delete_media)
         self._bind("Ctrl+Shift+Delete", app.file_ops_ctrl.delete_current_base_dir)
         self._bind("Shift+V", app.file_ops_ctrl.hide_current_media)
-        self._bind("Shift+B", app.file_ops_ctrl.clear_hidden_images)
+        self._bind("Shift+B", app.file_ops_ctrl.clear_hidden_media)
         self._bind("Shift+U", app.file_ops_ctrl.run_refacdir)
 
         # ==============================================================
@@ -131,11 +131,11 @@ class KeyBindingManager:
         # Info / details
         # ==============================================================
         self._bind("Shift+D", app.window_launcher.open_media_details)
-        self._bind("Shift+R", app.window_launcher.show_related_image)
+        self._bind("Shift+R", app.window_launcher.show_related_media)
         self._bind(
             "Shift+T",
-            lambda: app.search_ctrl.find_related_images_in_open_window()
-            if hasattr(app.search_ctrl, "find_related_images_in_open_window")
+            lambda: app.search_ctrl.find_related_media_in_open_window()
+            if hasattr(app.search_ctrl, "find_related_media_in_open_window")
             else None,
         )
         self._bind("Shift+Y", app.file_marks_ctrl.set_marks_from_downstream_related_images)
@@ -159,14 +159,14 @@ class KeyBindingManager:
         # ==============================================================
         self._bind(
             "Shift+A",
-            lambda: app.search_ctrl.set_current_image_run_search(base_dir=app.base_dir),
+            lambda: app.search_ctrl.set_current_media_run_search(base_dir=app.base_dir),
         )
         # Keep Shift+Z on the generic resolver flow. Unlike Shift+A, there is no
         # complementary Ctrl+<key> path available for explicit cross-window targeting
         # because Ctrl+Z is reserved for undo.
         # TODO: Consider adding Ctrl+Shift+Z for explicit current-window negative
         # search binding if shortcut conflicts remain acceptable.
-        self._bind("Shift+Z", app.search_ctrl.add_current_image_to_negative_search)
+        self._bind("Shift+Z", app.search_ctrl.add_current_media_to_negative_search)
         self._bind(
             "Shift+I",
             lambda: ImageDetails.run_image_generation_static(app.app_actions),

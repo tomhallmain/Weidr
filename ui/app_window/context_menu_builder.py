@@ -153,12 +153,12 @@ class ContextMenuBuilder:
         # Related images
         # ------------------------------------------------------------------
         menu.addAction(
-            _("Show Source Image"),
-            lambda: app.window_launcher.show_related_image(),
+            _("Show Source Media"),
+            lambda: app.window_launcher.show_related_media(),
         )
         menu.addAction(
-            _("Find Related Images"),
-            lambda: app.search_ctrl.find_related_images_in_open_window(),
+            _("Find Related Media"),
+            lambda: app.search_ctrl.find_related_media_in_open_window(),
         )
         menu.addAction(
             _("Set Marks from Downstream Related Images"),
@@ -171,12 +171,12 @@ class ContextMenuBuilder:
         # Search
         # ------------------------------------------------------------------
         menu.addAction(
-            _("Set Current Image as Search Image"),
-            lambda: app.search_ctrl.set_current_image_run_search(),
+            _("Set Current Media as Search Target"),
+            lambda: app.search_ctrl.set_current_media_run_search(),
         )
         menu.addAction(
-            _("Add Current Image to Negative Search"),
-            lambda: app.search_ctrl.add_current_image_to_negative_search(),
+            _("Add Current Media to Negative Search"),
+            lambda: app.search_ctrl.add_current_media_to_negative_search(),
         )
 
         menu.addSeparator()
@@ -238,7 +238,7 @@ class ContextMenuBuilder:
         # Delete (last, with visual separation)
         menu.addAction(
             _("Delete"),
-            lambda: app.file_ops_ctrl.delete_image(),
+            lambda: app.file_ops_ctrl.delete_media(),
         )
 
         menu.exec(global_pos)

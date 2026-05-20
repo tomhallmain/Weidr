@@ -119,7 +119,7 @@ class CompareWrapper:
                 # We've gone through all images and they all need to be skipped (TODO: show an alert)
                 break
         self._master.update()
-        self._app_actions.create_image(prev_image)
+        self._app_actions.create_media(prev_image)
         return True
 
     def show_next_media(self, show_alert=True):
@@ -140,7 +140,7 @@ class CompareWrapper:
                 # We've gone through all images and they all need to be skipped (TODO: show an alert)
                 break
         self._master.update()
-        self._app_actions.create_image(next_image)
+        self._app_actions.create_media(next_image)
         return True
 
     def skip_image(self, image_path):
@@ -216,7 +216,7 @@ class CompareWrapper:
             if (self.compare_mode == CompareMode.COLOR_MATCHING and not CompareColors.is_related(previous_image, next_image)) or \
                     (self.compare_mode != CompareMode.COLOR_MATCHING and not CompareEmbeddingClip.is_related(previous_image, next_image)):
                 found_unrelated_image = True
-                self._app_actions.create_image(next_image)
+                self._app_actions.create_media(next_image)
                 self._app_actions.toast(_("Skipped %s images.").format(skip_count))
                 return
             skip_count += 1
@@ -273,7 +273,7 @@ class CompareWrapper:
 
         self._app_actions._set_label_state(group_number=self.current_group_index, size=len(self.files_matched))
         self._master.update()
-        self._app_actions.create_image(self.current_match())
+        self._app_actions.create_media(self.current_match())
 
     def page_down(self, half_length=False):
         paging_length = self._get_paging_length(half_length=half_length)
@@ -421,7 +421,7 @@ class CompareWrapper:
             _("%s possibly related images found.").format(str(len(self.files_matched))), 30))
 
         self._app_actions._add_buttons_for_mode()
-        self._app_actions.create_image(self.files_matched[self.match_index])
+        self._app_actions.create_media(self.files_matched[self.match_index])
 
     def run_group(self, args=CompareArgs()) -> None:
         assert self._compare is not None
@@ -562,7 +562,7 @@ class CompareWrapper:
                     self._master.update()
                     self._app_actions.release_media_canvas()
                     media = self._get_prev_image() if show_next_media == Direction.BACKWARD else self.current_match()
-                    self._app_actions.create_image(media)
+                    self._app_actions.create_media(media)
 
     def update_compare_for_readded_file(self, readded_file):
         self._compare.readd_files([readded_file])

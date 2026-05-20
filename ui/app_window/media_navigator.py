@@ -3,9 +3,9 @@ MediaNavigator -- media browsing logic controller.
 
 Owns the "what to show" without "how to show it" (that's MediaFrame).
 Extracted from: show_prev_media, show_next_media, last_chosen_direction_func,
-create_image, clear_image, go_to_file, go_to_file_by_index,
-go_to_previous_image, home, page_up, page_down, show_searched_image,
-toggle_image_view, get_active_media_filepath, toggle_slideshow.
+create_media, clear_media, go_to_file, go_to_file_by_index,
+go_to_previous_media, home, page_up, page_down, show_searched_media,
+toggle_media_view, get_active_media_filepath, toggle_slideshow.
 """
 
 from __future__ import annotations
@@ -85,7 +85,7 @@ class MediaNavigator:
             while self._cm.skip_image(previous_file) and previous_file != start_file:
                 previous_file = self._fb.previous_file()
             try:
-                self.create_image(previous_file)
+                self.create_media(previous_file)
                 return True
             except Exception as e:
                 self._app.notification_ctrl.handle_error(str(e), title="Exception")
@@ -109,7 +109,7 @@ class MediaNavigator:
             while self._cm.skip_image(next_file) and next_file != start_file:
                 next_file = self._fb.next_file()
             try:
-                self.create_image(next_file)
+                self.create_media(next_file)
                 return True
             except Exception as e:
                 traceback.print_exc()
@@ -157,7 +157,7 @@ class MediaNavigator:
             if current_file is None:
                 if self._fb.has_files():
                     if self._fb.is_incremental_loading:
-                        self.create_image(self._fb.get_files()[0])
+                        self.create_media(self._fb.get_files()[0])
                         current_file = self.get_active_media_filepath()
                         if current_file is None:
                             self._app.notification_ctrl.toast(
@@ -174,7 +174,7 @@ class MediaNavigator:
                     target = self._fb.last_file()
                     while self._cm.skip_image(target) and target != current_file:
                         target = self._fb.previous_file()
-                    self.create_image(target)
+                    self.create_media(target)
                     if (len(MarkedFiles.file_marks) == 1
                             and self._fb.has_file(MarkedFiles.file_marks[0])):
                         self._app.file_marks_ctrl.add_all_marks_from_last_or_current_group()
@@ -183,7 +183,7 @@ class MediaNavigator:
                     target = self._fb.next_file()
                     while self._cm.skip_image(target) and target != current_file:
                         target = self._fb.next_file()
-                    self.create_image(target)
+                    self.create_media(target)
             except Exception:
                 traceback.print_exc()
                 if self._fb.is_incremental_loading:
@@ -223,7 +223,7 @@ class MediaNavigator:
             else:
                 prev_file = self._cm._get_prev_image()
 
-        self.create_image(prev_file)
+        self.create_media(prev_file)
         self._app.direction = Direction.BACKWARD
 
     def page_down(self, event=None) -> None:
@@ -244,7 +244,7 @@ class MediaNavigator:
             else:
                 next_file = self._cm._get_next_image()
 
-        self.create_image(next_file)
+        self.create_media(next_file)
         self._app.direction = Direction.FORWARD
 
     # ==================================================================
@@ -290,7 +290,7 @@ class MediaNavigator:
                 closest_sort_by=closest_sort_by,
             )
             if image_path:
-                self.create_image(image_path)
+                self.create_media(image_path)
                 return True
         else:
             image_path, group_indexes = self._cm.find_file_after_comparison(
@@ -318,7 +318,7 @@ class MediaNavigator:
                 if found_path:
                     window.raise_()
                     window.activateWindow()
-                    window.media_navigator.create_image(found_path)
+                    window.media_navigator.create_media(found_path)
                     return True
             else:
                 found_path, group_indexes = window.compare_manager.find_file_after_comparison(
@@ -379,7 +379,7 @@ class MediaNavigator:
                 self._fb.refresh()
             file_path = self._fb.go_to_index(index)
             if file_path:
-                self.create_image(file_path)
+                self.create_media(file_path)
                 return True
         except ValueError as e:
             self._app.notification_ctrl.alert(_("Invalid index"), str(e))
@@ -390,20 +390,20 @@ class MediaNavigator:
 
         return False
 
-    def go_to_previous_image(self, event=None) -> None:
-        """Navigate back to the previously viewed image."""
+    def go_to_previous_media(self, event=None) -> None:
+        """Navigate back to the previously viewed media file."""
         if self._app.prev_img_path is not None:
             self.go_to_file(event=event, search_text=self._app.prev_img_path)
 
     # ==================================================================
     # Display
     # ==================================================================
-    def create_image(self, image_path: str, extra_text: Optional[str] = None) -> None:
+    def create_media(self, image_path: str, extra_text: Optional[str] = None) -> None:
         """
-        Show an image in the main content pane of the UI.
+        Show a media file in the main content pane of the UI.
 
         Ported from App.create_image. Updates the sidebar label, the
-        internal path state, and refreshes the image-details window if open.
+        internal path state, and refreshes the media-details window if open.
         """
         if not image_path:
             return
@@ -421,27 +421,27 @@ class MediaNavigator:
         text = basename if relative_filepath == "" else relative_filepath + "\n" + basename
         if extra_text is not None:
             text += "\n" + extra_text
-        self._app.sidebar_panel.update_current_image_label(text)
+        self._app.sidebar_panel.update_current_media_label(text)
 
-        # Auto-refresh the image details window if it is open
+        # Auto-refresh the media details window if it is open
         if self._app.app_actions.image_details_window() is not None:
             self._app.window_launcher.open_media_details(manually_keyed=False)
 
-    def clear_image(self) -> None:
+    def clear_media(self) -> None:
         """
         Clear the currently displayed media.
 
         Ported from App.clear_image.
         """
         self._mf.clear()
-        self._app.sidebar_panel.update_current_image_label("")
+        self._app.sidebar_panel.update_current_media_label("")
         self._app.img_path = None
         self._slideshow_media_started_monotonic = None
         self._slideshow_dynamic_poll_timer.stop()
 
-    def show_searched_image(self) -> None:
+    def show_searched_media(self) -> None:
         """
-        Display the image found by the last search.
+        Display the media file found by the last search.
 
         Ported from App.show_searched_image.
         """
@@ -450,16 +450,16 @@ class MediaNavigator:
             logger.debug(f"Search image full path: {search_path}")
         if search_path is not None and search_path.strip() != "":
             if os.path.isfile(search_path):
-                self.create_image(search_path, extra_text="(search image)")
+                self.create_media(search_path, extra_text="(search media)")
             else:
                 logger.warning(search_path)
                 self._app.notification_ctrl.handle_error(
                     _("Somehow, the search file is invalid")
                 )
 
-    def toggle_image_view(self) -> None:
+    def toggle_media_view(self) -> None:
         """
-        While in search mode, toggle between the search image and the results.
+        While in search mode, toggle between the search media and the results.
 
         Ported from App.toggle_image_view.
         """
@@ -467,9 +467,9 @@ class MediaNavigator:
             return
 
         if self._app.is_toggled_view_matches:
-            self.show_searched_image()
+            self.show_searched_media()
         else:
-            self.create_image(self._cm.current_match())
+            self.create_media(self._cm.current_match())
 
         self._app.is_toggled_view_matches = not self._app.is_toggled_view_matches
 
@@ -563,13 +563,13 @@ class MediaNavigator:
         if self._app.mode == Mode.BROWSE:
             return self._fb.current_file()
 
-        if self.is_toggled_search_image():
+        if self.is_toggled_search_media():
             filepath = self._cm.search_image_full_path
         else:
             filepath = self._cm.current_match()
 
         return Utils.get_valid_file(self._app.get_base_dir(), filepath)
 
-    def is_toggled_search_image(self) -> bool:
-        """Return True if the toggled view is showing the search image."""
+    def is_toggled_search_media(self) -> bool:
+        """Return True if the toggled view is showing the search media."""
         return self._app.mode == Mode.SEARCH and not self._app.is_toggled_view_matches

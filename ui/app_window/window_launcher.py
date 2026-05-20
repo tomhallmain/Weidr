@@ -315,8 +315,8 @@ class WindowLauncher:
         )
 
     @require_password(ProtectedActions.VIEW_MEDIA_DETAILS)
-    def show_related_image(self, event=None) -> None:
-        """Show a related image to the current one."""
+    def show_related_media(self, event=None) -> None:
+        """Show a related media file to the current one."""
         from ui.image.image_details_qt import ImageDetails
         ImageDetails.show_related_image(
             master=self._app,

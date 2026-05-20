@@ -1,14 +1,14 @@
 """
 SearchController -- search and comparison execution logic.
 
-Extracted from: set_search_for_image, set_search_for_text, set_search,
+Extracted from: set_search_for_media, set_search_for_text, set_search,
 run_compare, _debounced_run_compare, _run_with_progress, _run_compare,
 _validate_run, display_progress, get_search_file_path, get_compare_threshold,
-get_inclusion_pattern, set_current_image_run_search, _set_image_run_search,
-add_current_image_to_negative_search, negative_image_search,
+get_inclusion_pattern, set_current_media_run_search, _set_media_run_search,
+add_current_media_to_negative_search, negative_media_search,
 next_text_embedding_preset, run_image_generation,
 trigger_image_generation, run_image_generation_on_directory,
-find_related_images_in_open_window.
+find_related_media_in_open_window.
 """
 
 from __future__ import annotations
@@ -126,9 +126,9 @@ class SearchController:
     # Search setup
     # ==================================================================
     @require_password(ProtectedActions.RUN_SEARCH)
-    def set_search_for_image(self, event=None) -> None:
+    def set_search_for_media(self, event=None) -> None:
         """
-        Set search mode to image search.
+        Set search mode to media search.
 
         Ported from App.set_search_for_image.
         """
@@ -156,11 +156,11 @@ class SearchController:
         self.set_search()
 
     @require_password(ProtectedActions.RUN_SEARCH)
-    def set_negative_search_for_image(self, event=None) -> None:
+    def set_negative_search_for_media(self, event=None) -> None:
         """
-        Set search mode to include a negative search image.
+        Set search mode to include a negative search media file.
 
-        Mirrors ``set_search_for_image`` behavior for the negative image input.
+        Mirrors ``set_search_for_media`` behavior for the negative media input.
         """
         image_path = self.get_negative_search_file_path()
         if image_path is None or image_path == "":
@@ -217,7 +217,7 @@ class SearchController:
             self._app.search_dir = os.path.dirname(image_path)
             args.search_file_path = image_path
             self._cm.search_image_full_path = image_path
-            self._app.media_navigator.show_searched_image()
+            self._app.media_navigator.show_searched_media()
 
         if args.not_searching():
             if self._app.mode != Mode.BROWSE:
@@ -409,9 +409,9 @@ class SearchController:
         return text if text else None
 
     @require_password(ProtectedActions.RUN_SEARCH)
-    def set_current_image_run_search(self, event=None, base_dir: Optional[str] = None) -> None:
+    def set_current_media_run_search(self, event=None, base_dir: Optional[str] = None) -> None:
         """
-        Use the current image as the search target and run search.
+        Use the current media file as the search target and run search.
 
         Ported from App.set_current_image_run_search.
         """
@@ -423,7 +423,7 @@ class SearchController:
             )
             if window is None:
                 self._app.window_launcher.open_recent_directory_window(
-                    extra_callback_args=(self.set_current_image_run_search, dirs)
+                    extra_callback_args=(self.set_current_media_run_search, dirs)
                 )
                 return
             base_dir = dirs[0]
@@ -438,13 +438,13 @@ class SearchController:
 
         filepath = self._app.media_navigator.get_active_media_filepath()
         if filepath:
-            window.search_ctrl._set_image_run_search(filepath)
+            window.search_ctrl._set_media_run_search(filepath)
         else:
-            self._app.notification_ctrl.handle_error(_("Failed to get active image filepath"))
+            self._app.notification_ctrl.handle_error(_("Failed to get active media filepath"))
 
-    def _set_image_run_search(self, filepath: str) -> None:
+    def _set_media_run_search(self, filepath: str) -> None:
         """
-        Set the search image path and trigger the search.
+        Set the search media path and trigger the search.
 
         Ported from App._set_image_run_search.
         """
@@ -455,9 +455,9 @@ class SearchController:
         self.set_search()
 
     @require_password(ProtectedActions.RUN_SEARCH)
-    def add_current_image_to_negative_search(self, event=None, base_dir: Optional[str] = None) -> None:
+    def add_current_media_to_negative_search(self, event=None, base_dir: Optional[str] = None) -> None:
         """
-        Add the current image to the negative search list.
+        Add the current media file to the negative search list.
 
         Ported from App.add_current_image_to_negative_search.
         """
@@ -471,19 +471,19 @@ class SearchController:
                 )
                 if window is None:
                     self._app.window_launcher.open_recent_directory_window(
-                        extra_callback_args=(self.add_current_image_to_negative_search, dirs)
+                        extra_callback_args=(self.add_current_media_to_negative_search, dirs)
                     )
                     return
                 base_dir = dirs[0]
             else:
                 window = WindowManager.get_window(base_dir=base_dir)
-            window.search_ctrl.negative_image_search(filepath)
+            window.search_ctrl.negative_media_search(filepath)
         else:
-            self._app.notification_ctrl.handle_error(_("Failed to get active image filepath"))
+            self._app.notification_ctrl.handle_error(_("Failed to get active media filepath"))
 
-    def negative_image_search(self, filepath: str) -> None:
+    def negative_media_search(self, filepath: str) -> None:
         """
-        Set up a negative image search.
+        Set up a negative media search.
 
         Ported from App.negative_image_search.
         """
@@ -557,7 +557,7 @@ class SearchController:
         from ui.image.image_details_qt import ImageDetails
 
         if image_path is None:
-            image_path = self._get_image_path()
+            image_path = self._get_media_path()
         if image_path is None:
             return
         if _type is None:
@@ -595,7 +595,7 @@ class SearchController:
         from ui.image.image_details_qt import ImageDetails
 
         if image_path is None:
-            image_path = self._get_image_path()
+            image_path = self._get_media_path()
         if image_path is None:
             return
         directory_path = os.path.dirname(image_path)
@@ -628,9 +628,9 @@ class SearchController:
     # ==================================================================
     # Related images (cross-window)
     # ==================================================================
-    def find_related_images_in_open_window(self, event=None, base_dir: Optional[str] = None) -> None:
+    def find_related_media_in_open_window(self, event=None, base_dir: Optional[str] = None) -> None:
         """
-        Navigate to the next downstream related image in another window.
+        Navigate to the next downstream related media file in another window.
 
         Ported from App.find_related_images_in_open_window.
         """
@@ -642,7 +642,7 @@ class SearchController:
             window, dirs = WindowManager.get_other_window_or_self_dir(self._app)
             if window is None:
                 self._app.window_launcher.open_recent_directory_window(
-                    extra_callback_args=(self.find_related_images_in_open_window, dirs)
+                    extra_callback_args=(self.find_related_media_in_open_window, dirs)
                 )
                 return
             base_dir = dirs[0]
@@ -672,8 +672,8 @@ class SearchController:
     # ==================================================================
     # Private helpers
     # ==================================================================
-    def _get_image_path(self) -> Optional[str]:
-        """Get the current image path, falling back to prev if delete-locked."""
+    def _get_media_path(self) -> Optional[str]:
+        """Get the current media path, falling back to prev if delete-locked."""
         if self._app.delete_lock:
             image_path = self._app.prev_img_path
         else:

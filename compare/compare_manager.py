@@ -952,7 +952,7 @@ class CompareManager:
                 f"{len(wrapper.files_matched)} matches found (composite search)"
             )
             self._app_actions._add_buttons_for_mode()
-            self._app_actions.create_image(wrapper.files_matched[0])
+            self._app_actions.create_media(wrapper.files_matched[0])
         else:
             self._app_actions._set_label_state("No matches found")
             self._app_actions.alert(

@@ -1,8 +1,8 @@
 """
 FileOpsController -- delete, hide, copy, and file-manipulation operations.
 
-Extracted from: delete_image, _handle_delete, delete_current_base_dir,
-hide_current_media, clear_hidden_images, replace_current_image_with_search_image,
+Extracted from: delete_media, _handle_delete, delete_current_base_dir,
+hide_current_media, clear_hidden_media, replace_current_media_with_search_media,
 _handle_remove_files_from_groups, open_media_location, open_image_in_gimp,
 copy_media_path, copy_media_basename, run_refacdir, randomize filenames, check_files (periodic).
 
@@ -110,9 +110,9 @@ class FileOpsController:
     # Delete operations
     # ==================================================================
     @require_password(ProtectedActions.DELETE_MEDIA)
-    def delete_image(self, event=None) -> None:
+    def delete_media(self, event=None) -> None:
         """
-        Delete the currently displayed image from the filesystem.
+        Delete the currently displayed media file from the filesystem.
 
         Ported from App.delete_image.
         """
@@ -139,7 +139,7 @@ class FileOpsController:
             self._fb.checking_files = True
             return
 
-        is_toggle_search_image = self._nav.is_toggled_search_image()
+        is_toggle_search_image = self._nav.is_toggled_search_media()
 
         if len(self._cm.files_matched) == 0 and not is_toggle_search_image:
             self._app.app_actions.warn(_("Invalid action, no files found to delete"))
@@ -385,10 +385,10 @@ class FileOpsController:
             self._app.notification_ctrl.toast(_("Hid current image.\nTo unhide, press Shift+B."))
         self._nav.show_next_media()
 
-    def clear_hidden_images(self, event=None) -> None:
-        """Clear the list of hidden images."""
+    def clear_hidden_media(self, event=None) -> None:
+        """Clear the list of hidden media files."""
         self._cm.hidden_images.clear()
-        self._app.notification_ctrl.toast(_("Cleared all hidden images."))
+        self._app.notification_ctrl.toast(_("Cleared all hidden media."))
 
     # ==================================================================
     # Copy operations
@@ -666,9 +666,9 @@ class FileOpsController:
     # ==================================================================
     # Replace / group operations
     # ==================================================================
-    def replace_current_image_with_search_image(self) -> None:
+    def replace_current_media_with_search_media(self) -> None:
         """
-        Overwrite the current image file with the search image.
+        Overwrite the current media file with the search media file.
 
         Ported from App.replace_current_image_with_search_image.
         """

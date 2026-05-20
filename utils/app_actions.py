@@ -5,7 +5,7 @@ from ui.app_style import AppStyle
 class AppActions:
     REQUIRED_ACTIONS = {
         "new_window", "get_window", "toast", "_alert", "title_notify", "refresh",
-        "refocus", "set_mode", "get_active_media_filepath", "create_image", "show_next_media", 
+        "refocus", "set_mode", "get_active_media_filepath", "create_media", "show_next_media", 
         "play_media", "pause_media", "toggle_media_play_pause", "seek_media", "stop_media",
         "set_media_volume", "get_media_volume", "toggle_media_mute", "set_media_mute", "is_media_muted",
         "get_media_details", "open_move_marks_window", "open_password_admin_window",

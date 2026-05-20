@@ -303,9 +303,9 @@ class SmartWindow(QWidget):
                                  title="My Window", geometry="400x300", offset_x=30, offset_y=30)
     """
     
-    def __init__(self, persistent_parent=None, position_parent=None, title=None, geometry=None, 
-                 offset_x=30, offset_y=30, center=False, 
-                 auto_position=True, window_flags=None, **kwargs):
+    def __init__(self, persistent_parent=None, position_parent=None, title=None, geometry=None,
+                 offset_x=30, offset_y=30, center=False,
+                 auto_position=True, window_flags=None, respect_title_bar=False, **kwargs):
         """
         Initialize a SmartWindow.
         
@@ -361,12 +361,13 @@ class SmartWindow(QWidget):
                 # logger.debug(f"Parent window position: ({parent_x}, {parent_y})")
                 
                 display_manager.position_window_on_same_display(
-                    position_parent, self, 
-                    offset_x=offset_x, 
-                    offset_y=offset_y, 
+                    position_parent, self,
+                    offset_x=offset_x,
+                    offset_y=offset_y,
                     center=center,
                     center_relative_to=position_parent,
-                    geometry=geometry
+                    geometry=geometry,
+                    respect_title_bar=respect_title_bar,
                 )
                 
             except Exception as e:

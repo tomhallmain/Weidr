@@ -74,6 +74,7 @@ class FileActionsWindow(SmartWindow):
             position_parent=app_master,
             title=_("File Actions"),
             geometry=geometry,
+            respect_title_bar=True,
         )
         FileActionsWindow._instance = self
         self._app_master = app_master

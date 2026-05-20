@@ -145,7 +145,7 @@ class WindowManager:
     def add_secondary_window(
         cls,
         base_dir: str,
-        image_path: Optional[str] = None,
+        media_path: Optional[str] = None,
         do_search: bool = False,
         master: Optional[AppWindow] = None,
     ) -> None:
@@ -161,24 +161,24 @@ class WindowManager:
         if not config.always_open_new_windows:
             for win in cls._windows:
                 if win.base_dir == base_dir:
-                    if image_path is not None and image_path != "":
+                    if media_path is not None and media_path != "":
                         if do_search:
-                            win.sidebar_panel.search_media_path_box.setText(image_path)
+                            win.sidebar_panel.search_media_path_box.setText(media_path)
                             win.search_ctrl.set_search()
                         else:
-                            win.media_navigator.go_to_file(search_text=image_path)
+                            win.media_navigator.go_to_file(search_text=media_path)
                     win.raise_()
                     win.activateWindow()
                     return
 
-        if do_search and (image_path is None or image_path == ""):
+        if do_search and (media_path is None or media_path == ""):
             do_search = False
 
         new_id = random.randint(1_000_000_000, 9_999_999_999)
 
         window = AppWindow(
             base_dir=base_dir,
-            image_path=image_path,
+            media_path=media_path,
             sidebar_visible=False,
             do_search=do_search,
             window_id=new_id,

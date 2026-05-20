@@ -36,8 +36,8 @@ class ContextMenuBuilder:
     def show(self, global_pos: QPoint) -> None:
         """Build the context menu and display it at the given position."""
         app = self._app
-        image_path = app.media_navigator.get_active_media_filepath()
-        if not image_path:
+        media_path = app.media_navigator.get_active_media_filepath()
+        if not media_path:
             return
 
         menu = QMenu(app)
@@ -46,7 +46,7 @@ class ContextMenuBuilder:
         # ------------------------------------------------------------------
         # Header: filename (italic, disabled)
         # ------------------------------------------------------------------
-        header = menu.addAction(os.path.basename(image_path))
+        header = menu.addAction(os.path.basename(media_path))
         header.setEnabled(False)
         italic_font = QFont()
         italic_font.setItalic(True)
@@ -69,7 +69,7 @@ class ContextMenuBuilder:
         # ------------------------------------------------------------------
         # Marks
         # ------------------------------------------------------------------
-        in_marks = image_path in MarkedFiles.file_marks
+        in_marks = media_path in MarkedFiles.file_marks
         menu.addAction(
             _("Remove from Marks") if in_marks else _("Add to Marks"),
             lambda: app.file_marks_ctrl.add_or_remove_mark(),
@@ -80,13 +80,13 @@ class ContextMenuBuilder:
         # ------------------------------------------------------------------
         try:
             from ui.files.favorites_window_qt import FavoritesWindow
-            in_favorites = image_path in FavoritesWindow.get_favorites(base_dir)
+            in_favorites = media_path in FavoritesWindow.get_favorites(base_dir)
             fav_command = (
                 FavoritesWindow.remove_favorite if in_favorites else FavoritesWindow.add_favorite
             )
             menu.addAction(
                 _("Remove from Favorites") if in_favorites else _("Add to Favorites"),
-                lambda: fav_command(base_dir, image_path, app.notification_ctrl.toast),
+                lambda: fav_command(base_dir, media_path, app.notification_ctrl.toast),
             )
         except Exception:
             pass  # Favorites module may not be available
@@ -96,7 +96,7 @@ class ContextMenuBuilder:
         # ------------------------------------------------------------------
         # Directory notes
         # ------------------------------------------------------------------
-        in_dir_notes = DirectoryNotes.is_marked_file(base_dir, image_path)
+        in_dir_notes = DirectoryNotes.is_marked_file(base_dir, media_path)
         menu.addAction(
             _("Remove from Directory Notes") if in_dir_notes else _("Add to Directory Notes"),
             lambda: app.window_launcher.toggle_directory_note_mark(),
@@ -146,7 +146,7 @@ class ContextMenuBuilder:
         menu.addSeparator()
 
         # ------------------------------------------------------------------
-        # Related images
+        # Related media
         # ------------------------------------------------------------------
         menu.addAction(
             _("Show Source Media"),
@@ -157,7 +157,7 @@ class ContextMenuBuilder:
             lambda: app.search_ctrl.find_related_media_in_open_window(),
         )
         menu.addAction(
-            _("Set Marks from Downstream Related Images"),
+            _("Set Marks from Downstream Related Media"),
             lambda: app.file_marks_ctrl.set_marks_from_downstream_related_images(),
         )
 
@@ -193,7 +193,7 @@ class ContextMenuBuilder:
             lambda: app.file_ops_ctrl.open_media_location(),
         )
 
-        if is_video_file(image_path):
+        if is_video_file(media_path):
             menu.addAction(
                 _("Save copy without audio"),
                 lambda: app.file_ops_ctrl.strip_audio_from_current_video(),

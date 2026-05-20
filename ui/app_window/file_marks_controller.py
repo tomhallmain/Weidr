@@ -90,7 +90,7 @@ class FileMarksController:
         """
         Add all files from the last or current group/series to the mark list.
 
-        In BROWSE mode, selects files between the last mark and the current image.
+        In BROWSE mode, selects files between the last mark and the current media file.
         In compare modes, Alt selects all matches; otherwise selects series.
         """
         if self._app.mode == Mode.BROWSE:
@@ -184,18 +184,18 @@ class FileMarksController:
             logger.debug(_("Including marks: {0}").format(override_marks))
             MarkedFiles.file_marks.extend(override_marks)
 
-        current_image = filepath
-        single_image = False
+        current_media = filepath
+        single_media = False
         if len(MarkedFiles.file_marks) == 0:
             self.add_or_remove_mark(filepath=filepath)
-            single_image = True
+            single_media = True
 
         try:
             MarkedFileMover.show_window(
                 self._app,  # parent widget for the window
                 open_gui,
-                single_image,
-                current_image,
+                single_media,
+                current_media,
                 self._app.mode,
                 self._app.app_actions,
                 base_dir=self._app.get_base_dir(),
@@ -282,14 +282,14 @@ class FileMarksController:
             MarkedFileMover.undo_move_marks(self._app.get_base_dir(), self._app.app_actions)
 
     # ==================================================================
-    # Related images / downstream marks
+    # Related media / downstream marks
     # ==================================================================
     @require_password(ProtectedActions.VIEW_MEDIA_DETAILS)
     def set_marks_from_downstream_related_images(
         self,
         event=None,
         base_dir: Optional[str] = None,
-        image_to_use: Optional[str] = None,
+        media_to_use: Optional[str] = None,
     ) -> None:
         """Set marks from downstream related images found in another directory."""
         from ui.image.media_details import MediaDetails
@@ -308,18 +308,18 @@ class FileMarksController:
         else:
             window = WindowManager.get_window(base_dir=base_dir)
 
-        if image_to_use is None:
-            image_to_use = (
+        if media_to_use is None:
+            media_to_use = (
                 self._app.media_path
                 if len(MarkedFiles.file_marks) != 1
                 else MarkedFiles.file_marks[0]
             )
 
-        if self._app.check_many_files(window, action="find related images"):
+        if self._app.check_many_files(window, action="find related media"):
             return
 
         downstream_related_images = MediaDetails.get_downstream_related_images(
-            image_to_use, base_dir, self._app.app_actions, force_refresh=True
+            media_to_use, base_dir, self._app.app_actions, force_refresh=True
         )
         if downstream_related_images is not None:
             MarkedFiles.file_marks = downstream_related_images

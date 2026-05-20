@@ -93,7 +93,7 @@ class TempImageWindow(SmartWindow):
         sc(
             "Shift+Y",
             lambda: self._app_actions.set_marks_from_downstream_related_images(
-                image_to_use=self._image_path
+                media_to_use=self._image_path
             ),
         )
         sc("Ctrl+M", lambda: self._open_move_marks_window())
@@ -211,7 +211,7 @@ class TempImageWindow(SmartWindow):
             return
         base_dir = os.path.dirname(self._image_path)
         self._app_actions.new_window(
-            base_dir=base_dir, image_path=self._image_path
+            base_dir=base_dir, media_path=self._image_path
         )
         self.close()
 

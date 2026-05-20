@@ -96,7 +96,7 @@ class FileOpsController:
             base_dir = self._app.get_base_dir()
             if base_dir and base_dir != "":
                 self._app.refresh(
-                    show_new_images=self._app.slideshow_config.show_new_images,
+                    show_new_media=self._app.slideshow_config.show_new_images,
                     from_file_check=True,
                 )
         except Exception as e:

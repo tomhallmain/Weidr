@@ -145,7 +145,7 @@ class RecentDirectoryWindow(DirectoryPickerDialog):
         else:
             self._app_actions.new_window(
                 base_dir=_dir,
-                image_path=self._run_compare_media,
+                media_path=self._run_compare_media,
                 do_search=True,
             )
 

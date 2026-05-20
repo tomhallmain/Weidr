@@ -341,7 +341,7 @@ class DirectoryNotesWindow(SmartDialog):
             self._app_actions.toast(_("Opened file: {0}").format(basename))
             return
         if hasattr(self._app_actions, "new_window"):
-            self._app_actions.new_window(base_dir=self._base_dir, image_path=filepath)
+            self._app_actions.new_window(base_dir=self._base_dir, media_path=filepath)
             self._app_actions.toast(
                 _("Opened file in new window: {0}").format(basename)
             )

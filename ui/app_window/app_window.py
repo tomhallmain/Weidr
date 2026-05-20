@@ -123,7 +123,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
     def __init__(
         self,
         base_dir: Optional[str] = None,
-        image_path: Optional[str] = None,
+        media_path: Optional[str] = None,
         sidebar_visible: bool = config.sidebar_visible,
         do_search: bool = False,
         window_id: int = 0,
@@ -179,7 +179,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         self._suppress_file_check_refresh_until = 0.0
         self._incremental_status_timer: Optional[QTimer] = None
         self._base_dir_load_spinner_active = False
-        self._startup_image_path: Optional[str] = image_path
+        self._startup_media_path: Optional[str] = media_path
 
         # ------------------------------------------------------------------
         # Backend (non-UI) objects -- shared across controllers
@@ -373,12 +373,12 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             # Re-open secondary windows that were open last session
             QTimer.singleShot(100, self._restore_secondary_windows)
 
-        # Handle initial image_path / do_search
-        if image_path is not None:
+        # Handle initial media_path / do_search
+        if media_path is not None:
             if do_search:
                 QTimer.singleShot(200, lambda: self.search_ctrl.set_search())
             else:
-                QTimer.singleShot(200, lambda ip=image_path: self.media_navigator.go_to_file(search_text=ip))
+                QTimer.singleShot(200, lambda ip=media_path: self.media_navigator.go_to_file(search_text=ip))
 
         if self.is_secondary():
             QTimer.singleShot(300, lambda: self.cache_ctrl.store_info_cache())
@@ -656,7 +656,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
                     from lib.fast_directory_picker_qt import get_existing_directory
 
                     chosen = get_existing_directory(
-                        self, _("Set image comparison directory"), self.get_base_dir()
+                        self, _("Set media comparison directory"), self.get_base_dir()
                     )
                     if not chosen:
                         return
@@ -732,12 +732,12 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             )
             preferred_initial_file = None
             if (
-                self._startup_image_path
-                and isinstance(self._startup_image_path, str)
-                and os.path.isfile(self._startup_image_path)
-                and os.path.dirname(self._startup_image_path) == new_dir
+                self._startup_media_path
+                and isinstance(self._startup_media_path, str)
+                and os.path.isfile(self._startup_media_path)
+                and os.path.dirname(self._startup_media_path) == new_dir
             ):
-                preferred_initial_file = self._startup_image_path
+                preferred_initial_file = self._startup_media_path
             elif previous_file_path and os.path.isfile(previous_file_path):
                 # Seed incremental loading with the cached media when available.
                 preferred_initial_file = previous_file_path
@@ -941,7 +941,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
 
     def refresh(
         self,
-        show_new_images: bool = False,
+        show_new_media: bool = False,
         refresh_cursor: bool = False,
         file_check: bool = True,
         removed_files: Optional[list] = None,
@@ -1002,16 +1002,16 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
                 if self.mode != Mode.BROWSE:
                     self._sync_media_empty_directory_message()
                     return
-                has_new_images = False
-                if show_new_images:
-                    has_new_images = self.file_browser.update_cursor_to_new_images()
-                    if has_new_images:
+                has_new_media = False
+                if show_new_media:
+                    has_new_media = self.file_browser.update_cursor_to_new_images()
+                    if has_new_media:
                         self.media_navigator.show_next_media()
                 if active_media_in_removed:
                     self.media_navigator.last_chosen_direction_func()
                 self.notification_ctrl.set_label_state()
-                if show_new_images and has_new_images:
-                    # Brief delete-lock to prevent misdeletion after automatic image change
+                if show_new_media and has_new_media:
+                    # Brief delete-lock to prevent misdeletion after automatic media change
                     self.delete_lock = True
                     time.sleep(1)
                     self.delete_lock = False
@@ -1222,10 +1222,10 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         self.context_menu_builder.show(event.globalPos())
 
     # ------------------------------------------------------------------
-    # Middle-click → delete image
+    # Middle-click → delete media file
     # ------------------------------------------------------------------
     def mousePressEvent(self, event):  # noqa: N802
-        """Middle mouse button (wheel click) deletes the current image."""
+        """Middle mouse button (wheel click) deletes the current media file."""
         if event.button() == Qt.MouseButton.MiddleButton:
             self.file_ops_ctrl.delete_media()
             event.accept()
@@ -1236,7 +1236,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
     # Mouse scroll → navigate media
     # ------------------------------------------------------------------
     def wheelEvent(self, event):  # noqa: N802
-        """Scroll up/down navigates between images.
+        """Scroll up/down navigates between media files.
 
         In masonry view the QScrollArea consumes wheel events before they reach
         here, but guard explicitly so stray events don't navigate the file list

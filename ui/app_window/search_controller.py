@@ -565,17 +565,17 @@ class SearchController:
         else:
             window = WindowManager.get_window(base_dir=base_dir)
 
-        image_to_use = (
+        media_to_use = (
             self._app.media_path
             if len(MarkedFiles.file_marks) != 1
             else MarkedFiles.file_marks[0]
         )
 
-        if self._app.check_many_files(window, action="find related images"):
+        if self._app.check_many_files(window, action="find related media"):
             return
 
         next_related_image = MediaDetails.next_downstream_related_image(
-            image_to_use, base_dir, self._app.app_actions
+            media_to_use, base_dir, self._app.app_actions
         )
         if next_related_image is not None:
             window.media_navigator.go_to_file(search_text=next_related_image)

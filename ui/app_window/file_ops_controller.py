@@ -96,7 +96,7 @@ class FileOpsController:
             base_dir = self._app.get_base_dir()
             if base_dir and base_dir != "":
                 self._app.refresh(
-                    show_new_media=self._app.slideshow_config.show_new_images,
+                    show_new_media=self._app.slideshow_config.show_new_media,
                     from_file_check=True,
                 )
         except Exception as e:
@@ -131,24 +131,24 @@ class FileOpsController:
             self._fb.checking_files = True
             return
 
-        is_toggle_search_image = self._nav.is_toggled_search_media()
+        is_toggled_search_media = self._nav.is_toggled_search_media()
 
-        if len(self._cm.files_matched) == 0 and not is_toggle_search_image:
+        if len(self._cm.files_matched) == 0 and not is_toggled_search_media:
             self._app.app_actions.warn(_("Invalid action, no files found to delete"))
             return
-        elif is_toggle_search_image and (
-            self._cm.search_image_full_path is None
-            or self._cm.search_image_full_path == ""
+        elif is_toggled_search_media and (
+            self._cm.search_file_path is None
+            or self._cm.search_file_path == ""
         ):
-            self._app.app_actions.warn(_("Invalid action, search image not found"))
+            self._app.app_actions.warn(_("Invalid action, search media not found"))
             return
 
         filepath = self._nav.get_active_media_filepath()
 
         if filepath is not None:
             MarkedFiles.handle_file_removal(filepath)
-            if filepath == self._cm.search_image_full_path:
-                self._cm.search_image_full_path = None
+            if filepath == self._cm.search_file_path:
+                self._cm.search_file_path = None
             self._app.release_media_canvas()
             self._handle_delete(filepath)
             if self._cm.has_compare():
@@ -358,18 +358,18 @@ class FileOpsController:
     # ==================================================================
     # Hide operations
     # ==================================================================
-    def hide_current_media(self, event=None, image_path: Optional[str] = None) -> None:
+    def hide_current_media(self, event=None, media_path: Optional[str] = None) -> None:
         """Hide the current media from the file list."""
-        filepath = self._nav.get_active_media_filepath() if image_path is None else image_path
-        if filepath is not None and filepath not in self._cm.hidden_images:
-            self._cm.hidden_images.append(filepath)
-        if image_path is None:
-            self._app.notification_ctrl.toast(_("Hid current image.\nTo unhide, press Shift+B."))
+        filepath = self._nav.get_active_media_filepath() if media_path is None else media_path
+        if filepath is not None and filepath not in self._cm.hidden_media:
+            self._cm.hidden_media.append(filepath)
+        if media_path is None:
+            self._app.notification_ctrl.toast(_("Hid current media.\nTo unhide, press Shift+B."))
         self._nav.show_next_media()
 
     def clear_hidden_media(self, event=None) -> None:
         """Clear the list of hidden media files."""
-        self._cm.hidden_images.clear()
+        self._cm.hidden_media.clear()
         self._app.notification_ctrl.toast(_("Cleared all hidden media."))
 
     # ==================================================================
@@ -645,7 +645,7 @@ class FileOpsController:
         if (
             self._app.mode != Mode.SEARCH
             or len(self._cm.files_matched) == 0
-            or not os.path.exists(str(self._cm.search_image_full_path))
+            or not os.path.exists(str(self._cm.search_file_path))
         ):
             return
 
@@ -658,15 +658,15 @@ class FileOpsController:
             )
             return
 
-        os.rename(str(self._cm.search_image_full_path), filepath)
+        os.rename(str(self._cm.search_file_path), filepath)
         self._app.notification_ctrl.toast(_("Moved search image to ") + filepath)
 
     def handle_remove_files_from_groups(self, files: list[str]) -> None:
         """Remove the given files from compare groups."""
         current_image = self._cm.current_match()
         for filepath in files:
-            if filepath == self._cm.search_image_full_path:
-                self._cm.search_image_full_path = None
+            if filepath == self._cm.search_file_path:
+                self._cm.search_file_path = None
             show_next_media = self._app.direction if current_image == filepath else None
             file_group_map = self._cm._get_file_group_map(self._app.mode)
             try:

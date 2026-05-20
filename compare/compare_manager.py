@@ -34,7 +34,7 @@ class CompareConfig:
 # Filter classes (will be moved to compare_args.py when filtering is integrated)
 @dataclass
 class SizeFilter:
-    """Filter criteria for image dimensions."""
+    """Filter criteria for media dimensions."""
     min_size: Optional[Tuple[int, int]] = None  # Minimum (width, height)
     max_size: Optional[Tuple[int, int]] = None  # Maximum (width, height)
     exact_size: Optional[Tuple[int, int]] = None  # Exact size match
@@ -49,7 +49,7 @@ class SizeFilter:
 
 @dataclass
 class ModelFilter:
-    """Filter criteria for image models/loras."""
+    """Filter criteria for media models/loras."""
     models: Optional[List[str]] = None  # Model names to filter by
     mode: str = 'include'  # 'include' or 'exclude' - include/exclude matching models
     match_any: bool = False  # If True, match any model; if False, match all models
@@ -391,7 +391,7 @@ class CompareManager:
         logger.info(f" recursive: {args.recursive}")
         logger.info(f" file glob pattern: {args.inclusion_pattern}")
         logger.info(f" include videos: {args.include_videos}")
-        logger.info(f" overwrite image data: {args.overwrite}")
+        logger.info(f" overwrite media data: {args.overwrite}")
         logger.info(f" store checkpoints: {args.store_checkpoints}")
         
         # Filter settings
@@ -529,23 +529,23 @@ class CompareManager:
             self._wrappers[self._primary_mode].current_group_index = value
     
     @property
-    def search_image_full_path(self) -> Optional[str]:
+    def search_file_path(self) -> Optional[str]:
         """Get search image path from primary wrapper."""
         if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].search_image_full_path
+            return self._wrappers[self._primary_mode].search_file_path
         return None
     
-    @search_image_full_path.setter
-    def search_image_full_path(self, value: Optional[str]):
+    @search_file_path.setter
+    def search_file_path(self, value: Optional[str]):
         """Set search image path on primary wrapper."""
         if self._primary_mode and self._primary_mode in self._wrappers:
-            self._wrappers[self._primary_mode].search_image_full_path = value
+            self._wrappers[self._primary_mode].search_file_path = value
     
     @property
-    def hidden_images(self) -> List[str]:
+    def hidden_media(self) -> List[str]:
         """Get hidden images from primary wrapper."""
         if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].hidden_images
+            return self._wrappers[self._primary_mode].hidden_media
         return []
     
     @property
@@ -563,10 +563,10 @@ class CompareManager:
         return 0
     
     @property
-    def has_image_matches(self) -> bool:
-        """Get has_image_matches from primary wrapper."""
+    def has_media_matches(self) -> bool:
+        """Get has_media_matches from primary wrapper."""
         if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].has_image_matches
+            return self._wrappers[self._primary_mode].has_media_matches
         return False
     
     # ========== Delegation Methods (for backward compatibility) ==========
@@ -618,10 +618,10 @@ class CompareManager:
             return self._wrappers[self._primary_mode].show_next_media(show_alert)
         return False
     
-    def skip_image(self, image_path: str) -> bool:
+    def skip_file(self, image_path: str) -> bool:
         """Check if image should be skipped (delegated to primary wrapper)."""
         if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].skip_image(image_path)
+            return self._wrappers[self._primary_mode].skip_file(image_path)
         return False
     
     def show_prev_group(self, event=None, file_browser=None):
@@ -684,23 +684,23 @@ class CompareManager:
             return self._wrappers[self._primary_mode]._get_file_group_map(app_mode)
         return {}
     
-    def find_next_unrelated_image(self, file_browser, forward=True):
+    def find_next_unrelated_file(self, file_browser, forward=True):
         """Find next unrelated image (delegated to primary wrapper)."""
         if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].find_next_unrelated_image(
+            return self._wrappers[self._primary_mode].find_next_unrelated_file(
                 file_browser, forward
             )
     
-    def _get_prev_image(self):
+    def _get_prev_file(self):
         """Get previous image (delegated to primary wrapper)."""
         if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode]._get_prev_image()
+            return self._wrappers[self._primary_mode]._get_prev_file()
         return None
     
-    def _get_next_image(self):
+    def _get_next_file(self):
         """Get next image (delegated to primary wrapper)."""
         if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode]._get_next_image()
+            return self._wrappers[self._primary_mode]._get_next_file()
         return None
     
     def compare(self):
@@ -945,9 +945,9 @@ class CompareManager:
         wrapper.current_group_index = 0
         wrapper.max_group_index = 0
         wrapper.match_index = 0
-        wrapper.has_image_matches = len(wrapper.files_matched) > 0
+        wrapper.has_media_matches = len(wrapper.files_matched) > 0
         
-        if wrapper.has_image_matches:
+        if wrapper.has_media_matches:
             self._app_actions._set_label_state(
                 f"{len(wrapper.files_matched)} matches found (composite search)"
             )

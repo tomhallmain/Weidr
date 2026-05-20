@@ -80,7 +80,7 @@ class MediaNavigator:
             previous_file = self._fb.previous_file()
             if self._app.media_path == previous_file:
                 return True  # already at this file (refresh case)
-            while self._cm.skip_image(previous_file) and previous_file != start_file:
+            while self._cm.skip_file(previous_file) and previous_file != start_file:
                 previous_file = self._fb.previous_file()
             try:
                 self.create_media(previous_file)
@@ -100,7 +100,7 @@ class MediaNavigator:
             next_file = self._fb.next_file()
             if self._app.media_path == next_file:
                 return True  # already at this file (refresh case)
-            while self._cm.skip_image(next_file) and next_file != start_file:
+            while self._cm.skip_file(next_file) and next_file != start_file:
                 next_file = self._fb.next_file()
             try:
                 self.create_media(next_file)
@@ -158,7 +158,7 @@ class MediaNavigator:
             try:
                 if last_file:
                     target = self._fb.last_file()
-                    while self._cm.skip_image(target) and target != current_file:
+                    while self._cm.skip_file(target) and target != current_file:
                         target = self._fb.previous_file()
                     self.create_media(target)
                     if (len(MarkedFiles.file_marks) == 1
@@ -167,7 +167,7 @@ class MediaNavigator:
                     self._app.direction = Direction.BACKWARD
                 else:
                     target = self._fb.next_file()
-                    while self._cm.skip_image(target) and target != current_file:
+                    while self._cm.skip_file(target) and target != current_file:
                         target = self._fb.next_file()
                     self.create_media(target)
             except Exception:
@@ -199,11 +199,11 @@ class MediaNavigator:
         else:
             prev_file = self._cm.page_up()
 
-        while self._cm.skip_image(prev_file) and prev_file != current_image:
+        while self._cm.skip_file(prev_file) and prev_file != current_image:
             if self._app.mode == Mode.BROWSE:
                 prev_file = self._fb.previous_file()
             else:
-                prev_file = self._cm._get_prev_image()
+                prev_file = self._cm._get_prev_file()
 
         self.create_media(prev_file)
         self._app.direction = Direction.BACKWARD
@@ -216,11 +216,11 @@ class MediaNavigator:
         else:
             next_file = self._cm.page_down()
 
-        while self._cm.skip_image(next_file) and next_file != current_image:
+        while self._cm.skip_file(next_file) and next_file != current_image:
             if self._app.mode == Mode.BROWSE:
                 next_file = self._fb.next_file()
             else:
-                next_file = self._cm._get_next_image()
+                next_file = self._cm._get_next_file()
 
         self.create_media(next_file)
         self._app.direction = Direction.FORWARD
@@ -409,7 +409,7 @@ class MediaNavigator:
 
     def show_searched_media(self) -> None:
         """Display the media file found by the last search."""
-        search_path = self._cm.search_image_full_path
+        search_path = self._cm.search_file_path
         if config.debug:
             logger.debug(f"Search image full path: {search_path}")
         if search_path is not None and search_path.strip() != "":
@@ -458,7 +458,7 @@ class MediaNavigator:
         file-check timer for "new images" mode.
         """
         self._app.slideshow_config.toggle_slideshow()
-        if self._app.slideshow_config.show_new_images:
+        if self._app.slideshow_config.show_new_media:
             message = _("Slideshow for new images started")
             self.stop_slideshow_timers()
         elif self._app.slideshow_config.slideshow_running:
@@ -520,7 +520,7 @@ class MediaNavigator:
             return self._fb.current_file()
 
         if self.is_toggled_search_media():
-            filepath = self._cm.search_image_full_path
+            filepath = self._cm.search_file_path
         else:
             filepath = self._cm.current_match()
 

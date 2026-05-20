@@ -669,32 +669,31 @@ class FileCheckConfig:
 
 
 class SlideshowConfig:
-    '''
-    There are two modes, one is simple slideshow, the other is a slideshow that shows newly added images only.
-    '''
+    """Two modes: a timed slideshow and a slideshow that shows newly added media only."""
+
     interval_seconds = config.slideshow_interval_seconds
 
     def __init__(self, window_id):
         self.window_id = window_id
         self.registry_id = f"{window_id}_slideshow"
         self.slideshow_running = False
-        self.show_new_images = False
+        self.show_new_media = False
 
     def toggle_slideshow(self):
-        if self.show_new_images:
-            self.show_new_images = False
+        if self.show_new_media:
+            self.show_new_media = False
             running_tasks_registry.remove(self.registry_id)
         elif self.slideshow_running:
-            self.show_new_images = True
+            self.show_new_media = True
             self.slideshow_running = False
         else:
             self.slideshow_running = True
             running_tasks_registry.add(self.registry_id, SlideshowConfig.interval_seconds, f"Slideshow (window {self.window_id})")
 
     def end_slideshows(self):
-        if self.slideshow_running or self.show_new_images:
+        if self.slideshow_running or self.show_new_media:
             self.slideshow_running = False
-            self.show_new_images = False
+            self.show_new_media = False
             running_tasks_registry.remove(self.registry_id)
             return True
         return False

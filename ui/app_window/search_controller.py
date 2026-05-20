@@ -198,7 +198,7 @@ class SearchController:
                 self._sidebar.search_media_path_box.setText(os.path.basename(media_path))
             self._app.search_dir = os.path.dirname(media_path)
             args.search_file_path = media_path
-            self._cm.search_image_full_path = media_path
+            self._cm.search_file_path = media_path
             self._app.media_navigator.show_searched_media()
 
         if args.not_searching():
@@ -318,7 +318,7 @@ class SearchController:
         """Read the search media path from the sidebar entry."""
         media_path = self._sidebar.search_media_path_box.text().strip()
         if not media_path:
-            self._cm.search_image_full_path = None
+            self._cm.search_file_path = None
             return None
         search_file = Utils.get_valid_file(self._app.get_base_dir(), media_path)
         if search_file is None:

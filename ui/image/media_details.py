@@ -1299,13 +1299,13 @@ class MediaDetails(SmartWindow):
                 master, media_path, app_actions
             )
         try:
-            MediaDetails.temp_media_canvas.create_image(media_path)
+            MediaDetails.temp_media_canvas.create_media(media_path)
         except Exception:
             # Re-create the canvas window if the old one was destroyed
             MediaDetails.set_temp_media_canvas(
                 master, media_path, app_actions
             )
-            MediaDetails.temp_media_canvas.create_image(media_path)
+            MediaDetails.temp_media_canvas.create_media(media_path)
 
     @staticmethod
     def set_temp_media_canvas(

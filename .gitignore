@@ -27,8 +27,7 @@ app_info_cache*
 !app_info_cache.py
 file_paths.json
 temp*
-!temp_image_canvas.py
-!temp_image_window_qt.py
+!temp_media_window.py
 todo_list.txt
 
 # -----------------------------------------------------------------------------

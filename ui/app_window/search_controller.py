@@ -473,16 +473,16 @@ class SearchController:
         self,
         event=None,
         _type: Optional[str] = None,
-        image_path: Optional[str] = None,
+        media_path: Optional[str] = None,
         modify_call: bool = False,
     ) -> None:
         """Trigger image generation via SD runner."""
         from extensions.sd_runner_client import SDRunnerClient
         from ui.image.media_details import MediaDetails
 
-        if image_path is None:
-            image_path = self._get_media_path()
-        if image_path is None:
+        if media_path is None:
+            media_path = self._get_media_path()
+        if media_path is None:
             return
         if _type is None:
             _type = MediaDetails.get_image_specific_generation_mode()
@@ -490,8 +490,8 @@ class SearchController:
         sd_client = SDRunnerClient()
 
         def _do_run() -> None:
-            sd_client.run(_type, image_path, append=modify_call)
-            MediaDetails.previous_image_generation_adapter_path = image_path
+            sd_client.run(_type, media_path, append=modify_call)
+            MediaDetails.previous_image_generation_adapter_path = media_path
 
         worker = _CompareWorker(_do_run, [])
         worker.signals.finished.connect(
@@ -508,17 +508,17 @@ class SearchController:
 
     @require_password(ProtectedActions.RUN_IMAGE_GENERATION)
     def run_image_generation_on_directory(
-        self, event=None, _type: Optional[str] = None, image_path: Optional[str] = None
+        self, event=None, _type: Optional[str] = None, media_path: Optional[str] = None
     ) -> None:
         """Run image generation on all files in the directory."""
         from extensions.sd_runner_client import SDRunnerClient
         from ui.image.media_details import MediaDetails
 
-        if image_path is None:
-            image_path = self._get_media_path()
-        if image_path is None:
+        if media_path is None:
+            media_path = self._get_media_path()
+        if media_path is None:
             return
-        directory_path = os.path.dirname(image_path)
+        directory_path = os.path.dirname(media_path)
         if _type is None:
             _type = MediaDetails.get_image_specific_generation_mode()
 

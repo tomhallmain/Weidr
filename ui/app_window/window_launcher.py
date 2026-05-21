@@ -256,17 +256,17 @@ class WindowLauncher:
                 app_actions.media_details_window().close_windows()
                 app_actions.set_media_details_window(None)
 
-        preset_image_path = True
+        preset_media_path = True
         if media_path is None:
             media_path = self._app.media_path
-            preset_image_path = False
+            preset_media_path = False
 
         if not media_path:
             return
 
         # Build index text
-        if preset_image_path:
-            index_text = _("(Open this image as part of a directory to see index details.)")
+        if preset_media_path:
+            index_text = _("(Open this media as part of a directory to see index details.)")
         elif self._app.mode == Mode.BROWSE:
             index_text = self._app.file_browser.get_index_details()
         else:
@@ -285,7 +285,7 @@ class WindowLauncher:
         existing = app_actions.media_details_window()
         if existing is not None and not existing.has_closed:
             if existing.do_refresh:
-                existing.update_image_details(media_path, index_text)
+                existing.update_media_details(media_path, index_text)
             if manually_keyed:
                 existing.focus()
             else:
@@ -295,7 +295,7 @@ class WindowLauncher:
             try:
                 details_win = MediaDetails(
                     self._app, media_path, index_text,
-                    app_actions, do_refresh=not preset_image_path,
+                    app_actions, do_refresh=not preset_media_path,
                     take_focus=manually_keyed,
                 )
                 details_win.show()
@@ -455,20 +455,20 @@ class WindowLauncher:
         """Toggle a file's marked status in directory notes."""
         from files.directory_notes import DirectoryNotes
 
-        image_path = self._app.media_navigator.get_active_media_filepath()
-        if not image_path:
+        media_path = self._app.media_navigator.get_active_media_filepath()
+        if not media_path:
             return
 
         base_dir = self._app.get_base_dir()
-        if DirectoryNotes.is_marked_file(base_dir, image_path):
-            DirectoryNotes.remove_marked_file(base_dir, image_path)
+        if DirectoryNotes.is_marked_file(base_dir, media_path):
+            DirectoryNotes.remove_marked_file(base_dir, media_path)
             self._app.notification_ctrl.toast(
-                _("Removed from directory notes: {0}").format(os.path.basename(image_path))
+                _("Removed from directory notes: {0}").format(os.path.basename(media_path))
             )
         else:
-            DirectoryNotes.add_marked_file(base_dir, image_path)
+            DirectoryNotes.add_marked_file(base_dir, media_path)
             self._app.notification_ctrl.toast(
-                _("Added to directory notes: {0}").format(os.path.basename(image_path))
+                _("Added to directory notes: {0}").format(os.path.basename(media_path))
             )
 
         # Refresh the notes window if it is open
@@ -488,19 +488,19 @@ class WindowLauncher:
         )
         from ui.app_style import AppStyle
 
-        image_path = self._app.media_navigator.get_active_media_filepath()
-        if not image_path:
+        media_path = self._app.media_navigator.get_active_media_filepath()
+        if not media_path:
             return
 
         base_dir = self._app.get_base_dir()
-        current_note = DirectoryNotes.get_file_note(base_dir, image_path) or ""
+        current_note = DirectoryNotes.get_file_note(base_dir, media_path) or ""
 
         dialog = QDialog(self._app)
-        dialog.setWindowTitle(_("Edit Note - {0}").format(os.path.basename(image_path)))
+        dialog.setWindowTitle(_("Edit Note - {0}").format(os.path.basename(media_path)))
         dialog.resize(600, 400)
 
         layout = QVBoxLayout(dialog)
-        path_label = QLabel(image_path, dialog)
+        path_label = QLabel(media_path, dialog)
         path_label.setWordWrap(True)
         layout.addWidget(path_label)
 
@@ -518,9 +518,9 @@ class WindowLauncher:
 
         def save_note():
             new_note = note_edit.toPlainText().strip()
-            DirectoryNotes.set_file_note(base_dir, image_path, new_note)
+            DirectoryNotes.set_file_note(base_dir, media_path, new_note)
             self._app.notification_ctrl.toast(
-                _("Note saved for: {0}").format(os.path.basename(image_path))
+                _("Note saved for: {0}").format(os.path.basename(media_path))
             )
             dialog.accept()
             if self._directory_notes_window is not None:

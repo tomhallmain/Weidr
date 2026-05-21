@@ -587,10 +587,10 @@ class MediaDetails(SmartWindow):
         file_size = get_readable_file_size(stat_path)
         return mod_time, file_size
 
-    def update_image_details(self, image_path: str, index_text: str) -> None:
-        """Refresh all displayed fields for a new image."""
-        self._media_path = image_path
-        self._image_path = FrameCache.get_image_path(image_path)
+    def update_media_details(self, media_path: str, index_text: str) -> None:
+        """Refresh all displayed fields for new media."""
+        self._media_path = media_path
+        self._image_path = FrameCache.get_image_path(media_path)
         self._temp_path = (
             self._image_path
             if self._image_path != self._media_path
@@ -1467,7 +1467,7 @@ class MediaDetails(SmartWindow):
                 _type = ImageGenerationType.LAST_SETTINGS
             app_actions.run_image_generation(
                 _type=_type,
-                image_path=MediaDetails.previous_image_generation_adapter_path,
+                media_path=MediaDetails.previous_image_generation_adapter_path,
                 modify_call=modify_call,
             )
         else:

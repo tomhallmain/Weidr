@@ -185,7 +185,7 @@ class KeyBindingManager:
             "Ctrl+Return",
             lambda: app.search_ctrl.run_image_generation(
                 _type=ImageGenerationType.LAST_SETTINGS,
-                image_path=MediaDetails.previous_image_generation_adapter_path,
+                media_path=MediaDetails.previous_image_generation_adapter_path,
             ),
             guarded=False,
         )
@@ -193,7 +193,7 @@ class KeyBindingManager:
             "Ctrl+Shift+Return",
             lambda: app.search_ctrl.run_image_generation(
                 _type=ImageGenerationType.CANCEL,
-                image_path=MediaDetails.previous_image_generation_adapter_path,
+                media_path=MediaDetails.previous_image_generation_adapter_path,
             ),
             guarded=False,
         )
@@ -201,7 +201,7 @@ class KeyBindingManager:
             "Ctrl+Alt+Return",
             lambda: app.search_ctrl.run_image_generation(
                 _type=ImageGenerationType.REVERT_TO_SIMPLE_GEN,
-                image_path=MediaDetails.previous_image_generation_adapter_path,
+                media_path=MediaDetails.previous_image_generation_adapter_path,
             ),
             guarded=False,
         )

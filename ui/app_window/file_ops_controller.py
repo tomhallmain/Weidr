@@ -659,7 +659,7 @@ class FileOpsController:
             return
 
         os.rename(str(self._cm.search_media_path), filepath)
-        self._app.notification_ctrl.toast(_("Moved search image to ") + filepath)
+        self._app.notification_ctrl.toast(_("Moved search media to ") + filepath)
 
     def handle_remove_files_from_groups(self, files: list[str]) -> None:
         """Remove the given files from compare groups."""

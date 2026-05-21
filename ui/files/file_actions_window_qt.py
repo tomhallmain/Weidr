@@ -99,9 +99,9 @@ class FileActionsWindow(SmartWindow):
         header.addWidget(title_lbl)
         header.addStretch()
 
-        search_btn = QPushButton(_("Search Image"))
-        # clicked emits bool(checked); ignore so it is never passed as image_path.
-        search_btn.clicked.connect(lambda _checked=False: self._search_for_active_image())
+        search_btn = QPushButton(_("Search Media"))
+        # clicked emits bool(checked); ignore so it is never passed as media_path.
+        search_btn.clicked.connect(lambda _checked=False: self._search_for_active_media())
         header.addWidget(search_btn)
 
         clear_btn = QPushButton(_("Clear History"))
@@ -135,7 +135,7 @@ class FileActionsWindow(SmartWindow):
         QShortcut(QKeySequence(Qt.Key_Escape), self).activated.connect(self.close)
         QShortcut(QKeySequence("Shift+Escape"), self).activated.connect(self.close)
         QShortcut(QKeySequence("Shift+A"), self).activated.connect(
-            self._search_for_active_image
+            self._search_for_active_media
         )
 
         # Focus the scroll area so key events are captured
@@ -388,21 +388,21 @@ class FileActionsWindow(SmartWindow):
     # ==================================================================
     # Actions
     # ==================================================================
-    def _view(self, image_path: str) -> None:
-        if not os.path.isfile(image_path):
+    def _view(self, media_path: str) -> None:
+        if not os.path.isfile(media_path):
             self._app_actions.warn(
-                _("File not found: ") + os.path.basename(image_path)
+                _("File not found: ") + os.path.basename(media_path)
             )
             return
         try:
             self._view_image_callback(
                 master=self._app_master,
-                image_path=image_path,
+                media_path=media_path,
                 app_actions=self._app_actions,
             )
         except Exception as e:
             self._app_actions.toast(
-                _("Error opening image: ") + str(e)
+                _("Error opening media: ") + str(e)
             )
 
     def _undo(self, action: FileAction, specific_image: str | None = None) -> None:
@@ -490,25 +490,25 @@ class FileActionsWindow(SmartWindow):
         self._rebuild_content()
 
     # ==================================================================
-    # Search for active image
+    # Search for active media
     # ==================================================================
-    def _search_for_active_image(self, image_path: str | None = None) -> None:
-        if image_path is not None and not isinstance(image_path, str):
-            image_path = None
-        if image_path is None:
-            image_path = self._app_actions.get_active_media_filepath()
-            if image_path is None:
-                raise Exception("No active image")
+    def _search_for_active_media(self, media_path: str | None = None) -> None:
+        if media_path is not None and not isinstance(media_path, str):
+            media_path = None
+        if media_path is None:
+            media_path = self._app_actions.get_active_media_filepath()
+            if media_path is None:
+                raise Exception("No active media")
 
-        image_path = os.path.normpath(image_path)
-        search_basename = os.path.basename(image_path).lower()
+        media_path = os.path.normpath(media_path)
+        search_basename = os.path.basename(media_path).lower()
         basename_no_ext = os.path.splitext(search_basename)[0].lower()
 
         temp: list[FileAction] = []
         # Pass 1: exact path match
         for action in FileAction.action_history:
             for f in action.new_files:
-                if f == image_path:
+                if f == media_path:
                     temp.append(action)
                     break
         # Pass 2: basename match

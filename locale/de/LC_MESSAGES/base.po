@@ -2,9 +2,9 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: 1.0\n"
-"POT-Creation-Date: 2026-04-30 15:43-0400\n"
-"PO-Revision-Date: 2026-04-30 15:43-0400\n"
-"Last-Translator: Thomas Hall <tomhall.main@gmail.com>\n"
+"POT-Creation-Date: 2026-05-20 22:11-0400\n"
+"PO-Revision-Date: 2026-05-20 22:11-0400\n"
+"Last-Translator: Translator Name <translator@example.com>\n"
 "Language-Team: de Team <<EMAIL>>\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
@@ -40,131 +40,131 @@ msgstr ""
 msgid "Restarting Comparison"
 msgstr "Neustart-Vergleich"
 
-#: compare/classifier_actions_manager.py:74
+#: compare/classifier_action.py:55
 msgid "(no positives set)"
 msgstr "(es werden keine Positiven gesetzt)"
 
-#: compare/classifier_actions_manager.py:75
+#: compare/classifier_action.py:56
 msgid "(no negatives set)"
 msgstr "(es werden keine Negative gesetzt)"
 
-#: compare/classifier_actions_manager.py:77
-#: ui/compare/classifier_management_window_qt.py:85
+#: compare/classifier_action.py:58
+#: ui/compare/classifier_management_window_qt.py:86
 msgid "New Classifier Action"
 msgstr "Neue Klassifizierungsaktion"
 
-#: compare/classifier_actions_manager.py:185
+#: compare/classifier_action.py:168
 msgid "Loading image classifier <{0}> ..."
 msgstr "Laden des Bildklassifizierers <{0}> ..."
 
-#: compare/classifier_actions_manager.py:296
+#: compare/classifier_action.py:281
 msgid "Loading embedding prototype from {0}..."
 msgstr "Laden des Einbettungsprototyps aus {0}..."
 
-#: compare/classifier_actions_manager.py:312
+#: compare/classifier_action.py:297
 msgid "Loading negative embedding prototype from {0}..."
 msgstr "Laden des negativen Einbettungsprototyps aus {0}..."
 
-#: compare/classifier_actions_manager.py:422
-#: ui/compare/classifier_actions_tab_qt.py:307
+#: compare/classifier_action.py:407
+#: ui/compare/classifier_actions_tab_qt.py:309
 msgid "unknown error"
 msgstr "Unbekannter Fehler"
 
-#: compare/classifier_actions_manager.py:695
+#: compare/classifier_action.py:680
 msgid " detected"
 msgstr " entdeckt"
 
-#: compare/classifier_actions_manager.py:697
+#: compare/classifier_action.py:682
 msgid " - skipped"
 msgstr " - übersprungen"
 
-#: compare/classifier_actions_manager.py:700
+#: compare/classifier_action.py:685
 msgid " - hidden"
 msgstr " - versteckt"
 
-#: compare/classifier_actions_manager.py:705
+#: compare/classifier_action.py:690
 msgid " - marked"
 msgstr " - markiert"
 
-#: compare/classifier_actions_manager.py:728
+#: compare/classifier_action.py:713
 msgid "Moving file: "
 msgstr "Bewegliche Datei: "
 
-#: compare/classifier_actions_manager.py:774
+#: compare/classifier_action.py:759
 msgid "Deleting file: "
 msgstr "Löschung der Datei: "
 
-#: compare/classifier_actions_manager.py:861
+#: compare/classifier_action.py:856
 msgid "Action modifier is not a valid directory: "
 msgstr "Aktionsmodifikator ist kein gültiges Verzeichnis: "
 
-#: compare/classifier_actions_manager.py:863
+#: compare/classifier_action.py:858
 msgid "Invalid classifier action {0}, may cause errors or be unable to run!"
 msgstr ""
 "Ungültige Klassifizierungsaktion {0}, kann zu Fehlern führen oder nicht "
 "ausgeführt werden können!"
 
-#: compare/classifier_actions_manager.py:1021
+#: compare/classifier_action.py:1021
 msgid "embedding"
 msgstr "Einbettung"
 
-#: compare/classifier_actions_manager.py:1023
+#: compare/classifier_action.py:1023
 msgid "classifier {0}"
 msgstr "Klassifikator {0}"
 
-#: compare/classifier_actions_manager.py:1025
+#: compare/classifier_action.py:1025
 msgid "prompts"
 msgstr "Eingabeaufforderungen"
 
-#: compare/classifier_actions_manager.py:1027
+#: compare/classifier_action.py:1027
 msgid "prototype"
 msgstr "Prototyp"
 
-#: compare/classifier_actions_manager.py:1035
+#: compare/classifier_action.py:1037
 msgid "categories: {0}"
 msgstr "Kategorien: {0}"
 
-#: compare/classifier_actions_manager.py:1039
+#: compare/classifier_action.py:1041
 msgid "{0} positives, {1} negatives"
 msgstr "{0} Positiv, {1} Negativ"
 
-#: compare/classifier_actions_manager.py:1043
+#: compare/classifier_action.py:1045
 msgid " using {0} ({1})"
 msgstr " mit {0} ({1})"
 
-#: compare/classifier_actions_manager.py:1045
+#: compare/classifier_action.py:1047
 msgid " using {0}"
 msgstr " mit {0}"
 
-#: compare/classifier_actions_manager.py:1047
+#: compare/classifier_action.py:1049
 msgid " ({0} positives, {1} negatives)"
 msgstr " ({0} Positiv, {1} Negativ)"
 
-#: compare/classifier_actions_manager.py:1050
+#: compare/classifier_action.py:1052
 msgid "disabled"
 msgstr "deaktiviert"
 
-#: compare/classifier_actions_manager.py:1052
+#: compare/classifier_action.py:1054
 msgid "cannot run"
 msgstr "kann nicht laufen"
 
-#: compare/classifier_actions_manager.py:1059
-#: ui/compare/classifier_management_window_qt.py:81
-#: ui/compare/prevalidations_tab_qt.py:133
+#: compare/classifier_action.py:1061
+#: ui/compare/classifier_management_window_qt.py:82
+#: ui/compare/prevalidations_tab_qt.py:131
 msgid "New Prevalidation"
 msgstr "Neue Prävalidierung"
 
-#: compare/classifier_actions_manager.py:1175
+#: compare/classifier_action.py:1179
 msgid "Profile directory is not a valid directory: "
 msgstr "Das Profilverzeichnis ist kein gültiges Verzeichnis: "
 
-#: compare/classifier_actions_manager.py:1177
+#: compare/classifier_action.py:1181
 msgid "Invalid prevalidation {0}, may cause errors or be unable to run!"
 msgstr ""
 "Invalide Vorvalidierung {0}, kann Fehler verursachen oder nicht laufen "
 "können!"
 
-#: compare/classifier_actions_manager.py:1265
+#: compare/classifier_action.py:1273
 msgid "lookaheads: {0}"
 msgstr "Vorausschauen: {0}"
 
@@ -291,7 +291,7 @@ msgstr ""
 "Für dieses Verzeichnis und die aktuellen Filtereinstellungen sind keine "
 "Bildgruppen mehr vorhanden."
 
-#: compare/compare_wrapper.py:538 ui/app_window/sidebar_panel.py:85
+#: compare/compare_wrapper.py:538 ui/app_window/sidebar_panel.py:86
 msgid "Set a directory to run comparison."
 msgstr "Legen Sie ein Verzeichnis für den Vergleich fest."
 
@@ -413,10 +413,10 @@ msgstr "Datei aktualisiert: {0}"
 #: files/pdf_creator.py:232 files/pdf_creator.py:250 files/pdf_creator.py:282
 #: ui/app_window/notification_controller.py:258
 #: ui/auth/app_startup_auth_qt.py:124 ui/auth/password_admin_window.py:130
-#: ui/auth/password_admin_window.py:537 ui/auth/password_dialog.py:305
-#: ui/compare/classifier_action_copy_window_qt.py:227
-#: ui/compare/classifier_action_copy_window_qt.py:235
-#: ui/files/marked_file_mover_qt.py:613 ui/files/marked_file_mover_qt.py:701
+#: ui/auth/password_admin_window.py:537 ui/auth/password_dialog.py:308
+#: ui/compare/classifier_action_copy_window_qt.py:224
+#: ui/compare/classifier_action_copy_window_qt.py:232
+#: ui/files/marked_file_mover_qt.py:617 ui/files/marked_file_mover_qt.py:727
 msgid "Error"
 msgstr "Fehler"
 
@@ -458,36 +458,36 @@ msgstr "Überschreiben bestätigen"
 msgid "File overwrite cancelled"
 msgstr "Dateiüberschreibung abgebrochen"
 
-#: files/file_browser.py:190 files/file_browser.py:202
-#: files/file_browser.py:214 ui/app_window/media_navigator.py:142
-#: ui/app_window/media_navigator.py:185
+#: files/file_browser.py:187 files/file_browser.py:199
+#: files/file_browser.py:211 ui/app_window/media_navigator.py:138
+#: ui/app_window/media_navigator.py:181
 msgid " (try setting recursive to True)"
 msgstr " (versuchen Sie, rekursiv auf True zu setzen)"
 
-#: files/file_browser.py:191 files/file_browser.py:203
-#: files/file_browser.py:215 files/file_browser.py:253
-#: ui/app_window/media_navigator.py:144 ui/app_window/media_navigator.py:187
+#: files/file_browser.py:188 files/file_browser.py:200
+#: files/file_browser.py:212 files/file_browser.py:250
+#: ui/app_window/media_navigator.py:140 ui/app_window/media_navigator.py:183
 msgid "No files found for current browsing settings."
 msgstr ""
 "Es wurden keine Dateien für die aktuellen Browsing-Einstellungen gefunden."
 
-#: files/file_browser.py:239
+#: files/file_browser.py:236
 msgid "FILE_BROWSER_INDEX_DETAILS"
 msgstr "{0} von {1} Dateien im Verzeichnis, {3} sortiert nach {2}"
 
-#: files/file_browser.py:257
+#: files/file_browser.py:254
 msgid "Index must be 1 or greater."
 msgstr "Der Index muss 1 oder größer sein."
 
-#: files/file_browser.py:261
+#: files/file_browser.py:258
 msgid "Index {0} is out of range. There are {1} files."
 msgstr "Index {0} liegt außerhalb des Bereichs. Es gibt {1} Dateien."
 
-#: files/file_browser.py:289
+#: files/file_browser.py:286
 msgid "Search text provided to file_browser.find() was invalid."
 msgstr "Der an file_browser.find() übergebene Suchtext war ungültig."
 
-#: files/file_browser.py:654
+#: files/file_browser.py:651
 msgid ""
 "Loading directory... {0} files currently available (scanned {1} folders; "
 "total unknown)"
@@ -495,7 +495,7 @@ msgstr ""
 "Verzeichnis wird geladen... {0} Dateien vorläufig verfügbar (gescannte {1} "
 "Verzeichnisse; Gesamt unbekannt)"
 
-#: files/file_browser.py:963
+#: files/file_browser.py:960
 msgid "No files found"
 msgstr "Keine Dateien gefunden"
 
@@ -646,11 +646,11 @@ msgstr "Möglicher Fehler erkannt"
 msgid "Removed marked file from source: {0}"
 msgstr "Markierte Datei aus der Quelle entfernt: {0}"
 
-#: files/marked_files.py:677 ui/files/file_actions_window_qt.py:222
+#: files/marked_files.py:677 ui/files/file_actions_window_qt.py:224
 msgid "Moved"
 msgstr "Verschiebt"
 
-#: files/marked_files.py:677 ui/files/file_actions_window_qt.py:222
+#: files/marked_files.py:677 ui/files/file_actions_window_qt.py:224
 msgid "Copied"
 msgstr "Kopiert"
 
@@ -682,7 +682,7 @@ msgstr "Der PDF-Datei konnten keine Seiten hinzugefügt werden"
 msgid "PDF creation requires pypdfium2 package"
 msgstr "PDF-Erstellung erfordert das Paket pypdfium2"
 
-#: files/pdf_creator.py:172 ui/files/marked_file_mover_qt.py:273
+#: files/pdf_creator.py:172 ui/files/marked_file_mover_qt.py:280
 msgid "Diff PDFs"
 msgstr "PDF-Vergleich"
 
@@ -733,17 +733,17 @@ msgstr ""
 msgid "Video ({0})"
 msgstr "Video ({0})"
 
-#: image/video_ops.py:312 ui/image/image_details_qt.py:542
-#: utils/constants.py:387
+#: image/video_ops.py:312 ui/image/media_details.py:544 utils/constants.py:392
 msgid "Video"
 msgstr "Video"
 
-#: lib/custom_dialogs_qt.py:149 lib/fast_directory_picker_qt.py:330
-#: lib/qt_alert.py:28 ui/app_window/file_ops_controller.py:290
-#: ui/app_window/window_launcher.py:479 ui/auth/app_startup_auth_qt.py:76
-#: ui/auth/password_admin_window.py:83 ui/auth/password_dialog.py:197
-#: ui/auth/password_dialog.py:267 ui/auth/password_dialog.py:288
-#: ui/compare/classifier_action_copy_window_qt.py:174
+#: lib/custom_dialogs_qt.py:149 lib/fast_directory_picker_qt.py:331
+#: lib/qt_alert.py:28 ui/app_window/file_ops_controller.py:280
+#: ui/app_window/file_ops_controller.py:930
+#: ui/app_window/window_launcher.py:513 ui/auth/app_startup_auth_qt.py:76
+#: ui/auth/password_admin_window.py:83 ui/auth/password_dialog.py:200
+#: ui/auth/password_dialog.py:270 ui/auth/password_dialog.py:291
+#: ui/compare/classifier_action_copy_window_qt.py:171
 #: ui/compare/compare_settings_window_qt.py:295
 #: ui/compare/hf_model_manager_window_qt.py:181
 #: ui/files/directory_notes_window_qt.py:379
@@ -753,7 +753,7 @@ msgid "Cancel"
 msgstr "Abbrechen"
 
 #: lib/custom_dialogs_qt.py:155 lib/qt_alert.py:27
-#: ui/auth/app_startup_auth_qt.py:79 ui/auth/password_dialog.py:200
+#: ui/auth/app_startup_auth_qt.py:79 ui/auth/password_dialog.py:203
 #: ui/compare/hf_model_manager_window_qt.py:889
 msgid "OK"
 msgstr "GUT"
@@ -786,74 +786,74 @@ msgstr "RAM-Festplatte"
 msgid "Unknown"
 msgstr "Unbekannter"
 
-#: lib/fast_directory_picker_qt.py:252 lib/fast_directory_picker_qt.py:538
+#: lib/fast_directory_picker_qt.py:252 lib/fast_directory_picker_qt.py:539
 #: ui/files/directory_picker_dialog.py:99
 msgid "Select Directory"
 msgstr "Auswählen Verzeichnis"
 
-#: lib/fast_directory_picker_qt.py:277
+#: lib/fast_directory_picker_qt.py:278
 msgid "Locations"
 msgstr "Orte"
 
-#: lib/fast_directory_picker_qt.py:282
+#: lib/fast_directory_picker_qt.py:283
 msgid "Refresh locations"
 msgstr "Aktualisieren Sie die Standorte"
 
-#: lib/fast_directory_picker_qt.py:295
+#: lib/fast_directory_picker_qt.py:296
 msgid "Type or paste a directory path"
 msgstr "Geben Sie einen Verzeichnispfad ein oder fügen Sie ihn ein"
 
-#: lib/fast_directory_picker_qt.py:299
+#: lib/fast_directory_picker_qt.py:300
 msgid "Go"
 msgstr "Geh"
 
-#: lib/fast_directory_picker_qt.py:303
+#: lib/fast_directory_picker_qt.py:304
 msgid "Up"
 msgstr "Hoch"
 
-#: lib/fast_directory_picker_qt.py:307
+#: lib/fast_directory_picker_qt.py:308
 msgid "New Folder"
 msgstr "Neuer Ordner"
 
-#: lib/fast_directory_picker_qt.py:311
+#: lib/fast_directory_picker_qt.py:312
 #: ui/compare/hf_model_manager_window_qt.py:591
 msgid "Refresh"
 msgstr "Aktualisieren"
 
-#: lib/fast_directory_picker_qt.py:315
+#: lib/fast_directory_picker_qt.py:316
 msgid "Folders"
 msgstr "Ordner"
 
-#: lib/fast_directory_picker_qt.py:334
+#: lib/fast_directory_picker_qt.py:335
 msgid "Select"
 msgstr "Auswählen"
 
-#: lib/fast_directory_picker_qt.py:398
+#: lib/fast_directory_picker_qt.py:399
 msgid "Create New Folder"
 msgstr "Neuen Ordner erstellen"
 
-#: lib/fast_directory_picker_qt.py:399
+#: lib/fast_directory_picker_qt.py:400
 msgid "Folder name:"
 msgstr "Ordnername"
 
-#: lib/fast_directory_picker_qt.py:405
+#: lib/fast_directory_picker_qt.py:406
 msgid "Folder name cannot be empty."
 msgstr "Der Ordnername kann nicht leer sein."
 
-#: lib/fast_directory_picker_qt.py:417
+#: lib/fast_directory_picker_qt.py:418
 msgid "A folder with that name already exists."
 msgstr "Ein Ordner mit diesem Namen existiert bereits."
 
-#: lib/fast_directory_picker_qt.py:422
+#: lib/fast_directory_picker_qt.py:423
 msgid "Failed to create folder (check permissions/path)."
 msgstr "Ordner konnte nicht erstellt werden (Überprüfe Rechte/Pfad)."
 
-#: lib/fast_directory_picker_qt.py:471
+#: lib/fast_directory_picker_qt.py:472
 msgid "No folders found (or folder is not currently accessible)."
 msgstr "Keine Ordner gefunden (oder der Ordner ist momentan nicht zugänglich)"
 
-#: lib/fast_directory_picker_qt.py:531 ui/files/marked_file_mover_qt.py:90
-#: ui/files/marked_file_mover_qt.py:102 ui/files/marked_file_mover_qt.py:581
+#: lib/fast_directory_picker_qt.py:532 ui/files/marked_file_mover_qt.py:90
+#: ui/files/marked_file_mover_qt.py:102 ui/files/marked_file_mover_qt.py:585
 msgid "Current Base Directory"
 msgstr "Aktuelle Basisverzeichnis"
 
@@ -873,13 +873,13 @@ msgstr "Hilfe und Konfig"
 msgid "Main Window Shortcuts"
 msgstr "Hauptfenster-Verknüpfungen"
 
-#: ui/help_and_config_qt.py:74 ui/help_and_config_qt.py:143
-#: ui/help_and_config_qt.py:187
+#: ui/help_and_config_qt.py:74 ui/help_and_config_qt.py:159
+#: ui/help_and_config_qt.py:186 ui/help_and_config_qt.py:230
 msgid "Command"
 msgstr "Befehl"
 
-#: ui/help_and_config_qt.py:74 ui/help_and_config_qt.py:143
-#: ui/help_and_config_qt.py:187
+#: ui/help_and_config_qt.py:74 ui/help_and_config_qt.py:159
+#: ui/help_and_config_qt.py:186 ui/help_and_config_qt.py:230
 msgid "Description"
 msgstr "Beschreibung"
 
@@ -915,79 +915,79 @@ msgstr "Seitenleiste ausblenden/einblenden"
 msgid "Open hotkeys window (*when marks window open)"
 msgstr "Hotkeys-Fenster öffnen (*wenn das Markierungsfenster geöffnet ist)"
 
-#: ui/help_and_config_qt.py:83
+#: ui/help_and_config_qt.py:82
 msgid "Open content filters window"
 msgstr "Fenster Inhaltsfilter öffnen"
 
-#: ui/help_and_config_qt.py:84
+#: ui/help_and_config_qt.py:83
 msgid "Open marks window (no GUI)"
 msgstr "Markenfenster öffnen (kein GUI)"
 
-#: ui/help_and_config_qt.py:85
+#: ui/help_and_config_qt.py:84
 msgid "Open marks window"
 msgstr "Markenfenster öffnen"
 
-#: ui/help_and_config_qt.py:86
+#: ui/help_and_config_qt.py:85
 msgid "Open marks action history window"
 msgstr "Fenster Aktionshistorie öffnen"
 
-#: ui/help_and_config_qt.py:87
+#: ui/help_and_config_qt.py:86
 msgid "Quit"
 msgstr "Beenden"
 
-#: ui/help_and_config_qt.py:88
+#: ui/help_and_config_qt.py:87
 msgid "Open security configuration window"
 msgstr "Fenster der Sicherheitskonfiguration öffnen"
 
-#: ui/help_and_config_qt.py:89
+#: ui/help_and_config_qt.py:88
 msgid "Run previous marks action"
 msgstr "Vorherige Markierungsaktion ausführen"
 
-#: ui/help_and_config_qt.py:90
+#: ui/help_and_config_qt.py:89
 msgid "Run penultimate marks action"
 msgstr "Vorletzte Markierungsaktion ausführen"
 
-#: ui/help_and_config_qt.py:91
+#: ui/help_and_config_qt.py:90
 msgid "Run third-most-recent marks action"
 msgstr "Führe die dritt-aktuellsten Marken-Aktion aus"
 
-#: ui/help_and_config_qt.py:92
+#: ui/help_and_config_qt.py:91
 msgid "Continue image generation"
 msgstr "Bilderzeugung fortsetzen"
 
-#: ui/help_and_config_qt.py:93
+#: ui/help_and_config_qt.py:92
 msgid "Cancel image generation"
 msgstr "Bilderzeugung abbrechen"
 
-#: ui/help_and_config_qt.py:94
+#: ui/help_and_config_qt.py:93
 msgid "Toggle slideshow"
 msgstr "Diashow umschalten"
 
-#: ui/help_and_config_qt.py:95
+#: ui/help_and_config_qt.py:94
 msgid "Run next text embedding search preset"
 msgstr "Nächste Suchvorgabe für Texteinbettung ausführen"
 
-#: ui/help_and_config_qt.py:96
+#: ui/help_and_config_qt.py:95
 msgid "Run permanent marks action"
 msgstr "Aktion Dauerhafte Markierungen ausführen"
 
-#: ui/help_and_config_qt.py:97
+#: ui/help_and_config_qt.py:96
 msgid "Open type configuration window"
 msgstr "Typkonfigurationsfenster öffnen"
 
-#: ui/help_and_config_qt.py:98
+#: ui/help_and_config_qt.py:97
 msgid "Open new compare window"
 msgstr "Neues Vergleichsfenster öffnen"
 
-#: ui/help_and_config_qt.py:99
+#: ui/help_and_config_qt.py:98
 msgid "Move previous marks to a different directory"
 msgstr "Vorherige Markierungen in ein anderes Verzeichnis verschieben"
 
-#: ui/help_and_config_qt.py:100 ui/help_and_config_qt.py:130
+#: ui/help_and_config_qt.py:99 ui/help_and_config_qt.py:130
 msgid "Undo previous marks changes"
 msgstr "Rückgängigmachen früherer Änderungen an Markierungen"
 
-#: ui/help_and_config_qt.py:101
+#: ui/help_and_config_qt.py:100
 msgid "Toggle fullscreen"
 msgstr "Vollbild umschalten"
 
@@ -1015,7 +1015,7 @@ msgstr "Aktuelles Bild im aktuellen Fenster suchen"
 msgid "Clear all hidden images"
 msgstr "Alle versteckten Bilder löschen"
 
-#: ui/help_and_config_qt.py:108
+#: ui/help_and_config_qt.py:107
 msgid "Clear marks list"
 msgstr "Markierungsliste löschen"
 
@@ -1029,27 +1029,27 @@ msgstr ""
 "Bild löschen (oder markierte Dateigruppe, wenn das Markierungsfenster "
 "ausgewählt ist)"
 
-#: ui/help_and_config_qt.py:111
+#: ui/help_and_config_qt.py:110
 msgid "Delete current base directory and all contents"
 msgstr "Aktuelles Basisverzeichnis und alle Inhalte löschen"
 
-#: ui/help_and_config_qt.py:112
+#: ui/help_and_config_qt.py:111
 msgid "Go to next mark"
 msgstr "Zur nächsten Markierung gehen"
 
-#: ui/help_and_config_qt.py:113
+#: ui/help_and_config_qt.py:112
 msgid "Show help window"
 msgstr "Hilfefenster anzeigen"
 
-#: ui/help_and_config_qt.py:114
+#: ui/help_and_config_qt.py:113
 msgid "Run image generation"
 msgstr "Bilderzeugung ausführen"
 
-#: ui/help_and_config_qt.py:115
+#: ui/help_and_config_qt.py:114
 msgid "Open context menu"
 msgstr "Kontextmenü öffnen"
 
-#: ui/help_and_config_qt.py:116
+#: ui/help_and_config_qt.py:115
 msgid "Run content filters for all files in the current directory"
 msgstr "Inhaltsfilter für alle Dateien im aktuellen Verzeichnis ausführen"
 
@@ -1073,7 +1073,7 @@ msgstr ""
 "Hinzufügen aller Marken zwischen der zuletzt gesetzten und der aktuell "
 "ausgewählten Marke oder aller Marken in der aktuellen Gruppe"
 
-#: ui/app_window/sidebar_panel.py:263 ui/help_and_config_qt.py:121
+#: ui/app_window/sidebar_panel.py:319 ui/help_and_config_qt.py:121
 msgid "Open media location"
 msgstr "Medienstandort öffnen"
 
@@ -1113,70 +1113,70 @@ msgstr "Marken aus nachgelagerten Bildern setzen"
 msgid "Show previous/next group"
 msgstr "Vorherige/nächste Gruppe anzeigen"
 
-#: ui/help_and_config_qt.py:140
+#: ui/help_and_config_qt.py:183
 msgid "Image Details Shortcuts"
 msgstr "Bilddetails-Verknüpfungen"
 
-#: ui/help_and_config_qt.py:144 ui/image/image_details_qt.py:387
+#: ui/help_and_config_qt.py:187 ui/image/media_details.py:388
 msgid "Crop Image (Smart Detect)"
 msgstr "Bild zuschneiden (Klug erkennen)"
 
-#: ui/help_and_config_qt.py:145 ui/image/image_details_qt.py:383
+#: ui/help_and_config_qt.py:188 ui/image/media_details.py:384
 msgid "Rotate Image Left"
 msgstr "Bild nach links drehen"
 
-#: ui/help_and_config_qt.py:146 ui/image/image_details_qt.py:384
+#: ui/help_and_config_qt.py:189 ui/image/media_details.py:385
 msgid "Rotate Image Right"
 msgstr "Bild nach rechts drehen"
 
-#: ui/help_and_config_qt.py:147 ui/image/image_details_qt.py:388
+#: ui/help_and_config_qt.py:190 ui/image/media_details.py:389
 msgid "Enhance Image"
 msgstr "Bild verbessern"
 
-#: ui/help_and_config_qt.py:148 ui/image/image_details_qt.py:391
+#: ui/help_and_config_qt.py:191 ui/image/media_details.py:392
 msgid "Random Crop"
 msgstr "Zufälliger Bildausschnitt"
 
-#: ui/help_and_config_qt.py:149
+#: ui/help_and_config_qt.py:192
 msgid "Randomly Modify Image"
 msgstr "Bild zufällig verändern"
 
-#: ui/help_and_config_qt.py:150 ui/image/image_details_qt.py:395
+#: ui/help_and_config_qt.py:193 ui/image/media_details.py:396
 msgid "Flip Image Horizontally"
 msgstr "Bild waagerecht spiegeln"
 
-#: ui/help_and_config_qt.py:151 ui/image/image_details_qt.py:396
+#: ui/help_and_config_qt.py:194 ui/image/media_details.py:397
 msgid "Flip Image Vertically"
 msgstr "Bild senkrecht spiegeln"
 
-#: ui/help_and_config_qt.py:152 ui/image/image_details_qt.py:403
+#: ui/help_and_config_qt.py:195 ui/image/media_details.py:404
 msgid "Copy Without EXIF"
 msgstr "Kopieren ohne EXIF"
 
-#: ui/help_and_config_qt.py:153 ui/image/image_details_qt.py:404
+#: ui/help_and_config_qt.py:196 ui/image/media_details.py:405
 msgid "Convert to JPG"
 msgstr "Konvertieren zu JPG"
 
-#: ui/help_and_config_qt.py:154 ui/image/image_details_qt.py:407
+#: ui/help_and_config_qt.py:197 ui/image/media_details.py:408
 msgid "Show Metadata"
 msgstr "Metadaten anzeigen"
 
-#: ui/help_and_config_qt.py:155 ui/image/image_details_qt.py:411
+#: ui/help_and_config_qt.py:198 ui/image/media_details.py:412
 msgid "Open Related Image"
 msgstr "Verwandtes Bild öffnen"
 
-#: ui/app_window/context_menu_builder.py:123 ui/help_and_config_qt.py:156
-#: ui/image/image_details_qt.py:429 ui/image/temp_image_window_qt.py:222
-#: utils/constants.py:579
+#: ui/app_window/context_menu_builder.py:119 ui/help_and_config_qt.py:199
+#: ui/image/media_details.py:430 ui/image/temp_media_window.py:225
+#: utils/constants.py:584
 msgid "Run Image Generation"
 msgstr "Bilderzeugung ausführen"
 
-#: ui/help_and_config_qt.py:157 ui/image/image_details_qt.py:433
+#: ui/help_and_config_qt.py:200 ui/image/media_details.py:434
 #: utils/constants.py:323
 msgid "Redo Prompt"
 msgstr "Eingabeaufforderung wiederholen"
 
-#: ui/help_and_config_qt.py:164
+#: ui/help_and_config_qt.py:207
 msgid ""
 "Note: Using Ctrl instead of Shift marks the created file and opens the marks"
 " window without GUI."
@@ -1184,177 +1184,177 @@ msgstr ""
 "Hinweis: Durch Drücken der Strg-Taste anstelle der Umschalttaste wird die "
 "erstellte Datei markiert und das Markierungsfenster ohne GUI geöffnet."
 
-#: ui/help_and_config_qt.py:184
+#: ui/help_and_config_qt.py:227
 msgid "Go To File Shortcuts"
 msgstr "Gehe zu Datei-Verknüpfungen"
 
-#: ui/files/go_to_file_qt.py:277 ui/help_and_config_qt.py:188
+#: ui/files/go_to_file_qt.py:277 ui/help_and_config_qt.py:231
 msgid "Go To Last Moved"
 msgstr "Zur letzten Verschiebung gehen"
 
-#: ui/help_and_config_qt.py:189
+#: ui/help_and_config_qt.py:232
 msgid "Browse File"
 msgstr "Datei durchsuchen"
 
-#: ui/files/go_to_file_qt.py:388 ui/help_and_config_qt.py:190
+#: ui/files/go_to_file_qt.py:388 ui/help_and_config_qt.py:233
 msgid "Current Media"
 msgstr "Aktuelle Medien"
 
-#: ui/help_and_config_qt.py:191
+#: ui/help_and_config_qt.py:234
 msgid "Find Related Files"
 msgstr "Verwandte Dateien suchen"
 
-#: ui/help_and_config_qt.py:192
+#: ui/help_and_config_qt.py:235
 msgid "Extract Base ID"
 msgstr "Basis-ID extrahieren"
 
-#: ui/help_and_config_qt.py:193
+#: ui/help_and_config_qt.py:236
 msgid "Browse Directory"
 msgstr "Verzeichnis durchsuchen"
 
-#: ui/help_and_config_qt.py:202
+#: ui/help_and_config_qt.py:245
 msgid "Config Settings"
 msgstr "Konfigurations-Einstellungen"
 
-#: ui/help_and_config_qt.py:206
+#: ui/help_and_config_qt.py:249
 msgid "Show Toasts"
 msgstr "Toasts anzeigen"
 
-#: ui/help_and_config_qt.py:209
+#: ui/help_and_config_qt.py:252
 msgid "Slideshow Interval (sec)"
 msgstr "Diashow-Intervall (Sek.)"
 
-#: ui/help_and_config_qt.py:212
+#: ui/help_and_config_qt.py:267
 msgid "File Check Interval (sec)"
 msgstr "Datei-Prüfintervall (sec)"
 
-#: ui/help_and_config_qt.py:215
+#: ui/help_and_config_qt.py:270
 msgid "Max Search Results"
 msgstr "Max Suchergebnisse"
 
-#: ui/help_and_config_qt.py:219
+#: ui/help_and_config_qt.py:274
 msgid "Sort By"
 msgstr "Sortieren nach"
 
-#: ui/app_window/context_menu_builder.py:139
-#: ui/compare/prevalidations_tab_qt.py:373 ui/help_and_config_qt.py:227
+#: ui/app_window/context_menu_builder.py:135
+#: ui/compare/prevalidations_tab_qt.py:383 ui/help_and_config_qt.py:282
 msgid "Enable Prevalidations"
 msgstr "Freigabe von Prävalidierungen"
 
-#: ui/help_and_config_qt.py:230
+#: ui/help_and_config_qt.py:285
 msgid "Toasts Persist (sec)"
 msgstr "Toasts bleiben bestehen (sec)"
 
-#: ui/help_and_config_qt.py:233
+#: ui/help_and_config_qt.py:288
 msgid "Title Notify Persist (sec)"
 msgstr "Titel Benachrichtigung Dauerhaft (Sekunden)"
 
-#: ui/help_and_config_qt.py:236
+#: ui/help_and_config_qt.py:291
 msgid "Delete Instantly"
 msgstr "Sofortiges Löschen"
 
-#: ui/help_and_config_qt.py:239
+#: ui/help_and_config_qt.py:294
 msgid "Trash Folder"
 msgstr "Ordner Papierkorb"
 
-#: ui/help_and_config_qt.py:242
+#: ui/help_and_config_qt.py:297
 msgid "Image Tagging Enabled"
 msgstr "Bild-Tagging aktiviert"
 
-#: ui/help_and_config_qt.py:245
+#: ui/help_and_config_qt.py:300
 msgid "Escape Backslash Filepaths"
 msgstr "Escape Backslash-Dateipfade"
 
-#: ui/help_and_config_qt.py:250
+#: ui/help_and_config_qt.py:305
 msgid "Large Image Threshold (px)"
 msgstr "Maximale Bildgröße (px)"
 
-#: ui/help_and_config_qt.py:253
+#: ui/help_and_config_qt.py:308
 msgid "Large Preview Overscan"
 msgstr "Großvorschau Überscan"
 
-#: ui/help_and_config_qt.py:256
+#: ui/help_and_config_qt.py:311
 msgid "Large Preview Max Dimension"
 msgstr "Grosse Vorschau Maximale Dimension"
 
-#: ui/help_and_config_qt.py:259
+#: ui/help_and_config_qt.py:314
 msgid "Large Image HQ Idle Downscale"
 msgstr "Großbild Hochaufloeder Inaktiv Niederschlag"
 
-#: ui/help_and_config_qt.py:262
+#: ui/help_and_config_qt.py:317
 msgid "Large Image Full-Res Promotion"
 msgstr "Hochaufloesendes Bild Vollauflösung Promotion"
 
-#: ui/help_and_config_qt.py:265
+#: ui/help_and_config_qt.py:320
 msgid "Large HQ Downscale Ratio Threshold"
 msgstr "GrossesHQ-Einkommen-Verhältnis-Schwellenwert"
 
-#: ui/help_and_config_qt.py:268
+#: ui/help_and_config_qt.py:323
 msgid "Large Promotion Min Free RAM (GB)"
 msgstr "Grosser Rabatt Min freier RAM (GB)"
 
-#: ui/help_and_config_qt.py:271
+#: ui/help_and_config_qt.py:326
 msgid "Large Promotion Max Estimated (MB)"
 msgstr "GroßePromotionMaximalGeschätzte(MB)"
 
-#: ui/help_and_config_qt.py:274
+#: ui/help_and_config_qt.py:329
 msgid "Large Promotion RAM Fraction"
 msgstr "Große Promotion RAM Teil"
 
-#: ui/help_and_config_qt.py:279
+#: ui/help_and_config_qt.py:334
 msgid "Skip File Check If Files Over"
 msgstr "Dateiüberprüfung überspringen Wenn Dateien überschreiten"
 
-#: ui/help_and_config_qt.py:282
+#: ui/help_and_config_qt.py:337
 msgid "Screenshot Directory"
 msgstr "Schirmablage-Verzeichnis"
 
-#: ui/help_and_config_qt.py:285
+#: ui/help_and_config_qt.py:340
 msgid "Save Screenshot To Same Dir"
 msgstr "Im gleichen Verzeichnis speichern"
 
-#: ui/app_window/app_window.py:134 ui/app_window/app_window.py:195
-#: ui/app_window/app_window.py:780
+#: ui/app_window/app_window.py:135 ui/app_window/app_window.py:198
+#: ui/app_window/app_window.py:840
 msgid " Weidr - Media Handler "
 msgstr " Weidr - Mediaprosessor "
 
-#: ui/app_window/app_window.py:550
+#: ui/app_window/app_window.py:560
 msgid "Set Title Bar Color..."
 msgstr "Setzen Sie die Titelleistenfarbe..."
 
-#: ui/app_window/app_window.py:559
+#: ui/app_window/app_window.py:569
 msgid "Clear Title Bar Color"
 msgstr "Klarer Titelzeilenfarbe"
 
-#: ui/app_window/app_window.py:572
+#: ui/app_window/app_window.py:582
 msgid "No directory loaded."
 msgstr "Kein Verzeichnis geladen."
 
-#: ui/app_window/app_window.py:579
+#: ui/app_window/app_window.py:589
 msgid "Choose Title Bar Color"
 msgstr "Titelbalkenfarbe auswählen"
 
-#: ui/app_window/app_window.py:587
+#: ui/app_window/app_window.py:597
 msgid "Title bar color set for this directory."
 msgstr "Farbe der Titelleiste für dieses Verzeichnis."
 
-#: ui/app_window/app_window.py:602
+#: ui/app_window/app_window.py:612
 msgid "Title bar color cleared for this directory."
 msgstr "Titelbaren Farbe auf klar gestellt für dieses Verzeichnis."
 
-#: ui/app_window/app_window.py:643 ui/app_window/sidebar_panel.py:104
+#: ui/app_window/app_window.py:654 ui/app_window/sidebar_panel.py:110
 msgid "Enter base directory..."
 msgstr "Geben Sie die Basisverzeichnis an..."
 
-#: ui/app_window/app_window.py:648 ui/files/recent_directory_window_qt.py:164
+#: ui/files/recent_directory_window_qt.py:164
 msgid "Set image comparison directory"
 msgstr "Verzeichnis für den Bildvergleich festlegen"
 
-#: ui/app_window/app_window.py:803
+#: ui/app_window/app_window.py:867
 msgid "Large Directory Detected: {0}"
 msgstr "Großes Verzeichnis erkannt: {0}"
 
-#: ui/app_window/app_window.py:804
+#: ui/app_window/app_window.py:868
 msgid ""
 "A directory with a large number of files or a directory with a fair-sized "
 "number of files on external storage was detected, which may result in a slow"
@@ -1365,38 +1365,38 @@ msgstr ""
 "Speichermedium erkannt, was zu einer langsamen Ladezeit führen kann. Bitte "
 "bestätigen Sie, dass Sie das gesamte Verzeichnis laden möchten."
 
-#: ui/app_window/app_window.py:856
+#: ui/app_window/app_window.py:917
 msgid "Browsing mode set."
 msgstr "Browsing-Modus eingestellt."
 
-#: ui/app_window/app_window.py:872 ui/app_window/window_launcher.py:366
+#: ui/app_window/app_window.py:932 ui/app_window/window_launcher.py:365
 msgid "Many Files"
 msgstr "Viele Dateien"
 
-#: ui/app_window/app_window.py:959 ui/app_window/file_ops_controller.py:213
-#: ui/app_window/file_ops_controller.py:219
-#: ui/app_window/file_ops_controller.py:223
+#: ui/app_window/app_window.py:1022 ui/app_window/file_ops_controller.py:205
+#: ui/app_window/file_ops_controller.py:211
+#: ui/app_window/file_ops_controller.py:215
+#: ui/app_window/file_ops_controller.py:222
 #: ui/app_window/file_ops_controller.py:230
-#: ui/app_window/file_ops_controller.py:238
-#: ui/app_window/search_controller.py:578
-#: ui/app_window/search_controller.py:621
-#: ui/app_window/search_controller.py:683
+#: ui/app_window/search_controller.py:502
+#: ui/app_window/search_controller.py:541
+#: ui/app_window/search_controller.py:599
 msgid "Warning"
 msgstr "Warnung"
 
-#: ui/app_window/app_window.py:959
+#: ui/app_window/app_window.py:1022
 msgid "No files found in directory after refresh."
 msgstr "Keine Dateien im Verzeichnis nach Aktualisierung gefunden."
 
-#: ui/app_window/app_window.py:1036
+#: ui/app_window/app_window.py:1099
 msgid "Screenshots are available for videos and animated GIF files."
 msgstr "ScreenShot sind für Videos und animierte GIF-Dateien verfügbar."
 
-#: ui/app_window/app_window.py:1046 ui/app_window/app_window.py:1061
+#: ui/app_window/app_window.py:1109 ui/app_window/app_window.py:1124
 msgid "Screenshot Failed"
 msgstr "Screenshot fehlte"
 
-#: ui/app_window/app_window.py:1047
+#: ui/app_window/app_window.py:1110
 msgid ""
 "Unable to create screenshot directory:\n"
 "{0}\n"
@@ -1408,7 +1408,7 @@ msgstr ""
 "\n"
 "{1}"
 
-#: ui/app_window/app_window.py:1062
+#: ui/app_window/app_window.py:1125
 msgid ""
 "Unable to save screenshot.\n"
 "\n"
@@ -1418,7 +1418,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: ui/app_window/app_window.py:1068
+#: ui/app_window/app_window.py:1131
 msgid ""
 "Screenshot saved to:\n"
 "{0}"
@@ -1426,61 +1426,69 @@ msgstr ""
 "Screenshot gespeichert unter:\n"
 "{0}"
 
-#: ui/app_window/app_window.py:1104
+#: ui/app_window/app_window.py:1214
 msgid "Theme switched to {0}."
 msgstr "Thema auf {0} umgestellt."
 
-#: ui/app_window/app_window.py:1208
+#: ui/app_window/app_window.py:1324
 msgid "Confirm Quit"
 msgstr "Beenden bestätigen"
 
-#: ui/app_window/app_window.py:1208
+#: ui/app_window/app_window.py:1324
 msgid "Would you like to quit the application?"
 msgstr "Möchten Sie die Anwendung beenden?"
 
-#: ui/app_window/context_menu_builder.py:64 utils/constants.py:573
+#: ui/app_window/context_menu_builder.py:60 utils/constants.py:578
 msgid "View Media Details"
 msgstr "Mediendetails anzeigen"
 
-#: ui/app_window/context_menu_builder.py:69
+#: ui/app_window/context_menu_builder.py:65
 msgid "Hide Media"
 msgstr "Medien ausblenden"
 
-#: ui/app_window/context_menu_builder.py:78
+#: ui/app_window/context_menu_builder.py:74
 msgid "Remove from Marks"
 msgstr "Aus den Markierungen entfernen"
 
-#: ui/app_window/context_menu_builder.py:78
+#: ui/app_window/context_menu_builder.py:74
 msgid "Add to Marks"
 msgstr "Zu den Markierungen hinzufügen"
 
-#: ui/app_window/context_menu_builder.py:92
+#: ui/app_window/context_menu_builder.py:88
 msgid "Remove from Favorites"
 msgstr "Aus Favoriten entfernen"
 
-#: ui/app_window/context_menu_builder.py:92
+#: ui/app_window/context_menu_builder.py:88
 msgid "Add to Favorites"
 msgstr "Zu Favoriten hinzufügen"
 
-#: ui/app_window/context_menu_builder.py:105
+#: ui/app_window/context_menu_builder.py:101
 msgid "Remove from Directory Notes"
 msgstr "Aus Verzeichnisnotizen entfernen"
 
-#: ui/app_window/context_menu_builder.py:105
+#: ui/app_window/context_menu_builder.py:101
 msgid "Add to Directory Notes"
 msgstr "Zu Verzeichnisnotizen hinzufügen"
 
-#: ui/app_window/context_menu_builder.py:109
+#: ui/app_window/context_menu_builder.py:105
 msgid "Edit File Note"
 msgstr "Dateinotiz bearbeiten"
 
-#: ui/app_window/context_menu_builder.py:119
+#: ui/app_window/context_menu_builder.py:115
 msgid "Open in GIMP"
 msgstr "In GIMP öffnen"
 
-#: ui/app_window/context_menu_builder.py:127
+#: ui/app_window/context_menu_builder.py:123
 msgid "Run Image Generation on Directory"
 msgstr "Bildgenerierung im Verzeichnis ausführen"
+
+#: ui/app_window/context_menu_builder.py:133
+msgid "Disable Prevalidations"
+msgstr "Vorabprüfungen deaktivieren"
+
+#: ui/app_window/context_menu_builder.py:138
+msgid "Run Prevalidations on Directory"
+msgstr "Vorabprüfungen für das Verzeichnis durchführen"
 
 #: ui/app_window/context_menu_builder.py:156
 msgid "Show Source Image"
@@ -1502,37 +1510,37 @@ msgstr "Aktuelles Bild als Suchbild festlegen"
 msgid "Add Current Image to Negative Search"
 msgstr "Aktuelles Bild zur Negativsuche hinzufügen"
 
-#: ui/app_window/context_menu_builder.py:188
+#: ui/app_window/context_menu_builder.py:184
 msgid "Copy file path"
 msgstr "Kopieren Sie den Dateipfad"
 
-#: ui/app_window/context_menu_builder.py:192
+#: ui/app_window/context_menu_builder.py:188
 msgid "Copy file name"
 msgstr "Dateinamen kopieren"
 
-#: ui/app_window/context_menu_builder.py:196
+#: ui/app_window/context_menu_builder.py:192
 msgid "Open file location"
 msgstr "Öffne Dateiort"
 
-#: ui/app_window/context_menu_builder.py:202
-#: ui/app_window/file_ops_controller.py:752
+#: ui/app_window/context_menu_builder.py:198
+#: ui/app_window/file_ops_controller.py:718
 msgid "Save copy without audio"
 msgstr "Speichere Kopie ohne Ton"
 
-#: ui/app_window/context_menu_builder.py:206
-#: ui/app_window/file_ops_controller.py:794
+#: ui/app_window/context_menu_builder.py:202
+#: ui/app_window/file_ops_controller.py:760
 msgid "Save copy without metadata"
 msgstr "Speichere Kopie ohne Metadaten"
 
-#: ui/app_window/context_menu_builder.py:211
+#: ui/app_window/context_menu_builder.py:207
 msgid "Convert directory images to JPG"
 msgstr "Konvertiere die Bilder im Verzeichnis in JPG"
 
-#: ui/app_window/context_menu_builder.py:216
+#: ui/app_window/context_menu_builder.py:212
 msgid "Convert directory SVGs to PNG"
 msgstr "Konvertieren Sie die SVG-Dateien im Verzeichnis zu PNG"
 
-#: ui/app_window/context_menu_builder.py:221
+#: ui/app_window/context_menu_builder.py:217
 msgid "Save copies of all videos in directory without metadata"
 msgstr "Speichere Kopien aller Videos im Verzeichnis ohne Metadaten"
 
@@ -1541,67 +1549,67 @@ msgid "Run Refacdir"
 msgstr "RefacDir ausführen"
 
 #: ui/app_window/context_menu_builder.py:236
-#: ui/app_window/file_ops_controller.py:288
-#: ui/compare/classifier_actions_tab_qt.py:204
-#: ui/compare/prevalidations_tab_qt.py:646 utils/constants.py:526
+#: ui/app_window/file_ops_controller.py:278
+#: ui/compare/classifier_actions_tab_qt.py:206
+#: ui/compare/prevalidations_tab_qt.py:657 utils/constants.py:531
 msgid "Delete"
 msgstr "Löschen"
 
-#: ui/app_window/file_marks_controller.py:70
+#: ui/app_window/file_marks_controller.py:66
 msgid "DELETE_LOCK_MARK_STOP"
 msgstr ""
 "Sperre nach Diashow-Übergang löschen\n"
 "verhinderte das Hinzufügen einer Markierung"
 
-#: ui/app_window/file_marks_controller.py:84
+#: ui/app_window/file_marks_controller.py:80
 msgid "Mark removed. Remaining: {0}"
 msgstr "Markierung entfernt. Verbleibend: {0}"
 
-#: ui/app_window/file_marks_controller.py:90
+#: ui/app_window/file_marks_controller.py:86
 msgid "Mark added. Total set: {0}"
 msgstr "Mark hinzugefügt. Gesamtmenge: {0}"
 
-#: ui/app_window/file_marks_controller.py:127
+#: ui/app_window/file_marks_controller.py:121
 msgid "Marks added. Total set: {0}"
 msgstr "Markierungen hinzugefügt. Gesamtmenge: {0}"
 
-#: ui/app_window/file_marks_controller.py:147
+#: ui/app_window/file_marks_controller.py:137
 msgid "First sorted mark"
 msgstr "Erste sortierte Marke"
 
-#: ui/app_window/file_marks_controller.py:155
+#: ui/app_window/file_marks_controller.py:145
 msgid "Only one marked file set."
 msgstr "Es wird nur eine markierte Datei gesetzt"
 
-#: ui/app_window/file_marks_controller.py:192
+#: ui/app_window/file_marks_controller.py:174
 msgid "Invalid file path"
 msgstr "Ungültiger Dateipfad"
 
-#: ui/app_window/file_marks_controller.py:193
+#: ui/app_window/file_marks_controller.py:175
 msgid "The file path {0} is invalid."
 msgstr "Der Dateipfad {0} ist ungültig."
 
-#: ui/app_window/file_marks_controller.py:202
+#: ui/app_window/file_marks_controller.py:184
 msgid "Including marks: {0}"
 msgstr "Einschließlich Markierungen: {0}"
 
-#: ui/app_window/file_marks_controller.py:308
+#: ui/app_window/file_marks_controller.py:272
 msgid "NO_MARKS_SET"
 msgstr ""
 "Es wurden {0} Markierungen gesetzt (>={1} erwartet).\n"
 "Verwenden Sie Shift+M, um eine Markierung zu setzen."
 
-#: ui/app_window/file_marks_controller.py:371
+#: ui/app_window/file_marks_controller.py:327
 msgid "{0} file marks set"
 msgstr "{0} Dateimarken sind gesetzt"
 
-#: ui/app_window/file_ops_controller.py:118
+#: ui/app_window/file_ops_controller.py:114
 msgid "DELETE_LOCK"
 msgstr ""
 "Löschsperre nach Diashow-Übergang\n"
 "verhinderte Löschung"
 
-#: ui/app_window/file_ops_controller.py:141
+#: ui/app_window/file_ops_controller.py:137
 msgid "Invalid action, no files found to delete"
 msgstr "Ungültige Aktion, keine Dateien zum Löschen gefunden"
 
@@ -1609,26 +1617,26 @@ msgstr "Ungültige Aktion, keine Dateien zum Löschen gefunden"
 msgid "Invalid action, search image not found"
 msgstr "Ungültige Aktion, Suchbild nicht gefunden"
 
-#: ui/app_window/file_ops_controller.py:168
+#: ui/app_window/file_ops_controller.py:164
 msgid "Failed to delete current file, unable to get valid filepath"
 msgstr ""
 "Aktuelle Datei konnte nicht gelöscht werden, da kein gültiger Dateipfad "
 "ermittelt werden konnte"
 
-#: ui/app_window/file_ops_controller.py:191
+#: ui/app_window/file_ops_controller.py:183
 msgid "Removing directory: {0}"
 msgstr "Verzeichnis entfernen: {0}"
 
-#: ui/app_window/file_ops_controller.py:196
+#: ui/app_window/file_ops_controller.py:188
 msgid "Removing file: {0}"
 msgstr "Die Datei wird entfernt: {0}"
 
-#: ui/app_window/file_ops_controller.py:213
-#: ui/app_window/file_ops_controller.py:238
+#: ui/app_window/file_ops_controller.py:205
+#: ui/app_window/file_ops_controller.py:230
 msgid "Failed to delete item: {0}"
 msgstr "Das Element konnte nicht gelöscht werden: {0}"
 
-#: ui/app_window/file_ops_controller.py:216
+#: ui/app_window/file_ops_controller.py:208
 msgid ""
 "Failed to move directory to {0}. Double check the trash folder is set "
 "properly in config.json."
@@ -1637,7 +1645,7 @@ msgstr ""
 "Sie, ob der Papierkorbordner in der Datei config.json richtig eingestellt "
 "ist."
 
-#: ui/app_window/file_ops_controller.py:218
+#: ui/app_window/file_ops_controller.py:210
 msgid ""
 "Failed to send file to {0}. Double check the trash folder is set properly in"
 " config.json."
@@ -1645,7 +1653,7 @@ msgstr ""
 "Das Senden der Datei an {0} ist fehlgeschlagen. Überprüfen Sie, ob der "
 "Papierkorbordner in der Datei config.json richtig eingestellt ist."
 
-#: ui/app_window/file_ops_controller.py:224
+#: ui/app_window/file_ops_controller.py:216
 msgid ""
 "Failed to move directory to the trash. Either pip install send2trash or set "
 "a specific trash folder in config.json."
@@ -1654,7 +1662,7 @@ msgstr ""
 "Installieren Sie entweder pip install send2trash oder legen Sie einen "
 "bestimmten Papierkorb-Ordner in config.json fest."
 
-#: ui/app_window/file_ops_controller.py:231
+#: ui/app_window/file_ops_controller.py:223
 msgid ""
 "Failed to send file to the trash, so it will be deleted. Either pip install "
 "send2trash or set a specific trash folder in config.json."
@@ -1663,38 +1671,57 @@ msgstr ""
 "gelöscht. Entweder pip installiert send2trash oder setzt einen bestimmten "
 "Papierkorbordner in config.json."
 
-#: ui/app_window/file_ops_controller.py:258
+#: ui/app_window/file_ops_controller.py:248
 msgid "Invalid directory"
 msgstr "Ungültiges Verzeichnis"
 
-#: ui/app_window/file_ops_controller.py:258
+#: ui/app_window/file_ops_controller.py:248
 msgid "No valid base directory to delete"
 msgstr "Kein gültiges Basisverzeichnis zum Löschen"
 
-#: ui/app_window/file_ops_controller.py:271
+#: ui/app_window/file_ops_controller.py:261
 msgid "Cannot Delete Directory"
 msgstr "Verzeichnis kann nicht gelöscht werden"
 
-#: ui/app_window/file_ops_controller.py:276
+#: ui/app_window/file_ops_controller.py:266
 msgid "Are you sure you want to delete the directory and all contents?"
 msgstr ""
 "Sind Sie sicher, dass Sie das Verzeichnis und alle Inhalte löschen möchten?"
 
-#: ui/app_window/file_ops_controller.py:278
+#: ui/app_window/file_ops_controller.py:268
 msgid "Contents to be deleted:"
 msgstr "Zu löschende Inhalte:"
 
-#: ui/app_window/file_ops_controller.py:283
+#: ui/app_window/file_ops_controller.py:273
 msgid "Confirm Delete Directory"
 msgstr "Löschen des Verzeichnisses bestätigen"
 
-#: ui/app_window/file_ops_controller.py:332
+#: ui/app_window/file_ops_controller.py:279
+#: ui/app_window/file_ops_controller.py:286
+msgid "Move Files"
+msgstr "Dateien verschieben"
+
+#: ui/app_window/file_ops_controller.py:293
+msgid "Select target directory for directory contents"
+msgstr "Wählen Sie das Zielverzeichnis für den Verzeichnisinhalt aus"
+
+#: ui/app_window/file_ops_controller.py:322
 msgid "Delete Directory Error"
 msgstr "Verzeichnislöschungsfehler"
 
-#: ui/app_window/file_ops_controller.py:342
+#: ui/app_window/file_ops_controller.py:327
+msgid "Directory {0} contents moved to {1} and directory deleted."
+msgstr ""
+"Der Inhalt des Verzeichnisses {0} wurde nach {1} verschoben und das "
+"Verzeichnis gelöscht."
+
+#: ui/app_window/file_ops_controller.py:332
 msgid "Directory {0} deleted."
 msgstr "Verzeichnis {0} gelöscht."
+
+#: ui/app_window/file_ops_controller.py:339
+msgid "Moving directory contents: {0}"
+msgstr "Verzeichnisinhalte verschieben: {0}"
 
 #: ui/app_window/file_ops_controller.py:381
 msgid ""
@@ -1708,39 +1735,38 @@ msgstr ""
 msgid "Cleared all hidden images."
 msgstr "Alle versteckten Bilder wurden gelöscht."
 
-#: ui/app_window/file_ops_controller.py:408
-#: ui/image/temp_image_window_qt.py:181
+#: ui/app_window/file_ops_controller.py:390 ui/image/temp_media_window.py:184
 msgid "Copied filepath to clipboard"
 msgstr "Dateipfad in die Zwischenablage kopiert"
 
-#: ui/app_window/file_ops_controller.py:423
+#: ui/app_window/file_ops_controller.py:401
 msgid "Copied filename to clipboard"
 msgstr "Dateiname in die Zwischenablage kopiert"
 
-#: ui/app_window/file_ops_controller.py:434
-#: ui/app_window/file_ops_controller.py:577
+#: ui/app_window/file_ops_controller.py:412
+#: ui/app_window/file_ops_controller.py:555
 msgid "No valid base directory to convert"
 msgstr "Es gibt kein gültiges Basierungsverzeichnis zum Umwandeln."
 
-#: ui/app_window/file_ops_controller.py:447
-#: ui/app_window/file_ops_controller.py:590
+#: ui/app_window/file_ops_controller.py:425
+#: ui/app_window/file_ops_controller.py:568
 msgid "No files found to convert"
 msgstr "Keine Dateien zum Konvertieren gefunden"
 
-#: ui/app_window/file_ops_controller.py:496
+#: ui/app_window/file_ops_controller.py:474
 msgid "No image files found to convert"
 msgstr "Keine Bilddateien zum Konvertieren gefunden"
 
-#: ui/app_window/file_ops_controller.py:499
-#: ui/app_window/file_ops_controller.py:607
+#: ui/app_window/file_ops_controller.py:477
+#: ui/app_window/file_ops_controller.py:585
 msgid "(None found)"
 msgstr "(Keine gefunden)"
 
-#: ui/app_window/file_ops_controller.py:501
+#: ui/app_window/file_ops_controller.py:479
 msgid "Convert Directory Images to JPG"
 msgstr "Konvertieren Sie Verzeichnisbilder zu JPG:"
 
-#: ui/app_window/file_ops_controller.py:503
+#: ui/app_window/file_ops_controller.py:481
 msgid ""
 "Confirm convert images in current directory scope.\n"
 "\n"
@@ -1766,25 +1792,25 @@ msgstr ""
 "Nein = Konvertierung für Dateien mit Zielkonflikten abbrechen\n"
 "Abbrechen = Konvertierung abbrechen"
 
-#: ui/app_window/file_ops_controller.py:560
+#: ui/app_window/file_ops_controller.py:538
 msgid "Converted {0} files to JPG"
 msgstr "Konvertierte {0} Dateien in JPG um"
 
-#: ui/app_window/file_ops_controller.py:565
+#: ui/app_window/file_ops_controller.py:543
 msgid "Converted {0} files to JPG, {1} failed, {2} skipped existing"
 msgstr ""
 "Konvertiert {0} Dateien zu JPG, {1} fehlgeschlagen, {2} übersprungen "
 "existierende."
 
-#: ui/app_window/file_ops_controller.py:603
+#: ui/app_window/file_ops_controller.py:581
 msgid "No SVG files found to convert"
 msgstr "Keine SVG-Dateien zum Umwandeln gefunden"
 
-#: ui/app_window/file_ops_controller.py:609
+#: ui/app_window/file_ops_controller.py:587
 msgid "Convert Directory SVG to PNG"
 msgstr "Konvertieren Sie das Verzeichnis SVG zu PNG"
 
-#: ui/app_window/file_ops_controller.py:611
+#: ui/app_window/file_ops_controller.py:589
 msgid ""
 "Convert SVGs in the current directory scope to PNG?\n"
 "\n"
@@ -1806,16 +1832,16 @@ msgstr ""
 "Nein = Überspringen Sie die Konvertierung für SVGs mit Zielkonflikten\n"
 "Abbrechen = Abbrechen"
 
-#: ui/app_window/file_ops_controller.py:653
+#: ui/app_window/file_ops_controller.py:631
 msgid "Converted {0} SVG files to PNG"
 msgstr "Konvertiert {0} SVG-Dateien zu PNG"
 
-#: ui/app_window/file_ops_controller.py:658
+#: ui/app_window/file_ops_controller.py:636
 msgid "Converted {0} files, {1} failed, {2} skipped existing"
 msgstr ""
 "Konvertierte {0} Dateien, {1} fehlgeschlagen, {2} existierende übersprungen"
 
-#: ui/app_window/file_ops_controller.py:683
+#: ui/app_window/file_ops_controller.py:657
 msgid "Invalid target filepath for replacement: "
 msgstr "Ungültiger Zieldateipfad für Ersetzung: "
 
@@ -1823,28 +1849,28 @@ msgstr "Ungültiger Zieldateipfad für Ersetzung: "
 msgid "Moved search image to "
 msgstr "Suchbild verschoben nach "
 
-#: ui/app_window/file_ops_controller.py:726
+#: ui/app_window/file_ops_controller.py:692
 msgid "Opening media file: {0}"
 msgstr "Öffnen der Mediendatei: {0}"
 
-#: ui/app_window/file_ops_controller.py:730
+#: ui/app_window/file_ops_controller.py:696
 msgid "Failed to open current media file, unable to get valid filepath"
 msgstr ""
 "Die aktuelle Mediendatei konnte nicht geöffnet werden, es konnte kein "
 "gültiger Dateipfad abgerufen werden"
 
-#: ui/app_window/file_ops_controller.py:744
-#: ui/app_window/file_ops_controller.py:786
+#: ui/app_window/file_ops_controller.py:710
+#: ui/app_window/file_ops_controller.py:752
 msgid "Not a video file"
 msgstr "Keine Videodatei"
 
-#: ui/app_window/file_ops_controller.py:747
+#: ui/app_window/file_ops_controller.py:713
 msgid "ffmpeg not found on PATH. Install ffmpeg to strip audio."
 msgstr ""
 "ffmpeg wurde im PATH nicht gefunden. Installiere ffmpeg, um den Ton zu "
 "entfernen."
 
-#: ui/app_window/file_ops_controller.py:754
+#: ui/app_window/file_ops_controller.py:720
 msgid ""
 "Create a new file with all audio streams removed (stream copy, no re-encode). The original file will not be changed.\n"
 "\n"
@@ -1856,16 +1882,16 @@ msgstr ""
 "Ausgabe:\n"
 "{0}"
 
-#: ui/app_window/file_ops_controller.py:773
+#: ui/app_window/file_ops_controller.py:739
 msgid "Saved copy without audio: {0}"
 msgstr "Gespeicherte Kopie ohne Audio: {0}"
 
-#: ui/app_window/file_ops_controller.py:789
-#: ui/app_window/file_ops_controller.py:835
+#: ui/app_window/file_ops_controller.py:755
+#: ui/app_window/file_ops_controller.py:801
 msgid "ffmpeg not found on PATH."
 msgstr "ffmpeg wurde im PATH nicht gefunden."
 
-#: ui/app_window/file_ops_controller.py:796
+#: ui/app_window/file_ops_controller.py:762
 msgid ""
 "Create a new file with container tags and chapters removed (stream copy, no re-encode). The original file will not be changed.\n"
 "\n"
@@ -1877,27 +1903,27 @@ msgstr ""
 "Ausgabe:\n"
 "{0}"
 
-#: ui/app_window/file_ops_controller.py:815
+#: ui/app_window/file_ops_controller.py:781
 msgid "Saved copy without metadata: {0}"
 msgstr "Gespeicherte Kopie ohne Metadaten: {0}"
 
-#: ui/app_window/file_ops_controller.py:826
+#: ui/app_window/file_ops_controller.py:792
 msgid "Video support is disabled in configuration"
 msgstr "Videounterstützung ist deaktiviert in der Konfiguration"
 
-#: ui/app_window/file_ops_controller.py:831
+#: ui/app_window/file_ops_controller.py:797
 msgid "No valid base directory"
 msgstr "Kein gültiger Basisverzeichnis"
 
-#: ui/app_window/file_ops_controller.py:846
+#: ui/app_window/file_ops_controller.py:812
 msgid "No video files found in this directory scope"
 msgstr "In diesem Verzeichnis wurden keine Videodateien gefunden"
 
-#: ui/app_window/file_ops_controller.py:850
+#: ui/app_window/file_ops_controller.py:816
 msgid "Save copies without metadata (videos in directory)"
 msgstr "Kopien speichern ohne Metadaten (Videos im Verzeichnis)"
 
-#: ui/app_window/file_ops_controller.py:852
+#: ui/app_window/file_ops_controller.py:818
 msgid ""
 "Create new files with container tags and chapters removed (stream copy) for each video.\n"
 "\n"
@@ -1913,15 +1939,15 @@ msgstr ""
 "\n"
 "Zu verarbeitende Videos: {1}"
 
-#: ui/app_window/file_ops_controller.py:873
+#: ui/app_window/file_ops_controller.py:839
 msgid "Wrote {0} video copy(ies) without metadata"
 msgstr "{0} Videodatei(en) ohne Metadaten geschrieben"
 
-#: ui/app_window/file_ops_controller.py:877
+#: ui/app_window/file_ops_controller.py:843
 msgid "Finished: {0} succeeded, {1} failed"
 msgstr "Beendet: {0} erfolgreich, {1} fehlgeschlagen"
 
-#: ui/app_window/file_ops_controller.py:889
+#: ui/app_window/file_ops_controller.py:851
 msgid ""
 "GIMP integration is not configured. Please set 'gimp_exe_loc' in "
 "config.json."
@@ -1929,21 +1955,21 @@ msgstr ""
 "Die GIMP-Integrierung ist nicht konfiguriert. Bitte legen Sie „gimp_exe_loc”"
 " in der Datei „config.json” fest."
 
-#: ui/app_window/file_ops_controller.py:890
+#: ui/app_window/file_ops_controller.py:852
 msgid "GIMP Integration Error"
 msgstr "GIMP-Integrierungsfehler"
 
-#: ui/app_window/file_ops_controller.py:911
+#: ui/app_window/file_ops_controller.py:873
 msgid "Failed to open current file in GIMP, unable to get valid filepath"
 msgstr ""
 "Die aktuelle Datei konnte in GIMP nicht geöffnet werden, da kein gültiger "
 "Dateipfad ermittelt werden konnte"
 
-#: ui/app_window/file_ops_controller.py:930
+#: ui/app_window/file_ops_controller.py:888
 msgid "Running refacdir"
 msgstr "Ausführen der refacdir-App"
 
-#: ui/app_window/media_frame.py:343
+#: ui/app_window/media_frame.py:357
 msgid "No displayable files found in this directory for the current settings."
 msgstr ""
 "Keine anzuzeigbaren Dateien gefunden in diesem Verzeichnis für die aktuellen"
@@ -1953,72 +1979,76 @@ msgstr ""
 msgid "Animated image format is not supported for playback: "
 msgstr "Das Bewegtbildformat wird nicht für die Wiedergabe unterstützt: "
 
-#: ui/app_window/media_frame.py:815
+#: ui/app_window/media_frame.py:840
 msgid "Video: "
 msgstr "Video: "
 
-#: ui/app_window/media_frame.py:825
+#: ui/app_window/media_frame.py:850
 msgid "Unable to display this file: "
 msgstr "Kann diese Datei nicht anzeigen: "
 
-#: ui/app_window/media_frame.py:1049
+#: ui/app_window/media_frame.py:901
+msgid "Audio: "
+msgstr "Audio: "
+
+#: ui/app_window/media_frame.py:1148
 msgid "No output path provided."
 msgstr "Kein Ausgabepfad angegeben."
 
-#: ui/app_window/media_frame.py:1053
+#: ui/app_window/media_frame.py:1152
 msgid "VLC player is unavailable."
 msgstr "Der VLC-Player ist nicht verfügbar."
 
-#: ui/app_window/media_frame.py:1057
+#: ui/app_window/media_frame.py:1156
 msgid "VLC snapshot operation failed."
 msgstr "VLC-Snapshotvorgang fehlgeschlagen."
 
-#: ui/app_window/media_frame.py:1062
+#: ui/app_window/media_frame.py:1161
 msgid "Snapshot file was not created."
 msgstr "Die Momentaufnahme-Datei wurde nicht erstellt."
 
-#: ui/app_window/media_frame.py:1073
+#: ui/app_window/media_frame.py:1172
 msgid "No GIF frame available for screenshot."
 msgstr "Kein GIF-Bild für Screenshot verfügbar."
 
-#: ui/app_window/media_frame.py:1079
+#: ui/app_window/media_frame.py:1178
 msgid "Failed to save GIF frame image."
 msgstr "Fehler beim Speichern des Bildrahmens der GIF-Bilder."
 
-#: ui/app_window/media_frame.py:1082
+#: ui/app_window/media_frame.py:1181
 msgid "No time-based media is currently active."
 msgstr "Kein zeitbasiertes Medium ist zurzeit aktiv."
 
-#: ui/app_window/media_navigator.py:139 ui/app_window/media_navigator.py:154
+#: ui/app_window/media_navigator.py:135 ui/app_window/media_navigator.py:150
 msgid "Directory is still loading; no files available yet."
 msgstr "Ordner wird gerade geladen, es liegen derzeit keine Dateien vor."
 
-#: ui/app_window/media_navigator.py:181
+#: ui/app_window/media_navigator.py:177
 msgid "Directory is still loading; try again in a moment."
 msgstr ""
 "Das Verzeichnis wird gerade geladen; versuchen Sie es später noch einmal."
 
-#: ui/app_window/media_navigator.py:349
+#: ui/app_window/media_navigator.py:335
 msgid "File not found"
 msgstr "Datei nicht gefunden"
 
-#: ui/app_window/media_navigator.py:350
+#: ui/app_window/media_navigator.py:336
 msgid "No file was found for the search text: \"{0}\""
 msgstr "Es wurde keine Datei für den Suchtext gefunden: \"{0}\""
 
-#: ui/app_window/media_navigator.py:362
+#: ui/app_window/media_navigator.py:344
 msgid "Index navigation not available"
 msgstr "Indexnavigation nicht verfügbar"
 
-#: ui/app_window/media_navigator.py:363
+#: ui/app_window/media_navigator.py:345
 msgid "Index navigation is only available in BROWSE mode."
 msgstr "Die Indexnavigation ist nur im Browse-Modus verfügbar."
 
-#: ui/app_window/media_navigator.py:375
+#: ui/app_window/media_navigator.py:357
 msgid "Invalid index"
 msgstr "Ungültiger Index"
 
-#: ui/app_window/media_navigator.py:442
+#: ui/app_window/media_navigator.py:421
 msgid "Somehow, the search file is invalid"
 msgstr "Irgendwie ist die Suchdatei ungültig"
 
@@ -2026,15 +2056,15 @@ msgstr "Irgendwie ist die Suchdatei ungültig"
 msgid "Slideshow for new images started"
 msgstr "Diashow für neue Bilder gestartet"
 
-#: ui/app_window/media_navigator.py:480
+#: ui/app_window/media_navigator.py:465
 msgid "Slideshow started"
 msgstr "Diashow gestartet"
 
-#: ui/app_window/media_navigator.py:484
+#: ui/app_window/media_navigator.py:470
 msgid "Slideshows ended"
 msgstr "Diashows beendet"
 
-#: ui/app_window/notification_controller.py:285
+#: ui/app_window/notification_controller.py:281
 msgid "GROUP_DETAILS"
 msgstr ""
 "Gruppe {0} von {1}\n"
@@ -2052,7 +2082,7 @@ msgstr "1 Bilddatei gefunden"
 msgid "{0} image files found"
 msgstr "{0} Bilddateien gefunden"
 
-#: ui/app_window/notification_controller.py:302
+#: ui/app_window/notification_controller.py:298
 msgid "(filtered)"
 msgstr "(gefiltert)"
 
@@ -2061,12 +2091,12 @@ msgstr "(gefiltert)"
 msgid "No image selected."
 msgstr "Kein Bild ausgewählt."
 
-#: ui/app_window/search_controller.py:139
-#: ui/app_window/search_controller.py:169
+#: ui/app_window/search_controller.py:127
+#: ui/app_window/search_controller.py:153
 msgid "Invalid Setting"
 msgstr "Ungültige Einstellung"
 
-#: ui/app_window/search_controller.py:203
+#: ui/app_window/search_controller.py:185
 msgid ""
 "Compare mode must be set to an embedding mode to search text embeddings"
 msgstr ""
@@ -2081,25 +2111,25 @@ msgstr "Bilddatei auswählen"
 msgid "Image files"
 msgstr "Bilddateien"
 
-#: ui/app_window/search_controller.py:283
+#: ui/app_window/search_controller.py:253
 msgid "Error running compare"
 msgstr "Fehler beim Ausführen des Vergleichs"
 
-#: ui/app_window/search_controller.py:291
+#: ui/app_window/search_controller.py:261
 msgid "{0}: {1}% complete"
 msgstr "{0}: {1} % abgeschlossen"
 
-#: ui/app_window/search_controller.py:330
+#: ui/app_window/search_controller.py:292
 msgid "Confirm comparison"
 msgstr "Vergleich bestätigen"
 
-#: ui/app_window/search_controller.py:331
+#: ui/app_window/search_controller.py:293
 msgid "No base directory has been set, will use current base directory of "
 msgstr ""
 "Es wurde kein Basisverzeichnis festgelegt, es wird das aktuelle "
 "Basisverzeichnis von "
 
-#: ui/app_window/search_controller.py:332
+#: ui/app_window/search_controller.py:294
 msgid "Are you sure you want to proceed?"
 msgstr "Sind Sie sicher, dass Sie fortfahren wollen?"
 
@@ -2108,63 +2138,65 @@ msgstr "Sind Sie sicher, dass Sie fortfahren wollen?"
 msgid "Failed to get active image filepath"
 msgstr "Dateipfad des aktiven Bildes konnte nicht ermittelt werden"
 
-#: ui/app_window/search_controller.py:507
+#: ui/app_window/search_controller.py:439
 msgid "No Text Search Presets Found"
 msgstr "Keine Textsuchvoreinstellungen gefunden"
 
-#: ui/app_window/search_controller.py:508
+#: ui/app_window/search_controller.py:440
 msgid ""
 "No text embedding search presets found. Set them in the config.json file."
 msgstr ""
 "Keine Suchvorgaben für die Texteinbettung gefunden. Legen Sie sie in der "
 "Datei config.json fest."
 
-#: ui/app_window/search_controller.py:574
+#: ui/app_window/search_controller.py:498
 msgid "Running image gen: "
 msgstr "Laufende Bilderzeugung: "
 
-#: ui/app_window/search_controller.py:578
-#: ui/app_window/search_controller.py:621
+#: ui/app_window/search_controller.py:502
+#: ui/app_window/search_controller.py:541
 msgid "Error running image generation:"
 msgstr "Fehler bei der Bilderzeugung:"
 
-#: ui/app_window/search_controller.py:616
+#: ui/app_window/search_controller.py:536
 msgid "Running image gen on directory: "
 msgstr "Bildgenerierung im Verzeichnis ausführen: "
 
-#: ui/app_window/search_controller.py:669
+#: ui/app_window/search_controller.py:585
 msgid "No downstream related image(s) found in {0}"
 msgstr "Keine stromabwärts gerichtete(n) Bilder im {0} gefunden"
 
-#: ui/app_window/search_controller.py:683
+#: ui/app_window/search_controller.py:391
+#: ui/app_window/search_controller.py:422
+#: ui/app_window/search_controller.py:599
 msgid "Failed to get active media filepath"
 msgstr "Aktiven Medienpfad konnte nicht abgerufen werden"
 
-#: ui/app_window/sidebar_panel.py:94
+#: ui/app_window/sidebar_panel.py:95
 msgid "Toggle theme"
 msgstr "Thema umschalten"
 
-#: ui/app_window/sidebar_panel.py:100
+#: ui/app_window/sidebar_panel.py:102
 msgid "Set directory"
 msgstr "Verzeichnis einstellen"
 
-#: ui/app_window/sidebar_panel.py:109
+#: ui/app_window/sidebar_panel.py:115
 msgid "Directory notes"
 msgstr "Verzeichnisnotizen"
 
-#: ui/app_window/sidebar_panel.py:115
+#: ui/app_window/sidebar_panel.py:125
 msgid "Browsing options"
 msgstr "Surfensoptionen"
 
-#: ui/app_window/sidebar_panel.py:118
+#: ui/app_window/sidebar_panel.py:128
 msgid "Filter files by glob pattern"
 msgstr "Dateien nach glob-Muster filtern"
 
-#: ui/app_window/sidebar_panel.py:124
+#: ui/app_window/sidebar_panel.py:134
 msgid "Browsing mode - Sort by"
 msgstr "Browsing-Modus - Sortieren"
 
-#: ui/app_window/sidebar_panel.py:133
+#: ui/app_window/sidebar_panel.py:157
 msgid "Recurse subdirectories"
 msgstr "Unterverzeichnisse rekursieren"
 
@@ -2172,18 +2204,18 @@ msgstr "Unterverzeichnisse rekursieren"
 msgid "Image resize to full window"
 msgstr "Bildgröße auf ganzes Fenster ändern"
 
-#: ui/app_window/sidebar_panel.py:143
+#: ui/app_window/sidebar_panel.py:167
 #: ui/compare/compare_settings_window_qt.py:249
 msgid "Search only return closest"
 msgstr "Suche liefert nur die nächstgelegenen"
 
-#: ui/app_window/sidebar_panel.py:150
+#: ui/app_window/sidebar_panel.py:174
 #: ui/compare/hf_model_manager_window_qt.py:439
 #: ui/compare/hf_model_manager_window_qt.py:477
 msgid "Search"
 msgstr "Suche"
 
-#: ui/app_window/sidebar_panel.py:154
+#: ui/app_window/sidebar_panel.py:178
 msgid "Set search file"
 msgstr "Suchdatei einstellen"
 
@@ -2199,7 +2231,7 @@ msgstr ""
 msgid "Search image path..."
 msgstr "Suche Bildpfad..."
 
-#: ui/app_window/sidebar_panel.py:171
+#: ui/app_window/sidebar_panel.py:195
 msgid "Set negative search file"
 msgstr "Negativen Suchdateien setzen"
 
@@ -2207,7 +2239,7 @@ msgstr "Negativen Suchdateien setzen"
 msgid "Negative search image path..."
 msgstr "Negative Such-Bild-Pfad..."
 
-#: ui/app_window/sidebar_panel.py:183
+#: ui/app_window/sidebar_panel.py:211
 msgid "Search text (embedding mode)"
 msgstr "Suchtext (Einbettungsmodus)"
 
@@ -2221,33 +2253,33 @@ msgstr ""
 "Negativer Text: Schließe Bilder aus, die diesem Text ähnlich sind.\n"
 "Beide verwenden eingebettete Ähnlichkeitsabgleiche."
 
-#: ui/app_window/sidebar_panel.py:194
+#: ui/app_window/sidebar_panel.py:222
 msgid "Positive text:"
 msgstr "Positiver Text:"
 
-#: ui/app_window/sidebar_panel.py:202
+#: ui/app_window/sidebar_panel.py:230
 msgid "Negative text:"
 msgstr "Negativer Text:"
 
-#: ui/app_window/sidebar_panel.py:212
-#: ui/compare/classifier_actions_tab_qt.py:96
-#: ui/compare/classifier_management_window_qt.py:565
+#: ui/app_window/sidebar_panel.py:242
+#: ui/compare/classifier_actions_tab_qt.py:98
+#: ui/compare/classifier_management_window_qt.py:575
 msgid "Classifier Actions"
 msgstr "Klassifizierer-Aktionen"
 
-#: ui/app_window/sidebar_panel.py:216
+#: ui/app_window/sidebar_panel.py:251
 #: ui/compare/hf_model_manager_window_qt.py:392
 msgid "Model Manager"
 msgstr "Modellmanager"
 
-#: ui/app_window/sidebar_panel.py:220
+#: ui/app_window/sidebar_panel.py:264
 #: ui/compare/compare_settings_window_qt.py:88
 #: ui/compare/compare_settings_window_qt.py:115
 #: ui/compare/compare_settings_window_qt.py:184
 msgid "Compare Settings"
 msgstr "Einstellungen für Vergleiche"
 
-#: ui/app_window/sidebar_panel.py:226
+#: ui/app_window/sidebar_panel.py:261
 msgid "Compare actions"
 msgstr "Vergleichen Sie Aktionen"
 
@@ -2255,11 +2287,11 @@ msgstr "Vergleichen Sie Aktionen"
 msgid "Run image compare"
 msgstr "Bildvergleich durchführen"
 
-#: ui/app_window/sidebar_panel.py:240
+#: ui/app_window/sidebar_panel.py:288
 msgid "Find duplicates"
 msgstr "Duplikate finden"
 
-#: ui/app_window/sidebar_panel.py:244 ui/image/image_details_qt.py:163
+#: ui/image/media_details.py:163
 msgid "Image details"
 msgstr "Bild-Details"
 
@@ -2275,7 +2307,7 @@ msgstr ""
 "Suche nach Bildern, die dem aktuell angezeigten Bild ähnlich sind.\n"
 "Verwendet Einbettungsähnlichkeitsabgleich."
 
-#: ui/app_window/sidebar_panel.py:260
+#: ui/app_window/sidebar_panel.py:316
 msgid "File actions"
 msgstr "Dateiaktionen"
 
@@ -2283,15 +2315,15 @@ msgstr "Dateiaktionen"
 msgid "Copy image path"
 msgstr "Bildpfad kopieren"
 
-#: ui/app_window/sidebar_panel.py:271
+#: ui/app_window/sidebar_panel.py:335
 msgid "Copy media basename"
 msgstr "Medien-Basenamen kopieren"
 
-#: ui/app_window/sidebar_panel.py:275
+#: ui/app_window/sidebar_panel.py:343
 msgid "---- DELETE ----"
 msgstr "---- LÖSCHEN ----"
 
-#: ui/app_window/sidebar_panel.py:423
+#: ui/app_window/sidebar_panel.py:514
 msgid "Ended slideshows"
 msgstr "Beendete Diashows"
 
@@ -2313,7 +2345,7 @@ msgstr "Kein Bild ausgewählt"
 msgid "No image was selected for comparison"
 msgstr "Es wurde kein Bild zum Vergleich ausgewählt"
 
-#: ui/app_window/window_launcher.py:367
+#: ui/app_window/window_launcher.py:366
 msgid ""
 "Are you sure you want to run all prevalidations on directory {0} ? This may "
 "take a while."
@@ -2321,42 +2353,42 @@ msgstr ""
 "Sind Sie sicher, dass Sie alle Prävalidierungen im Verzeichnis {0} "
 "durchführen wollen? Das kann eine Weile dauern."
 
-#: ui/app_window/window_launcher.py:402
+#: ui/app_window/window_launcher.py:436
 msgid "Prevalidations now running"
 msgstr "Prävalidierungen laufen jetzt"
 
-#: ui/app_window/window_launcher.py:403
+#: ui/app_window/window_launcher.py:437
 msgid "Prevalidations turned off"
 msgstr "Prävalidierungen ausgeschaltet"
 
-#: ui/app_window/window_launcher.py:413
+#: ui/app_window/window_launcher.py:447
 msgid "Extra debug logging enabled"
 msgstr "Zusätzliche Debug-Protokollierung aktiviert"
 
-#: ui/app_window/window_launcher.py:414
+#: ui/app_window/window_launcher.py:448
 msgid "Extra debug logging disabled"
 msgstr "Zusätzliche Debug-Protokollierung deaktiviert"
 
-#: ui/app_window/window_launcher.py:432
+#: ui/app_window/window_launcher.py:466
 msgid "Removed from directory notes: {0}"
 msgstr "Aus Verzeichnisnotizen entfernt: {0}"
 
-#: ui/app_window/window_launcher.py:437
+#: ui/app_window/window_launcher.py:471
 msgid "Added to directory notes: {0}"
 msgstr "Zu den Verzeichnisnotizen hinzugefügt: {0}"
 
-#: ui/app_window/window_launcher.py:465
+#: ui/app_window/window_launcher.py:499
 #: ui/files/directory_notes_window_qt.py:355
 msgid "Edit Note - {0}"
 msgstr "Bearbeiten Hinweis - {0}"
 
-#: ui/app_window/window_launcher.py:478
+#: ui/app_window/window_launcher.py:512
 #: ui/compare/hf_model_manager_window_qt.py:184
 #: ui/files/directory_notes_window_qt.py:378
 msgid "Save"
 msgstr "Speichern"
 
-#: ui/app_window/window_launcher.py:489
+#: ui/app_window/window_launcher.py:523
 #: ui/files/directory_notes_window_qt.py:385
 msgid "Note saved for: {0}"
 msgstr "Notiz gespeichert für: {0}"
@@ -2373,11 +2405,11 @@ msgstr "Anwendungskennwort erforderlich"
 msgid "A password is required to open this application."
 msgstr "Zum Öffnen dieser Softwareanwendung ist ein Passwort erforderlich."
 
-#: ui/auth/app_startup_auth_qt.py:56 ui/auth/password_dialog.py:178
+#: ui/auth/app_startup_auth_qt.py:56 ui/auth/password_dialog.py:181
 msgid "Password:"
 msgstr "Kennwort:"
 
-#: ui/auth/app_startup_auth_qt.py:124 ui/auth/password_dialog.py:306
+#: ui/auth/app_startup_auth_qt.py:124 ui/auth/password_dialog.py:309
 msgid "Incorrect password"
 msgstr "Falsches Kennwort"
 
@@ -2587,7 +2619,7 @@ msgstr "Der Cache konnte nicht als JSON exportiert werden:"
 msgid "⚠ Caps Lock is ON"
 msgstr "⚠ Die Feststelltaste ist aktiviert"
 
-#: ui/auth/password_dialog.py:97 ui/auth/password_dialog.py:152
+#: ui/auth/password_dialog.py:97 ui/auth/password_dialog.py:155
 msgid "Password Required"
 msgstr "Kennwort erforderlich"
 
@@ -2595,43 +2627,43 @@ msgstr "Kennwort erforderlich"
 msgid "Password Protection"
 msgstr "Kennwortschutz"
 
-#: ui/auth/password_dialog.py:160
+#: ui/auth/password_dialog.py:163
 msgid "Password required for: {0}"
 msgstr "Kennwort erforderlich für: {0}"
 
-#: ui/auth/password_dialog.py:207
+#: ui/auth/password_dialog.py:210
 msgid "Password Protection Available"
 msgstr "Kennwortschutz verfügbar"
 
-#: ui/auth/password_dialog.py:215
+#: ui/auth/password_dialog.py:218
 msgid "This action requires password protection: {0}"
 msgstr "Diese Aktion erfordert einen Kennwortschutz: {0}"
 
-#: ui/auth/password_dialog.py:234
+#: ui/auth/password_dialog.py:237
 msgid "Password protection is not currently configured. You can:"
 msgstr "Der Kennwortschutz ist derzeit nicht konfiguriert. Sie können:"
 
-#: ui/auth/password_dialog.py:243
+#: ui/auth/password_dialog.py:246
 msgid "• Configure password protection for sensitive actions"
 msgstr "• Konfigurieren Sie den Kennwortschutz für sensible Aktionen"
 
-#: ui/auth/password_dialog.py:251
+#: ui/auth/password_dialog.py:254
 msgid "• Continue without password protection (less secure)"
 msgstr "• Weiter ohne Kennwortschutz (weniger sicher)"
 
-#: ui/auth/password_dialog.py:258
+#: ui/auth/password_dialog.py:261
 msgid "Don't show this security advice again"
 msgstr "Diese Sicherheitshinweise nicht mehr anzeigen"
 
-#: ui/auth/password_dialog.py:270
+#: ui/auth/password_dialog.py:273
 msgid "Continue Without Protection"
 msgstr "Weiter ohne Schutz"
 
-#: ui/auth/password_dialog.py:273 ui/auth/password_dialog.py:291
+#: ui/auth/password_dialog.py:276 ui/auth/password_dialog.py:294
 msgid "Configure Protection"
 msgstr "Schutz konfigurieren"
 
-#: ui/auth/password_dialog.py:279
+#: ui/auth/password_dialog.py:282
 msgid ""
 "Password protection is required for this action but is not currently "
 "configured."
@@ -2639,273 +2671,279 @@ msgstr ""
 "Für diese Aktion ist ein Kennwortschutz erforderlich, der jedoch derzeit "
 "nicht konfiguriert ist."
 
-#: ui/compare/classifier_action_copy_window_qt.py:64
+#: ui/compare/classifier_action_copy_window_qt.py:61
 msgid "Copy Classifier Action / Prevalidation"
 msgstr "Klassifikator-Aktion kopieren / Prüfungsergebnis"
 
-#: ui/compare/classifier_action_copy_window_qt.py:111
+#: ui/compare/classifier_action_copy_window_qt.py:108
 msgid "Copying from:"
 msgstr "Kopieren von:"
 
-#: ui/compare/classifier_action_copy_window_qt.py:134
+#: ui/compare/classifier_action_copy_window_qt.py:131
 msgid "Copy to:"
 msgstr "Kopie an:"
 
-#: ui/compare/classifier_action_copy_window_qt.py:140
+#: ui/compare/classifier_action_copy_window_qt.py:137
 msgid "Target Type:"
 msgstr "Zieltyp:"
 
-#: ui/compare/classifier_action_copy_window_qt.py:156
+#: ui/compare/classifier_action_copy_window_qt.py:153
 msgid "New Name:"
 msgstr "Neuer Name:"
 
-#: ui/compare/classifier_action_copy_window_qt.py:170
-#: ui/compare/classifier_actions_tab_qt.py:200
-#: ui/compare/directory_profile_window_qt.py:314
-#: ui/compare/directory_profile_window_qt.py:338
-#: ui/compare/prevalidations_tab_qt.py:640
-#: ui/files/file_actions_window_qt.py:316 ui/files/marked_file_mover_qt.py:324
-#: utils/constants.py:524
+#: ui/compare/classifier_action_copy_window_qt.py:167
+#: ui/compare/classifier_actions_tab_qt.py:202
+#: ui/compare/directory_profile_window_qt.py:333
+#: ui/compare/directory_profile_window_qt.py:357
+#: ui/compare/prevalidations_tab_qt.py:651
+#: ui/files/file_actions_window_qt.py:318 ui/files/marked_file_mover_qt.py:331
+#: utils/constants.py:529
 msgid "Copy"
 msgstr "Kopie"
 
-#: ui/compare/classifier_action_copy_window_qt.py:227
+#: ui/compare/classifier_action_copy_window_qt.py:224
 msgid "Name cannot be empty"
 msgstr "Der Name kann nicht leer sein."
 
-#: ui/compare/classifier_action_copy_window_qt.py:236
+#: ui/compare/classifier_action_copy_window_qt.py:233
 msgid "A {0} with this name already exists"
 msgstr "Ein {0} mit diesem Namen existiert bereits"
 
-#: ui/compare/classifier_action_copy_window_qt.py:266
+#: ui/compare/classifier_action_copy_window_qt.py:263
 msgid "Invalid Copy Target"
 msgstr "Ungültiges Kopiierziel"
 
-#: ui/compare/classifier_actions_tab_qt.py:102
+#: ui/compare/classifier_actions_tab_qt.py:104
 msgid "Add Classifier Action"
 msgstr "Klassifizierungsaktion hinzufügen"
 
-#: ui/compare/classifier_actions_tab_qt.py:106
+#: ui/compare/classifier_actions_tab_qt.py:108
 msgid "Clear Classifier Actions"
 msgstr "Klassifizierungsaktionen löschen"
 
-#: ui/compare/classifier_actions_tab_qt.py:110
+#: ui/compare/classifier_actions_tab_qt.py:112
 msgid "Run All"
 msgstr "Alle ausführen"
 
-#: ui/compare/classifier_actions_tab_qt.py:119
+#: ui/compare/classifier_actions_tab_qt.py:121
 msgid "Run on Profile:"
 msgstr "Auf Profil ausführen:"
 
-#: ui/compare/classifier_actions_tab_qt.py:167
-#: ui/compare/prevalidations_tab_qt.py:597
+#: ui/compare/classifier_actions_tab_qt.py:169
+#: ui/compare/prevalidations_tab_qt.py:608
 msgid "Active"
 msgstr "Aktiv"
 
-#: ui/compare/classifier_actions_tab_qt.py:167
-#: ui/compare/classifier_management_window_qt.py:102
-#: ui/compare/prevalidations_tab_qt.py:596 utils/constants.py:133
+#: ui/compare/classifier_actions_tab_qt.py:169
+#: ui/compare/classifier_management_window_qt.py:103
+#: ui/compare/prevalidations_tab_qt.py:607 utils/constants.py:133
 #: utils/constants.py:148
 msgid "Name"
 msgstr "Name"
 
-#: ui/compare/classifier_actions_tab_qt.py:167
-#: ui/compare/classifier_management_window_qt.py:206
-#: ui/compare/prevalidations_tab_qt.py:596
+#: ui/compare/classifier_actions_tab_qt.py:169
+#: ui/compare/classifier_management_window_qt.py:215
+#: ui/compare/prevalidations_tab_qt.py:607
 msgid "Action"
 msgstr "Aktion"
 
-#: ui/compare/classifier_actions_tab_qt.py:178
+#: ui/compare/classifier_actions_tab_qt.py:180
 msgid "Run"
 msgstr "Ausführen"
 
-#: ui/compare/classifier_actions_tab_qt.py:196
-#: ui/compare/prevalidations_tab_qt.py:634
-#: ui/files/file_actions_window_qt.py:331
-#: ui/files/file_actions_window_qt.py:377
+#: ui/compare/classifier_actions_tab_qt.py:198
+#: ui/compare/prevalidations_tab_qt.py:645
+#: ui/files/file_actions_window_qt.py:333
+#: ui/files/file_actions_window_qt.py:379
 msgid "Modify"
 msgstr "Ändern"
 
-#: ui/compare/classifier_actions_tab_qt.py:208
-#: ui/compare/prevalidations_tab_qt.py:652
+#: ui/compare/classifier_actions_tab_qt.py:210
+#: ui/compare/prevalidations_tab_qt.py:663
 msgid "Move down"
 msgstr "Nach unten gehen"
 
-#: ui/compare/classifier_actions_tab_qt.py:297
-#: ui/compare/prevalidations_tab_qt.py:473
+#: ui/compare/classifier_actions_tab_qt.py:299
+#: ui/compare/prevalidations_tab_qt.py:484
 msgid "directories"
 msgstr "Verzeichnisse"
 
-#: ui/compare/classifier_actions_tab_qt.py:306
+#: ui/compare/classifier_actions_tab_qt.py:308
 msgid "This classifier action cannot run until configuration is fixed: {0}"
 msgstr ""
 "Diese Klassifizierungsaktion kann nicht ausgeführt werden, bevor die "
 "Konfiguration behoben wird: {0}"
 
-#: ui/compare/classifier_actions_tab_qt.py:312
+#: ui/compare/classifier_actions_tab_qt.py:314
 msgid "Run classifier action '{0}' on the following directories?"
 msgstr ""
 "Die Klassifizierungsaktion „{0}“ für die folgenden Verzeichnisse ausführen?"
 
-#: ui/compare/classifier_actions_tab_qt.py:317
+#: ui/compare/classifier_actions_tab_qt.py:319
 msgid "Run Classifier Action"
 msgstr "Klassifizierungsaktion ausführen"
 
-#: ui/compare/classifier_actions_tab_qt.py:345
+#: ui/compare/classifier_actions_tab_qt.py:347
 msgid "No active classifier actions to run"
 msgstr "Keine aktiven Klassifizierungsaktionen auszuführen"
 
-#: ui/compare/classifier_actions_tab_qt.py:350
+#: ui/compare/classifier_actions_tab_qt.py:352
 msgid "Run {0} active classifier action(s) on the following directories?"
 msgstr ""
 "{0} aktive Klassifizierungsaktion(en) für die folgenden Verzeichnisse "
 "ausführen?"
 
-#: ui/compare/classifier_actions_tab_qt.py:358
+#: ui/compare/classifier_actions_tab_qt.py:360
 msgid "Run All Classifier Actions"
 msgstr "Alle Klassifizierungsaktionen ausführen"
 
-#: ui/compare/classifier_management_window_qt.py:79
-#: ui/compare/prevalidations_tab_qt.py:131
+#: ui/compare/classifier_management_window_qt.py:80
+#: ui/compare/prevalidations_tab_qt.py:129
 msgid "Modify Prevalidation"
 msgstr "Ändern der Prävalidierung"
 
-#: ui/compare/classifier_management_window_qt.py:80
-#: ui/compare/prevalidations_tab_qt.py:132
+#: ui/compare/classifier_management_window_qt.py:81
+#: ui/compare/prevalidations_tab_qt.py:130
 msgid "Prevalidation Name"
 msgstr "Prävalidierung Name"
 
-#: ui/compare/classifier_management_window_qt.py:83
+#: ui/compare/classifier_management_window_qt.py:84
 msgid "Modify Classifier Action"
 msgstr "Klassifizierungsaktion ändern"
 
-#: ui/compare/classifier_management_window_qt.py:84
+#: ui/compare/classifier_management_window_qt.py:85
 msgid "Classifier Action Name"
 msgstr "Name der Klassifizierungsaktion"
 
-#: ui/compare/classifier_management_window_qt.py:103
+#: ui/compare/classifier_management_window_qt.py:104
 msgid "New"
 msgstr "Neu"
 
-#: ui/compare/classifier_management_window_qt.py:148
+#: ui/compare/classifier_management_window_qt.py:149
 msgid "Positives"
 msgstr "Positiv"
 
-#: ui/compare/classifier_management_window_qt.py:155
+#: ui/compare/classifier_management_window_qt.py:156
 msgid "Negatives"
 msgstr "Negativ"
 
-#: ui/compare/classifier_management_window_qt.py:162
+#: ui/compare/classifier_management_window_qt.py:163
 msgid "Validation Types"
 msgstr "Validierungstypen"
 
-#: ui/compare/classifier_management_window_qt.py:163
+#: ui/compare/classifier_management_window_qt.py:164
 msgid "Use Text Embeddings"
 msgstr "Text-Einbettungen verwenden"
 
-#: ui/compare/classifier_management_window_qt.py:169
+#: ui/compare/classifier_management_window_qt.py:170
 msgid "Use Image Classifier"
 msgstr "Bildklassifikator verwenden"
 
-#: ui/compare/classifier_management_window_qt.py:175
+#: ui/compare/classifier_management_window_qt.py:176
 msgid "Use Prompts"
 msgstr "Eingabeaufforderungen verwenden"
 
-#: ui/compare/classifier_management_window_qt.py:181
+#: ui/compare/classifier_management_window_qt.py:182
 msgid "Use Embedding Prototype"
 msgstr "Einbettungsprototyp verwenden"
 
-#: ui/compare/classifier_management_window_qt.py:188
+#: ui/compare/classifier_management_window_qt.py:197
 msgid "Text Embedding Threshold"
 msgstr "Schwellenwert für die Texteinbettung"
 
-#: ui/compare/classifier_management_window_qt.py:197
+#: ui/compare/classifier_management_window_qt.py:206
 msgid "Embedding Prototype Threshold"
 msgstr "Einbettung Prototyp-Schwellenwert"
 
-#: ui/compare/classifier_management_window_qt.py:215
+#: ui/compare/classifier_management_window_qt.py:224
 msgid "Action Modifier"
 msgstr "Aktionsmodifikator"
 
-#: ui/compare/classifier_management_window_qt.py:225
+#: ui/compare/classifier_management_window_qt.py:227
+msgid "Leave blank to auto-route by image-classifier selected category."
+msgstr ""
+"Lassen Sie das Feld leer, um die automatische Zuordnung anhand der vom "
+"Bildklassifikator ausgewählten Kategorie vorzunehmen."
+
+#: ui/compare/classifier_management_window_qt.py:234
 msgid "Image Classifier Name"
 msgstr "Bildklassifikator Name"
 
-#: ui/compare/classifier_management_window_qt.py:237
+#: ui/compare/classifier_management_window_qt.py:246
 msgid "Image Classifier Selected Category"
 msgstr "Bildklassifikator Ausgewählte Kategorie"
 
-#: ui/compare/classifier_management_window_qt.py:247
+#: ui/compare/classifier_management_window_qt.py:256
 msgid "Image Classifier Classification Mode"
 msgstr "Bildklasifizierer Klassifizierungsmodus"
 
-#: ui/compare/classifier_management_window_qt.py:250
+#: ui/compare/classifier_management_window_qt.py:259
 msgid "Selected categories"
 msgstr "Ausgewählte Kategorien"
 
-#: ui/compare/classifier_management_window_qt.py:251
+#: ui/compare/classifier_management_window_qt.py:260
 msgid "Model strategy"
 msgstr "Modellstrategie"
 
-#: ui/compare/classifier_management_window_qt.py:260
+#: ui/compare/classifier_management_window_qt.py:269
 msgid "Prototype Directory"
 msgstr "Verzeichnis für Prototyp"
 
-#: ui/compare/classifier_management_window_qt.py:265
-#: ui/compare/classifier_management_window_qt.py:283
+#: ui/compare/classifier_management_window_qt.py:274
+#: ui/compare/classifier_management_window_qt.py:292
 #: ui/compare/hf_model_manager_window_qt.py:93 ui/files/go_to_file_qt.py:273
 #: ui/files/go_to_file_qt.py:381
 msgid "Browse..."
 msgstr "Durchsuchen..."
 
-#: ui/compare/classifier_management_window_qt.py:272
+#: ui/compare/classifier_management_window_qt.py:281
 msgid "Force Recalculate Prototype"
 msgstr "Neuberechnung des Prototyps erzwingen"
 
-#: ui/compare/classifier_management_window_qt.py:278
+#: ui/compare/classifier_management_window_qt.py:287
 msgid "Negative Prototype Directory (Optional)"
 msgstr "Verzeichnis für negativen Prototyp (optional)"
 
-#: ui/compare/classifier_management_window_qt.py:290
+#: ui/compare/classifier_management_window_qt.py:299
 msgid "Negative Prototype Weight (λ)"
 msgstr "Gewicht des negativen Prototyps (λ)"
 
-#: ui/compare/classifier_management_window_qt.py:304
+#: ui/compare/classifier_management_window_qt.py:313
 msgid "Should Run"
 msgstr "Sollte laufen"
 
-#: ui/compare/classifier_management_window_qt.py:305
+#: ui/compare/classifier_management_window_qt.py:314
 msgid "Enable this classifier action"
 msgstr "Diese Klassifizierungsaktion aktivieren"
 
-#: ui/compare/classifier_management_window_qt.py:311
-#: ui/compare/directory_profile_window_qt.py:176
+#: ui/compare/classifier_management_window_qt.py:320
+#: ui/compare/directory_profile_window_qt.py:179
 #: ui/compare/lookahead_window_qt.py:153
 msgid "Done"
 msgstr "Fertig"
 
-#: ui/compare/classifier_management_window_qt.py:404
+#: ui/compare/classifier_management_window_qt.py:413
 msgid "Select Prototype Directory"
 msgstr "Verzeichnis für Prototyp auswählen"
 
-#: ui/compare/classifier_management_window_qt.py:411
+#: ui/compare/classifier_management_window_qt.py:420
 msgid "Select Negative Prototype Directory"
 msgstr "Verzeichnis für negativen Prototyp auswählen"
 
-#: ui/compare/classifier_management_window_qt.py:461
+#: ui/compare/classifier_management_window_qt.py:470
 msgid "Prototypes recalculated successfully"
 msgstr "Prototypen erfolgreich neu berechnet"
 
-#: ui/compare/classifier_management_window_qt.py:542
+#: ui/compare/classifier_management_window_qt.py:552
 msgid "Classifier Management"
 msgstr "Klassifikatorverwaltung"
 
-#: ui/compare/classifier_management_window_qt.py:567
-#: ui/compare/prevalidations_tab_qt.py:354
+#: ui/compare/classifier_management_window_qt.py:577
+#: ui/compare/prevalidations_tab_qt.py:352
 msgid "Prevalidations"
 msgstr "Prävalidierungen"
 
-#: ui/compare/classifier_management_window_qt.py:573
+#: ui/compare/classifier_management_window_qt.py:583
 msgid ""
 "Prevalidations are disabled. Enable them in the Prevalidations tab settings."
 msgstr ""
@@ -2973,94 +3011,94 @@ msgstr "Bewerben"
 msgid "Instance Weights:"
 msgstr "Instanzgewichte:"
 
-#: ui/compare/directory_profile_window_qt.py:96
-#: ui/compare/prevalidations_tab_qt.py:342
+#: ui/compare/directory_profile_window_qt.py:98
+#: ui/compare/prevalidations_tab_qt.py:340
 msgid "Copy Profile"
 msgstr "Profil kopieren"
 
-#: ui/compare/directory_profile_window_qt.py:98
-#: ui/compare/prevalidations_tab_qt.py:339
+#: ui/compare/directory_profile_window_qt.py:100
+#: ui/compare/prevalidations_tab_qt.py:337
 msgid "Edit Profile"
 msgstr "Profil bearbeiten"
 
-#: ui/compare/directory_profile_window_qt.py:98
+#: ui/compare/directory_profile_window_qt.py:100
 msgid "Create Profile"
 msgstr "Profil erstellen"
 
-#: ui/compare/directory_profile_window_qt.py:122
+#: ui/compare/directory_profile_window_qt.py:124
 msgid "Profile Name"
 msgstr "Profilname"
 
-#: ui/compare/directory_profile_window_qt.py:131
+#: ui/compare/directory_profile_window_qt.py:133
 msgid "Directories"
 msgstr "Verzeichnisse"
 
-#: ui/compare/directory_profile_window_qt.py:148
+#: ui/compare/directory_profile_window_qt.py:151
 msgid "Add"
 msgstr "Hinzufügen"
 
-#: ui/compare/directory_profile_window_qt.py:152
+#: ui/compare/directory_profile_window_qt.py:155
 msgid "Edit"
 msgstr "Bearbeiten"
 
-#: ui/compare/directory_profile_window_qt.py:156
-#: ui/compare/directory_profile_window_qt.py:404
+#: ui/compare/directory_profile_window_qt.py:159
+#: ui/compare/directory_profile_window_qt.py:423
 #: ui/files/directory_notes_window_qt.py:200
 msgid "Remove"
 msgstr "Entfernen"
 
-#: ui/compare/directory_profile_window_qt.py:160
+#: ui/compare/directory_profile_window_qt.py:163
 msgid "Add dirs from subdirs"
 msgstr "Verzeichnisse aus Unterverzeichnissen hinzufügen"
 
-#: ui/compare/directory_profile_window_qt.py:164
+#: ui/compare/directory_profile_window_qt.py:167
 msgid "Clear all"
 msgstr "Alle löschen"
 
-#: ui/compare/directory_profile_window_qt.py:181
+#: ui/compare/directory_profile_window_qt.py:184
 msgid "Copy associated prevalidations"
 msgstr "Die beigefügten Prävalidierungen kopieren"
 
-#: ui/compare/directory_profile_window_qt.py:189
+#: ui/compare/directory_profile_window_qt.py:192
 msgid "No prevalidations are associated with this profile."
 msgstr "Es sind keine Prüfungen mit diesem Profil verknüpft."
 
-#: ui/compare/directory_profile_window_qt.py:195
+#: ui/compare/directory_profile_window_qt.py:198
 msgid "Optional: adjust action target directories for copied prevalidations."
 msgstr ""
 "Optional: Anpassen der Aktionszielverzeichnisse für kopierte "
 "Prävalidierungen."
 
-#: ui/compare/directory_profile_window_qt.py:218
+#: ui/compare/directory_profile_window_qt.py:221
 #: ui/files/directory_picker_dialog.py:209
 msgid "Select directory"
 msgstr "Verzeichnis auswählen"
 
-#: ui/compare/directory_profile_window_qt.py:229
+#: ui/compare/directory_profile_window_qt.py:232
 msgid "Add Directory"
 msgstr "Verzeichnis hinzufügen"
 
-#: ui/compare/directory_profile_window_qt.py:251
+#: ui/compare/directory_profile_window_qt.py:254
 msgid "Edit Directory"
 msgstr "Verzeichnis bearbeiten"
 
-#: ui/compare/directory_profile_window_qt.py:280
+#: ui/compare/directory_profile_window_qt.py:299
 msgid "Select directory to add subdirectories from"
 msgstr "Verzeichnis auswählen, um Unterverzeichnisse hinzuzufügen"
 
-#: ui/compare/directory_profile_window_qt.py:382
+#: ui/compare/directory_profile_window_qt.py:401
 msgid "Copied prevalidation name"
 msgstr "Kopie der Prüfung des Namens"
 
-#: ui/compare/directory_profile_window_qt.py:394
+#: ui/compare/directory_profile_window_qt.py:413
 msgid "Action target directory (action_modifier)"
 msgstr "Aktionszielverzeichnis (action_modifier)"
 
-#: ui/compare/directory_profile_window_qt.py:439
+#: ui/compare/directory_profile_window_qt.py:458
 msgid "Remove Prevalidation"
 msgstr "Entferne die Vorvalidierung"
 
-#: ui/compare/directory_profile_window_qt.py:440
+#: ui/compare/directory_profile_window_qt.py:459
 msgid "Remove prevalidation '{0}' from this copy operation?"
 msgstr "Vorabvalidierung '{0}' von diesem Kopiervorgang entfernen?"
 
@@ -3089,6 +3127,25 @@ msgstr "Kategorien"
 #: ui/compare/hf_model_manager_window_qt.py:520
 msgid "Comma-separated categories"
 msgstr "kommaseparierte Kategorien"
+
+#: ui/compare/hf_model_manager_window_qt.py:107
+msgid ""
+"Optional. PyTorch: width and height for the internal resize (defaults to "
+"224x224 when left blank). HDF5 (.h5): the loaded model defines its own input"
+" size; this value is stored in config but is not used when loading."
+msgstr ""
+"Optional. PyTorch: Breite und Höhe für die interne Größenanpassung "
+"(Standardwert ist 224x224, wenn das Feld leer gelassen wird). HDF5 (.h5): "
+"Das geladene Modell definiert seine eigene Eingabegröße; dieser Wert wird in"
+" der Konfiguration gespeichert, beim Laden jedoch nicht verwendet."
+
+#: ui/compare/hf_model_manager_window_qt.py:112
+msgid "Input shape (WxH)"
+msgstr "Eingabeformat (BxH)"
+
+#: ui/compare/hf_model_manager_window_qt.py:118
+msgid "224, 224"
+msgstr "224, 224"
 
 #: ui/compare/hf_model_manager_window_qt.py:124
 msgid "Positive groups"
@@ -3173,6 +3230,16 @@ msgstr "Feld fehlen"
 msgid "Model name, model file path, and at least one category are required."
 msgstr ""
 "Modellname, Modelldateipfad und mindestens eine Kategorie sind erforderlich."
+
+#: ui/compare/hf_model_manager_window_qt.py:310
+msgid "Invalid input shape"
+msgstr "Ungültiger Eingabestring"
+
+#: ui/compare/hf_model_manager_window_qt.py:311
+msgid "Use two positive integers, for example 224, 224 or 384x384."
+msgstr ""
+"Verwenden Sie zwei positive Ganzzahlen, beispielsweise 224, 224 oder "
+"384×384."
 
 #: ui/compare/hf_model_manager_window_qt.py:340
 msgid "Invalid model configuration"
@@ -3459,7 +3526,7 @@ msgid "Removed model '{0}'."
 msgstr "Modell '{0}' entfernt"
 
 #: ui/compare/lookahead_window_qt.py:62
-#: ui/compare/prevalidations_tab_qt.py:312
+#: ui/compare/prevalidations_tab_qt.py:310
 msgid "Edit Lookahead"
 msgstr "Vorschau bearbeiten"
 
@@ -3479,62 +3546,84 @@ msgstr "Bezugnahme auf bestehenden Vorvalidierungsnamen"
 msgid "Prevalidation Name or Custom Text"
 msgstr "Name der Vorabvalidierung oder benutzerdefinierter Text"
 
-#: ui/compare/prevalidations_tab_qt.py:146
+#: ui/compare/prevalidations_tab_qt.py:144
 msgid "Lookaheads (select from shared list)"
 msgstr "Vorausschauen (Auswahl aus gemeinsamer Liste)"
 
-#: ui/compare/prevalidations_tab_qt.py:160
+#: ui/compare/prevalidations_tab_qt.py:158
 msgid "Directory Profile"
 msgstr "Verzeichnisprofil"
 
-#: ui/compare/prevalidations_tab_qt.py:296
+#: ui/compare/prevalidations_tab_qt.py:294
 msgid "Lookaheads"
 msgstr "Vorausschauen"
 
-#: ui/compare/prevalidations_tab_qt.py:309
+#: ui/compare/prevalidations_tab_qt.py:307
 msgid "Add Lookahead"
 msgstr "Vorschau hinzufügen"
 
-#: ui/compare/prevalidations_tab_qt.py:315
+#: ui/compare/prevalidations_tab_qt.py:313
 msgid "Remove Lookahead"
 msgstr "Vorschau entfernen"
 
-#: ui/compare/prevalidations_tab_qt.py:323
+#: ui/compare/prevalidations_tab_qt.py:321
 msgid "Directory Profiles"
 msgstr "Verzeichnisprofile"
 
-#: ui/compare/prevalidations_tab_qt.py:336
+#: ui/compare/prevalidations_tab_qt.py:334
 msgid "Add Profile"
 msgstr "Profil hinzufügen"
 
-#: ui/compare/prevalidations_tab_qt.py:345
+#: ui/compare/prevalidations_tab_qt.py:343
 msgid "Remove Profile"
 msgstr "Profil entfernen"
 
-#: ui/compare/prevalidations_tab_qt.py:355
+#: ui/compare/prevalidations_tab_qt.py:353
 msgid "Add prevalidation"
 msgstr "Prävalidierung hinzufügen"
 
-#: ui/compare/prevalidations_tab_qt.py:358
-#: ui/compare/prevalidations_tab_qt.py:855
+#: ui/compare/prevalidations_tab_qt.py:356
+#: ui/compare/prevalidations_tab_qt.py:866
 msgid "Clear prevalidations"
 msgstr "Klare Prävalidierungen"
 
-#: ui/compare/prevalidations_tab_qt.py:404
+#: ui/compare/prevalidations_tab_qt.py:368
+msgid ""
+"When checked, the clear button evicts only the cached results\n"
+"for the current base directory — prevalidation rules are kept."
+msgstr ""
+"Wenn diese Option aktiviert ist, löscht die Schaltfläche „Löschen“ nur die zwischengespeicherten Ergebnisse\n"
+"für das aktuelle Basisverzeichnis – die Vorvalidierungsregeln bleiben erhalten."
+
+#: ui/compare/prevalidations_tab_qt.py:415
 msgid "{name} ({name_or_text}, threshold: {threshold:.2f})"
 msgstr "{name} ({name_or_text}, Schwelle: {threshold:.2f})"
 
-#: ui/compare/prevalidations_tab_qt.py:473
+#: ui/compare/prevalidations_tab_qt.py:484
 msgid "directory"
 msgstr "Verzeichnis"
 
-#: ui/compare/prevalidations_tab_qt.py:596
+#: ui/compare/prevalidations_tab_qt.py:607
 msgid "Profile"
 msgstr "Profil"
 
-#: ui/compare/prevalidations_tab_qt.py:622
+#: ui/compare/prevalidations_tab_qt.py:633
 msgid "(Global)"
 msgstr "(Global)"
+
+#: ui/compare/prevalidations_tab_qt.py:854
+#: ui/compare/prevalidations_tab_qt.py:862
+msgid "current dir"
+msgstr "aktueller Ordner"
+
+#: ui/compare/prevalidations_tab_qt.py:855
+msgid "Only: {0}"
+msgstr "Nur: {0}"
+
+#: ui/compare/prevalidations_tab_qt.py:858
+#: ui/compare/prevalidations_tab_qt.py:864
+msgid "Clear results ({0})"
+msgstr "Ergebnisse löschen ({0})"
 
 #: ui/files/directory_notes_window_qt.py:51
 msgid "Directory Notes - {0}"
@@ -3547,6 +3636,15 @@ msgstr "Verzeichnis: {0}"
 #: ui/files/directory_notes_window_qt.py:106
 msgid "Export to Text File"
 msgstr "In Textdatei exportieren"
+
+#: ui/files/directory_notes_window_qt.py:107
+#: ui/files/directory_notes_window_qt.py:434
+msgid "Generate File List"
+msgstr "Generiere Dateiliste"
+
+#: ui/files/directory_notes_window_qt.py:108
+msgid "Set as Runtime Marks"
+msgstr "Aktivieren Sie als Laufzeitmarkierungen"
 
 #: ui/files/directory_notes_window_qt.py:109
 msgid "Import from Text File"
@@ -3640,6 +3738,65 @@ msgstr "Exportfehler"
 msgid "Failed to export notes: {0}"
 msgstr "Exportieren der Notizen fehlgeschlagen: {0}"
 
+#: ui/files/directory_notes_window_qt.py:428
+#: ui/files/directory_notes_window_qt.py:458
+msgid "No Marked Files"
+msgstr "Keine markierten Dateien"
+
+#: ui/files/directory_notes_window_qt.py:428
+msgid "There are no marked files to export."
+msgstr "Es gibt keine markierten Dateien zum Exportieren."
+
+#: ui/files/directory_notes_window_qt.py:436
+#: ui/files/directory_notes_window_qt.py:537
+msgid "JSON files (*.json);;All files (*)"
+msgstr "JSON-Dateien (*.json);; Alle Dateien (*)"
+
+#: ui/files/directory_notes_window_qt.py:442
+msgid "File list ({0} entries) saved to: {1}"
+msgstr "Dateiliste ({0} Einträge) gespeichert unter: {1}"
+
+#: ui/files/directory_notes_window_qt.py:449
+msgid "Failed to generate file list: {0}"
+msgstr "Fehler beim Generieren der Dateiliste: {0}"
+
+#: ui/files/directory_notes_window_qt.py:458
+msgid "There are no marked files to set as marks."
+msgstr "Es gibt keine markierten Dateien, um als Markierungen zu setzen."
+
+#: ui/files/directory_notes_window_qt.py:466
+msgid "Replace Existing Marks?"
+msgstr "Vorhandene Markierungen ersetzen?"
+
+#: ui/files/directory_notes_window_qt.py:467
+msgid ""
+"There are already {0} runtime mark(s). Replace them with the {1} directory-"
+"note mark(s)?"
+msgstr ""
+"Es gibt bereits {0} Laufzeitmarkierungen. Sollen diese durch die {1} "
+"Verzeichnis-Notizmarkierungen ersetzt werden?"
+
+#: ui/files/directory_notes_window_qt.py:477
+msgid "{0} runtime marks set from directory notes"
+msgstr ""
+"{0} Laufzeitmarkierungen, die anhand der Verzeichnisnotizen gesetzt wurden"
+
+#: ui/files/directory_notes_window_qt.py:484
+msgid "Clear Directory Note Marks?"
+msgstr "Löschen Sie die Verzeichnis-Hinweismarkierungen?"
+
+#: ui/files/directory_notes_window_qt.py:485
+msgid ""
+"If you plan to move these files, the saved paths will become stale.\n"
+"Clear the directory note marks now?"
+msgstr ""
+"Wenn Sie diese Dateien verschieben möchten, werden die gespeicherten Pfade ungültig.\n"
+"Möchten Sie die Verzeichnisvermerke jetzt löschen?"
+
+#: ui/files/directory_notes_window_qt.py:491
+msgid "Directory note marks cleared."
+msgstr "Verzeichnis-Notenzeichen gelöscht."
+
 #: ui/files/directory_notes_window_qt.py:497
 msgid "Import Marked Files from Text File"
 msgstr "Markierte Dateien aus Textdatei importieren"
@@ -3664,7 +3821,7 @@ msgstr "{0} Dateinamen nicht gefunden:"
 
 #: ui/files/directory_notes_window_qt.py:521
 #: ui/files/directory_notes_window_qt.py:551
-#: ui/files/file_actions_window_qt.py:250
+#: ui/files/file_actions_window_qt.py:252
 msgid "... and {0} more"
 msgstr "... und {0} weitere"
 
@@ -3691,11 +3848,6 @@ msgstr "Import aus Textdatei fehlgeschlagen: {0}"
 msgid "Import Marked Files from JSON File"
 msgstr "Markierte Dateien aus JSON-Datei importieren"
 
-#: ui/files/directory_notes_window_qt.py:436
-#: ui/files/directory_notes_window_qt.py:537
-msgid "JSON files (*.json);;All files (*)"
-msgstr "JSON-Dateien (*.json);; Alle Dateien (*)"
-
 #: ui/files/directory_notes_window_qt.py:548
 msgid "{0} invalid or missing file paths:"
 msgstr "{0} ungültige oder fehlende Dateipfade:"
@@ -3713,7 +3865,7 @@ msgid "Add directories from parent"
 msgstr "Verzeichnisse aus übergeordneten Verzeichnissen hinzufügen"
 
 #: ui/files/directory_picker_dialog.py:132
-#: ui/files/marked_file_mover_qt.py:261
+#: ui/files/marked_file_mover_qt.py:268
 msgid "Clear targets"
 msgstr "Klare Ziele"
 
@@ -3780,11 +3932,11 @@ msgstr ""
 msgid "Remove Favorite"
 msgstr "Entfernen Favoriten"
 
-#: ui/files/favorites_window_qt.py:232 ui/files/file_actions_window_qt.py:392
+#: ui/files/favorites_window_qt.py:232 ui/files/file_actions_window_qt.py:394
 msgid "File not found: "
 msgstr "Datei nicht gefunden: "
 
-#: ui/files/favorites_window_qt.py:246 ui/files/file_actions_window_qt.py:403
+#: ui/files/favorites_window_qt.py:246
 msgid "Error opening image: "
 msgstr "Fehler beim Öffnen des Bildes: "
 
@@ -3804,78 +3956,78 @@ msgstr "Datei Aktionsverlauf"
 msgid "Search Image"
 msgstr "Bild suchen"
 
-#: ui/files/file_actions_window_qt.py:106
+#: ui/files/file_actions_window_qt.py:107
 msgid "Clear History"
 msgstr "Geschichte löschen"
 
-#: ui/files/file_actions_window_qt.py:167
+#: ui/files/file_actions_window_qt.py:169
 msgid "Load More ({0} remaining)"
 msgstr "Mehr laden ({0} übrig)"
 
-#: ui/files/file_actions_window_qt.py:205
+#: ui/files/file_actions_window_qt.py:207
 msgid "Today's File Actions"
 msgstr "Dateiaktionen von heute"
 
-#: ui/files/file_actions_window_qt.py:207
+#: ui/files/file_actions_window_qt.py:209
 msgid "File Action Statistics"
 msgstr "Dateiaktionsstatistik"
 
-#: ui/files/file_actions_window_qt.py:215
+#: ui/files/file_actions_window_qt.py:217
 msgid "All Time"
 msgstr "Alle Zeiten"
 
-#: ui/files/file_actions_window_qt.py:215
+#: ui/files/file_actions_window_qt.py:217
 msgid "Today Only"
 msgstr "Nur heute"
 
-#: ui/files/file_actions_window_qt.py:222
+#: ui/files/file_actions_window_qt.py:224
 msgid "Target Directory"
 msgstr "Zielverzeichnis"
 
-#: ui/files/file_actions_window_qt.py:222
+#: ui/files/file_actions_window_qt.py:224
 msgid "Total"
 msgstr "Gesamt"
 
-#: ui/files/file_actions_window_qt.py:306
+#: ui/files/file_actions_window_qt.py:308
 msgid " ({0} files)"
 msgstr " ({0} Dateien)"
 
-#: ui/files/file_actions_window_qt.py:308
+#: ui/files/file_actions_window_qt.py:310
 msgid "(auto)"
 msgstr "(auto)"
 
-#: ui/files/file_actions_window_qt.py:316 ui/files/marked_file_mover_qt.py:317
-#: utils/constants.py:522
+#: ui/files/file_actions_window_qt.py:318 ui/files/marked_file_mover_qt.py:324
+#: utils/constants.py:527
 msgid "Move"
 msgstr "Bewegen"
 
-#: ui/files/file_actions_window_qt.py:325
-#: ui/files/file_actions_window_qt.py:369
+#: ui/files/file_actions_window_qt.py:327
+#: ui/files/file_actions_window_qt.py:371
 msgid "Undo"
 msgstr "Rückgängig"
 
-#: ui/files/file_actions_window_qt.py:357
+#: ui/files/file_actions_window_qt.py:359
 msgid "View"
 msgstr "Siehe"
 
-#: ui/files/file_actions_window_qt.py:363
+#: ui/files/file_actions_window_qt.py:365
 msgid "Copy Filename"
 msgstr "Name kopieren"
 
-#: ui/files/file_actions_window_qt.py:410
+#: ui/files/file_actions_window_qt.py:412
 msgid "Image does not exist: "
 msgstr "Das Bild existiert nicht: "
 
-#: ui/files/file_actions_window_qt.py:412
-#: ui/files/file_actions_window_qt.py:431
+#: ui/files/file_actions_window_qt.py:414
+#: ui/files/file_actions_window_qt.py:433
 msgid "File Action Error"
 msgstr "Datei Aktion Fehler"
 
-#: ui/files/file_actions_window_qt.py:429
+#: ui/files/file_actions_window_qt.py:431
 msgid "Images not found"
 msgstr "Bilder nicht gefunden"
 
-#: ui/files/file_actions_window_qt.py:537
+#: ui/files/file_actions_window_qt.py:541
 msgid "Filter: {}"
 msgstr "Filter: {}"
 
@@ -4061,67 +4213,67 @@ msgstr "Zielverzeichnis für markierte Dateien auswählen"
 msgid "Where should the marked files have gone?"
 msgstr "Wo sollen die markierten Dateien hin?"
 
-#: ui/files/marked_file_mover_qt.py:129 ui/files/marked_file_mover_qt.py:166
+#: ui/files/marked_file_mover_qt.py:129 ui/files/marked_file_mover_qt.py:172
 msgid "Move {0} Marked File(s)"
 msgstr "{0} Markierte Datei(en) verschieben"
 
-#: ui/files/marked_file_mover_qt.py:233
+#: ui/files/marked_file_mover_qt.py:240
 msgid "New target:"
 msgstr "Neues Ziel:"
 
-#: ui/files/marked_file_mover_qt.py:237
+#: ui/files/marked_file_mover_qt.py:244
 msgid "MOVE"
 msgstr "BEWEGEN"
 
-#: ui/files/marked_file_mover_qt.py:244
+#: ui/files/marked_file_mover_qt.py:251
 msgid "COPY"
 msgstr "KOPIE"
 
-#: ui/files/marked_file_mover_qt.py:251
+#: ui/files/marked_file_mover_qt.py:258
 msgid "DELETE"
 msgstr "LÖSCHEN"
 
-#: ui/files/marked_file_mover_qt.py:256
+#: ui/files/marked_file_mover_qt.py:263
 msgid "Add from parent"
 msgstr "Hinzufügen von über dem Eltern"
 
-#: ui/files/marked_file_mover_qt.py:266 ui/files/pdf_options_window_qt.py:137
+#: ui/files/marked_file_mover_qt.py:273 ui/files/pdf_options_window_qt.py:137
 msgid "Create PDF"
 msgstr "PDF erstellen"
 
-#: ui/files/marked_file_mover_qt.py:334
+#: ui/files/marked_file_mover_qt.py:341
 msgid "Unlock"
 msgstr "unlocken"
 
-#: ui/files/marked_file_mover_qt.py:336
+#: ui/files/marked_file_mover_qt.py:343
 msgid "Lock"
 msgstr "Schloß"
 
-#: ui/files/marked_file_mover_qt.py:340
+#: ui/files/marked_file_mover_qt.py:347
 msgid "Toggle GUI requirement for this target directory"
 msgstr "Schalten Sie die GUI-Anforderung für dieses Zielverzeichnis um."
 
-#: ui/files/marked_file_mover_qt.py:349
+#: ui/files/marked_file_mover_qt.py:356
 msgid "Remove this target directory"
 msgstr "Entfernen Sie diesen Zielverzeichnis."
 
-#: ui/files/marked_file_mover_qt.py:415
+#: ui/files/marked_file_mover_qt.py:422
 msgid "locked"
 msgstr "geschlossen"
 
-#: ui/files/marked_file_mover_qt.py:415
+#: ui/files/marked_file_mover_qt.py:422
 msgid "unlocked"
 msgstr "entsperrt"
 
-#: ui/files/marked_file_mover_qt.py:417
+#: ui/files/marked_file_mover_qt.py:424
 msgid "Target directory {0}: {1}"
 msgstr "Zielverzeichnis {0}: {1}"
 
-#: ui/files/marked_file_mover_qt.py:428
+#: ui/files/marked_file_mover_qt.py:436
 msgid "Target is locked"
 msgstr "Das Ziel ist gesperrt."
 
-#: ui/files/marked_file_mover_qt.py:430
+#: ui/files/marked_file_mover_qt.py:438
 msgid ""
 "This target requires the GUI Marked File Mover window.\n"
 "\n"
@@ -4131,7 +4283,7 @@ msgstr ""
 "\n"
 "Öffnen Sie die Benutzerflächenmarkierte Dateien-Beweger-Ausschnitte-Dateien (Strg+M), um diese Zielstelle zu bestätigen."
 
-#: ui/files/marked_file_mover_qt.py:491
+#: ui/files/marked_file_mover_qt.py:499
 msgid ""
 "You are about to move {0} marked files to:\n"
 "\n"
@@ -4145,7 +4297,7 @@ msgstr ""
 "\n"
 "zu verschieben. Bitte bestätigen Sie, dass dieser Zielort korrekt ist."
 
-#: ui/files/marked_file_mover_qt.py:496
+#: ui/files/marked_file_mover_qt.py:504
 msgid ""
 "You are about to copy {0} marked files to:\n"
 "\n"
@@ -4159,39 +4311,39 @@ msgstr ""
 "\n"
 "Bitte bestätigen Sie, dass dieser Zielordner korrekt ist."
 
-#: ui/files/marked_file_mover_qt.py:501
+#: ui/files/marked_file_mover_qt.py:509
 msgid "Confirm Large File Operation"
 msgstr "Bestätigen Sie die großen Dateioperationen"
 
-#: ui/files/marked_file_mover_qt.py:511
+#: ui/files/marked_file_mover_qt.py:519
 msgid "Confirm Delete"
 msgstr "Bestätigen Löschen"
 
-#: ui/files/marked_file_mover_qt.py:512
+#: ui/files/marked_file_mover_qt.py:520
 msgid "Deleting {0} marked files - Are you sure you want to proceed?"
 msgstr ""
 "Löschen von {0} markierten Dateien - Sind Sie sicher, dass Sie fortfahren "
 "möchten?"
 
-#: ui/files/marked_file_mover_qt.py:544
+#: ui/files/marked_file_mover_qt.py:552
 msgid "Delete Failed"
 msgstr "Löschen fehlgeschlagen"
 
-#: ui/files/marked_file_mover_qt.py:545
+#: ui/files/marked_file_mover_qt.py:553
 msgid "Failed to delete {0} files - check log for details."
 msgstr ""
 "Das Löschen von {0}-Dateien ist fehlgeschlagen - prüfen Sie das Protokoll "
 "für Details."
 
-#: ui/files/marked_file_mover_qt.py:550
+#: ui/files/marked_file_mover_qt.py:558
 msgid "Deleted {0} marked files."
 msgstr "Gelöschte {0} markierte Dateien."
 
-#: ui/files/marked_file_mover_qt.py:579
+#: ui/files/marked_file_mover_qt.py:583
 msgid "Select parent directory for target directories"
 msgstr "Übergeordnetes Verzeichnis für Zielverzeichnisse auswählen"
 
-#: ui/files/marked_file_mover_qt.py:621
+#: ui/files/marked_file_mover_qt.py:625
 msgid ""
 "WARNING: This action sets hotkey actions that will be used for future file "
 "operations. You may have accidentally triggered this shortcut due to a "
@@ -4202,36 +4354,36 @@ msgstr ""
 "Tastenkombination versehentlich aufgrund einer klemmenden Strg-Taste "
 "ausgelöst. Bitte bestätigen Sie, dass Sie fortfahren möchten."
 
-#: ui/files/marked_file_mover_qt.py:631 ui/files/marked_file_mover_qt.py:637
+#: ui/files/marked_file_mover_qt.py:635 ui/files/marked_file_mover_qt.py:641
 msgid "Recording next mark target and action."
 msgstr "Aufzeichnung des nächsten Markierungsziels und der nächsten Aktion."
 
-#: ui/files/marked_file_mover_qt.py:659
+#: ui/files/marked_file_mover_qt.py:685
 msgid "Sorted directories by embedding comparison."
 msgstr "Sortierte Verzeichnisse durch Einbettungsvergleich."
 
-#: ui/files/marked_file_mover_qt.py:684
+#: ui/files/marked_file_mover_qt.py:710
 msgid "Save PDF as"
 msgstr "PDF speichern als"
 
-#: ui/files/marked_file_mover_qt.py:702
+#: ui/files/marked_file_mover_qt.py:728
 msgid "Failed to create PDF from marked files."
 msgstr ""
 "Die PDF-Datei konnte nicht aus den markierten Dateien erstellt werden."
 
-#: ui/files/marked_file_mover_qt.py:820
+#: ui/files/marked_file_mover_qt.py:846
 msgid "Found {0} downstream related images"
 msgstr "{0} stromabwärts gerichtete Bilder gefunden"
 
-#: ui/files/marked_file_mover_qt.py:825
+#: ui/files/marked_file_mover_qt.py:851
 msgid "No downstream related images found"
 msgstr "Keine stromabwärts gerichteten Bilder gefunden"
 
-#: ui/files/marked_file_mover_qt.py:855
+#: ui/files/marked_file_mover_qt.py:881
 msgid "Filter: {0}"
 msgstr "Filter: {0}"
 
-#: ui/files/marked_file_mover_qt.py:1038
+#: ui/files/marked_file_mover_qt.py:1064
 msgid "Cleared marked file"
 msgstr "Gelöschte markierte Datei"
 
@@ -4311,7 +4463,7 @@ msgstr "HTML-Unterstützung erfordert pyppeteer Paket"
 msgid "Media Type Configuration"
 msgstr "Medientyp-Konfiguration"
 
-#: ui/files/type_configuration_window_qt.py:154 utils/constants.py:582
+#: ui/files/type_configuration_window_qt.py:154 utils/constants.py:587
 msgid "Configure Media Types"
 msgstr "Konfigurieren Sie Medientypen"
 
@@ -4343,184 +4495,183 @@ msgstr ""
 msgid "Media type configuration updated"
 msgstr "Medientyp-Konfiguration aktualisiert"
 
-#: ui/image/image_details_qt.py:250
+#: ui/image/media_details.py:251
 msgid "(negative prompt not shown by config setting)"
 msgstr ""
 "(negative Eingabeaufforderung wird durch die Konfigurationseinstellung nicht"
 " angezeigt)"
 
-#: ui/image/image_details_qt.py:322
+#: ui/image/media_details.py:323
 msgid "Image Path"
 msgstr "Bild Pfad"
 
-#: ui/image/image_details_qt.py:326
+#: ui/image/media_details.py:327
 msgid "Temp Path"
 msgstr "Temp Pfad"
 
-#: ui/image/image_details_qt.py:332
+#: ui/image/media_details.py:333
 msgid "File Index"
 msgstr "Datei-Index"
 
-#: ui/image/image_details_qt.py:336
+#: ui/image/media_details.py:337
 msgid "Color Mode"
 msgstr "Farbmodus"
 
-#: ui/image/image_details_qt.py:340
+#: ui/image/media_details.py:341
 msgid "Dimensions"
 msgstr "Abmessungen"
 
-#: ui/image/image_details_qt.py:344 utils/constants.py:45
-#: utils/constants.py:68 utils/constants.py:138 utils/constants.py:158
+#: ui/image/media_details.py:345 utils/constants.py:45 utils/constants.py:68
+#: utils/constants.py:138 utils/constants.py:158
 msgid "Size"
 msgstr "Größe"
 
-#: ui/image/image_details_qt.py:348
+#: ui/image/media_details.py:349
 msgid "Modification Time"
 msgstr "Änderung der Zeit"
 
-#: ui/image/image_details_qt.py:352
+#: ui/image/media_details.py:353
 msgid "Positive"
 msgstr "Positiv"
 
-#: ui/image/image_details_qt.py:361
+#: ui/image/media_details.py:362
 msgid "Negative"
 msgstr "Negativ"
 
-#: ui/image/image_details_qt.py:370 utils/constants.py:46
-#: utils/constants.py:70
+#: ui/image/media_details.py:371 utils/constants.py:46 utils/constants.py:70
 msgid "Models"
 msgstr "Modelle"
 
-#: ui/image/image_details_qt.py:374
+#: ui/image/media_details.py:375
 msgid "LoRAs"
 msgstr "LoRA"
 
-#: ui/image/image_details_qt.py:379
+#: ui/image/media_details.py:380
 msgid "Copy Prompt"
 msgstr "Kopieraufforderung"
 
-#: ui/image/image_details_qt.py:380
+#: ui/image/media_details.py:381
 msgid "Copy Prompt No BREAK"
 msgstr "Kopieraufforderung Kein \"BREAK\""
 
-#: ui/image/image_details_qt.py:392
+#: ui/image/media_details.py:393
 msgid "Randomly Modify"
 msgstr "Zufälliges ändern"
 
-#: ui/image/image_details_qt.py:399 ui/image/image_details_qt.py:974
+#: ui/image/media_details.py:400 ui/image/media_details.py:976
 msgid "Change Aspect Ratio"
 msgstr "Ändern Sie das Aspektverhältnis"
 
-#: ui/image/image_details_qt.py:400
+#: ui/image/media_details.py:401
 msgid "Flip Aspect Ratio"
 msgstr "Spiegeln des Aspektverhältnisses"
 
-#: ui/image/image_details_qt.py:408
+#: ui/image/media_details.py:409
 msgid "Run OCR"
 msgstr "Führe OCR durch."
 
-#: ui/image/image_details_qt.py:416
+#: ui/image/media_details.py:417
 msgid "Image Generation"
 msgstr "Bilderzeugung"
 
-#: ui/image/image_details_qt.py:430
+#: ui/image/media_details.py:431
 msgid "Press Shift+I on a main app window to run this"
 msgstr ""
 "Drücken Sie Umschalt+I in einem Hauptanwendungsfenster, um dies auszuführen"
 
-#: ui/image/image_details_qt.py:438
+#: ui/image/media_details.py:439
 msgid "Tags"
 msgstr "Tags"
 
-#: ui/image/image_details_qt.py:446
+#: ui/image/media_details.py:447
 msgid "Update Tags"
 msgstr "Update-Tags"
 
-#: ui/image/image_details_qt.py:502 ui/image/image_details_qt.py:1173
+#: ui/image/media_details.py:504 ui/image/media_details.py:1175
 msgid "(Not available)"
 msgstr "(Nicht verfügbar)"
 
-#: ui/image/image_details_qt.py:504
+#: ui/image/media_details.py:506
 msgid "Unavailable"
 msgstr "Nicht verfügbar"
 
-#: ui/image/image_details_qt.py:507
+#: ui/image/media_details.py:509
 msgid ""
 "This media type is not enabled in configuration, or the path is invalid."
 msgstr ""
 "Dieser Medientyp ist in der Konfiguration nicht aktiviert oder der Pfad ist "
 "ungültig."
 
-#: ui/image/image_details_qt.py:531
+#: ui/image/media_details.py:533
 msgid "Video (ffprobe unavailable)"
 msgstr "Video (ffprobe nicht verfügbar)"
 
-#: ui/image/image_details_qt.py:548
+#: ui/image/media_details.py:550
 msgid "(Could not load video details)"
 msgstr "(Könnte die Video-details nicht laden)"
 
-#: ui/image/image_details_qt.py:730
+#: ui/image/media_details.py:732
 msgid "No prompt found"
 msgstr "Keine Eingabeaufforderung gefunden"
 
-#: ui/image/image_details_qt.py:737
+#: ui/image/media_details.py:739
 msgid "Copied prompt without BREAK"
 msgstr "Kopierte Aufforderung ohne \"BREAK\""
 
-#: ui/image/image_details_qt.py:756
+#: ui/image/media_details.py:758
 msgid "No files found in current directory"
 msgstr "Keine Dateien im aktuellen Verzeichnis gefunden"
 
-#: ui/image/image_details_qt.py:761
+#: ui/image/media_details.py:763
 msgid "No files available"
 msgstr "Keine Dateien verfügbar"
 
-#: ui/image/image_details_qt.py:786
+#: ui/image/media_details.py:788
 msgid "Copied prompt from {0}"
 msgstr "Kopierte Eingabeaufforderung aus {0}"
 
-#: ui/image/image_details_qt.py:793
+#: ui/image/media_details.py:795
 msgid "No files with prompts found in current directory"
 msgstr ""
 "Keine Dateien mit Eingabeaufforderungen im aktuellen Verzeichnis gefunden"
 
-#: ui/image/image_details_qt.py:840 ui/image/image_details_qt.py:1027
+#: ui/image/media_details.py:842 ui/image/media_details.py:1029
 msgid "Rotated image right"
 msgstr "Gedrehtes Bild rechts"
 
-#: ui/image/image_details_qt.py:840 ui/image/image_details_qt.py:1027
+#: ui/image/media_details.py:842 ui/image/media_details.py:1029
 msgid "Rotated image left"
 msgstr "Gedrehtes Bild links"
 
-#: ui/image/image_details_qt.py:849 ui/image/image_details_qt.py:1035
+#: ui/image/media_details.py:851 ui/image/media_details.py:1037
 msgid "Cropped image"
 msgstr "Bild beschnitten"
 
-#: ui/image/image_details_qt.py:856 ui/image/image_details_qt.py:1040
+#: ui/image/media_details.py:858 ui/image/media_details.py:1042
 msgid "No crops found"
 msgstr "Keine Bildausschnitte gefunden"
 
-#: ui/image/image_details_qt.py:860 ui/image/image_details_qt.py:1047
+#: ui/image/media_details.py:862 ui/image/media_details.py:1049
 msgid "Enhanced image"
 msgstr "Bild verbessert"
 
-#: ui/image/image_details_qt.py:864 ui/image/image_details_qt.py:1056
+#: ui/image/media_details.py:866 ui/image/media_details.py:1058
 msgid "Randomly cropped image"
 msgstr "Zufällig beschnittenes Bild"
 
-#: ui/image/image_details_qt.py:878 ui/image/image_details_qt.py:1064
+#: ui/image/media_details.py:880 ui/image/media_details.py:1066
 msgid "Randomly modified image"
 msgstr "Zufällig modifiziertes Bild"
 
-#: ui/image/image_details_qt.py:886 ui/image/image_details_qt.py:1069
+#: ui/image/media_details.py:888 ui/image/media_details.py:1071
 msgid "No new image created"
 msgstr "Es wurde kein neues Bild erstellt"
 
-#: ui/image/image_details_qt.py:893
+#: ui/image/media_details.py:895
 msgid "Confirm Vertical Flip"
 msgstr "Vertikale Spiegelung bestätigen"
 
-#: ui/image/image_details_qt.py:895
+#: ui/image/media_details.py:897
 msgid ""
 "Are you sure you want to flip this image vertically? This is an uncommon "
 "operation and may have been clicked by accident."
@@ -4528,111 +4679,111 @@ msgstr ""
 "Möchten Sie dieses Bild wirklich vertikal spiegeln? Dies ist eine "
 "ungewöhnliche Aktion, die möglicherweise versehentlich ausgelöst wurde."
 
-#: ui/image/image_details_qt.py:905 ui/image/image_details_qt.py:1073
+#: ui/image/media_details.py:907 ui/image/media_details.py:1075
 msgid "Flipped image"
 msgstr "Umgekehrtes Bild"
 
-#: ui/image/image_details_qt.py:938
+#: ui/image/media_details.py:940
 msgid "Please enter a target ratio"
 msgstr "Geben Sie bitte das Zielverhältnis ein"
 
-#: ui/image/image_details_qt.py:948
+#: ui/image/media_details.py:950
 msgid "Changed image aspect ratio"
 msgstr "Änderung des Bildverhältnisses"
 
-#: ui/image/image_details_qt.py:953
+#: ui/image/media_details.py:955
 msgid "Error changing image aspect ratio"
 msgstr "Fehler beim Ändern des Bildverhältnisses"
 
-#: ui/image/image_details_qt.py:958 ui/image/image_details_qt.py:965
+#: ui/image/media_details.py:960 ui/image/media_details.py:967
 msgid "Aspect ratio changes are only available for images"
 msgstr "Aspektverhältnisänderungen sind nur für Bilder verfügbar"
 
-#: ui/image/image_details_qt.py:979
+#: ui/image/media_details.py:981
 msgid "Current ratio: {0}"
 msgstr "Zinsmaß: {0}"
 
-#: ui/image/image_details_qt.py:981
+#: ui/image/media_details.py:983
 msgid "Target ratio (e.g. 16:9 or 1.777):"
 msgstr "Zielverhältnis (z.B. 16:9 oder 1,777):"
 
-#: ui/image/image_details_qt.py:1008 ui/image/image_details_qt.py:1080
+#: ui/image/media_details.py:1010 ui/image/media_details.py:1082
 msgid "Copied image without EXIF data"
 msgstr "Kopiertes Bild ohne EXIF-Daten"
 
-#: ui/image/image_details_qt.py:1013 ui/image/image_details_qt.py:1086
+#: ui/image/media_details.py:1015 ui/image/media_details.py:1088
 msgid "Error copying image without EXIF"
 msgstr "Fehler beim Kopieren des Bildes ohne EXIF"
 
-#: ui/image/image_details_qt.py:1018 ui/image/image_details_qt.py:1091
+#: ui/image/media_details.py:1020 ui/image/media_details.py:1093
 msgid "Converted image to JPG"
 msgstr "Bild wurde zu JPG konvertiert"
 
-#: ui/image/image_details_qt.py:1021 ui/image/image_details_qt.py:1094
+#: ui/image/media_details.py:1023 ui/image/media_details.py:1096
 msgid "Error converting image to JPG"
 msgstr "Fehler beim Konvertieren des Bildes zu JPG"
 
-#: ui/image/image_details_qt.py:1100
+#: ui/image/media_details.py:1102
 msgid "Metadata is not available for this path"
 msgstr "Für diesen Pfad sind keine Metadaten verfügbar"
 
-#: ui/image/image_details_qt.py:1105
+#: ui/image/media_details.py:1107
 msgid "ffprobe not found on PATH"
 msgstr "ffprobe wurde im PATH nicht gefunden"
 
-#: ui/image/image_details_qt.py:1113 ui/image/image_details_qt.py:1120
+#: ui/image/media_details.py:1115 ui/image/media_details.py:1122
 msgid "No metadata found"
 msgstr "Keine Metadaten gefunden"
 
-#: ui/image/image_details_qt.py:1140
+#: ui/image/media_details.py:1142
 msgid "OCR is only available for images"
 msgstr "Die OCR ist nur für Bilder verfügbar."
 
-#: ui/image/image_details_qt.py:1143
+#: ui/image/media_details.py:1145
 msgid "Surya OCR is not installed"
 msgstr "Surya OCR ist nicht installiert"
 
-#: ui/image/image_details_qt.py:1148
+#: ui/image/media_details.py:1150
 msgid "No text found in image"
 msgstr "Kein Text im Bild gefunden"
 
-#: ui/image/image_details_qt.py:1155
+#: ui/image/media_details.py:1157
 msgid "OCR failed: "
 msgstr "OCR fehlgeschlagen: "
 
-#: ui/image/image_details_qt.py:1175
+#: ui/image/media_details.py:1177
 msgid "(Related image lookup is not available for video)"
 msgstr "(Die Suche nach ähnlichen Bildern ist für Videos nicht verfügbar)"
 
-#: ui/image/image_details_qt.py:1185 ui/image/image_details_qt.py:1265
+#: ui/image/media_details.py:1187 ui/image/media_details.py:1267
 msgid " (Exact Match Not Found)"
 msgstr " (Genaue Übereinstimmung nicht gefunden)"
 
-#: ui/image/image_details_qt.py:1187 ui/image/image_details_qt.py:1262
+#: ui/image/media_details.py:1189 ui/image/media_details.py:1264
 msgid "(No related image found)"
 msgstr "(Kein zugehöriges Bild gefunden)"
 
-#: ui/image/image_details_qt.py:1191
+#: ui/image/media_details.py:1193
 msgid "Related image is not available for this path"
 msgstr "Für diesen Pfad ist kein zugehöriges Bild verfügbar"
 
-#: ui/image/image_details_qt.py:1194
+#: ui/image/media_details.py:1196
 msgid "Related image is not available for video files"
 msgstr "Für Videodateien ist kein zugehöriges Bild verfügbar"
 
-#: ui/image/image_details_qt.py:1376 ui/image/image_details_qt.py:1385
+#: ui/image/media_details.py:1401 ui/image/media_details.py:1410
 msgid "{0} downstream image(s) found."
 msgstr "{0} nachgeschaltete(s) Bild(er) gefunden."
 
-#: ui/image/image_details_qt.py:1379
+#: ui/image/media_details.py:1404
 msgid "{0} (cached) downstream image(s) found."
 msgstr "{0} (zwischengespeicherte) nachgelagerte Bilder gefunden."
 
-#: ui/image/image_details_qt.py:1389
+#: ui/image/media_details.py:1414
 msgid "No downstream related images found in"
 msgstr "Keine stromabwärts gerichteten Bilder im Verzeichnis gefunden:"
 
-#: ui/image/image_details_qt.py:1477
+#: ui/image/media_details.py:1502
 msgid "Updated tags for {0}"
 msgstr "Aktualisierte Tags für {0}"
 
@@ -4677,15 +4828,15 @@ msgstr "Kopiert OCR-Text in die Zwischenablage"
 msgid "Error copying OCR text: "
 msgstr "Fehler beim Kopieren des OCR-Textes: "
 
-#: ui/image/temp_image_window_qt.py:122
+#: ui/image/temp_media_window.py:125
 msgid "Open a new related image with Shift+R on main window"
 msgstr "Öffnen Sie ein neues zugehöriges Bild mit Shift+R im Hauptfenster"
 
-#: ui/image/temp_image_window_qt.py:218
+#: ui/image/temp_media_window.py:221
 msgid "Open in Full Window"
 msgstr "Öffnen in Vollbildschirm"
 
-#: ui/image/temp_image_window_qt.py:229
+#: ui/image/temp_media_window.py:232
 msgid "Copy File Path"
 msgstr "Dateipfad kopieren"
 
@@ -4905,143 +5056,143 @@ msgstr "Letzte Einstellungen"
 msgid "Revert to Simple Generation"
 msgstr "Zur einfacher Generierung revidieren"
 
-#: utils/constants.py:383
+#: utils/constants.py:388
 msgid "Image"
 msgstr "Bild"
 
-#: utils/constants.py:385
+#: utils/constants.py:390
 msgid "GIF"
 msgstr "GIF"
 
-#: utils/constants.py:389
+#: utils/constants.py:394
 msgid "PDF"
 msgstr "PDF"
 
-#: utils/constants.py:391
+#: utils/constants.py:396
 msgid "SVG"
 msgstr "SVG"
 
-#: utils/constants.py:393
+#: utils/constants.py:398
 msgid "HTML"
 msgstr "HTML"
 
-#: utils/constants.py:395
+#: utils/constants.py:400
 msgid "Unconfigured"
 msgstr "Nicht konfiguriert"
 
-#: utils/constants.py:440
+#: utils/constants.py:445
 msgid "Moved files"
 msgstr "Dateien verschoben"
 
-#: utils/constants.py:442
+#: utils/constants.py:447
 msgid "Copied files"
 msgstr "Dateien kopierten"
 
-#: utils/constants.py:444
+#: utils/constants.py:449
 msgid "Removed files"
 msgstr "Dateien entfernen"
 
-#: utils/constants.py:446
+#: utils/constants.py:451
 msgid "Marked files"
 msgstr "Markierte Dateien"
 
-#: utils/constants.py:448
+#: utils/constants.py:453
 msgid "Unmarked files"
 msgstr "Unmarkierte Dateien"
 
-#: utils/constants.py:450
+#: utils/constants.py:455
 msgid "Searched files"
 msgstr "Durchsuchte Dateien"
 
-#: utils/constants.py:452
+#: utils/constants.py:457
 msgid "Compared files"
 msgstr "Verglich Dateien"
 
-#: utils/constants.py:454
+#: utils/constants.py:459
 msgid "Generated images"
 msgstr "Erstellte Bilder"
 
-#: utils/constants.py:456
+#: utils/constants.py:461
 msgid "Changed directory"
 msgstr "Geändertes Verzeichnis"
 
-#: utils/constants.py:458
+#: utils/constants.py:463
 msgid "System"
 msgstr "System"
 
-#: utils/constants.py:470
+#: utils/constants.py:475
 msgid "Classifier Action"
 msgstr "Klassifikator-Aktion"
 
-#: utils/constants.py:472
+#: utils/constants.py:477
 msgid "Prevalidation"
 msgstr "Vorvalidierung"
 
-#: utils/constants.py:516
+#: utils/constants.py:521
 msgid "Hide"
 msgstr "Verstecken"
 
-#: utils/constants.py:518
+#: utils/constants.py:523
 msgid "Notify"
 msgstr "Benachrichtigen"
 
-#: utils/constants.py:520
+#: utils/constants.py:525
 msgid "Skip"
 msgstr "Überspringen"
 
-#: utils/constants.py:528
+#: utils/constants.py:533
 msgid "Add Mark"
 msgstr "Markierung hinzufügen"
 
-#: utils/constants.py:569
+#: utils/constants.py:574
 msgid "Start Application"
 msgstr "Anwendung starten"
 
-#: utils/constants.py:570
+#: utils/constants.py:575
 msgid "Run Compares"
 msgstr "Vergleiche ausführen"
 
-#: utils/constants.py:571
+#: utils/constants.py:576
 msgid "Run Search"
 msgstr "Suche ausführen"
 
-#: utils/constants.py:572
+#: utils/constants.py:577
 msgid "Run Search Preset"
 msgstr "Suchvoreinstellung ausführen"
 
-#: utils/constants.py:574
+#: utils/constants.py:579
 msgid "View Recent Directories"
 msgstr "Aktuelle Verzeichnisse anzeigen"
 
-#: utils/constants.py:575
+#: utils/constants.py:580
 msgid "View File Actions"
 msgstr "Datei-Aktionen anzeigen"
 
-#: utils/constants.py:576
+#: utils/constants.py:581
 msgid "Run File Actions"
 msgstr "Datei-Aktionen ausführen"
 
-#: utils/constants.py:577
+#: utils/constants.py:582
 msgid "Edit Prevalidations"
 msgstr "Prävalidierungen bearbeiten"
 
-#: utils/constants.py:578
+#: utils/constants.py:583
 msgid "Run Prevalidations"
 msgstr "Prävalidierungen durchführen"
 
-#: utils/constants.py:580
+#: utils/constants.py:585
 msgid "Run RefacDir"
 msgstr "RefacDir ausführen"
 
-#: utils/constants.py:581
+#: utils/constants.py:586
 msgid "Delete Media"
 msgstr "Medien löschen"
 
-#: utils/constants.py:583
+#: utils/constants.py:588
 msgid "Set Hotkey Actions"
 msgstr "Hotkey-Aktionen festlegen"
 
-#: utils/constants.py:584
+#: utils/constants.py:589
 msgid "Access Password Administration"
 msgstr "Zugang Kennwortverwaltung"
 
@@ -5049,153 +5200,587 @@ msgstr "Zugang Kennwortverwaltung"
 msgid " etc."
 msgstr " usw."
 
-#: ui/app_window/context_menu_builder.py:137
-msgid "Disable Prevalidations"
-msgstr "Vorabprüfungen deaktivieren"
+#: compare/classifier_action.py:1029
+msgid "pseudo-static dynamic media"
+msgstr "pseudo-statische dynamische Medien"
 
-#: ui/app_window/context_menu_builder.py:142
-msgid "Run Prevalidations on Directory"
-msgstr "Vorabprüfungen für das Verzeichnis durchführen"
-
-#: ui/app_window/file_ops_controller.py:289
-#: ui/app_window/file_ops_controller.py:296
-msgid "Move Files"
-msgstr "Dateien verschieben"
-
-#: ui/app_window/file_ops_controller.py:303
-msgid "Select target directory for directory contents"
-msgstr "Wählen Sie das Zielverzeichnis für den Verzeichnisinhalt aus"
-
-#: ui/app_window/file_ops_controller.py:337
-msgid "Directory {0} contents moved to {1} and directory deleted."
+#: compare/compare_wrapper.py:220
+msgid "Skipped %s media."
 msgstr ""
-"Der Inhalt des Verzeichnisses {0} wurde nach {1} verschoben und das "
-"Verzeichnis gelöscht."
 
-#: ui/app_window/file_ops_controller.py:349
-msgid "Moving directory contents: {0}"
-msgstr "Verzeichnisinhalte verschieben: {0}"
-
-#: ui/app_window/media_frame.py:863
-msgid "Audio: "
-msgstr "Audio: "
-
-#: ui/compare/classifier_management_window_qt.py:218
-msgid "Leave blank to auto-route by image-classifier selected category."
+#: compare/compare_wrapper.py:226
+msgid "No Unrelated Media"
 msgstr ""
-"Lassen Sie das Feld leer, um die automatische Zuordnung anhand der vom "
-"Bildklassifikator ausgewählten Kategorie vorzunehmen."
 
-#: ui/compare/hf_model_manager_window_qt.py:107
+#: compare/compare_wrapper.py:226
+msgid "No unrelated media found."
+msgstr ""
+
+#: compare/compare_wrapper.py:333
 msgid ""
-"Optional. PyTorch: width and height for the internal resize (defaults to "
-"224x224 when left blank). HDF5 (.h5): the loaded model defines its own input"
-" size; this value is stored in config but is not used when loading."
+"Gathering media data... setup may take a while depending on number of files "
+"involved."
 msgstr ""
-"Optional. PyTorch: Breite und Höhe für die interne Größenanpassung "
-"(Standardwert ist 224x224, wenn das Feld leer gelassen wird). HDF5 (.h5): "
-"Das geladene Modell definiert seine eigene Eingabegröße; dieser Wert wird in"
-" der Konfiguration gespeichert, beim Laden jedoch nicht verwendet."
+"Mediendaten werden abgerufen... Die Einrichtung kann je nach Anzahl der "
+"Dateien eine Weile dauern."
 
-#: ui/compare/hf_model_manager_window_qt.py:112
-msgid "Input shape (WxH)"
-msgstr "Eingabeformat (BxH)"
-
-#: ui/compare/hf_model_manager_window_qt.py:118
-msgid "224, 224"
-msgstr "224, 224"
-
-#: ui/compare/hf_model_manager_window_qt.py:310
-msgid "Invalid input shape"
-msgstr "Ungültiger Eingabestring"
-
-#: ui/compare/hf_model_manager_window_qt.py:311
-msgid "Use two positive integers, for example 224, 224 or 384x384."
-msgstr ""
-"Verwenden Sie zwei positive Ganzzahlen, beispielsweise 224, 224 oder "
-"384×384."
-
-#: ui/compare/prevalidations_tab_qt.py:363
+#: compare/compare_wrapper.py:356
 msgid ""
-"When checked, the clear button evicts only the cached results\n"
-"for the current base directory — prevalidation rules are kept."
+"Search mode detected, please confirm switch to group mode before run. Group "
+"mode will take longer as all media in the base directory are compared."
 msgstr ""
-"Wenn diese Option aktiviert ist, löscht die Schaltfläche „Löschen“ nur die zwischengespeicherten Ergebnisse\n"
-"für das aktuelle Basisverzeichnis – die Vorvalidierungsregeln bleiben erhalten."
+"Es wurde der Suchmodus erkannt. Bitte bestätigen Sie vor dem Start den "
+"Wechsel in den Gruppenmodus. Der Gruppenmodus dauert länger, da alle Medien "
+"im Basisverzeichnis verglichen werden."
 
-#: ui/compare/prevalidations_tab_qt.py:843
-#: ui/compare/prevalidations_tab_qt.py:851
-msgid "current dir"
-msgstr "aktueller Ordner"
+#: compare/compare_wrapper.py:363
+msgid "Gathering media data for comparison"
+msgstr ""
 
-#: ui/compare/prevalidations_tab_qt.py:844
-msgid "Only: {0}"
-msgstr "Nur: {0}"
+#: compare/compare_wrapper.py:401
+msgid "Searching media..."
+msgstr ""
 
-#: ui/compare/prevalidations_tab_qt.py:847
-#: ui/compare/prevalidations_tab_qt.py:853
-msgid "Clear results ({0})"
-msgstr "Ergebnisse löschen ({0})"
+#: compare/compare_wrapper.py:421
+msgid "%s possibly related media found."
+msgstr ""
 
-#: ui/files/directory_notes_window_qt.py:107
-#: ui/files/directory_notes_window_qt.py:434
-msgid "Generate File List"
-msgstr "Generiere Dateiliste"
+#: compare/compare_wrapper.py:429
+msgid "Running media comparisons..."
+msgstr ""
 
-#: ui/files/directory_notes_window_qt.py:108
-msgid "Set as Runtime Marks"
-msgstr "Aktivieren Sie als Laufzeitmarkierungen"
-
-#: ui/files/directory_notes_window_qt.py:428
-#: ui/files/directory_notes_window_qt.py:458
-msgid "No Marked Files"
-msgstr "Keine markierten Dateien"
-
-#: ui/files/directory_notes_window_qt.py:428
-msgid "There are no marked files to export."
-msgstr "Es gibt keine markierten Dateien zum Exportieren."
-
-#: ui/files/directory_notes_window_qt.py:442
-msgid "File list ({0} entries) saved to: {1}"
-msgstr "Dateiliste ({0} Einträge) gespeichert unter: {1}"
-
-#: ui/files/directory_notes_window_qt.py:449
-msgid "Failed to generate file list: {0}"
-msgstr "Fehler beim Generieren der Dateiliste: {0}"
-
-#: ui/files/directory_notes_window_qt.py:458
-msgid "There are no marked files to set as marks."
-msgstr "Es gibt keine markierten Dateien, um als Markierungen zu setzen."
-
-#: ui/files/directory_notes_window_qt.py:466
-msgid "Replace Existing Marks?"
-msgstr "Vorhandene Markierungen ersetzen?"
-
-#: ui/files/directory_notes_window_qt.py:467
+#: compare/compare_wrapper.py:530
 msgid ""
-"There are already {0} runtime mark(s). Replace them with the {1} directory-"
-"note mark(s)?"
+"There are no more media groups remaining for this directory and current "
+"filter settings."
 msgstr ""
-"Es gibt bereits {0} Laufzeitmarkierungen. Sollen diese durch die {1} "
-"Verzeichnis-Notizmarkierungen ersetzt werden?"
+"Für dieses Verzeichnis und die aktuellen Filtereinstellungen sind keine "
+"Mediengruppen mehr vorhanden."
 
-#: ui/files/directory_notes_window_qt.py:477
-msgid "{0} runtime marks set from directory notes"
+#: ui/help_and_config_qt.py:75
+msgid "Search current media in new window"
+msgstr "Aktuelle Medien in einem neuen Fenster suchen"
+
+#: ui/help_and_config_qt.py:101
+msgid "Go to first sorted media"
 msgstr ""
-"{0} Laufzeitmarkierungen, die anhand der Verzeichnisnotizen gesetzt wurden"
 
-#: ui/files/directory_notes_window_qt.py:484
-msgid "Clear Directory Note Marks?"
-msgstr "Löschen Sie die Verzeichnis-Hinweismarkierungen?"
+#: ui/help_and_config_qt.py:102
+msgid "Go to last sorted media"
+msgstr ""
 
-#: ui/files/directory_notes_window_qt.py:485
+#: ui/help_and_config_qt.py:103
+msgid "Show previous/next media"
+msgstr ""
+
+#: ui/help_and_config_qt.py:104
+msgid "Page through media"
+msgstr ""
+
+#: ui/help_and_config_qt.py:105
+msgid "Search current media in current window"
+msgstr ""
+
+#: ui/help_and_config_qt.py:106
+msgid "Clear all hidden media"
+msgstr ""
+
+#: ui/help_and_config_qt.py:108
+msgid "Show media details"
+msgstr ""
+
+#: ui/help_and_config_qt.py:109
+msgid "Delete media (or marked file group if marks window selected)"
+msgstr ""
+"Medien löschen (oder markierte Dateigruppe, falls das Markierungsfenster "
+"ausgewählt ist)"
+
+#: ui/help_and_config_qt.py:116
+msgid "View last moved media mark"
+msgstr "Markierung für zuletzt verschobene Medien anzeigen"
+
+#: ui/help_and_config_qt.py:117
+msgid "View last system-moved media"
+msgstr "Zuletzt vom System verschobene Medien anzeigen"
+
+#: ui/help_and_config_qt.py:119
+msgid "Add or remove a mark for current media"
+msgstr ""
+
+#: ui/help_and_config_qt.py:128
+msgid "Hide current media"
+msgstr ""
+
+#: ui/help_and_config_qt.py:140
+msgid "Move Marks Window Shortcuts"
+msgstr "Tastenkombinationen für das Fenster „Markierungen verschieben“"
+
+#: ui/help_and_config_qt.py:143
 msgid ""
-"If you plan to move these files, the saved paths will become stale.\n"
-"Clear the directory note marks now?"
+"These shortcuts apply when the Move Marks dialog has keyboard focus (Ctrl+M "
+"full window, or Ctrl+K minimal). They take priority over the same keys in "
+"the main window while this dialog is active."
 msgstr ""
-"Wenn Sie diese Dateien verschieben möchten, werden die gespeicherten Pfade ungültig.\n"
-"Möchten Sie die Verzeichnisvermerke jetzt löschen?"
+"Diese Tastenkombinationen gelten, wenn der Dialog „Markierungen verschieben“"
+" den Tastaturfokus hat (Strg+M für das Vollbildfenster oder Strg+K für das "
+"Minimalfenster). Sie haben Vorrang vor den entsprechenden Tasten im "
+"Hauptfenster, solange dieser Dialog aktiv ist."
 
-#: ui/files/directory_notes_window_qt.py:491
-msgid "Directory note marks cleared."
-msgstr "Verzeichnis-Notenzeichen gelöscht."
+#: ui/help_and_config_qt.py:160
+msgid "Close Move Marks window"
+msgstr ""
+
+#: ui/help_and_config_qt.py:161
+msgid ""
+"Move marked files to inferred target (filtered row, filter text, or last "
+"used)"
+msgstr ""
+
+#: ui/help_and_config_qt.py:162
+msgid "Copy marked files instead of move"
+msgstr ""
+
+#: ui/help_and_config_qt.py:163
+msgid "Choose destination folder, then move or copy"
+msgstr ""
+
+#: ui/help_and_config_qt.py:164
+msgid "Move or copy using the penultimate marks action target"
+msgstr ""
+
+#: ui/help_and_config_qt.py:165 ui/help_and_config_qt.py:174
+msgid "Delete all marked files"
+msgstr ""
+
+#: ui/help_and_config_qt.py:166
+msgid "Arm permanent mark target (next Move/Copy sets the permanent action)"
+msgstr ""
+"Das Ziel der permanenten Markierung aktivieren (der nächste Befehl "
+"„Verschieben“ oder „Kopieren“ legt die permanente Aktion fest)"
+
+#: ui/help_and_config_qt.py:167
+msgid "Sort filtered target directories by CLIP embedding (GUI mode only)"
+msgstr ""
+
+#: ui/help_and_config_qt.py:168
+msgid "Open hotkey actions configuration (password)"
+msgstr ""
+
+#: ui/help_and_config_qt.py:169
+msgid "Rotate the filtered target list in chunks"
+msgstr ""
+
+#: ui/help_and_config_qt.py:170
+msgid "Rotate the filtered target list one row (GUI updates the list)"
+msgstr ""
+
+#: ui/help_and_config_qt.py:171
+msgid "Remove last character from target name filter"
+msgstr ""
+
+#: ui/help_and_config_qt.py:172
+msgid "Letter keys"
+msgstr ""
+
+#: ui/help_and_config_qt.py:172
+msgid "Filter target directories by name (both window modes)"
+msgstr ""
+
+#: ui/help_and_config_qt.py:173
+msgid "Test marked files in directory (use Ctrl/Alt/Shift for variants)"
+msgstr ""
+"Die markierten Dateien im Verzeichnis testen (für Varianten "
+"Strg/Alt/Umschalt verwenden)"
+
+#: ui/help_and_config_qt.py:255
+msgid "Slideshow video sec (0=interval; >0=max; <0=full clip/VLC)"
+msgstr ""
+"Dauer der Diashow in Sekunden (0 = Intervall; >0 = maximal; <0 = gesamter "
+"Clip/VLC)"
+
+#: ui/help_and_config_qt.py:259
+msgid "Slideshow GIF/WebP sec (0=interval; >0=max; <0=one full loop)"
+msgstr ""
+"Diashow GIF/WebP Sek. (0 = Intervall; >0 = max.; <0 = eine vollständige "
+"Schleife)"
+
+#: ui/help_and_config_qt.py:263
+msgid ""
+"Slideshow PDF pages (0=interval; N>0=N×interval; N<0=file page "
+"count×interval)"
+msgstr ""
+"PDF-Seiten in der Diashow (0 = Intervall; N > 0 = N × Intervall; N < 0 = "
+"Seitenanzahl der Datei × Intervall)"
+
+#: ui/app_window/app_window.py:659
+msgid "Set media comparison directory"
+msgstr ""
+
+#: ui/app_window/app_window.py:675
+msgid ""
+"Path is not an existing directory:\n"
+"{0}"
+msgstr ""
+
+#: ui/app_window/app_window.py:1164
+msgid "Masonry view is only available in browse mode."
+msgstr ""
+
+#: ui/app_window/app_window.py:1177
+msgid "Masonry view"
+msgstr ""
+
+#: ui/app_window/app_window.py:1182
+msgid "Single view"
+msgstr ""
+
+#: ui/app_window/context_menu_builder.py:152
+msgid "Show Source Media"
+msgstr ""
+
+#: ui/app_window/context_menu_builder.py:156
+msgid "Find Related Media"
+msgstr ""
+
+#: ui/app_window/context_menu_builder.py:160
+msgid "Set Marks from Downstream Related Media"
+msgstr ""
+
+#: ui/app_window/context_menu_builder.py:170
+msgid "Set Current Media as Search Target"
+msgstr ""
+
+#: ui/app_window/context_menu_builder.py:174
+msgid "Add Current Media to Negative Search"
+msgstr ""
+
+#: ui/app_window/context_menu_builder.py:224
+msgid "Randomize filenames"
+msgstr ""
+
+#: ui/app_window/file_ops_controller.py:143
+msgid "Invalid action, search media not found"
+msgstr ""
+
+#: ui/app_window/file_ops_controller.py:367
+msgid ""
+"Hid current media.\n"
+"To unhide, press Shift+B."
+msgstr ""
+
+#: ui/app_window/file_ops_controller.py:373
+msgid "Cleared all hidden media."
+msgstr ""
+
+#: ui/app_window/file_ops_controller.py:662
+msgid "Moved search media to "
+msgstr ""
+
+#: ui/app_window/file_ops_controller.py:901
+msgid "No valid base directory for randomize filenames"
+msgstr ""
+
+#: ui/app_window/file_ops_controller.py:907
+msgid ""
+"Randomize filenames script not found:\n"
+"{0}"
+msgstr ""
+
+#: ui/app_window/file_ops_controller.py:914
+msgid "Dry run"
+msgstr ""
+
+#: ui/app_window/file_ops_controller.py:915
+msgid "Execute"
+msgstr ""
+
+#: ui/app_window/file_ops_controller.py:917
+msgid "Randomize Filenames"
+msgstr ""
+
+#: ui/app_window/file_ops_controller.py:919
+msgid ""
+"Randomize media filenames under the entire base directory tree.\n"
+"\n"
+"{0}\n"
+"\n"
+"Log file:\n"
+"{1}\n"
+"\n"
+"Dry run — plan renames only; no files are changed.\n"
+"Execute — apply renames and update the mapping cache (irreversible)."
+msgstr ""
+"Dateinamen von Mediendateien im gesamten Basisverzeichnisbaum randomisieren.\n"
+"\n"
+"{0}\n"
+"\n"
+"Protokolldatei:\n"
+"{1}\n"
+"\n"
+"Trockenlauf – nur Umbenennungen planen; es werden keine Dateien geändert.\n"
+"Ausführen – Umbenennungen anwenden und den Zuordnungs-Cache aktualisieren (unumkehrbar)."
+
+#: ui/app_window/file_ops_controller.py:938
+msgid "Confirm Randomize Filenames — Execute"
+msgstr ""
+
+#: ui/app_window/file_ops_controller.py:940
+msgid ""
+"This will rename media files on disk under:\n"
+"\n"
+"{0}\n"
+"\n"
+"Output log:\n"
+"{1}\n"
+"\n"
+"This cannot be undone from Weidr. Proceed?"
+msgstr ""
+"Dadurch werden die Mediendateien auf der Festplatte unter folgendem Pfad umbenannt:\n"
+"\n"
+"{0}\n"
+"\n"
+"Ausgabeprotokoll:\n"
+"{1}\n"
+"\n"
+"Dieser Vorgang kann in Weidr nicht rückgängig gemacht werden. Möchten Sie fortfahren?"
+
+#: ui/app_window/file_ops_controller.py:973
+msgid "Failed to start randomize filenames: {0}"
+msgstr ""
+
+#: ui/app_window/file_ops_controller.py:981
+msgid "Randomizing filenames under {0} — see {1}"
+msgstr ""
+
+#: ui/app_window/file_ops_controller.py:985
+msgid "Randomize filenames dry run started for {0} — see {1}"
+msgstr ""
+
+#: ui/app_window/media_frame.py:773
+msgid "Animated media format is not supported for playback: "
+msgstr ""
+
+#: ui/app_window/media_navigator.py:462
+msgid "Slideshow for new media started"
+msgstr ""
+
+#: ui/app_window/notification_controller.py:289
+msgid "No media files found"
+msgstr ""
+
+#: ui/app_window/notification_controller.py:291
+msgid "1 media file found"
+msgstr ""
+
+#: ui/app_window/notification_controller.py:293
+msgid "{0} media files found"
+msgstr ""
+
+#: ui/app_window/search_controller.py:127
+#: ui/app_window/search_controller.py:153
+msgid "No media file selected."
+msgstr ""
+
+#: ui/app_window/search_controller.py:191
+msgid "Select media file"
+msgstr ""
+
+#: ui/app_window/search_controller.py:193
+msgid "Media files"
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:97
+msgid "Switch between light and dark theme."
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:106
+msgid "Set the base directory to browse or run comparisons on."
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:120
+msgid "Open and edit notes associated with the current directory."
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:162
+msgid "Media resize to full window"
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:182
+msgid ""
+"Set a media file to search for similar media.\n"
+"Uses embedding similarity to find visually similar media."
+msgstr ""
+"Wählen Sie eine Mediendatei aus, um nach ähnlichen Medien zu suchen.\n"
+"Es wird die Ähnlichkeit der eingebetteten Daten verwendet, um visuell ähnliche Medien zu finden."
+
+#: ui/app_window/sidebar_panel.py:187
+msgid "Search media path..."
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:200
+msgid ""
+"Set a media file to search away from — results will exclude media similar to"
+" this."
+msgstr ""
+"Legen Sie eine Mediendatei fest, nach der nicht gesucht werden soll – "
+"ähnliche Medien werden dann aus den Ergebnissen ausgeschlossen."
+
+#: ui/app_window/sidebar_panel.py:203
+msgid "Negative search media path..."
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:216
+msgid ""
+"Positive text: Find media similar to this text.\n"
+"Negative text: Exclude media similar to this text.\n"
+"Both use embedding similarity matching."
+msgstr ""
+"Positiver Text: Medien finden, die diesem Text ähnlich sind.\n"
+"Negativer Text: Medien ausschließen, die diesem Text ähnlich sind.\n"
+"Beide verwenden einen Abgleich anhand der Einbettungsähnlichkeit."
+
+#: ui/app_window/sidebar_panel.py:239
+msgid "Compare tools"
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:247
+msgid ""
+"Configure rules for automatically copying or moving files\n"
+"based on classifier results."
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:256
+msgid "Manage HuggingFace models used for media embeddings and comparison."
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:269
+msgid "Configure settings for media comparison and duplicate detection."
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:280
+msgid "Run media compare"
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:285
+msgid ""
+"Run embedding-based similarity comparison on all media in the directory."
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:293
+msgid "Find duplicate or near-duplicate media in the directory."
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:296
+msgid "Media details"
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:301
+msgid "Show detailed metadata and information about the current media file."
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:306
+msgid "Search current media"
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:311
+msgid ""
+"Search for media similar to the currently displayed media.\n"
+"Uses embedding similarity matching."
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:324
+msgid ""
+"Open the folder containing the current file in the system file manager."
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:327
+msgid "Copy media path"
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:332
+msgid "Copy the full file path of the current media file to the clipboard."
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:340
+msgid ""
+"Copy the filename (without directory path) of the current file to the "
+"clipboard."
+msgstr ""
+
+#: ui/app_window/sidebar_panel.py:348
+msgid "Permanently delete the current media file from disk."
+msgstr ""
+
+#: ui/app_window/window_launcher.py:269
+msgid "(Open this media as part of a directory to see index details.)"
+msgstr ""
+
+#: ui/app_window/window_launcher.py:348
+msgid "No media selected"
+msgstr ""
+
+#: ui/app_window/window_launcher.py:349
+msgid "No media file was selected for comparison"
+msgstr ""
+
+#: ui/app_window/window_launcher.py:422
+msgid ""
+"All prevalidations in this directory have finished.\n"
+"Files checked: {0} — outcomes: {1} — moves: {2} — copies: {3} — deletes: {4} — errors: {5}"
+msgstr ""
+
+#: ui/compare/classifier_management_window_qt.py:189
+msgid ""
+"Match pseudo-static dynamic media (video/GIF/PDF with no meaningful "
+"variation)"
+msgstr ""
+
+#: ui/compare/directory_profile_window_qt.py:283
+msgid "Remove Directories"
+msgstr ""
+
+#: ui/compare/directory_profile_window_qt.py:284
+msgid "Remove {0} selected directories from this profile?"
+msgstr ""
+
+#: ui/compare/prevalidations_tab_qt.py:359
+msgid "Clear prevalidation cache"
+msgstr ""
+
+#: ui/compare/prevalidations_tab_qt.py:361
+msgid ""
+"Discard cached prevalidation outcomes (this session and on disk).\n"
+"Rules, profiles, and lookaheads are not changed; media will be re-evaluated."
+msgstr ""
+"Zwischengespeicherte Ergebnisse der Vorabprüfung verwerfen (in dieser Sitzung und auf der Festplatte).\n"
+"Regeln, Profile und Lookaheads bleiben unverändert; Medien werden neu bewertet."
+
+#: ui/compare/prevalidations_tab_qt.py:880
+msgid "Confirm Clear Prevalidations"
+msgstr ""
+
+#: ui/compare/prevalidations_tab_qt.py:882
+msgid ""
+"Remove all prevalidation rules? Cached outcomes for this session will also be cleared.\n"
+"\n"
+"This cannot be undone."
+msgstr ""
+"Alle Vorvalidierungsregeln entfernen? Die zwischengespeicherten Ergebnisse für diese Sitzung werden ebenfalls gelöscht.\n"
+"\n"
+"Dieser Vorgang kann nicht rückgängig gemacht werden."
+
+#: ui/compare/prevalidations_tab_qt.py:931
+msgid ""
+"Prevalidation cache stats: ~{memory} — {items} items — {directories} "
+"directories"
+msgstr ""
+"Statistik zum Vorvalidierungs-Cache: ~{memory} – {items} Elemente – "
+"{directories} Verzeichnisse"
+
+#: ui/files/file_actions_window_qt.py:102
+msgid "Search Media"
+msgstr ""
+
+#: ui/files/file_actions_window_qt.py:405
+msgid "Error opening media: "
+msgstr ""

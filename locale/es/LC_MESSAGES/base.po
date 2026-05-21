@@ -2,8 +2,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: 1.0\n"
-"POT-Creation-Date: 2026-05-20 22:11-0400\n"
-"PO-Revision-Date: 2026-05-20 22:11-0400\n"
+"POT-Creation-Date: 2026-05-20 22:44-0400\n"
+"PO-Revision-Date: 2026-05-20 22:44-0400\n"
 "Last-Translator: Translator Name <translator@example.com>\n"
 "Language-Team: es Team <<EMAIL>>\n"
 "Language: es\n"
@@ -5372,6 +5372,8 @@ msgstr ""
 #: ui/help_and_config_qt.py:167
 msgid "Sort filtered target directories by CLIP embedding (GUI mode only)"
 msgstr ""
+"Ordenar los directorios de destino filtrados según la incrustación CLIP "
+"(solo en modo GUI)"
 
 #: ui/help_and_config_qt.py:168
 msgid "Open hotkey actions configuration (password)"
@@ -5455,7 +5457,7 @@ msgstr ""
 
 #: ui/app_window/context_menu_builder.py:160
 msgid "Set Marks from Downstream Related Media"
-msgstr ""
+msgstr "Establecer marcas de medios relacionados posteriores"
 
 #: ui/app_window/context_menu_builder.py:170
 msgid "Set Current Media as Search Target"
@@ -5485,17 +5487,21 @@ msgstr ""
 
 #: ui/app_window/file_ops_controller.py:662
 msgid "Moved search media to "
-msgstr ""
+msgstr "He trasladado los archivos multimedia de búsqueda a: "
 
 #: ui/app_window/file_ops_controller.py:901
 msgid "No valid base directory for randomize filenames"
 msgstr ""
+"No hay un directorio base válido para aleatorizar los nombres de los "
+"archivos"
 
 #: ui/app_window/file_ops_controller.py:907
 msgid ""
 "Randomize filenames script not found:\n"
 "{0}"
 msgstr ""
+"No se ha encontrado el script para aleatorizar nombres de archivo:\n"
+"{0}"
 
 #: ui/app_window/file_ops_controller.py:914
 msgid "Dry run"
@@ -5533,7 +5539,7 @@ msgstr ""
 
 #: ui/app_window/file_ops_controller.py:938
 msgid "Confirm Randomize Filenames — Execute"
-msgstr ""
+msgstr "Confirmar aleatorización de nombres de archivo — Ejecutar"
 
 #: ui/app_window/file_ops_controller.py:940
 msgid ""
@@ -5558,18 +5564,21 @@ msgstr ""
 #: ui/app_window/file_ops_controller.py:973
 msgid "Failed to start randomize filenames: {0}"
 msgstr ""
+"No se ha podido iniciar la aleatorización de los nombres de archivo: {0}"
 
 #: ui/app_window/file_ops_controller.py:981
 msgid "Randomizing filenames under {0} — see {1}"
-msgstr ""
+msgstr "Aleatorización de nombres de archivo en {0} — véase {1}"
 
 #: ui/app_window/file_ops_controller.py:985
 msgid "Randomize filenames dry run started for {0} — see {1}"
 msgstr ""
+"Se ha iniciado una prueba de simulación de aleatorización de nombres de "
+"archivo para {0}; consulte {1}"
 
 #: ui/app_window/media_frame.py:773
 msgid "Animated media format is not supported for playback: "
-msgstr ""
+msgstr " "
 
 #: ui/app_window/media_navigator.py:462
 msgid "Slideshow for new media started"
@@ -5659,6 +5668,8 @@ msgid ""
 "Configure rules for automatically copying or moving files\n"
 "based on classifier results."
 msgstr ""
+"Configurar reglas para copiar o mover archivos automáticamente\n"
+"en función de los resultados del clasificador."
 
 #: ui/app_window/sidebar_panel.py:256
 msgid "Manage HuggingFace models used for media embeddings and comparison."
@@ -5676,6 +5687,8 @@ msgstr ""
 msgid ""
 "Run embedding-based similarity comparison on all media in the directory."
 msgstr ""
+"Realiza una comparación de similitud de incrustaciones en todos los archivos"
+" multimedia del directorio."
 
 #: ui/app_window/sidebar_panel.py:293
 msgid "Find duplicate or near-duplicate media in the directory."
@@ -5698,6 +5711,8 @@ msgid ""
 "Search for media similar to the currently displayed media.\n"
 "Uses embedding similarity matching."
 msgstr ""
+"Busca archivos multimedia similares a los que se muestran actualmente.\n"
+"Utiliza la comparación de similitudes de incrustación."
 
 #: ui/app_window/sidebar_panel.py:324
 msgid ""
@@ -5739,12 +5754,16 @@ msgid ""
 "All prevalidations in this directory have finished.\n"
 "Files checked: {0} — outcomes: {1} — moves: {2} — copies: {3} — deletes: {4} — errors: {5}"
 msgstr ""
+"Se han completado todas las comprobaciones previas de este directorio.\n"
+"Archivos comprobados: {0} — resultados: {1} — desplazamientos: {2} — copias: {3} — eliminaciones: {4} — errores: {5}"
 
 #: ui/compare/classifier_management_window_qt.py:189
 msgid ""
 "Match pseudo-static dynamic media (video/GIF/PDF with no meaningful "
 "variation)"
 msgstr ""
+"Adapta los contenidos multimedia dinámicos pseudoestáticos (vídeos, GIF o "
+"PDF sin variaciones significativas)"
 
 #: ui/compare/directory_profile_window_qt.py:283
 msgid "Remove Directories"
@@ -5756,7 +5775,7 @@ msgstr ""
 
 #: ui/compare/prevalidations_tab_qt.py:359
 msgid "Clear prevalidation cache"
-msgstr ""
+msgstr "Borrar la caché de prevalidación"
 
 #: ui/compare/prevalidations_tab_qt.py:361
 msgid ""
@@ -5768,7 +5787,7 @@ msgstr ""
 
 #: ui/compare/prevalidations_tab_qt.py:880
 msgid "Confirm Clear Prevalidations"
-msgstr ""
+msgstr "Confirmar para borrar las validaciones previas"
 
 #: ui/compare/prevalidations_tab_qt.py:882
 msgid ""
@@ -5790,8 +5809,8 @@ msgstr ""
 
 #: ui/files/file_actions_window_qt.py:102
 msgid "Search Media"
-msgstr ""
+msgstr "Buscar los medios"
 
 #: ui/files/file_actions_window_qt.py:405
 msgid "Error opening media: "
-msgstr ""
+msgstr " "

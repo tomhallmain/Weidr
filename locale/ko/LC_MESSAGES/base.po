@@ -2,8 +2,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: 1.0\n"
-"POT-Creation-Date: 2026-05-20 22:11-0400\n"
-"PO-Revision-Date: 2026-05-20 22:11-0400\n"
+"POT-Creation-Date: 2026-05-20 22:44-0400\n"
+"PO-Revision-Date: 2026-05-20 22:44-0400\n"
 "Last-Translator: Translator Name <translator@example.com>\n"
 "Language-Team: ko Team <<EMAIL>>\n"
 "Language: ko\n"
@@ -5205,7 +5205,7 @@ msgstr "영구 마크 대상 활성화 (다음 이동/복사 시 영구 동작�
 
 #: ui/help_and_config_qt.py:167
 msgid "Sort filtered target directories by CLIP embedding (GUI mode only)"
-msgstr ""
+msgstr "필터링된 대상 디렉터리를 CLIP 임베딩 순으로 정렬 (GUI 모드에서만 가능)"
 
 #: ui/help_and_config_qt.py:168
 msgid "Open hotkey actions configuration (password)"
@@ -5281,7 +5281,7 @@ msgstr ""
 
 #: ui/app_window/context_menu_builder.py:160
 msgid "Set Marks from Downstream Related Media"
-msgstr ""
+msgstr "하류 관련 미디어에서 표시 설정"
 
 #: ui/app_window/context_menu_builder.py:170
 msgid "Set Current Media as Search Target"
@@ -5311,17 +5311,19 @@ msgstr ""
 
 #: ui/app_window/file_ops_controller.py:662
 msgid "Moved search media to "
-msgstr ""
+msgstr "검색 미디어를 다음 위치로 이동했습니다: "
 
 #: ui/app_window/file_ops_controller.py:901
 msgid "No valid base directory for randomize filenames"
-msgstr ""
+msgstr "파일 이름을 무작위로 지정할 유효한 기본 디렉터리가 없습니다"
 
 #: ui/app_window/file_ops_controller.py:907
 msgid ""
 "Randomize filenames script not found:\n"
 "{0}"
 msgstr ""
+"파일 이름 무작위 지정 스크립트를 찾을 수 없습니다:\n"
+"{0}"
 
 #: ui/app_window/file_ops_controller.py:914
 msgid "Dry run"
@@ -5359,7 +5361,7 @@ msgstr ""
 
 #: ui/app_window/file_ops_controller.py:938
 msgid "Confirm Randomize Filenames — Execute"
-msgstr ""
+msgstr "파일 이름 무작위 지정 확인 — 실행"
 
 #: ui/app_window/file_ops_controller.py:940
 msgid ""
@@ -5383,19 +5385,19 @@ msgstr ""
 
 #: ui/app_window/file_ops_controller.py:973
 msgid "Failed to start randomize filenames: {0}"
-msgstr ""
+msgstr "파일 이름 무작위 지정 시작에 실패했습니다: {0}"
 
 #: ui/app_window/file_ops_controller.py:981
 msgid "Randomizing filenames under {0} — see {1}"
-msgstr ""
+msgstr "{0}에서 파일 이름 무작위 지정 — {1} 참조"
 
 #: ui/app_window/file_ops_controller.py:985
 msgid "Randomize filenames dry run started for {0} — see {1}"
-msgstr ""
+msgstr "{0}에 대한 파일 이름 무작위 지정 시뮬레이션이 시작되었습니다 — {1}을(를) 참조하세요"
 
 #: ui/app_window/media_frame.py:773
 msgid "Animated media format is not supported for playback: "
-msgstr ""
+msgstr " "
 
 #: ui/app_window/media_navigator.py:462
 msgid "Slideshow for new media started"
@@ -5482,7 +5484,7 @@ msgstr ""
 msgid ""
 "Configure rules for automatically copying or moving files\n"
 "based on classifier results."
-msgstr ""
+msgstr "분류기 결과에 따라 파일을 자동으로 복사하거나 이동하도록 규칙을 설정합니다."
 
 #: ui/app_window/sidebar_panel.py:256
 msgid "Manage HuggingFace models used for media embeddings and comparison."
@@ -5499,7 +5501,7 @@ msgstr ""
 #: ui/app_window/sidebar_panel.py:285
 msgid ""
 "Run embedding-based similarity comparison on all media in the directory."
-msgstr ""
+msgstr "디렉토리 내의 모든 미디어에 대해 임베딩 유사도 비교를 실행합니다."
 
 #: ui/app_window/sidebar_panel.py:293
 msgid "Find duplicate or near-duplicate media in the directory."
@@ -5522,6 +5524,8 @@ msgid ""
 "Search for media similar to the currently displayed media.\n"
 "Uses embedding similarity matching."
 msgstr ""
+"현재 표시된 미디어와 유사한 미디어를 검색합니다.\n"
+"임베딩 유사도 매칭 방식을 사용합니다."
 
 #: ui/app_window/sidebar_panel.py:324
 msgid ""
@@ -5563,12 +5567,14 @@ msgid ""
 "All prevalidations in this directory have finished.\n"
 "Files checked: {0} — outcomes: {1} — moves: {2} — copies: {3} — deletes: {4} — errors: {5}"
 msgstr ""
+"이 디렉터리의 모든 사전 검증이 완료되었습니다.\n"
+"검증된 파일: {0} — 결과: {1} — 이동: {2} — 복사: {3} — 삭제: {4} — 오류: {5}"
 
 #: ui/compare/classifier_management_window_qt.py:189
 msgid ""
 "Match pseudo-static dynamic media (video/GIF/PDF with no meaningful "
 "variation)"
-msgstr ""
+msgstr "의미 있는 변형이 없는 동영상/GIF/PDF와 같은 준정적 동적 미디어를 매칭"
 
 #: ui/compare/directory_profile_window_qt.py:283
 msgid "Remove Directories"
@@ -5580,7 +5586,7 @@ msgstr ""
 
 #: ui/compare/prevalidations_tab_qt.py:359
 msgid "Clear prevalidation cache"
-msgstr ""
+msgstr "사전 검증 캐시 지우기"
 
 #: ui/compare/prevalidations_tab_qt.py:361
 msgid ""
@@ -5592,7 +5598,7 @@ msgstr ""
 
 #: ui/compare/prevalidations_tab_qt.py:880
 msgid "Confirm Clear Prevalidations"
-msgstr ""
+msgstr "사전 유효성 검사 지우기를 확인합니다"
 
 #: ui/compare/prevalidations_tab_qt.py:882
 msgid ""
@@ -5612,8 +5618,8 @@ msgstr "사전 검증 캐시 통계: ~{memory} — {items}개 항목 — {direct
 
 #: ui/files/file_actions_window_qt.py:102
 msgid "Search Media"
-msgstr ""
+msgstr "미디어 검색"
 
 #: ui/files/file_actions_window_qt.py:405
 msgid "Error opening media: "
-msgstr ""
+msgstr " "

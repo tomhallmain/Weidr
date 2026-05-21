@@ -2,8 +2,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: 1.0\n"
-"POT-Creation-Date: 2026-05-20 22:11-0400\n"
-"PO-Revision-Date: 2026-05-20 22:11-0400\n"
+"POT-Creation-Date: 2026-05-20 22:44-0400\n"
+"PO-Revision-Date: 2026-05-20 22:44-0400\n"
 "Last-Translator: Translator Name <translator@example.com>\n"
 "Language-Team: ja Team <<EMAIL>>\n"
 "Language: ja\n"
@@ -5195,7 +5195,7 @@ msgstr "永続マークの対象を有効にする（次の「移動」または
 
 #: ui/help_and_config_qt.py:167
 msgid "Sort filtered target directories by CLIP embedding (GUI mode only)"
-msgstr ""
+msgstr "フィルタリングされたターゲットディレクトリをCLIP埋め込みスコアで並べ替える（GUIモードのみ）"
 
 #: ui/help_and_config_qt.py:168
 msgid "Open hotkey actions configuration (password)"
@@ -5271,7 +5271,7 @@ msgstr ""
 
 #: ui/app_window/context_menu_builder.py:160
 msgid "Set Marks from Downstream Related Media"
-msgstr ""
+msgstr "下流の関連メディアからマークを設定する"
 
 #: ui/app_window/context_menu_builder.py:170
 msgid "Set Current Media as Search Target"
@@ -5301,17 +5301,19 @@ msgstr ""
 
 #: ui/app_window/file_ops_controller.py:662
 msgid "Moved search media to "
-msgstr ""
+msgstr "検索メディアを次の場所に移動しました： "
 
 #: ui/app_window/file_ops_controller.py:901
 msgid "No valid base directory for randomize filenames"
-msgstr ""
+msgstr "ファイル名のランダム化を行うための有効なベースディレクトリがありません"
 
 #: ui/app_window/file_ops_controller.py:907
 msgid ""
 "Randomize filenames script not found:\n"
 "{0}"
 msgstr ""
+"ファイル名をランダム化するスクリプトが見つかりません：\n"
+"{0}"
 
 #: ui/app_window/file_ops_controller.py:914
 msgid "Dry run"
@@ -5349,7 +5351,7 @@ msgstr ""
 
 #: ui/app_window/file_ops_controller.py:938
 msgid "Confirm Randomize Filenames — Execute"
-msgstr ""
+msgstr "「ファイル名のランダム化」を確認 — 実行"
 
 #: ui/app_window/file_ops_controller.py:940
 msgid ""
@@ -5373,19 +5375,19 @@ msgstr ""
 
 #: ui/app_window/file_ops_controller.py:973
 msgid "Failed to start randomize filenames: {0}"
-msgstr ""
+msgstr "ファイル名のランダム化を開始できませんでした: {0}"
 
 #: ui/app_window/file_ops_controller.py:981
 msgid "Randomizing filenames under {0} — see {1}"
-msgstr ""
+msgstr "{0} でのファイル名のランダム化 — {1} を参照"
 
 #: ui/app_window/file_ops_controller.py:985
 msgid "Randomize filenames dry run started for {0} — see {1}"
-msgstr ""
+msgstr "{0} のファイル名のランダム化のテスト実行が開始されました — {1} をご覧ください"
 
 #: ui/app_window/media_frame.py:773
 msgid "Animated media format is not supported for playback: "
-msgstr ""
+msgstr " "
 
 #: ui/app_window/media_navigator.py:462
 msgid "Slideshow for new media started"
@@ -5472,7 +5474,7 @@ msgstr ""
 msgid ""
 "Configure rules for automatically copying or moving files\n"
 "based on classifier results."
-msgstr ""
+msgstr "分類結果に基づいて、ファイルを自動的にコピーまたは移動するルールを設定します。"
 
 #: ui/app_window/sidebar_panel.py:256
 msgid "Manage HuggingFace models used for media embeddings and comparison."
@@ -5489,7 +5491,7 @@ msgstr ""
 #: ui/app_window/sidebar_panel.py:285
 msgid ""
 "Run embedding-based similarity comparison on all media in the directory."
-msgstr ""
+msgstr "ディレクトリ内のすべてのメディアに対して、埋め込みの類似性比較を実行します。"
 
 #: ui/app_window/sidebar_panel.py:293
 msgid "Find duplicate or near-duplicate media in the directory."
@@ -5512,6 +5514,8 @@ msgid ""
 "Search for media similar to the currently displayed media.\n"
 "Uses embedding similarity matching."
 msgstr ""
+"現在表示されているメディアと類似したメディアを検索します。\n"
+"埋め込み類似度マッチングを使用します。"
 
 #: ui/app_window/sidebar_panel.py:324
 msgid ""
@@ -5553,12 +5557,14 @@ msgid ""
 "All prevalidations in this directory have finished.\n"
 "Files checked: {0} — outcomes: {1} — moves: {2} — copies: {3} — deletes: {4} — errors: {5}"
 msgstr ""
+"このディレクトリ内のすべての事前検証が完了しました。\n"
+"チェックしたファイル数: {0} — 結果: {1} — 移動: {2} — コピー: {3} — 削除: {4} — エラー: {5}"
 
 #: ui/compare/classifier_management_window_qt.py:189
 msgid ""
 "Match pseudo-static dynamic media (video/GIF/PDF with no meaningful "
 "variation)"
-msgstr ""
+msgstr "実質的に静的な動的メディア（実質的な変化のない動画・GIF・PDF）を照合する"
 
 #: ui/compare/directory_profile_window_qt.py:283
 msgid "Remove Directories"
@@ -5570,7 +5576,7 @@ msgstr ""
 
 #: ui/compare/prevalidations_tab_qt.py:359
 msgid "Clear prevalidation cache"
-msgstr ""
+msgstr "事前検証キャッシュをクリアする"
 
 #: ui/compare/prevalidations_tab_qt.py:361
 msgid ""
@@ -5582,7 +5588,7 @@ msgstr ""
 
 #: ui/compare/prevalidations_tab_qt.py:880
 msgid "Confirm Clear Prevalidations"
-msgstr ""
+msgstr "事前検証をクリアすることを確認する"
 
 #: ui/compare/prevalidations_tab_qt.py:882
 msgid ""
@@ -5602,8 +5608,8 @@ msgstr "事前検証キャッシュの統計情報: ~{memory} — {items} アイ
 
 #: ui/files/file_actions_window_qt.py:102
 msgid "Search Media"
-msgstr ""
+msgstr "メディアを検索"
 
 #: ui/files/file_actions_window_qt.py:405
 msgid "Error opening media: "
-msgstr ""
+msgstr " "

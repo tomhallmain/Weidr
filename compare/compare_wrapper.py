@@ -110,16 +110,16 @@ class CompareWrapper:
             return False
 
         self._app_actions._set_toggled_view_matches()
-        prev_image = self._get_prev_file()
-        start_image = prev_image
-        # Skip images that should be skipped, but break if we've gone through all images
-        while self.skip_file(prev_image):
-            prev_image = self._get_prev_file()
-            if prev_image == start_image:
-                # We've gone through all images and they all need to be skipped (TODO: show an alert)
+        prev_file = self._get_prev_file()
+        start_file = prev_file
+        # Skip files that should be skipped, but break if we've gone through all files
+        while self.skip_file(prev_file):
+            prev_file = self._get_prev_file()
+            if prev_file == start_file:
+                # We've gone through all files and they all need to be skipped (TODO: show an alert)
                 break
         self._master.update()
-        self._app_actions.create_media(prev_image)
+        self._app_actions.create_media(prev_file)
         return True
 
     def show_next_media(self, show_alert=True):
@@ -131,27 +131,27 @@ class CompareWrapper:
             return False
 
         self._app_actions._set_toggled_view_matches()
-        next_image = self._get_next_file()
-        start_image = next_image
-        # Skip images that should be skipped, but break if we've gone through all images
-        while self.skip_file(next_image):
-            next_image = self._get_next_file()
-            if next_image == start_image:
-                # We've gone through all images and they all need to be skipped (TODO: show an alert)
+        next_file = self._get_next_file()
+        start_file = next_file
+        # Skip files that should be skipped, but break if we've gone through all files
+        while self.skip_file(next_file):
+            next_file = self._get_next_file()
+            if next_file == start_file:
+                # We've gone through all files and they all need to be skipped (TODO: show an alert)
                 break
         self._master.update()
-        self._app_actions.create_media(next_image)
+        self._app_actions.create_media(next_file)
         return True
 
-    def skip_file(self, image_path):
-        if image_path in self.hidden_media:
+    def skip_file(self, file_path):
+        if file_path in self.hidden_media:
             return True
         if config.enable_prevalidations:
-            if ClassifierActionsManager.is_dynamic_prevalidation_media(image_path):
-                prevalidation_action = self._run_dynamic_prevalidation_with_spinner(image_path)
+            if ClassifierActionsManager.is_dynamic_prevalidation_media(file_path):
+                prevalidation_action = self._run_dynamic_prevalidation_with_spinner(file_path)
             else:
                 prevalidation_action = ClassifierActionsManager.prevalidate_media(
-                    image_path,
+                    file_path,
                     self._app_actions.get_base_dir,
                     self._app_actions.hide_current_media,
                     self._app_actions.title_notify,
@@ -161,7 +161,7 @@ class CompareWrapper:
                 return prevalidation_action != ClassifierActionType.NOTIFY
         return False
 
-    def _run_dynamic_prevalidation_with_spinner(self, image_path):
+    def _run_dynamic_prevalidation_with_spinner(self, file_path):
         """
         Run prevalidation for dynamic media (video/GIF/PDF) on a worker QThread so
         the main-thread event loop keeps processing — allowing the spinner badge
@@ -186,7 +186,7 @@ class CompareWrapper:
         class _Worker(QThread):
             def run(self_inner):
                 result[0] = ClassifierActionsManager.prevalidate_media(
-                    image_path,
+                    file_path,
                     app_actions.get_base_dir,
                     app_actions.hide_current_media,
                     app_actions.title_notify,
@@ -205,25 +205,25 @@ class CompareWrapper:
         return result[0]
 
     def find_next_unrelated_file(self, file_browser, forward=True):
-        found_unrelated_image = False
-        previous_image = file_browser.current_file()
-        original_image = str(previous_image)
+        found_unrelated_file = False
+        previous_file = file_browser.current_file()
+        original_file = str(previous_file)
         skip_count = 0
-        if previous_image is None or len(previous_image) == 0:
+        if previous_file is None or len(previous_file) == 0:
             return
-        while not found_unrelated_image:
-            next_image = file_browser.next_file() if forward else file_browser.previous_file()
-            if (self.compare_mode == CompareMode.COLOR_MATCHING and not CompareColors.is_related(previous_image, next_image)) or \
-                    (self.compare_mode != CompareMode.COLOR_MATCHING and not CompareEmbeddingClip.is_related(previous_image, next_image)):
-                found_unrelated_image = True
-                self._app_actions.create_media(next_image)
-                self._app_actions.toast(_("Skipped %s images.").format(skip_count))
+        while not found_unrelated_file:
+            next_file = file_browser.next_file() if forward else file_browser.previous_file()
+            if (self.compare_mode == CompareMode.COLOR_MATCHING and not CompareColors.is_related(previous_file, next_file)) or \
+                    (self.compare_mode != CompareMode.COLOR_MATCHING and not CompareEmbeddingClip.is_related(previous_file, next_file)):
+                found_unrelated_file = True
+                self._app_actions.create_media(next_file)
+                self._app_actions.toast(_("Skipped %s files.").format(skip_count))
                 return
             skip_count += 1
-            previous_image = str(next_image)
-            if original_image == previous_image:
-                # Looped around and couldn't find an unrelated image
-                self._app_actions.alert(_("No Unrelated Images"), _("No unrelated images found."))
+            previous_file = str(next_file)
+            if original_file == previous_file:
+                # Looped around and couldn't find an unrelated file
+                self._app_actions.alert(_("No Unrelated Files"), _("No unrelated files found."))
                 break
 
     def show_prev_group(self, event=None, file_browser=None) -> None:
@@ -330,7 +330,7 @@ class CompareWrapper:
 
         if self._requires_new_compare(args.base_dir):
             self._app_actions._set_label_state(Utils._wrap_text_to_fit_length(
-                _("Gathering image data... setup may take a while depending on number of files involved."), 30))
+                _("Gathering media data... setup may take a while depending on number of files involved."), 30))
             self.new_compare(args)
         else:
             assert self._compare is not None
@@ -353,14 +353,14 @@ class CompareWrapper:
         else:
             if args.mode == Mode.SEARCH:
                 res = self._app_actions.alert(_("Confirm group run"),
-                                 _("Search mode detected, please confirm switch to group mode before run. Group mode will take longer as all images in the base directory are compared."),
+                                 _("Search mode detected, please confirm switch to group mode before run. Group mode will take longer as all files in the base directory are compared."),
                                  kind="askokcancel")
                 if not res:
                     return
             self._app_actions.set_mode(Mode.GROUP, do_update=False)
 
         if get_new_data:
-            self._app_actions.toast(_("Gathering image data for comparison"))
+            self._app_actions.toast(_("Gathering media data for comparison"))
             self._compare.get_files()
             self._compare.get_data()
 
@@ -398,7 +398,7 @@ class CompareWrapper:
 
     def run_search(self) -> None:
         assert self._compare is not None
-        self._app_actions._set_label_state(Utils._wrap_text_to_fit_length(_("Searching images..."), 30))
+        self._app_actions._set_label_state(Utils._wrap_text_to_fit_length(_("Searching media..."), 30))
         self.files_grouped = self._compare.run_search()
         self.file_groups = deepcopy(self.files_grouped)
 
@@ -418,7 +418,7 @@ class CompareWrapper:
         self.match_index = 0
         self.has_media_matches = True
         self._app_actions._set_label_state(Utils._wrap_text_to_fit_length(
-            _("%s possibly related images found.").format(str(len(self.files_matched))), 30))
+            _("%s possibly related files found.").format(str(len(self.files_matched))), 30))
 
         self._app_actions._add_buttons_for_mode()
         self._app_actions.create_media(self.files_matched[self.match_index])
@@ -426,7 +426,7 @@ class CompareWrapper:
     def run_group(self, args=CompareArgs()) -> None:
         assert self._compare is not None
         self._app_actions._set_label_state(Utils._wrap_text_to_fit_length(
-            _("Running image comparisons..."), 30))
+            _("Running media comparisons..."), 30))
         self.files_grouped, self.file_groups = self._compare.run(store_checkpoints=args.store_checkpoints)
 
         if len(self.files_grouped) == 0:
@@ -493,7 +493,7 @@ class CompareWrapper:
 
     def _update_groups_for_removed_file(self, app_mode, group_index, match_index, set_group=True, show_next_media=None):
         '''
-        After a file has been removed, delete the cached image path for it and
+        After a file has been removed, delete the cached file path for it and
         remove the group if only one file remains in that group.
 
         NOTE: This would be more complex if there was not a guarantee groups are disjoint.
@@ -527,7 +527,7 @@ class CompareWrapper:
 
             if len(self.file_groups) == 0:
                 self._app_actions.alert(_("No More Groups"),
-                           _("There are no more image groups remaining for this directory and current filter settings."))
+                           _("There are no more media groups remaining for this directory and current filter settings."))
                 self.current_group_index = 0
                 self.files_grouped = {}
                 self.file_groups = {}

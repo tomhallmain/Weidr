@@ -44,7 +44,7 @@ from lib.multi_display_qt import SmartWindow
 from ui.app_style import AppStyle
 from ui.image.metadata_viewer_window_qt import MetadataViewerWindow
 from ui.image.ocr_text_window_qt import OCRTextWindow
-from ui.image.temp_image_window_qt import TempImageWindow
+from ui.image.temp_media_window import TempMediaWindow
 from utils.app_info_cache import app_info_cache
 from utils.config import config
 from utils.constants import ImageGenerationType
@@ -107,7 +107,7 @@ class MediaDetails(SmartWindow):
     """Image details / actions dialog."""
 
     # -- Class-level state -----------------------------------------
-    temp_media_canvas: Optional[TempImageWindow] = None
+    temp_media_canvas: Optional[TempMediaWindow] = None
     related_image_saved_node_id: str = "LoadImage"
     downstream_related_image_index: int = 0
     downstream_related_images_cache: dict = {}
@@ -830,7 +830,7 @@ class MediaDetails(SmartWindow):
             else:
                 MediaDetails.open_temp_image_canvas(
                     master=self._parent_ref,
-                    image_path=new_filepath,
+                    media_path=new_filepath,
                     app_actions=self._app_actions,
                 )
 
@@ -851,7 +851,7 @@ class MediaDetails(SmartWindow):
             self._app_actions.success(_("Cropped image"))
             MediaDetails.open_temp_image_canvas(
                 master=self._parent_ref,
-                image_path=saved_files[0],
+                media_path=saved_files[0],
                 app_actions=self._app_actions,
             )
         else:
@@ -881,7 +881,7 @@ class MediaDetails(SmartWindow):
             if master is not None:
                 MediaDetails.open_temp_image_canvas(
                     master=master,
-                    image_path=new_filepath,
+                    media_path=new_filepath,
                     app_actions=app_actions,
                 )
         else:
@@ -1268,25 +1268,25 @@ class MediaDetails(SmartWindow):
             return
         MediaDetails.open_temp_image_canvas(
             master=master,
-            image_path=related_image_path,
+            media_path=related_image_path,
             app_actions=app_actions,
         )
 
     @staticmethod
     def open_temp_image_canvas(
         master=None,
-        image_path=None,
+        media_path=None,
         app_actions=None,
         skip_get_window_check=False,
     ) -> None:
-        if image_path is None:
+        if media_path is None:
             return
-        base_dir = os.path.dirname(image_path)
+        base_dir = os.path.dirname(media_path)
         if not skip_get_window_check:
             if (
                 app_actions.get_window(
                     base_dir=base_dir,
-                    media_path=image_path,
+                    media_path=media_path,
                     refocus=True,
                     disallow_if_compare_state=True,
                     new_media=True,
@@ -1296,23 +1296,23 @@ class MediaDetails(SmartWindow):
                 return
         if MediaDetails.temp_media_canvas is None:
             MediaDetails.set_temp_media_canvas(
-                master, image_path, app_actions
+                master, media_path, app_actions
             )
         try:
-            MediaDetails.temp_media_canvas.create_image(image_path)
+            MediaDetails.temp_media_canvas.create_image(media_path)
         except Exception:
             # Re-create the canvas window if the old one was destroyed
             MediaDetails.set_temp_media_canvas(
-                master, image_path, app_actions
+                master, media_path, app_actions
             )
-            MediaDetails.temp_media_canvas.create_image(image_path)
+            MediaDetails.temp_media_canvas.create_image(media_path)
 
     @staticmethod
     def set_temp_media_canvas(
         master, media_path: str, app_actions
     ) -> None:
         width, height = MediaDetails._get_temp_canvas_dimensions(media_path)
-        canvas = TempImageWindow(
+        canvas = TempMediaWindow(
             parent=master,
             title=media_path,
             dimensions=f"{width}x{height}",
@@ -1325,7 +1325,7 @@ class MediaDetails(SmartWindow):
     def _get_temp_canvas_dimensions(
         media_path: str, max_width: int = 700
     ) -> tuple[int, int]:
-        """Return (width, height) for TempImageWindow sizing.
+        """Return (width, height) for TempMediaWindow canvas sizing.
 
         Tries QImageReader (fast, no external library) then PIL for static
         images.  Falls back to a sensible default for video, PDF, and other

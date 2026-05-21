@@ -238,7 +238,7 @@ class FavoritesWindow(SmartDialog):
         try:
             MediaDetails.open_temp_image_canvas(
                 master=self._app_master,
-                image_path=fav,
+                media_path=fav,
                 app_actions=self._app_actions,
             )
         except Exception as e:

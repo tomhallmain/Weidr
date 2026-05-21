@@ -193,7 +193,7 @@ class CompareColors(BaseCompare):
         logger.info(" CONFIGURATION SETTINGS:")
         logger.info(f" run search: {self.is_run_search}")
         if self.is_run_search:
-            logger.info(f" search_file_path: {self.search_file_path}")
+            logger.info(f" search_media_path: {self.search_media_path}")
         logger.info(f" comparison files base directory: {self.base_dir}")
         logger.info(f" compare faces: {self.compare_faces}")
         logger.info(f" use thumb: {self.use_thumb}")
@@ -353,40 +353,40 @@ class CompareColors(BaseCompare):
         self.compare_result.files_grouped = dict(
             sorted(files_grouped.items(), key=lambda item: item[1]))
         self.compare_result.finalize_search_result(
-            self.search_file_path, verbose=self.verbose, is_embedding=False,
+            self.search_media_path, verbose=self.verbose, is_embedding=False,
             threshold_duplicate=CompareColors.THRESHHOLD_POTENTIAL_DUPLICATE,
             threshold_related=CompareColors.THRESHHOLD_PROBABLE_MATCH)
         return {0: files_grouped}
 
-    def _run_search_on_path(self, search_file_path):
+    def _run_search_on_path(self, search_media_path):
         '''
         Prepare and begin a search for a provided image file path.
         '''
-        if (search_file_path is None or search_file_path == ""
-                or search_file_path == self.base_dir):
-            while search_file_path is None:
-                search_file_path = input(
+        if (search_media_path is None or search_media_path == ""
+                or search_media_path == self.base_dir):
+            while search_media_path is None:
+                search_media_path = input(
                     "\nEnter a new file path to search for similars "
                     + "(enter \"exit\" or press Ctrl-C to quit): \n\n  > ")
-                if search_file_path is not None and search_file_path == "exit":
+                if search_media_path is not None and search_media_path == "exit":
                     break
-                search_file_path = Utils.get_valid_file(
-                    self.base_dir, search_file_path)
-                if search_file_path is None:
+                search_media_path = Utils.get_valid_file(
+                    self.base_dir, search_media_path)
+                if search_media_path is None:
                     logger.error("Invalid filepath provided.")
                 else:
                     logger.info("")
 
         # Gather new image data if it was not in the initial list
 
-        if search_file_path not in self.compare_data.files_found:
+        if search_media_path not in self.compare_data.files_found:
             if self.verbose:
                 logger.info("Filepath not found in initial list - gathering new file data")
             try:
-                image = get_image_array(search_file_path)
+                image = get_image_array(search_media_path)
             except OSError as e:
                 if self.verbose:
-                    logger.error(f"{search_file_path} - {e}")
+                    logger.error(f"{search_media_path} - {e}")
                 raise AssertionError(
                     "Encountered an error accessing the provided file path in the file system.")
 
@@ -397,18 +397,18 @@ class CompareColors(BaseCompare):
                     logger.error(e)
                 raise AssertionError(
                     "Encountered an error gathering colors from the file provided.")
-            n_faces = self._get_faces_count(search_file_path)
+            n_faces = self._get_faces_count(search_media_path)
             self._file_colors = np.insert(self._file_colors, 0, [colors], 0)
             self._file_faces = np.insert(self._file_faces, 0, [n_faces], 0)
-            self.compare_data.files_found.insert(0, search_file_path)
+            self.compare_data.files_found.insert(0, search_media_path)
 
         files_grouped = self.find_similars_to_image(
-            search_file_path, self.compare_data.files_found.index(search_file_path))
-        search_file_path = None
+            search_media_path, self.compare_data.files_found.index(search_media_path))
+        search_media_path = None
         return files_grouped
 
     def run_search(self):
-        return self._run_search_on_path(self.search_file_path)
+        return self._run_search_on_path(self.search_media_path)
 
     def run_comparison(self, store_checkpoints=False):
         '''
@@ -587,7 +587,7 @@ if __name__ == "__main__":
     run_search = False
     overwrite = False
     search_file_index = None
-    search_file_path = None
+    search_media_path = None
     verbose = False
     compare_faces = True
     include_gifs = False
@@ -633,9 +633,9 @@ if __name__ == "__main__":
                     print("No change made.")
                     exit()
             elif o == "--search":
-                search_file_path = Utils.get_valid_file(base_dir, a)
+                search_media_path = Utils.get_valid_file(base_dir, a)
                 run_search = True
-                if search_file_path is None:
+                if search_media_path is None:
                     assert False, "Search file provided \"" + str(a) \
                         + "\" is invalid - please ensure \"dir\" is passed first" \
                         + " if not providing full file path."
@@ -652,7 +652,7 @@ if __name__ == "__main__":
             exit(1)
 
     compare = CompareColors(base_dir,
-                      search_file_path=search_file_path,
+                      search_media_path=search_media_path,
                       counter_limit=counter_limit,
                       use_thumb=use_thumb,
                       compare_faces=compare_faces,

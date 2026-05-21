@@ -3,7 +3,7 @@ SearchController -- search and comparison execution logic.
 
 Extracted from: set_search_for_media, set_search_for_text, set_search,
 run_compare, _debounced_run_compare, _run_with_progress, _run_compare,
-_validate_run, display_progress, get_search_file_path, get_compare_threshold,
+_validate_run, display_progress, get_search_media_path, get_compare_threshold,
 get_inclusion_pattern, set_current_media_run_search, _set_media_run_search,
 add_current_media_to_negative_search, negative_media_search,
 next_text_embedding_preset, run_image_generation,
@@ -120,7 +120,7 @@ class SearchController:
     @require_password(ProtectedActions.RUN_SEARCH)
     def set_search_for_media(self, event=None) -> None:
         """Set search mode to media search."""
-        media_path = self.get_search_file_path()
+        media_path = self.get_search_media_path()
         if media_path is None or media_path == "":
             if self._app.media_path is None:
                 self._app.notification_ctrl.handle_error(
@@ -146,7 +146,7 @@ class SearchController:
 
         Mirrors ``set_search_for_media`` behavior for the negative media input.
         """
-        media_path = self.get_negative_search_file_path()
+        media_path = self.get_negative_search_media_path()
         if media_path is None or media_path == "":
             if self._app.media_path is None:
                 self._app.notification_ctrl.handle_error(
@@ -162,8 +162,8 @@ class SearchController:
         Set the mode based on the result.
         """
         args = CompareArgs()
-        media_path = self.get_search_file_path()
-        negative_media_path = self.get_negative_search_file_path()
+        media_path = self.get_search_media_path()
+        negative_media_path = self.get_negative_search_media_path()
         search_text = self._sidebar.search_text_box.text()
         search_text_negative = self._sidebar.search_text_negative_box.text()
 
@@ -173,12 +173,12 @@ class SearchController:
             search_text_negative = None
         args.search_text = search_text
         args.search_text_negative = search_text_negative
-        args.negative_search_file_path = negative_media_path
+        args.negative_search_media_path = negative_media_path
 
         if (
             args.search_text is not None
             or args.search_text_negative is not None
-            or args.negative_search_file_path is not None
+            or args.negative_search_media_path is not None
         ):
             self._cm.validate_compare_mode(
                 CompareMode.text_search_modes(),
@@ -197,8 +197,8 @@ class SearchController:
             if media_path.startswith(self._app.get_base_dir()):
                 self._sidebar.search_media_path_box.setText(os.path.basename(media_path))
             self._app.search_dir = os.path.dirname(media_path)
-            args.search_file_path = media_path
-            self._cm.search_file_path = media_path
+            args.search_media_path = media_path
+            self._cm.search_media_path = media_path
             self._app.media_navigator.show_searched_media()
 
         if args.not_searching():
@@ -314,11 +314,11 @@ class SearchController:
     # ==================================================================
     # Search helpers
     # ==================================================================
-    def get_search_file_path(self) -> Optional[str]:
+    def get_search_media_path(self) -> Optional[str]:
         """Read the search media path from the sidebar entry."""
         media_path = self._sidebar.search_media_path_box.text().strip()
         if not media_path:
-            self._cm.search_file_path = None
+            self._cm.search_media_path = None
             return None
         search_file = Utils.get_valid_file(self._app.get_base_dir(), media_path)
         if search_file is None:
@@ -331,7 +331,7 @@ class SearchController:
                 raise AssertionError("Search file is not a valid file.")
         return search_file
 
-    def get_negative_search_file_path(self) -> Optional[str]:
+    def get_negative_search_media_path(self) -> Optional[str]:
         """Read the negative-search media path from the dedicated sidebar entry."""
         media_path = self._sidebar.search_media_negative_path_box.text().strip()
         if not media_path:

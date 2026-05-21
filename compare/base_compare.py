@@ -61,7 +61,7 @@ class BaseCompare:
         self.args = args
         self.files = []
         self.set_base_dir(self.args.base_dir)
-        self.set_search_file_path(self.args.search_file_path)
+        self.set_search_media_path(self.args.search_media_path)
         # Keep search-mode state centralized from full args (positive/negative
         # image and text inputs), not just positive search image path.
         self.sync_search_state()
@@ -185,13 +185,13 @@ class BaseCompare:
                 base_dir=base_dir, mode=self.args.compare_mode)
         self.compare_result = CompareResult(base_dir=base_dir)
 
-    def set_search_file_path(self, search_file_path):
+    def set_search_media_path(self, search_media_path):
         '''
         Set the search file path. If it is already in the found data, move the
         reference to it to the first index in the list.
         '''
-        self.search_file_path = search_file_path
-        self.args.search_file_path = search_file_path
+        self.search_media_path = search_media_path
+        self.args.search_media_path = search_media_path
         self.sync_search_state()
 
     def _has_search_inputs(self) -> bool:
@@ -205,10 +205,10 @@ class BaseCompare:
         return any(
             _non_empty(v)
             for v in (
-                self.args.search_file_path,
+                self.args.search_media_path,
                 self.args.search_text,
                 self.args.search_text_negative,
-                self.args.negative_search_file_path,
+                self.args.negative_search_media_path,
             )
         )
 
@@ -216,17 +216,17 @@ class BaseCompare:
         """
         Recompute and apply search-mode state from current ``self.args``.
         """
-        self.search_file_path = self.args.search_file_path
+        self.search_media_path = self.args.search_media_path
         self.is_run_search = self._has_search_inputs()
         if (
-            self.search_file_path is not None
+            self.search_media_path is not None
             and self.files is not None
             and self.is_run_search
         ):
-            if self.search_file_path in self.files:
-                self.files.remove(self.search_file_path)
+            if self.search_media_path in self.files:
+                self.files.remove(self.search_media_path)
             self.search_file_index = 0
-            self.files.insert(self.search_file_index, self.search_file_path)
+            self.files.insert(self.search_file_index, self.search_media_path)
 
     def get_files(self):
         '''
@@ -248,10 +248,10 @@ class BaseCompare:
             self.max_files_processed, 200)
 
         if self.is_run_search:
-            if self.search_file_path in self.files:
-                self.files.remove(self.search_file_path)
+            if self.search_media_path in self.files:
+                self.files.remove(self.search_media_path)
             self.search_file_index = 0
-            self.files.insert(self.search_file_index, self.search_file_path)
+            self.files.insert(self.search_file_index, self.search_media_path)
 
         if self.verbose:
             self.print_settings()

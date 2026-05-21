@@ -420,8 +420,8 @@ class SidebarPanel(QWidget):
 
         if mode == Mode.SEARCH:
             cm = self._app.compare_manager
-            if (cm.search_file_path
-                    and cm.search_file_path.strip() != ""
+            if (cm.search_media_path
+                    and cm.search_media_path.strip() != ""
                     and "toggle_image_view_btn" not in self._dynamic_buttons):
                 self.add_button(
                     "toggle_image_view_btn",

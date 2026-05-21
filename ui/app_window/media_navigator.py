@@ -76,14 +76,14 @@ class MediaNavigator:
         self._app.direction = Direction.BACKWARD
 
         if self._app.mode == Mode.BROWSE:
-            start_file = self._fb.current_file()
-            previous_file = self._fb.previous_file()
-            if self._app.media_path == previous_file:
+            start_media = self._fb.current_file()
+            previous_media = self._fb.previous_file()
+            if self._app.media_path == previous_media:
                 return True  # already at this file (refresh case)
-            while self._cm.skip_file(previous_file) and previous_file != start_file:
-                previous_file = self._fb.previous_file()
+            while self._cm.skip_media(previous_media) and previous_media != start_media:
+                previous_media = self._fb.previous_file()
             try:
-                self.create_media(previous_file)
+                self.create_media(previous_media)
                 return True
             except Exception as e:
                 self._app.notification_ctrl.handle_error(str(e), title="Exception")
@@ -96,14 +96,14 @@ class MediaNavigator:
         self._app.direction = Direction.FORWARD
 
         if self._app.mode == Mode.BROWSE:
-            start_file = self._fb.current_file()
-            next_file = self._fb.next_file()
-            if self._app.media_path == next_file:
+            start_media = self._fb.current_file()
+            next_media = self._fb.next_file()
+            if self._app.media_path == next_media:
                 return True  # already at this file (refresh case)
-            while self._cm.skip_file(next_file) and next_file != start_file:
-                next_file = self._fb.next_file()
+            while self._cm.skip_media(next_media) and next_media != start_media:
+                next_media = self._fb.next_file()
             try:
-                self.create_media(next_file)
+                self.create_media(next_media)
                 return True
             except Exception as e:
                 traceback.print_exc()
@@ -126,7 +126,7 @@ class MediaNavigator:
         from ui.files.marked_file_mover_qt import MarkedFiles
 
         if self._app.mode == Mode.BROWSE:
-            current_file = self.get_active_media_filepath()
+            current_media = self.get_active_media_filepath()
             if not self._fb.is_incremental_loading:
                 self._fb.refresh()
             elif not self._fb.has_files():
@@ -140,12 +140,12 @@ class MediaNavigator:
                         _("No files found for current browsing settings.") + recursive_str
                     )
                 return
-            if current_file is None:
+            if current_media is None:
                 if self._fb.has_files():
                     if self._fb.is_incremental_loading:
                         self.create_media(self._fb.get_files()[0])
-                        current_file = self.get_active_media_filepath()
-                        if current_file is None:
+                        current_media = self.get_active_media_filepath()
+                        if current_media is None:
                             self._app.notification_ctrl.toast(
                                 _("Directory is still loading; no files available yet.")
                             )
@@ -158,7 +158,7 @@ class MediaNavigator:
             try:
                 if last_file:
                     target = self._fb.last_file()
-                    while self._cm.skip_file(target) and target != current_file:
+                    while self._cm.skip_media(target) and target != current_media:
                         target = self._fb.previous_file()
                     self.create_media(target)
                     if (len(MarkedFiles.file_marks) == 1
@@ -167,7 +167,7 @@ class MediaNavigator:
                     self._app.direction = Direction.BACKWARD
                 else:
                     target = self._fb.next_file()
-                    while self._cm.skip_file(target) and target != current_file:
+                    while self._cm.skip_media(target) and target != current_media:
                         target = self._fb.next_file()
                     self.create_media(target)
             except Exception:
@@ -193,36 +193,36 @@ class MediaNavigator:
 
     def page_up(self, event=None) -> None:
         """Jump backward by a page of files."""
-        current_file = self.get_active_media_filepath()
+        current_media = self.get_active_media_filepath()
         if self._app.mode == Mode.BROWSE:
-            prev_file = self._fb.page_up()
+            prev_media = self._fb.page_up()
         else:
-            prev_file = self._cm.page_up()
+            prev_media = self._cm.page_up()
 
-        while self._cm.skip_file(prev_file) and prev_file != current_file:
+        while self._cm.skip_media(prev_media) and prev_media != current_media:
             if self._app.mode == Mode.BROWSE:
-                prev_file = self._fb.previous_file()
+                prev_media = self._fb.previous_file()
             else:
-                prev_file = self._cm._get_prev_file()
+                prev_media = self._cm._get_prev_media()
 
-        self.create_media(prev_file)
+        self.create_media(prev_media)
         self._app.direction = Direction.BACKWARD
 
     def page_down(self, event=None) -> None:
         """Jump forward by a page of files."""
-        current_file = self.get_active_media_filepath()
+        current_media = self.get_active_media_filepath()
         if self._app.mode == Mode.BROWSE:
-            next_file = self._fb.page_down()
+            next_media = self._fb.page_down()
         else:
-            next_file = self._cm.page_down()
+            next_media = self._cm.page_down()
 
-        while self._cm.skip_file(next_file) and next_file != current_file:
+        while self._cm.skip_media(next_media) and next_media != current_media:
             if self._app.mode == Mode.BROWSE:
-                next_file = self._fb.next_file()
+                next_media = self._fb.next_file()
             else:
-                next_file = self._cm._get_next_file()
+                next_media = self._cm._get_next_media()
 
-        self.create_media(next_file)
+        self.create_media(next_media)
         self._app.direction = Direction.FORWARD
 
     # ==================================================================
@@ -316,7 +316,7 @@ class MediaNavigator:
                     closest_sort_by=closest_sort_by,
                 )
                 if found_path:
-                    MediaDetails.open_temp_image_canvas(
+                    MediaDetails.open_temp_media_canvas(
                         master=self._app, media_path=found_path,
                         app_actions=self._app.app_actions, skip_get_window_check=True,
                     )
@@ -324,7 +324,7 @@ class MediaNavigator:
 
         # --- File is a valid path on disk → open in temp canvas ---
         if original_search_text_is_file:
-            MediaDetails.open_temp_image_canvas(
+            MediaDetails.open_temp_media_canvas(
                 master=self._app, media_path=original_search_text,
                 app_actions=self._app.app_actions, skip_get_window_check=True,
             )
@@ -409,7 +409,7 @@ class MediaNavigator:
 
     def show_searched_media(self) -> None:
         """Display the media file found by the last search."""
-        search_path = self._cm.search_file_path
+        search_path = self._cm.search_media_path
         if config.debug:
             logger.debug(f"Search file path: {search_path}")
         if search_path is not None and search_path.strip() != "":
@@ -520,7 +520,7 @@ class MediaNavigator:
             return self._fb.current_file()
 
         if self.is_toggled_search_media():
-            filepath = self._cm.search_file_path
+            filepath = self._cm.search_media_path
         else:
             filepath = self._cm.current_match()
 

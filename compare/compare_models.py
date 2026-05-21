@@ -92,18 +92,18 @@ class CompareModels(BaseCompare):
         self.groups_output_path = os.path.join(base_dir, CompareModels.GROUPS_OUTPUT_FILE)
         self.compare_data = CompareData(base_dir=base_dir, mode=CompareMode.MODELS)
 
-    def set_search_file_path(self, search_file_path):
+    def set_search_media_path(self, search_media_path):
         '''
         Set the search file path. If it is already in the found data, move the
         reference to it to the first index in the list.
         '''
-        self.search_file_path = search_file_path
-        self.is_run_search = search_file_path is not None
+        self.search_media_path = search_media_path
+        self.is_run_search = search_media_path is not None
         if self.is_run_search and self.files is not None:
-            if self.search_file_path in self.files:
-                self.files.remove(self.search_file_path)
+            if self.search_media_path in self.files:
+                self.files.remove(self.search_media_path)
             self.search_file_index = 0
-            self.files.insert(self.search_file_index, self.search_file_path)
+            self.files.insert(self.search_file_index, self.search_media_path)
 
     def get_files(self):
         '''
@@ -123,10 +123,10 @@ class CompareModels(BaseCompare):
         self.max_files_processed_even = Utils.round_up(self.max_files_processed, 200)
 
         if self.is_run_search:
-            if self.search_file_path in self.files:
-                self.files.remove(self.search_file_path)
+            if self.search_media_path in self.files:
+                self.files.remove(self.search_media_path)
             self.search_file_index = 0
-            self.files.insert(self.search_file_index, self.search_file_path)
+            self.files.insert(self.search_file_index, self.search_media_path)
 
         if self.verbose:
             self.print_settings()
@@ -136,7 +136,7 @@ class CompareModels(BaseCompare):
         logger.info(" CONFIGURATION SETTINGS:")
         logger.info(f" run search: {self.is_run_search}")
         if self.is_run_search:
-            logger.info(f" search_file_path: {self.search_file_path}")
+            logger.info(f" search_media_path: {self.search_media_path}")
         logger.info(f" comparison files base directory: {self.base_dir}")
         logger.info(f" max file process limit: {self.args.counter_limit}")
         logger.info(f" max files processable for base dir: {self.max_files_processed}")
@@ -236,7 +236,7 @@ class CompareModels(BaseCompare):
         self.compare_result.files_grouped = dict(
             sorted(files_grouped.items(), key=lambda item: item[1], reverse=True))
         self.compare_result.finalize_search_result(
-            self.search_file_path, verbose=self.verbose, is_embedding=False,
+            self.search_media_path, verbose=self.verbose, is_embedding=False,
             threshold_duplicate=self.threshold_match,
             threshold_related=self.threshold_match)
         return {0: files_grouped}
@@ -244,7 +244,7 @@ class CompareModels(BaseCompare):
     def search_multimodal(self):
         '''
         Search for images matching the provided model search.
-        Supports search via search_file_path (extract models from image) or search_text (model names).
+        Supports search via search_media_path (extract models from image) or search_text (model names).
         Empty search text searches for images with no models.
         '''
         files_grouped = {0: {}}
@@ -254,8 +254,8 @@ class CompareModels(BaseCompare):
         search_for_no_models = False
 
         # If a search image is provided, extract its models
-        if self.args.search_file_path is not None:
-            search_models, search_loras = extract_models_from_image(self.args.search_file_path)
+        if self.args.search_media_path is not None:
+            search_models, search_loras = extract_models_from_image(self.args.search_media_path)
 
         # If search text is provided and not empty, parse it as model names (comma-separated)
         if self.args.search_text is not None and self.args.search_text.strip() != "":
@@ -267,8 +267,8 @@ class CompareModels(BaseCompare):
         # If no models found (empty search text or search image had no models), search for images without models
         if not search_models and not search_loras:
             # Check if we have any search criteria at all
-            if self.args.search_file_path is None and (self.args.search_text is None or self.args.search_text.strip() == ""):
-                logger.error("No model search criteria provided. Use search_file_path or search_text with model names, or empty search_text to search for images without models.")
+            if self.args.search_media_path is None and (self.args.search_text is None or self.args.search_text.strip() == ""):
+                logger.error("No model search criteria provided. Use search_media_path or search_text with model names, or empty search_text to search for images without models.")
                 return files_grouped
             # User provided search criteria but it resulted in no models - search for images without models
             search_for_no_models = True
@@ -311,7 +311,7 @@ class CompareModels(BaseCompare):
         # Finalize
         self.compare_result.files_grouped = files_grouped[0]
         self.compare_result.finalize_search_result(
-            self.args.search_file_path, verbose=self.verbose, is_embedding=False,
+            self.args.search_media_path, verbose=self.verbose, is_embedding=False,
             threshold_duplicate=self.threshold_match,
             threshold_related=self.threshold_match)
         return files_grouped
@@ -437,10 +437,10 @@ class CompareModels(BaseCompare):
         # Treat presence of any search text (or search file) as a search request
         has_text_search = (
             (self.args.search_text is not None and self.args.search_text.strip() != "") or
-            (self.args.search_file_path is not None and self.args.search_file_path.strip() != "")
+            (self.args.search_media_path is not None and self.args.search_media_path.strip() != "")
         )
 
-        if self.is_run_search and self.args.search_file_path:
+        if self.is_run_search and self.args.search_media_path:
             return self.run_search()
         elif has_text_search:
             return self.search_multimodal()

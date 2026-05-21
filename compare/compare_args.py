@@ -6,7 +6,7 @@ from utils.constants import CompareMode, Mode
 
 class CompareArgs:
     def __init__(self, base_dir=".", listener=None, mode=Mode.GROUP, compare_mode=CompareMode.CLIP_EMBEDDING,
-                 recursive=True, searching_image=False, search_file_path=None, search_text=None, search_text_negative=None,
+                 recursive=True, searching_image=False, search_media_path=None, search_text=None, search_text_negative=None,
                  find_duplicates=False, counter_limit=config.file_counter_limit, compare_threshold=config.embedding_similarity_threshold,
                  compare_faces=False, inclusion_pattern=None, overwrite=False, store_checkpoints=config.store_checkpoints,
                  use_matrix_comparison=False, app_actions=None):
@@ -16,8 +16,8 @@ class CompareArgs:
         self.compare_mode = compare_mode
         self.recursive = recursive
         self.searching_image = searching_image
-        self.search_file_path = search_file_path
-        self.negative_search_file_path = None
+        self.search_media_path = search_media_path
+        self.negative_search_media_path = None
         self.search_text = search_text
         self.search_text_negative = search_text_negative
         self.find_duplicates = find_duplicates
@@ -42,8 +42,8 @@ class CompareArgs:
             if isinstance(v, str):
                 return v.strip() == ""
             return True  # e.g. dict or other type treated as "no search"
-        return (_empty(self.search_file_path) and _empty(self.search_text)
-                and _empty(self.search_text_negative) and _empty(self.negative_search_file_path))
+        return (_empty(self.search_media_path) and _empty(self.search_text)
+                and _empty(self.search_text_negative) and _empty(self.negative_search_media_path))
 
     def _is_new_data_request_required(self, other):
         return (self.threshold != other.threshold

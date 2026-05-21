@@ -81,18 +81,18 @@ class ComparePrompts(BaseCompareEmbedding):
         self.groups_output_path = os.path.join(base_dir, ComparePrompts.GROUPS_OUTPUT_FILE)
         self.compare_data = CompareData(base_dir=base_dir, mode=CompareMode.PROMPTS)
 
-    def set_search_file_path(self, search_file_path):
+    def set_search_media_path(self, search_media_path):
         '''
         Set the search file path. If it is already in the found data, move the
         reference to it to the first index in the list.
         '''
-        self.search_file_path = search_file_path
-        self.is_run_search = search_file_path is not None
+        self.search_media_path = search_media_path
+        self.is_run_search = search_media_path is not None
         if self.is_run_search and self.files is not None:
-            if self.search_file_path in self.files:
-                self.files.remove(self.search_file_path)
+            if self.search_media_path in self.files:
+                self.files.remove(self.search_media_path)
             self.search_file_index = 0
-            self.files.insert(self.search_file_index, self.search_file_path)
+            self.files.insert(self.search_file_index, self.search_media_path)
 
     def get_files(self):
         '''
@@ -114,10 +114,10 @@ class ComparePrompts(BaseCompareEmbedding):
         self.max_files_processed_even = Utils.round_up(self.max_files_processed, 200)
 
         if self.is_run_search:
-            if self.search_file_path in self.files:
-                self.files.remove(self.search_file_path)
+            if self.search_media_path in self.files:
+                self.files.remove(self.search_media_path)
             self.search_file_index = 0
-            self.files.insert(self.search_file_index, self.search_file_path)
+            self.files.insert(self.search_file_index, self.search_media_path)
 
         if self.verbose:
             self.print_settings()
@@ -127,7 +127,7 @@ class ComparePrompts(BaseCompareEmbedding):
         logger.info(" CONFIGURATION SETTINGS:")
         logger.info(f" run search: {self.is_run_search}")
         if self.is_run_search:
-            logger.info(f" search_file_path: {self.search_file_path}")
+            logger.info(f" search_media_path: {self.search_media_path}")
         logger.info(f" comparison files base directory: {self.base_dir}")
         logger.info(f" max file process limit: {self.args.counter_limit}")
         logger.info(f" max files processable for base dir: {self.max_files_processed}")
@@ -235,52 +235,52 @@ class ComparePrompts(BaseCompareEmbedding):
         self.compare_result.files_grouped = dict(
             sorted(files_grouped.items(), key=lambda item: item[1], reverse=True))
         self.compare_result.finalize_search_result(
-            self.search_file_path, verbose=self.verbose, is_embedding=True,
+            self.search_media_path, verbose=self.verbose, is_embedding=True,
             threshold_duplicate=self.threshold_duplicate,
             threshold_related=self.threshold_probable_match)
         return {0: files_grouped}
 
-    def _run_search_on_path(self, search_file_path):
+    def _run_search_on_path(self, search_media_path):
         '''
         Prepare and begin a search for a provided image file path.
         '''
-        if (search_file_path is None or search_file_path == ""
-                or search_file_path == self.base_dir):
-            while search_file_path is None:
-                search_file_path = input(
+        if (search_media_path is None or search_media_path == ""
+                or search_media_path == self.base_dir):
+            while search_media_path is None:
+                search_media_path = input(
                     "\nEnter a new file path to search for similars "
                     + "(enter \"exit\" or press Ctrl-C to quit): \n\n  > ")
-                if search_file_path is not None and search_file_path == "exit":
+                if search_media_path is not None and search_media_path == "exit":
                     break
-                search_file_path = Utils.get_valid_file(self.base_dir, search_file_path)
-                if search_file_path is None:
+                search_media_path = Utils.get_valid_file(self.base_dir, search_media_path)
+                if search_media_path is None:
                     logger.error("Invalid filepath provided.")
                 else:
                     logger.info("")
 
         # Gather new prompt data if it was not in the initial list
-        if search_file_path not in self.compare_data.files_found:
+        if search_media_path not in self.compare_data.files_found:
             if self.verbose:
                 logger.info("Filepath not found in initial list - gathering new prompt data")
             try:
                 # Extract prompts from the search image and store them
-                positive_prompt, negative_prompt = extract_prompts_from_image(search_file_path)
+                positive_prompt, negative_prompt = extract_prompts_from_image(search_media_path)
                 if positive_prompt is None and negative_prompt is None:
                     raise AssertionError("No prompt data found in the provided image. This image may not contain prompt metadata.")
                 
                 # Generate embedding for the search image using the centralized method
-                search_embedding = prompt_embedding_from_image(search_file_path)
+                search_embedding = prompt_embedding_from_image(search_media_path)
                 
                 # Add to the beginning of our data; keep cache in sync only if still in memory
                 # (save_data() clears file_data_dict to free memory after persist)
                 self._file_embeddings = np.insert(self._file_embeddings, 0, [search_embedding], 0)
-                self.compare_data.files_found.insert(0, search_file_path)
+                self.compare_data.files_found.insert(0, search_media_path)
                 if self.compare_data.file_data_dict is not None:
-                    self.compare_data.file_data_dict[search_file_path] = (positive_prompt, negative_prompt)
+                    self.compare_data.file_data_dict[search_media_path] = (positive_prompt, negative_prompt)
                 
             except OSError as e:
                 if self.verbose:
-                    logger.error(f"{search_file_path} - {e}")
+                    logger.error(f"{search_media_path} - {e}")
                 raise AssertionError(
                     "Encountered an error accessing the provided file path in the file system.")
             except Exception as e:
@@ -290,8 +290,8 @@ class ComparePrompts(BaseCompareEmbedding):
                     "Encountered an error gathering prompt data from the file provided.")
 
         files_grouped = self.find_similars_to_image(
-            search_file_path, self.compare_data.files_found.index(search_file_path))
-        search_file_path = None
+            search_media_path, self.compare_data.files_found.index(search_media_path))
+        search_media_path = None
         return files_grouped
 
     # Use the base class run_search method which handles both file and text searches

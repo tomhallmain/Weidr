@@ -33,12 +33,12 @@ class CompareResult:
                 # Header
                 if args is not None:
                     header = f"Possibly related images to ("
-                    if args.search_file_path is not None:
-                        header += f"search file {args.search_file_path}, "
+                    if args.search_media_path is not None:
+                        header += f"search file {args.search_media_path}, "
                     if args.search_text is not None:
                         header += f"search text \"{args.search_text}\", "
-                    if args.negative_search_file_path is not None:
-                        header += f"negative search file {args.negative_search_file_path}, "
+                    if args.negative_search_media_path is not None:
+                        header += f"negative search file {args.negative_search_media_path}, "
                     if args.search_text_negative is not None:
                         header += f"negative search text \"{args.search_text_negative}\", "
                     header = header[:-2] + "):\n"

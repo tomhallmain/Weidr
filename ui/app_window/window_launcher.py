@@ -212,7 +212,7 @@ class WindowLauncher:
             window = FileActionsWindow(
                 self._app,
                 self._app.app_actions,
-                MediaDetails.open_temp_image_canvas,
+                MediaDetails.open_temp_media_canvas,
                 MarkedFiles.move_marks_to_dir_static,
             )
             window.show()

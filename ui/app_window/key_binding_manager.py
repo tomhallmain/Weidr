@@ -143,13 +143,13 @@ class KeyBindingManager:
         self._bind("Shift+E", app.window_launcher.copy_prompt)
         self._bind(
             "Shift+K",
-            lambda: MediaDetails.open_temp_image_canvas(
+            lambda: MediaDetails.open_temp_media_canvas(
                 app, MarkedFiles.last_moved_image, app.app_actions
             ),
         )
         self._bind(
             "Ctrl+Shift+K",
-            lambda: MediaDetails.open_temp_image_canvas(
+            lambda: MediaDetails.open_temp_media_canvas(
                 app, FileAction.get_last_auto_file(), app.app_actions
             ),
         )

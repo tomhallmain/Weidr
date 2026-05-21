@@ -112,18 +112,18 @@ class CompareSize(BaseCompare):
         self.groups_output_path = os.path.join(base_dir, CompareSize.GROUPS_OUTPUT_FILE)
         self.compare_data = CompareData(base_dir=base_dir, mode=CompareMode.SIZE)
 
-    def set_search_file_path(self, search_file_path):
+    def set_search_media_path(self, search_media_path):
         '''
         Set the search file path. If it is already in the found data, move the
         reference to it to the first index in the list.
         '''
-        self.search_file_path = search_file_path
-        self.is_run_search = search_file_path is not None
+        self.search_media_path = search_media_path
+        self.is_run_search = search_media_path is not None
         if self.is_run_search and self.files is not None:
-            if self.search_file_path in self.files:
-                self.files.remove(self.search_file_path)
+            if self.search_media_path in self.files:
+                self.files.remove(self.search_media_path)
             self.search_file_index = 0
-            self.files.insert(self.search_file_index, self.search_file_path)
+            self.files.insert(self.search_file_index, self.search_media_path)
 
     def get_files(self):
         '''
@@ -143,10 +143,10 @@ class CompareSize(BaseCompare):
         self.max_files_processed_even = Utils.round_up(self.max_files_processed, 200)
 
         if self.is_run_search:
-            if self.search_file_path in self.files:
-                self.files.remove(self.search_file_path)
+            if self.search_media_path in self.files:
+                self.files.remove(self.search_media_path)
             self.search_file_index = 0
-            self.files.insert(self.search_file_index, self.search_file_path)
+            self.files.insert(self.search_file_index, self.search_media_path)
 
         if self.verbose:
             self.print_settings()
@@ -156,7 +156,7 @@ class CompareSize(BaseCompare):
         logger.info(" CONFIGURATION SETTINGS:")
         logger.info(f" run search: {self.is_run_search}")
         if self.is_run_search:
-            logger.info(f" search_file_path: {self.search_file_path}")
+            logger.info(f" search_media_path: {self.search_media_path}")
         logger.info(f" comparison files base directory: {self.base_dir}")
         logger.info(f" max file process limit: {self.args.counter_limit}")
         logger.info(f" max files processable for base dir: {self.max_files_processed}")
@@ -270,7 +270,7 @@ class CompareSize(BaseCompare):
         self.compare_result.files_grouped = dict(
             sorted(files_grouped.items(), key=lambda item: item[1], reverse=True))
         self.compare_result.finalize_search_result(
-            self.search_file_path, verbose=self.verbose, is_embedding=False,
+            self.search_media_path, verbose=self.verbose, is_embedding=False,
             threshold_duplicate=self.threshold_match,
             threshold_related=self.threshold_match)
         return {0: files_grouped}
@@ -278,17 +278,17 @@ class CompareSize(BaseCompare):
     def search_multimodal(self):
         '''
         Search for images matching the provided size search.
-        Supports search via search_file_path (extract size from image) or search_text (parse size string).
+        Supports search via search_media_path (extract size from image) or search_text (parse size string).
         '''
         files_grouped = {0: {}}
 
         search_size = None
 
         # If a search image is provided, extract its size
-        if self.args.search_file_path is not None:
-            search_size = extract_size_from_image(self.args.search_file_path)
+        if self.args.search_media_path is not None:
+            search_size = extract_size_from_image(self.args.search_media_path)
             if search_size is None:
-                logger.error(f"Could not extract size from search image: {self.args.search_file_path}")
+                logger.error(f"Could not extract size from search image: {self.args.search_media_path}")
                 return files_grouped
 
         # If search text is provided, parse it as a size
@@ -300,7 +300,7 @@ class CompareSize(BaseCompare):
                 return files_grouped
 
         if search_size is None:
-            logger.error("No size search criteria provided. Use search_file_path or search_text with size format.")
+            logger.error("No size search criteria provided. Use search_media_path or search_text with size format.")
             return files_grouped
 
         # Use tolerance from set_similarity_threshold
@@ -334,7 +334,7 @@ class CompareSize(BaseCompare):
         # Finalize
         self.compare_result.files_grouped = files_grouped[0]
         self.compare_result.finalize_search_result(
-            self.args.search_file_path, verbose=self.verbose, is_embedding=False,
+            self.args.search_media_path, verbose=self.verbose, is_embedding=False,
             threshold_duplicate=self.threshold_match,
             threshold_related=self.threshold_match)
         return files_grouped
@@ -355,7 +355,7 @@ class CompareSize(BaseCompare):
         # Treat presence of search text or search file as a search request
         has_search = (
             (self.args.search_text is not None and self.args.search_text.strip() != "") or
-            (self.args.search_file_path is not None and self.args.search_file_path.strip() != "")
+            (self.args.search_media_path is not None and self.args.search_media_path.strip() != "")
         )
 
         if has_search or self.is_run_search:

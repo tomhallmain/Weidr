@@ -195,18 +195,18 @@ class ComparePromptsExact(BaseCompare):
         self.groups_output_path = os.path.join(base_dir, ComparePromptsExact.GROUPS_OUTPUT_FILE)
         self.compare_data = CompareData(base_dir=base_dir, mode=CompareMode.PROMPTS_EXACT)
 
-    def set_search_file_path(self, search_file_path):
+    def set_search_media_path(self, search_media_path):
         '''
         Set the search file path. If it is already in the found data, move the
         reference to it to the first index in the list.
         '''
-        self.search_file_path = search_file_path
-        self.is_run_search = search_file_path is not None
+        self.search_media_path = search_media_path
+        self.is_run_search = search_media_path is not None
         if self.is_run_search and self.files is not None:
-            if self.search_file_path in self.files:
-                self.files.remove(self.search_file_path)
+            if self.search_media_path in self.files:
+                self.files.remove(self.search_media_path)
             self.search_file_index = 0
-            self.files.insert(self.search_file_index, self.search_file_path)
+            self.files.insert(self.search_file_index, self.search_media_path)
 
     def get_files(self):
         '''
@@ -228,10 +228,10 @@ class ComparePromptsExact(BaseCompare):
         self.max_files_processed_even = Utils.round_up(self.max_files_processed, 200)
 
         if self.is_run_search:
-            if self.search_file_path in self.files:
-                self.files.remove(self.search_file_path)
+            if self.search_media_path in self.files:
+                self.files.remove(self.search_media_path)
             self.search_file_index = 0
-            self.files.insert(self.search_file_index, self.search_file_path)
+            self.files.insert(self.search_file_index, self.search_media_path)
 
         if self.verbose:
             self.print_settings()
@@ -241,7 +241,7 @@ class ComparePromptsExact(BaseCompare):
         logger.info(" CONFIGURATION SETTINGS:")
         logger.info(f" run search: {self.is_run_search}")
         if self.is_run_search:
-            logger.info(f" search_file_path: {self.search_file_path}")
+            logger.info(f" search_media_path: {self.search_media_path}")
         logger.info(f" comparison files base directory: {self.base_dir}")
         logger.info(f" max file process limit: {self.args.counter_limit}")
         logger.info(f" max files processable for base dir: {self.max_files_processed}")
@@ -385,54 +385,54 @@ class ComparePromptsExact(BaseCompare):
         self.compare_result.files_grouped = dict(
             sorted(files_grouped.items(), key=lambda item: item[1], reverse=True))
         self.compare_result.finalize_search_result(
-            self.search_file_path, verbose=self.verbose, is_embedding=False,
+            self.search_media_path, verbose=self.verbose, is_embedding=False,
             threshold_duplicate=self.threshold_duplicate,
             threshold_related=self.threshold_probable_match)
         return {0: files_grouped}
 
-    def _run_search_on_path(self, search_file_path):
+    def _run_search_on_path(self, search_media_path):
         '''
         Prepare and begin a search for a provided image file path.
         '''
-        if (search_file_path is None or search_file_path == ""
-                or search_file_path == self.base_dir):
-            while search_file_path is None:
-                search_file_path = input(
+        if (search_media_path is None or search_media_path == ""
+                or search_media_path == self.base_dir):
+            while search_media_path is None:
+                search_media_path = input(
                     "\nEnter a new file path to search for similars "
                     + "(enter \"exit\" or press Ctrl-C to quit): \n\n  > ")
-                if search_file_path is not None and search_file_path == "exit":
+                if search_media_path is not None and search_media_path == "exit":
                     break
-                search_file_path = Utils.get_valid_file(self.base_dir, search_file_path)
-                if search_file_path is None:
+                search_media_path = Utils.get_valid_file(self.base_dir, search_media_path)
+                if search_media_path is None:
                     logger.error("Invalid filepath provided.")
                 else:
                     logger.info("")
 
         # For exact matching, we don't need to preprocess the search image
         # We just need to make sure it's in our file list and in-memory arrays stay in sync
-        if search_file_path not in self.compare_data.files_found:
+        if search_media_path not in self.compare_data.files_found:
             if self.verbose:
                 logger.info("Filepath not found in initial list - adding to comparison list")
-            self.compare_data.files_found.insert(0, search_file_path)
+            self.compare_data.files_found.insert(0, search_media_path)
             
             # Extract and store prompts for the search image
-            positive_prompt, negative_prompt = extract_prompts_from_image(search_file_path)
+            positive_prompt, negative_prompt = extract_prompts_from_image(search_media_path)
             if positive_prompt is None and negative_prompt is None:
                 raise AssertionError("No prompt data found in the provided image. This image may not contain prompt metadata.")
             # Keep in-memory arrays in sync (primary source for comparison); update dict only if still in memory
             self._file_pos_texts.insert(0, _ensure_str(positive_prompt))
             self._file_neg_texts.insert(0, _ensure_str(negative_prompt))
             if self.compare_data.file_data_dict is not None:
-                self.compare_data.file_data_dict[search_file_path] = (positive_prompt, negative_prompt)
+                self.compare_data.file_data_dict[search_media_path] = (positive_prompt, negative_prompt)
 
         files_grouped = self.find_similars_to_image(
-            search_file_path, self.compare_data.files_found.index(search_file_path))
-        search_file_path = None
+            search_media_path, self.compare_data.files_found.index(search_media_path))
+        search_media_path = None
         return files_grouped
 
     def run_search(self):
         return self.search_multimodal()
-        # return self._run_search_on_path(self.search_file_path)
+        # return self._run_search_on_path(self.search_media_path)
 
     def search_multimodal(self):
         '''
@@ -445,16 +445,16 @@ class ComparePromptsExact(BaseCompare):
         negative_texts: List[str] = []
 
         # If a search image is provided, use its positive as positive and its negative as negative
-        if self.args.search_file_path is not None:
-            pos, neg = extract_prompts_from_image(self.args.search_file_path)
+        if self.args.search_media_path is not None:
+            pos, neg = extract_prompts_from_image(self.args.search_media_path)
             if pos is not None:
                 positive_texts.append(_ensure_str(pos))
             if neg is not None:
                 negative_texts.append(_ensure_str(neg))
 
         # If a negative search image is provided, treat its positive as negative context
-        if self.args.negative_search_file_path is not None:
-            pos, neg = extract_prompts_from_image(self.args.negative_search_file_path)
+        if self.args.negative_search_media_path is not None:
+            pos, neg = extract_prompts_from_image(self.args.negative_search_media_path)
             if pos:
                 negative_texts.append(pos)
             if neg:
@@ -474,8 +474,8 @@ class ComparePromptsExact(BaseCompare):
         if len(positive_texts) == 0 and len(negative_texts) == 0:
             logger.error(
                 "Failed to prepare texts for search.\n"
-                f"search image = {self.args.search_file_path}\n"
-                f"negative search image = {self.args.negative_search_file_path}\n"
+                f"search image = {self.args.search_media_path}\n"
+                f"negative search image = {self.args.negative_search_media_path}\n"
                 f"search text = {self.args.search_text}\n"
                 f"search text negative = {self.args.search_text_negative}")
             return files_grouped
@@ -525,7 +525,7 @@ class ComparePromptsExact(BaseCompare):
         # Finalize
         self.compare_result.files_grouped = files_grouped[0]
         self.compare_result.finalize_search_result(
-            self.args.search_file_path, verbose=self.verbose, is_embedding=False,
+            self.args.search_media_path, verbose=self.verbose, is_embedding=False,
             threshold_duplicate=self.threshold_duplicate,
             threshold_related=self.threshold_probable_match)
         return files_grouped
@@ -662,7 +662,7 @@ class ComparePromptsExact(BaseCompare):
             or _normalize_search_text_list(getattr(self.args, "search_text_negative", None))
         )
 
-        if self.is_run_search and self.args.search_file_path:
+        if self.is_run_search and self.args.search_media_path:
             return self.run_search()
         elif has_text_search:
             return self.search_multimodal()

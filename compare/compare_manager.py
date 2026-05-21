@@ -529,17 +529,17 @@ class CompareManager:
             self._wrappers[self._primary_mode].current_group_index = value
     
     @property
-    def search_file_path(self) -> Optional[str]:
+    def search_media_path(self) -> Optional[str]:
         """Get search file path from primary wrapper."""
         if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].search_file_path
+            return self._wrappers[self._primary_mode].search_media_path
         return None
     
-    @search_file_path.setter
-    def search_file_path(self, value: Optional[str]):
+    @search_media_path.setter
+    def search_media_path(self, value: Optional[str]):
         """Set search file path on primary wrapper."""
         if self._primary_mode and self._primary_mode in self._wrappers:
-            self._wrappers[self._primary_mode].search_file_path = value
+            self._wrappers[self._primary_mode].search_media_path = value
     
     @property
     def hidden_media(self) -> List[str]:
@@ -618,10 +618,10 @@ class CompareManager:
             return self._wrappers[self._primary_mode].show_next_media(show_alert)
         return False
     
-    def skip_file(self, file_path: str) -> bool:
-        """Check if file should be skipped (delegated to primary wrapper)."""
+    def skip_media(self, media_path: str) -> bool:
+        """Check if media should be skipped (delegated to primary wrapper)."""
         if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].skip_file(file_path)
+            return self._wrappers[self._primary_mode].skip_media(media_path)
         return False
     
     def show_prev_group(self, event=None, file_browser=None):
@@ -684,23 +684,23 @@ class CompareManager:
             return self._wrappers[self._primary_mode]._get_file_group_map(app_mode)
         return {}
     
-    def find_next_unrelated_file(self, file_browser, forward=True):
+    def find_next_unrelated_media(self, file_browser, forward=True):
         """Find next unrelated file (delegated to primary wrapper)."""
         if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].find_next_unrelated_file(
+            return self._wrappers[self._primary_mode].find_next_unrelated_media(
                 file_browser, forward
             )
     
-    def _get_prev_file(self):
+    def _get_prev_media(self):
         """Get previous file (delegated to primary wrapper)."""
         if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode]._get_prev_file()
+            return self._wrappers[self._primary_mode]._get_prev_media()
         return None
     
-    def _get_next_file(self):
+    def _get_next_media(self):
         """Get next file (delegated to primary wrapper)."""
         if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode]._get_next_file()
+            return self._wrappers[self._primary_mode]._get_next_media()
         return None
     
     def compare(self):

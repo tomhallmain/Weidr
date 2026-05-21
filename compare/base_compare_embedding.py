@@ -42,7 +42,7 @@ class BaseCompareEmbedding(BaseCompare):
         logger.info(" CONFIGURATION SETTINGS:")
         logger.info(f" run search: {self.is_run_search}")
         if self.is_run_search:
-            logger.info(f" search_file_path: {self.search_file_path}")
+            logger.info(f" search_media_path: {self.search_media_path}")
         logger.info(f" comparison files base directory: {self.base_dir}")
         logger.info(f" compare faces: {self.compare_faces}")
         logger.info(f" embedding similarity threshold: {self.embedding_similarity_threshold}")
@@ -155,7 +155,7 @@ class BaseCompareEmbedding(BaseCompare):
 
     def run_search(self):
         if self.args.compare_faces:
-            return self._run_search_on_path(self.search_file_path)
+            return self._run_search_on_path(self.search_media_path)
         else:
             return self.search_multimodal()
 
@@ -373,52 +373,52 @@ class BaseCompareEmbedding(BaseCompare):
             self.compare_result.files_grouped = dict(sorted(files_grouped.items(), key=lambda item: item[1], reverse=True))
 
         self.compare_result.finalize_search_result(
-            self.search_file_path, verbose=self.verbose, is_embedding=True,
+            self.search_media_path, verbose=self.verbose, is_embedding=True,
             threshold_duplicate=self.threshold_duplicate,
             threshold_related=self.threshold_probable_match)
         return {0: self.compare_result.files_grouped}
 
-    def _run_search_on_path(self, search_file_path):
+    def _run_search_on_path(self, search_media_path):
         '''
         Prepare and begin a search for a provided image file path.
         NOTE Legacy method to allow for compare_faces boolean to be respected.
         '''
-        if (search_file_path is None or search_file_path == ""
-                or search_file_path == self.base_dir):
-            while search_file_path is None:
-                search_file_path = input(
+        if (search_media_path is None or search_media_path == ""
+                or search_media_path == self.base_dir):
+            while search_media_path is None:
+                search_media_path = input(
                     "\nEnter a new file path to search for similars "
                     + "(enter \"exit\" or press Ctrl-C to quit): \n\n  > ")
-                if search_file_path is not None and search_file_path == "exit":
+                if search_media_path is not None and search_media_path == "exit":
                     break
-                search_file_path = Utils.get_valid_file(self.base_dir, search_file_path)
-                if search_file_path is None:
+                search_media_path = Utils.get_valid_file(self.base_dir, search_media_path)
+                if search_media_path is None:
                     logger.error("Invalid filepath provided.")
                 else:
                     logger.info("")
 
         # Gather new image data if it was not in the initial list
 
-        if search_file_path not in self.compare_data.files_found:
+        if search_media_path not in self.compare_data.files_found:
             if self.verbose:
                 logger.info("Filepath not found in initial list - gathering new file data")
             try:
-                embedding = self.image_embeddings_func(search_file_path)
+                embedding = self.image_embeddings_func(search_media_path)
             except OSError as e:
                 if self.verbose:
-                    logger.error(f"{search_file_path} - {e}")
+                    logger.error(f"{search_media_path} - {e}")
                 raise AssertionError(
                     "Encountered an error accessing the provided file path in the file system.")
 
             self._file_embeddings = np.insert(self._file_embeddings, 0, [embedding], 0)
             if self.compare_faces:
-                n_faces = self._get_faces_count(search_file_path)
+                n_faces = self._get_faces_count(search_media_path)
                 self._file_faces = np.insert(self._file_faces, 0, [n_faces], 0)
-            self.compare_data.files_found.insert(0, search_file_path)
+            self.compare_data.files_found.insert(0, search_media_path)
 
         files_grouped = self.find_similars_to_image(
-            search_file_path, self.compare_data.files_found.index(search_file_path))
-        search_file_path = None
+            search_media_path, self.compare_data.files_found.index(search_media_path))
+        search_media_path = None
         return files_grouped
 
     def _compute_multiembedding_diff(self, positive_embeddings=[], negative_embeddings=[], threshold=0.0):
@@ -494,7 +494,7 @@ class BaseCompareEmbedding(BaseCompare):
         if self.verbose:
             logger.info("Identifying similar image files...")
 
-        if self.args.search_file_path is None and self.args.negative_search_file_path is None:
+        if self.args.search_media_path is None and self.args.negative_search_media_path is None:
             # NOTE It is much less likely for text to match exactly
             adjusted_threshold = self.embedding_similarity_threshold / 3
         else:
@@ -502,7 +502,7 @@ class BaseCompareEmbedding(BaseCompare):
         self._compute_multiembedding_diff(positive_embeddings, negative_embeddings, adjusted_threshold)
 
         self.compare_result.finalize_search_result(
-            self.search_file_path, args=self.args, verbose=self.verbose, is_embedding=True,
+            self.search_media_path, args=self.args, verbose=self.verbose, is_embedding=True,
             threshold_duplicate=self.threshold_duplicate,
             threshold_related=self.threshold_probable_match)
         return {0: self.compare_result.files_grouped}
@@ -520,11 +520,11 @@ class BaseCompareEmbedding(BaseCompare):
         positive_embeddings = []
         negative_embeddings = []
 
-        if self.args.search_file_path is not None:
-            self._tokenize_image(self.args.search_file_path, positive_embeddings)
+        if self.args.search_media_path is not None:
+            self._tokenize_image(self.args.search_media_path, positive_embeddings)
 
-        if self.args.negative_search_file_path is not None:
-            self._tokenize_image(self.args.negative_search_file_path, negative_embeddings, "negative search image")
+        if self.args.negative_search_media_path is not None:
+            self._tokenize_image(self.args.negative_search_media_path, negative_embeddings, "negative search image")
 
         if self.args.search_text is not None and self.args.search_text.strip() != "":
             for text in self.args.search_text.split(","):
@@ -536,8 +536,8 @@ class BaseCompareEmbedding(BaseCompare):
 
         if len(positive_embeddings) == 0 and len(negative_embeddings) == 0:
             logger.error(f"Failed to generate embeddings.\n"
-                  f"search image = {self.args.search_file_path}\n"
-                  f"negative search image = {self.args.negative_search_file_path}\n"
+                  f"search image = {self.args.search_media_path}\n"
+                  f"negative search image = {self.args.negative_search_media_path}\n"
                   f"search text = {self.args.search_text}\n"
                   f"search text negative = {self.args.search_text_negative}")
             return files_grouped  # TODO better exception handling
@@ -749,7 +749,7 @@ def main(compare_class):
     search_output_path = "weidr_search_output.txt"
     groups_output_path = "weidr_file_groups_output.txt"
     overwrite = False
-    search_file_path = None
+    search_media_path = None
     verbose = False
     compare_faces = True
     include_gifs = False
@@ -794,8 +794,8 @@ def main(compare_class):
                     print("No change made.")
                     exit()
             elif o == "--search":
-                search_file_path = Utils.get_valid_file(base_dir, a)
-                if search_file_path is None:
+                search_media_path = Utils.get_valid_file(base_dir, a)
+                if search_media_path is None:
                     assert False, "Search file provided \"" + str(a) \
                         + "\" is invalid - please ensure \"dir\" is passed first" \
                         + " if not providing full file path."
@@ -810,7 +810,7 @@ def main(compare_class):
             exit(1)
 
     compare = compare_class.__init__(base_dir,
-                               search_file_path=search_file_path,
+                               search_media_path=search_media_path,
                                counter_limit=counter_limit,
                                embedding_similarity_threshold=embedding_similarity_threshold,
                                compare_faces=compare_faces,

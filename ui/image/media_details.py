@@ -828,7 +828,7 @@ class MediaDetails(SmartWindow):
                     filepath=new_filepath, open_gui=False
                 )
             else:
-                MediaDetails.open_temp_image_canvas(
+                MediaDetails.open_temp_media_canvas(
                     master=self._parent_ref,
                     media_path=new_filepath,
                     app_actions=self._app_actions,
@@ -849,7 +849,7 @@ class MediaDetails(SmartWindow):
             self.close_windows()
             self._app_actions.refresh()
             self._app_actions.success(_("Cropped image"))
-            MediaDetails.open_temp_image_canvas(
+            MediaDetails.open_temp_media_canvas(
                 master=self._parent_ref,
                 media_path=saved_files[0],
                 app_actions=self._app_actions,
@@ -879,7 +879,7 @@ class MediaDetails(SmartWindow):
         if os.path.exists(new_filepath):
             app_actions.success(_("Randomly modified image"))
             if master is not None:
-                MediaDetails.open_temp_image_canvas(
+                MediaDetails.open_temp_media_canvas(
                     master=master,
                     media_path=new_filepath,
                     app_actions=app_actions,
@@ -1266,14 +1266,14 @@ class MediaDetails(SmartWindow):
         elif not exact_match:
             app_actions.toast(_(" (Exact Match Not Found)"))
             return
-        MediaDetails.open_temp_image_canvas(
+        MediaDetails.open_temp_media_canvas(
             master=master,
             media_path=related_image_path,
             app_actions=app_actions,
         )
 
     @staticmethod
-    def open_temp_image_canvas(
+    def open_temp_media_canvas(
         master=None,
         media_path=None,
         app_actions=None,

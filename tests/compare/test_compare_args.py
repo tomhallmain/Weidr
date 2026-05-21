@@ -15,8 +15,8 @@ class TestNotSearching:
         args = CompareArgs()
         assert args.not_searching() is True
 
-    def test_search_file_path_set_returns_false(self):
-        args = CompareArgs(search_file_path="/some/image.jpg")
+    def test_search_media_path_set_returns_false(self):
+        args = CompareArgs(search_media_path="/some/image.jpg")
         assert args.not_searching() is False
 
     def test_search_text_set_returns_false(self):
@@ -31,9 +31,9 @@ class TestNotSearching:
         args = CompareArgs(search_text="   ")
         assert args.not_searching() is True
 
-    def test_negative_search_file_path_set_returns_false(self):
+    def test_negative_search_media_path_set_returns_false(self):
         args = CompareArgs()
-        args.negative_search_file_path = "/neg.jpg"
+        args.negative_search_media_path = "/neg.jpg"
         assert args.not_searching() is False
 
 

@@ -379,7 +379,7 @@ class MediaNavigator:
         """
         if not media_path:
             return
-        self._mf.show_image(media_path)
+        self._mf.show_media(media_path)
 
         relative_filepath, basename = Utils.get_relative_dirpath_split(
             self._app.base_dir, media_path

@@ -1,6 +1,6 @@
 """
-Media frame (PySide6): images and videos.
-Port of ui/media_frame.py. Uses QGraphicsView for images (pan/zoom), VLC for video.
+Media frame (PySide6): images, videos, GIFs, PDFs.
+Uses QGraphicsView for static images (pan/zoom), QMovie for animated rasters, VLC for video.
 """
 
 import os
@@ -252,8 +252,8 @@ class _ImageDecodeWorker(QThread):
 
 class MediaFrame(QFrame):
     """
-    Display image (with pan/zoom via QGraphicsView) and optional in-window video via VLC.
-    Provides winId() for VLC embedding (used by muse/playback.py).
+    Display media (static images with pan/zoom via QGraphicsView, animated rasters via QMovie,
+    video via VLC). Provides winId() for VLC embedding (used by muse/playback.py).
     """
     seek_requested = Signal(int)
     play_pause_requested = Signal()
@@ -272,7 +272,7 @@ class MediaFrame(QFrame):
         self.imscale = 1.0
         self.imwidth = 0
         self.imheight = 0
-        self.image_displayed = False
+        self.media_displayed = False
 
         self._image = None  # QImage or PIL Image when loaded
         self._video_ui = None  # VideoUI when showing video
@@ -558,7 +558,7 @@ class MediaFrame(QFrame):
         self._gif_label.hide()
         self._placeholder_label.hide()
         self._controls_overlay.set_audio_controls_visible(True)
-        self.image_displayed = True
+        self.media_displayed = True
 
     def _can_promote_large_image(self, source_dims: tuple[int, int]) -> bool:
         if not self._large_enable_full_res_promotion():
@@ -758,7 +758,7 @@ class MediaFrame(QFrame):
             return
         self._display_qimage(qimg, source_dims)
 
-    def _show_animated_image(self, path) -> bool:
+    def _show_animated_media(self, path) -> bool:
         if not path or path == "." or not os.path.exists(path):
             return False
         self.clear()
@@ -770,7 +770,7 @@ class MediaFrame(QFrame):
         if not self._gif_movie.isValid():
             self._gif_movie = None
             self._show_placeholder(
-                _("Animated image format is not supported for playback: ")
+                _("Animated media format is not supported for playback: ")
                 + os.path.basename(path)
             )
             return True
@@ -793,7 +793,7 @@ class MediaFrame(QFrame):
         self._image = None
         self._video_ui = None
         self._current_pixmap = None
-        self.image_displayed = True
+        self.media_displayed = True
         self.on_track_changed()
         self._update_gif_overlay_progress()
         self._playback_timer.start()
@@ -802,7 +802,7 @@ class MediaFrame(QFrame):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._position_overlay()
-        if not self.image_displayed or isinstance(self._video_ui, VideoUI):
+        if not self.media_displayed or isinstance(self._video_ui, VideoUI):
             return
         if self._gif_movie is not None:
             self._update_gif_scale_mode()
@@ -810,8 +810,8 @@ class MediaFrame(QFrame):
             if not self._graphics_view.is_user_zoom_active():
                 self._apply_image_scale_mode()
 
-    def show_image(self, path):
-        """Show image or video at path. Dispatches to show_video when appropriate."""
+    def show_media(self, path):
+        """Show media at path. Dispatches to show_video for video, QMovie for animated rasters."""
         self._invalidate_pending_image_promotion()
         if isinstance(self._video_ui, VideoUI):
             self.video_stop()
@@ -839,19 +839,19 @@ class MediaFrame(QFrame):
             else:
                 self._show_placeholder(_("Video: ") + os.path.basename(path))
             return
-        if self._is_animated_image_candidate(path) and self._show_animated_image(path):
+        if self._is_animated_image_candidate(path) and self._show_animated_media(path):
             return
         self._video_ui = None
         self.imscale = 1.0
         try:
             self._show_image_in_view(self.path)
         except Exception as e:
-            logger.warning("Failed to render image path=%s error=%s", self.path, e)
+            logger.warning("Failed to render media path=%s error=%s", self.path, e)
             self._show_placeholder(_("Unable to display this file: ") + os.path.basename(path))
 
     def set_fill_canvas(self, fill_canvas: bool):
         self.fill_canvas = bool(fill_canvas)
-        if not self.image_displayed or isinstance(self._video_ui, VideoUI):
+        if not self.media_displayed or isinstance(self._video_ui, VideoUI):
             return
         if self._gif_movie is not None:
             self._update_gif_scale_mode()
@@ -1310,7 +1310,7 @@ class MediaFrame(QFrame):
         self._scene.addItem(self._pixmap_item)
         self._current_pixmap = None
         self._image = None
-        self.image_displayed = False
+        self.media_displayed = False
         self._graphics_view.show()
         self._placeholder_label.setText("")
         self._placeholder_label.hide()
@@ -1347,14 +1347,14 @@ class MediaFrame(QFrame):
         self._graphics_view.reset_interaction()
         self._current_pixmap = None
         self._pixmap_item.setPixmap(QPixmap())
-        self.image_displayed = False
+        self.media_displayed = False
         self._controls_overlay.set_audio_controls_visible(True)
         self._controls_overlay.dismiss()
 
-    def focus(self, refresh_image=False):
+    def focus(self, refresh_media=False):
         self.setFocus(Qt.FocusReason.OtherFocusReason)
-        if refresh_image and self.path:
-            self.show_image(self.path)
+        if refresh_media and self.path:
+            self.show_media(self.path)
 
     def redraw_figures(self):
         """Dummy for compatibility with children that override."""

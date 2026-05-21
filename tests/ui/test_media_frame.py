@@ -121,8 +121,8 @@ class TestMalformedWebmVlcStop:
         media_frame._video_ui = VideoUI("fake.webm")
         media_frame._replace_vlc_player()
 
-        # show_image internally calls video_stop() before switching to image mode.
-        media_frame.show_image(png_path)
+        # show_media internally calls video_stop() before switching to static image mode.
+        media_frame.show_media(png_path)
 
-        qtbot.waitUntil(lambda: media_frame.image_displayed, timeout=3000)
-        assert media_frame.image_displayed
+        qtbot.waitUntil(lambda: media_frame.media_displayed, timeout=3000)
+        assert media_frame.media_displayed

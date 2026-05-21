@@ -1410,7 +1410,7 @@ msgid "Masonry view"
 msgstr ""
 
 #: ui/app_window/app_window.py:1182
-msgid "Single view"
+msgid "Full-window view"
 msgstr ""
 
 #: ui/app_window/app_window.py:1214
@@ -2225,8 +2225,7 @@ msgstr ""
 
 #: ui/app_window/sidebar_panel.py:247
 msgid ""
-"Configure rules for automatically copying or moving files\n"
-"based on classifier results."
+"Configure rules for automatically copying or moving files based on classifier results."
 msgstr ""
 
 #: ui/app_window/sidebar_panel.py:251 ui/compare/hf_model_manager_window_qt.py:392

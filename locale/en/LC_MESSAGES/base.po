@@ -5328,8 +5328,8 @@ msgid "Masonry view"
 msgstr "Masonry view"
 
 #: ui/app_window/app_window.py:1182
-msgid "Single view"
-msgstr "Single view"
+msgid "Full-window view"
+msgstr "Full-window view"
 
 #: ui/app_window/context_menu_builder.py:152
 msgid "Show Source Media"
@@ -5546,11 +5546,9 @@ msgstr "Compare tools"
 
 #: ui/app_window/sidebar_panel.py:247
 msgid ""
-"Configure rules for automatically copying or moving files\n"
-"based on classifier results."
+"Configure rules for automatically copying or moving files based on classifier results."
 msgstr ""
-"Configure rules for automatically copying or moving files\n"
-"based on classifier results."
+"Configure rules for automatically copying or moving files based on classifier results."
 
 #: ui/app_window/sidebar_panel.py:256
 msgid "Manage HuggingFace models used for media embeddings and comparison."

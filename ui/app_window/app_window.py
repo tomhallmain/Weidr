@@ -1179,7 +1179,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             self.view_mode = ViewMode.FULL
             self._media_stack.setCurrentIndex(0)
             self.media_frame.setFocus()
-            self.notification_ctrl.toast(_("Single view"))
+            self.notification_ctrl.toast(_("Full-window view"))
 
     def _refresh_masonry_if_active(self) -> None:
         """Repopulate the masonry grid if view_mode is MASONRY and reveal it.

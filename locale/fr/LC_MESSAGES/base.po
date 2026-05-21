@@ -2,9 +2,9 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: 1.0\n"
-"POT-Creation-Date: 2026-05-20 22:44-0400\n"
-"PO-Revision-Date: 2026-05-20 22:44-0400\n"
-"Last-Translator: Translator Name <translator@example.com>\n"
+"POT-Creation-Date: 2026-05-21 15:03-0400\n"
+"PO-Revision-Date: 2026-05-21 15:03-0400\n"
+"Last-Translator: Thomas Hall <tomhall.main@gmail.com>\n"
 "Language-Team: fr Team <<EMAIL>>\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
@@ -120,6 +120,10 @@ msgstr "invitations"
 msgid "prototype"
 msgstr "prototype"
 
+#: compare/classifier_action.py:1029
+msgid "pseudo-static dynamic media"
+msgstr "médias dynamiques pseudo-statiques"
+
 #: compare/classifier_action.py:1037
 msgid "categories: {0}"
 msgstr "catégories : {0}"
@@ -146,7 +150,7 @@ msgstr "désactivé"
 
 #: compare/classifier_action.py:1054
 msgid "cannot run"
-msgstr "Ne peut pas se lancer"
+msgstr "ne peut pas se lancer"
 
 #: compare/classifier_action.py:1061
 #: ui/compare/classifier_management_window_qt.py:82
@@ -183,16 +187,16 @@ msgstr ""
 " trouver des correspondances potentielles."
 
 #: compare/compare_wrapper.py:220
-msgid "Skipped %s images."
-msgstr "{0} images ont été omises."
+msgid "Skipped %s media."
+msgstr "Passé %s média."
 
 #: compare/compare_wrapper.py:226
-msgid "No Unrelated Images"
-msgstr "Pas d'images sans rapport avec le sujet"
+msgid "No Unrelated Media"
+msgstr "Pas de médias sans rapport"
 
 #: compare/compare_wrapper.py:226
-msgid "No unrelated images found."
-msgstr "Aucune image sans rapport n'a été trouvée."
+msgid "No unrelated media found."
+msgstr "Aucun média non lié n'a été trouvé."
 
 #: compare/compare_wrapper.py:263 compare/compare_wrapper.py:435
 msgid "No Groups Found"
@@ -200,11 +204,11 @@ msgstr "Aucun groupe trouvé"
 
 #: compare/compare_wrapper.py:333
 msgid ""
-"Gathering image data... setup may take a while depending on number of files "
+"Gathering media data... setup may take a while depending on number of files "
 "involved."
 msgstr ""
-"Collecte des données d'image... la configuration peut prendre un certain "
-"temps en fonction du nombre de fichiers concernés."
+"Collecte des données multimédia... La configuration peut prendre un certain "
+"temps selon le nombre de fichiers concernés."
 
 #: compare/compare_wrapper.py:355
 msgid "Confirm group run"
@@ -213,19 +217,19 @@ msgstr "Confirmer l'exécution du groupe"
 #: compare/compare_wrapper.py:356
 msgid ""
 "Search mode detected, please confirm switch to group mode before run. Group "
-"mode will take longer as all images in the base directory are compared."
+"mode will take longer as all media in the base directory are compared."
 msgstr ""
-"Mode recherche détecté, veuillez confirmer le passage en mode groupe avant "
-"l'exécution. Le mode groupe prend plus de temps car toutes les images du "
-"répertoire de base sont comparées."
+"Mode de recherche détecté. Veuillez confirmer le passage en mode groupe "
+"avant de lancer l'opération. Le mode groupe prendra plus de temps, car tous "
+"les fichiers multimédias du répertoire de base seront comparés."
 
 #: compare/compare_wrapper.py:363
-msgid "Gathering image data for comparison"
-msgstr "Collecte de données d'images à des fins de comparaison"
+msgid "Gathering media data for comparison"
+msgstr "Collecte des données des médias pour comparaison"
 
 #: compare/compare_wrapper.py:401
-msgid "Searching images..."
-msgstr "Recherche d'images..."
+msgid "Searching media..."
+msgstr "Recherche des médias..."
 
 #: compare/compare_wrapper.py:407
 msgid "Set a directory and search file or search text."
@@ -243,12 +247,12 @@ msgstr ""
 "paramètres actuels."
 
 #: compare/compare_wrapper.py:421
-msgid "%s possibly related images found."
-msgstr "{0} images possiblement liées ont été trouvées."
+msgid "%s possibly related media found."
+msgstr "%s médias potentiellement liés ont été trouvés."
 
 #: compare/compare_wrapper.py:429
-msgid "Running image comparisons..."
-msgstr "Comparaison d'images..."
+msgid "Running media comparisons..."
+msgstr "Comparaisons des médias en cours..."
 
 #: compare/compare_wrapper.py:434 compare/compare_wrapper.py:449
 msgid "Set a directory and search file."
@@ -270,7 +274,7 @@ msgstr ""
 
 #: compare/compare_wrapper.py:474
 msgid "Stranded Group Members Found"
-msgstr "Les membres du groupe en détresse retrouvés"
+msgstr "Membres retrouvés de groupes isolés"
 
 #: compare/compare_wrapper.py:474
 msgid "Some group members were left stranded by the grouping process."
@@ -284,11 +288,11 @@ msgstr "Plus de groupes"
 
 #: compare/compare_wrapper.py:530
 msgid ""
-"There are no more image groups remaining for this directory and current "
+"There are no more media groups remaining for this directory and current "
 "filter settings."
 msgstr ""
-"Il ne reste plus de groupes d'images pour ce répertoire et les paramètres de"
-" filtrage actuels."
+"Il n'y a plus aucun groupe de médias correspondant à ce répertoire et aux "
+"paramètres de filtrage actuels."
 
 #: compare/compare_wrapper.py:538 ui/app_window/sidebar_panel.py:86
 msgid "Set a directory to run comparison."
@@ -684,7 +688,7 @@ msgstr "La création PDF nécessite un paquet pypdfium2"
 
 #: files/pdf_creator.py:172 ui/files/marked_file_mover_qt.py:280
 msgid "Diff PDFs"
-msgstr "Comparer les différences entre deux fichiers PDF"
+msgstr "Diff PDFs"
 
 #: files/pdf_creator.py:173
 msgid "Please mark exactly 2 files."
@@ -727,8 +731,8 @@ msgstr "diff-pdf n'a pas créé un fichier de sortie."
 #: image/image_data_extractor.py:430
 msgid "(Unable to parse image prompt information for this file.)"
 msgstr ""
-"Impossible de traiter les informations de la promesse d'image pour ce "
-"fichier."
+"(Impossible d'analyser les informations relatives à l'image pour ce "
+"fichier.)"
 
 #: image/video_ops.py:312
 msgid "Video ({0})"
@@ -785,7 +789,7 @@ msgstr "Disque RAM"
 
 #: lib/fast_directory_picker_qt.py:158
 msgid "Unknown"
-msgstr "Impossible de traduire le texte fourni."
+msgstr "Inconnu"
 
 #: lib/fast_directory_picker_qt.py:252 lib/fast_directory_picker_qt.py:539
 #: ui/files/directory_picker_dialog.py:99
@@ -887,8 +891,8 @@ msgid "Description"
 msgstr "Description"
 
 #: ui/help_and_config_qt.py:75
-msgid "Search current image in new window"
-msgstr "Recherche de l'image actuelle dans une nouvelle fenêtre"
+msgid "Search current media in new window"
+msgstr "Ouvrir la recherche de médias en cours dans une nouvelle fenêtre"
 
 #: ui/help_and_config_qt.py:76
 msgid "Return to Browsing mode"
@@ -914,12 +918,6 @@ msgstr "Ouvrir la fenêtre Aller au fichier"
 #: ui/help_and_config_qt.py:81
 msgid "Hide/show sidebar"
 msgstr "Cacher/afficher la barre latérale"
-
-#: ui/help_and_config_qt.py:82
-msgid "Open hotkeys window (*when marks window open)"
-msgstr ""
-"Ouvrir la fenêtre des raccourcis clavier (*lorsque la fenêtre des marques "
-"est ouverte)"
 
 #: ui/help_and_config_qt.py:82
 msgid "Open content filters window"
@@ -997,43 +995,43 @@ msgstr "Annuler les changements de marques précédents"
 msgid "Toggle fullscreen"
 msgstr "Basculer en plein écran"
 
+#: ui/help_and_config_qt.py:101
+msgid "Go to first sorted media"
+msgstr "Aller à premier trié média"
+
 #: ui/help_and_config_qt.py:102
-msgid "Go to first sorted image"
-msgstr "Aller à la première image triée"
+msgid "Go to last sorted media"
+msgstr "Aller à la dernière média triée"
 
 #: ui/help_and_config_qt.py:103
-msgid "Go to last sorted image"
-msgstr "Aller à la dernière image triée"
+msgid "Show previous/next media"
+msgstr "Afficher le/la média précédent/suivant"
 
 #: ui/help_and_config_qt.py:104
-msgid "Show previous/next image"
-msgstr "Afficher l'image précédente/suivante"
+msgid "Page through media"
+msgstr "Feuilletter les médias"
 
 #: ui/help_and_config_qt.py:105
-msgid "Page through images"
-msgstr "Parcourir les images"
+msgid "Search current media in current window"
+msgstr "Rechercher le média actuel dans la fenêtre actuelle"
 
 #: ui/help_and_config_qt.py:106
-msgid "Search current image in current window"
-msgstr "Recherche de l'image actuelle dans la fenêtre actuelle"
-
-#: ui/help_and_config_qt.py:107
-msgid "Clear all hidden images"
-msgstr "Effacer toutes les images cachées"
+msgid "Clear all hidden media"
+msgstr "Effacer tout média masqué"
 
 #: ui/help_and_config_qt.py:107
 msgid "Clear marks list"
 msgstr "Effacer la liste des marques"
 
-#: ui/help_and_config_qt.py:109
-msgid "Show image details"
-msgstr "Afficher les détails de l'image"
+#: ui/help_and_config_qt.py:108
+msgid "Show media details"
+msgstr "Afficher les détails du média"
 
-#: ui/help_and_config_qt.py:110
-msgid "Delete image (or marked file group if marks window selected)"
+#: ui/help_and_config_qt.py:109
+msgid "Delete media (or marked file group if marks window selected)"
 msgstr ""
-"Supprimer l'image (ou le groupe de fichiers marqués si la fenêtre des "
-"marques est sélectionnée)"
+"Supprimer les fichiers multimédias (ou le groupe de fichiers sélectionnés si"
+" la fenêtre de sélection est ouverte)"
 
 #: ui/help_and_config_qt.py:110
 msgid "Delete current base directory and all contents"
@@ -1060,17 +1058,21 @@ msgid "Run content filters for all files in the current directory"
 msgstr ""
 "Exécuter des filtres de contenu pour tous les fichiers du répertoire actuel"
 
+#: ui/help_and_config_qt.py:116
+msgid "View last moved media mark"
+msgstr "Afficher le repère du dernier fichier multimédia déplacé"
+
 #: ui/help_and_config_qt.py:117
-msgid "View last moved image mark"
-msgstr "Afficher la dernière marque d'image déplacée"
+msgid "View last system-moved media"
+msgstr "Afficher les fichiers multimédias récemment déplacés par le système"
 
 #: ui/help_and_config_qt.py:118
 msgid "Toggle content filters"
 msgstr "Filtres de contenu"
 
 #: ui/help_and_config_qt.py:119
-msgid "Add or remove a mark for current image"
-msgstr "Ajouter ou supprimer une marque pour l'image actuelle"
+msgid "Add or remove a mark for current media"
+msgstr "Ajouter ou supprimer un marqueur pour les médias actuels"
 
 #: ui/help_and_config_qt.py:120
 msgid ""
@@ -1109,8 +1111,8 @@ msgid "Run refacdir"
 msgstr "Exécuter refacdir"
 
 #: ui/help_and_config_qt.py:128
-msgid "Hide current image"
-msgstr "Masquer l'image actuelle"
+msgid "Hide current media"
+msgstr "Cacher le média actuel"
 
 #: ui/help_and_config_qt.py:129
 msgid "Set marks from downstream related images"
@@ -1119,6 +1121,95 @@ msgstr "Marques de démarcation par rapport aux images liées à l'aval"
 #: ui/help_and_config_qt.py:131
 msgid "Show previous/next group"
 msgstr "Afficher le groupe précédent/suivant"
+
+#: ui/help_and_config_qt.py:140
+msgid "Move Marks Window Shortcuts"
+msgstr "Raccourcis clavier de la fenêtre « Déplacer les repères »"
+
+#: ui/help_and_config_qt.py:143
+msgid ""
+"These shortcuts apply when the Move Marks dialog has keyboard focus (Ctrl+M "
+"full window, or Ctrl+K minimal). They take priority over the same keys in "
+"the main window while this dialog is active."
+msgstr ""
+"Ces raccourcis s'appliquent lorsque la boîte de dialogue « Déplacer les "
+"repères » a le focus (Ctrl+M pour la fenêtre complète, ou Ctrl+K pour la "
+"fenêtre réduite). Ils ont la priorité sur les touches équivalentes de la "
+"fenêtre principale tant que cette boîte de dialogue est active."
+
+#: ui/help_and_config_qt.py:160
+msgid "Close Move Marks window"
+msgstr "Fermer la fenêtre « Déplacer les repères »"
+
+#: ui/help_and_config_qt.py:161
+msgid ""
+"Move marked files to inferred target (filtered row, filter text, or last "
+"used)"
+msgstr ""
+"Déplacer les fichiers marqués vers la cible inférée (ligne filtrée, texte de"
+" filtre ou dernière utilisée)"
+
+#: ui/help_and_config_qt.py:162
+msgid "Copy marked files instead of move"
+msgstr "Copiez les fichiers marqués à la place de déplacer"
+
+#: ui/help_and_config_qt.py:163
+msgid "Choose destination folder, then move or copy"
+msgstr "Choisir le dossier de destination, puis déplacer ou copier"
+
+#: ui/help_and_config_qt.py:164
+msgid "Move or copy using the penultimate marks action target"
+msgstr ""
+"Déplacer ou copier en utilisant l'action de cible des marques "
+"antépénultières"
+
+#: ui/help_and_config_qt.py:165 ui/help_and_config_qt.py:174
+msgid "Delete all marked files"
+msgstr "Supprimer tous les fichiers marqués"
+
+#: ui/help_and_config_qt.py:166
+msgid "Arm permanent mark target (next Move/Copy sets the permanent action)"
+msgstr ""
+"Activer la cible de la marque permanente (la prochaine action « "
+"Déplacer/Copier » définit l'action permanente)"
+
+#: ui/help_and_config_qt.py:167
+msgid "Sort filtered target directories by CLIP embedding (GUI mode only)"
+msgstr ""
+"Trier les répertoires cibles filtrés par embedding CLIP (mode interface "
+"graphique uniquement)"
+
+#: ui/help_and_config_qt.py:168
+msgid "Open hotkey actions configuration (password)"
+msgstr "Ouvrir la configuration des raccourcis clavier (avec le mot de passe)"
+
+#: ui/help_and_config_qt.py:169
+msgid "Rotate the filtered target list in chunks"
+msgstr "Déplacer la liste cible filtrée par tranches"
+
+#: ui/help_and_config_qt.py:170
+msgid "Rotate the filtered target list one row (GUI updates the list)"
+msgstr ""
+"Faites défiler la liste des cibles filtrées d'une ligne (l'interface "
+"graphique met la liste à jour)"
+
+#: ui/help_and_config_qt.py:171
+msgid "Remove last character from target name filter"
+msgstr "Supprimer le dernier caractère du nom du filtre de destination"
+
+#: ui/help_and_config_qt.py:172
+msgid "Letter keys"
+msgstr "Lettres de base"
+
+#: ui/help_and_config_qt.py:172
+msgid "Filter target directories by name (both window modes)"
+msgstr "Filtrer les dossiers cibles par nom (les deux modes de fenêtre)"
+
+#: ui/help_and_config_qt.py:173
+msgid "Test marked files in directory (use Ctrl/Alt/Shift for variants)"
+msgstr ""
+"Testez les fichiers sélectionnés dans le répertoire (utilisez les touches "
+"Ctrl/Alt/Maj pour les variantes)"
 
 #: ui/help_and_config_qt.py:183
 msgid "Image Details Shortcuts"
@@ -1231,6 +1322,26 @@ msgstr "Toasts du spectacle"
 #: ui/help_and_config_qt.py:252
 msgid "Slideshow Interval (sec)"
 msgstr "Intervalle de diaporama (sec)"
+
+#: ui/help_and_config_qt.py:255
+msgid "Slideshow video sec (0=interval; >0=max; <0=full clip/VLC)"
+msgstr ""
+"Vidéo en diaporama (0 = intervalle ; >0 = durée maximale ; <0 = clip complet"
+" / VLC)"
+
+#: ui/help_and_config_qt.py:259
+msgid "Slideshow GIF/WebP sec (0=interval; >0=max; <0=one full loop)"
+msgstr ""
+"Diaporama GIF/WebP (en secondes) (0 = intervalle ; >0 = durée maximale ; <0 "
+"= une boucle complète)"
+
+#: ui/help_and_config_qt.py:263
+msgid ""
+"Slideshow PDF pages (0=interval; N>0=N×interval; N<0=file page "
+"count×interval)"
+msgstr ""
+"Diaporama des pages du PDF (0 = intervalle ; N > 0 = N × intervalle ; N < 0 "
+"= nombre de pages du fichier × intervalle)"
 
 #: ui/help_and_config_qt.py:267
 msgid "File Check Interval (sec)"
@@ -1354,9 +1465,17 @@ msgstr "Couleur de la barre de titre effacée pour ce répertoire."
 msgid "Enter base directory..."
 msgstr "Entrez le répertoire de base..."
 
-#: ui/files/recent_directory_window_qt.py:164
-msgid "Set image comparison directory"
-msgstr "Définir le répertoire de comparaison des images"
+#: ui/app_window/app_window.py:659
+msgid "Set media comparison directory"
+msgstr "Configurer le répertoire de comparaison des médias"
+
+#: ui/app_window/app_window.py:675
+msgid ""
+"Path is not an existing directory:\n"
+"{0}"
+msgstr ""
+"La ruta no es un directorio existente:\n"
+"{0}"
 
 #: ui/app_window/app_window.py:867
 msgid "Large Directory Detected: {0}"
@@ -1437,6 +1556,18 @@ msgstr ""
 "Capture d'écran sauvegardée dans :\n"
 "{0}"
 
+#: ui/app_window/app_window.py:1164
+msgid "Masonry view is only available in browse mode."
+msgstr "La vue en maçonnerie est disponible uniquement en mode navigateur."
+
+#: ui/app_window/app_window.py:1177
+msgid "Masonry view"
+msgstr "Vue en maçonnerie"
+
+#: ui/app_window/app_window.py:1182
+msgid "Full-window view"
+msgstr "Affichage plein écran"
+
 #: ui/app_window/app_window.py:1214
 msgid "Theme switched to {0}."
 msgstr "Le thème est passé à {0}."
@@ -1501,25 +1632,25 @@ msgstr "Désactiver les prévalidations"
 msgid "Run Prevalidations on Directory"
 msgstr "Exécuter les Prévalidations sur le Répertoire"
 
+#: ui/app_window/context_menu_builder.py:152
+msgid "Show Source Media"
+msgstr "Afficher la source du média"
+
 #: ui/app_window/context_menu_builder.py:156
-msgid "Show Source Image"
-msgstr "Afficher l'image source"
+msgid "Find Related Media"
+msgstr "Trouver des médias apparentés"
 
 #: ui/app_window/context_menu_builder.py:160
-msgid "Find Related Images"
-msgstr "Trouver des images similaires"
+msgid "Set Marks from Downstream Related Media"
+msgstr "Définir des repères à partir de supports connexes en aval"
 
-#: ui/app_window/context_menu_builder.py:164
-msgid "Set Marks from Downstream Related Images"
-msgstr "Définir les marques à partir des images associées en aval"
+#: ui/app_window/context_menu_builder.py:170
+msgid "Set Current Media as Search Target"
+msgstr "Définir le support actif en tant qu'objectif de recherche"
 
 #: ui/app_window/context_menu_builder.py:174
-msgid "Set Current Image as Search Image"
-msgstr "Définir l'image actuelle comme image de recherche"
-
-#: ui/app_window/context_menu_builder.py:178
-msgid "Add Current Image to Negative Search"
-msgstr "Ajouter l'image actuelle à la recherche négative"
+msgid "Add Current Media to Negative Search"
+msgstr "Ajouter les médias actuels à la recherche négative"
 
 #: ui/app_window/context_menu_builder.py:184
 msgid "Copy file path"
@@ -1556,6 +1687,10 @@ msgid "Save copies of all videos in directory without metadata"
 msgstr ""
 "Enregistrer des copies de toutes les vidéos dans le répertoire sans "
 "métadonnées"
+
+#: ui/app_window/context_menu_builder.py:224
+msgid "Randomize filenames"
+msgstr "Mélanger les noms des fichiers"
 
 #: ui/app_window/context_menu_builder.py:228
 msgid "Run Refacdir"
@@ -1626,9 +1761,9 @@ msgstr ""
 msgid "Invalid action, no files found to delete"
 msgstr "Action non valide, aucun fichier à supprimer n'a été trouvé"
 
-#: ui/app_window/file_ops_controller.py:147
-msgid "Invalid action, search image not found"
-msgstr "Action non valide, l'image recherchée n'a pas été trouvée"
+#: ui/app_window/file_ops_controller.py:143
+msgid "Invalid action, search media not found"
+msgstr "Action non valide, recherche des médias non trouvés"
 
 #: ui/app_window/file_ops_controller.py:164
 msgid "Failed to delete current file, unable to get valid filepath"
@@ -1735,17 +1870,17 @@ msgstr "Répertoire {0} supprimé."
 msgid "Moving directory contents: {0}"
 msgstr "Déplacement des contenus du répertoire : {0}"
 
-#: ui/app_window/file_ops_controller.py:381
+#: ui/app_window/file_ops_controller.py:367
 msgid ""
-"Hid current image.\n"
+"Hid current media.\n"
 "To unhide, press Shift+B."
 msgstr ""
-"Masque l'image actuelle.\n"
-"Pour annuler le masquage, appuyez sur Maj+B."
+"Masquer le média actuel.\n"
+"Pour l'afficher, appuyez sur Maj+B."
 
-#: ui/app_window/file_ops_controller.py:387
-msgid "Cleared all hidden images."
-msgstr "Efface toutes les images cachées."
+#: ui/app_window/file_ops_controller.py:373
+msgid "Cleared all hidden media."
+msgstr "effacé tous les fichiers masqués."
 
 #: ui/app_window/file_ops_controller.py:390 ui/image/temp_media_window.py:184
 msgid "Copied filepath to clipboard"
@@ -1854,9 +1989,9 @@ msgstr "Converti {0} fichiers, {1} échoués, {2} existants ignorés"
 msgid "Invalid target filepath for replacement: "
 msgstr "Chemin d'accès au fichier cible non valide pour le remplacement : "
 
-#: ui/app_window/file_ops_controller.py:688
-msgid "Moved search image to "
-msgstr "Déplacement de l'image de recherche dans "
+#: ui/app_window/file_ops_controller.py:662
+msgid "Moved search media to "
+msgstr "Les fichiers multimédias de recherche ont été déplacés vers : "
 
 #: ui/app_window/file_ops_controller.py:692
 msgid "Opening media file: {0}"
@@ -1978,15 +2113,101 @@ msgstr ""
 msgid "Running refacdir"
 msgstr "Lancer refacdir"
 
+#: ui/app_window/file_ops_controller.py:901
+msgid "No valid base directory for randomize filenames"
+msgstr ""
+"Répertoire de base non valide pour la randomisation des noms de fichiers"
+
+#: ui/app_window/file_ops_controller.py:907
+msgid ""
+"Randomize filenames script not found:\n"
+"{0}"
+msgstr ""
+"Script de génération aléatoire de noms de fichiers introuvable :\n"
+"{0}"
+
+#: ui/app_window/file_ops_controller.py:914
+msgid "Dry run"
+msgstr "sécurité au sec"
+
+#: ui/app_window/file_ops_controller.py:915
+msgid "Execute"
+msgstr "Exécuter"
+
+#: ui/app_window/file_ops_controller.py:917
+msgid "Randomize Filenames"
+msgstr "Randomiser les noms des fichiers"
+
+#: ui/app_window/file_ops_controller.py:919
+msgid ""
+"Randomize media filenames under the entire base directory tree.\n"
+"\n"
+"{0}\n"
+"\n"
+"Log file:\n"
+"{1}\n"
+"\n"
+"Dry run — plan renames only; no files are changed.\n"
+"Execute — apply renames and update the mapping cache (irreversible)."
+msgstr ""
+"Randomiser les noms de fichiers multimédias dans l'ensemble de l'arborescence du répertoire de base.\n"
+"\n"
+"{0}\n"
+"\n"
+"Fichier journal :\n"
+"{1}\n"
+"\n"
+"Simulation — planification des changements de nom uniquement ; aucun fichier n'est modifié.\n"
+"Exécution — appliquer les changements de nom et mettre à jour le cache de mappage (irrémissible)."
+
+#: ui/app_window/file_ops_controller.py:938
+msgid "Confirm Randomize Filenames — Execute"
+msgstr "Confirmer la randomisation des noms de fichiers — Exécuter"
+
+#: ui/app_window/file_ops_controller.py:940
+msgid ""
+"This will rename media files on disk under:\n"
+"\n"
+"{0}\n"
+"\n"
+"Output log:\n"
+"{1}\n"
+"\n"
+"This cannot be undone from Weidr. Proceed?"
+msgstr ""
+"Cette opération renommera les fichiers multimédias présents sur le disque dans le répertoire :\n"
+"\n"
+"{0}\n"
+"\n"
+"Journal de sortie :\n"
+"{1}\n"
+"\n"
+"Cette opération ne peut pas être annulée depuis Weidr. Voulez-vous continuer ?"
+
+#: ui/app_window/file_ops_controller.py:973
+msgid "Failed to start randomize filenames: {0}"
+msgstr "Échec de la randomisation des noms de fichiers : {0}"
+
+#: ui/app_window/file_ops_controller.py:981
+msgid "Randomizing filenames under {0} — see {1}"
+msgstr "Génération aléatoire de noms de fichiers sous {0} — voir {1}"
+
+#: ui/app_window/file_ops_controller.py:985
+msgid "Randomize filenames dry run started for {0} — see {1}"
+msgstr ""
+"Lancement d'un test de simulation de la randomisation des noms de fichiers "
+"pour {0} — voir {1}"
+
 #: ui/app_window/media_frame.py:357
 msgid "No displayable files found in this directory for the current settings."
 msgstr ""
 "Aucuns fichiers affichables n'ont été trouvés dans ce dossier pour les "
 "paramètres actuels."
 
-#: ui/app_window/media_frame.py:759
-msgid "Animated image format is not supported for playback: "
-msgstr "Le format d'image animée n'est pas pris en charge pour la lecture : "
+#: ui/app_window/media_frame.py:773
+msgid "Animated media format is not supported for playback: "
+msgstr ""
+"Le format animé des médias n'est pas pris en charge pour la lecture : "
 
 #: ui/app_window/media_frame.py:840
 msgid "Video: "
@@ -2063,9 +2284,9 @@ msgstr "Index invalide"
 msgid "Somehow, the search file is invalid"
 msgstr "Le fichier de recherche n'est pas valide"
 
-#: ui/app_window/media_navigator.py:477
-msgid "Slideshow for new images started"
-msgstr "Démarrage du diaporama pour les nouvelles images"
+#: ui/app_window/media_navigator.py:462
+msgid "Slideshow for new media started"
+msgstr "Présentation en diaporama pour les nouveaux médias a commencé"
 
 #: ui/app_window/media_navigator.py:465
 msgid "Slideshow started"
@@ -2081,26 +2302,26 @@ msgstr ""
 "Groupe {0} de {1}\n"
 "Taille: {2}"
 
+#: ui/app_window/notification_controller.py:289
+msgid "No media files found"
+msgstr "Aucun fichier multimédia trouvé"
+
+#: ui/app_window/notification_controller.py:291
+msgid "1 media file found"
+msgstr "1 fichier média trouvé"
+
 #: ui/app_window/notification_controller.py:293
-msgid "No image files found"
-msgstr "Aucun fichier image trouvé"
-
-#: ui/app_window/notification_controller.py:295
-msgid "1 image file found"
-msgstr "1 fichier image trouvé"
-
-#: ui/app_window/notification_controller.py:297
-msgid "{0} image files found"
-msgstr "{0} fichiers images trouvés"
+msgid "{0} media files found"
+msgstr "{0} fichiers multimédia trouvés"
 
 #: ui/app_window/notification_controller.py:298
 msgid "(filtered)"
 msgstr "(filtré)"
 
-#: ui/app_window/search_controller.py:139
-#: ui/app_window/search_controller.py:169
-msgid "No image selected."
-msgstr "Aucune image sélectionnée."
+#: ui/app_window/search_controller.py:127
+#: ui/app_window/search_controller.py:153
+msgid "No media file selected."
+msgstr "Aucun fichier média n'a été sélectionné."
 
 #: ui/app_window/search_controller.py:127
 #: ui/app_window/search_controller.py:153
@@ -2114,13 +2335,13 @@ msgstr ""
 "Le mode de comparaison doit être configuré en un mode d'intégration pour "
 "rechercher les intégrations de texte"
 
-#: ui/app_window/search_controller.py:209
-msgid "Select image file"
-msgstr "Sélectionner un fichier image"
+#: ui/app_window/search_controller.py:191
+msgid "Select media file"
+msgstr "Sélectionnez un fichier média"
 
-#: ui/app_window/search_controller.py:211
-msgid "Image files"
-msgstr "Fichiers images"
+#: ui/app_window/search_controller.py:193
+msgid "Media files"
+msgstr "Fichiers multimédia"
 
 #: ui/app_window/search_controller.py:253
 msgid "Error running compare"
@@ -2143,10 +2364,11 @@ msgstr ""
 msgid "Are you sure you want to proceed?"
 msgstr "Êtes-vous sûr de vouloir continuer ?"
 
-#: ui/app_window/search_controller.py:443
-#: ui/app_window/search_controller.py:482
-msgid "Failed to get active image filepath"
-msgstr "Le chemin d'accès au fichier de l'image active n'a pas été obtenu"
+#: ui/app_window/search_controller.py:391
+#: ui/app_window/search_controller.py:422
+#: ui/app_window/search_controller.py:599
+msgid "Failed to get active media filepath"
+msgstr "Échec de l'obtention du chemin d'accès au fichier multimédia actif"
 
 #: ui/app_window/search_controller.py:439
 msgid "No Text Search Presets Found"
@@ -2176,23 +2398,30 @@ msgstr "Exécution de l'image gen sur le répertoire : "
 msgid "No downstream related image(s) found in {0}"
 msgstr "Aucune image liée à l'aval n'a été trouvée dans {0}"
 
-#: ui/app_window/search_controller.py:391
-#: ui/app_window/search_controller.py:422
-#: ui/app_window/search_controller.py:599
-msgid "Failed to get active media filepath"
-msgstr "Échec de l'obtention du chemin d'accès au fichier multimédia actif"
-
 #: ui/app_window/sidebar_panel.py:95
 msgid "Toggle theme"
 msgstr "Thème basculant"
+
+#: ui/app_window/sidebar_panel.py:97
+msgid "Switch between light and dark theme."
+msgstr "Basculer entre le thème clair et sombre."
 
 #: ui/app_window/sidebar_panel.py:102
 msgid "Set directory"
 msgstr "Définir le répertoire"
 
+#: ui/app_window/sidebar_panel.py:106
+msgid "Set the base directory to browse or run comparisons on."
+msgstr ""
+"Définit le répertoire de base pour naviguer ou exécuter des comparaisons."
+
 #: ui/app_window/sidebar_panel.py:115
 msgid "Directory notes"
 msgstr "Notes de l'annuaire"
+
+#: ui/app_window/sidebar_panel.py:120
+msgid "Open and edit notes associated with the current directory."
+msgstr "Ouvrir et modifier les notes associées au répertoire actuel."
 
 #: ui/app_window/sidebar_panel.py:125
 msgid "Browsing options"
@@ -2210,9 +2439,9 @@ msgstr "Mode de navigation - Trier par"
 msgid "Recurse subdirectories"
 msgstr "Récurrence des sous-répertoires"
 
-#: ui/app_window/sidebar_panel.py:138
-msgid "Image resize to full window"
-msgstr "Redimensionnement de l'image en pleine fenêtre"
+#: ui/app_window/sidebar_panel.py:162
+msgid "Media resize to full window"
+msgstr "Les médias se redimensionnent à la fenêtre entière"
 
 #: ui/app_window/sidebar_panel.py:167
 #: ui/compare/compare_settings_window_qt.py:249
@@ -2229,39 +2458,47 @@ msgstr "Rechercher"
 msgid "Set search file"
 msgstr "Définir le fichier de recherche"
 
-#: ui/app_window/sidebar_panel.py:158
+#: ui/app_window/sidebar_panel.py:182
 msgid ""
-"Set an image file to search for similar images.\n"
-"Uses embedding similarity to find visually similar images."
+"Set a media file to search for similar media.\n"
+"Uses embedding similarity to find visually similar media."
 msgstr ""
-"Définissez un fichier image pour rechercher des images similaires.\n"
-"Utilise la similarité d'intégration pour trouver des images visuellement similaires."
+"Sélectionnez un fichier multimédia pour rechercher des fichiers similaires.\n"
+"Utilise la similarité des vecteurs d'encodage pour trouver des fichiers multimédias visuellement similaires."
 
-#: ui/app_window/sidebar_panel.py:163
-msgid "Search image path..."
-msgstr "Rechercher le chemin de l'image..."
+#: ui/app_window/sidebar_panel.py:187
+msgid "Search media path..."
+msgstr "Rechercher le chemin média..."
 
 #: ui/app_window/sidebar_panel.py:195
 msgid "Set negative search file"
 msgstr "Définissez le fichier de recherche négative"
 
-#: ui/app_window/sidebar_panel.py:175
-msgid "Negative search image path..."
-msgstr "Chemin d'image de recherche négative..."
+#: ui/app_window/sidebar_panel.py:200
+msgid ""
+"Set a media file to search away from — results will exclude media similar to"
+" this."
+msgstr ""
+"Définissez un fichier multimédia à exclure de la recherche : les résultats "
+"ne comprendront pas les fichiers multimédias similaires à celui-ci."
+
+#: ui/app_window/sidebar_panel.py:203
+msgid "Negative search media path..."
+msgstr "Recherche négative du chemin média..."
 
 #: ui/app_window/sidebar_panel.py:211
 msgid "Search text (embedding mode)"
 msgstr "Texte de recherche (mode d'intégration)"
 
-#: ui/app_window/sidebar_panel.py:188
+#: ui/app_window/sidebar_panel.py:216
 msgid ""
-"Positive text: Find images similar to this text.\n"
-"Negative text: Exclude images similar to this text.\n"
+"Positive text: Find media similar to this text.\n"
+"Negative text: Exclude media similar to this text.\n"
 "Both use embedding similarity matching."
 msgstr ""
-"Texte positif : trouver des images similaires à ce texte.\n"
-"Texte négatif : exclure les images similaires à ce texte.\n"
-"Les deux utilisent la correspondance par similarité d'intégration."
+"Texte positif : rechercher des médias similaires à ce texte.\n"
+"Texte négatif : exclure les médias similaires à ce texte.\n"
+"Les deux utilisent la correspondance par similarité d'encodage."
 
 #: ui/app_window/sidebar_panel.py:222
 msgid "Positive text:"
@@ -2271,16 +2508,36 @@ msgstr "Texte positif :"
 msgid "Negative text:"
 msgstr "Texte négatif :"
 
+#: ui/app_window/sidebar_panel.py:239
+msgid "Compare tools"
+msgstr "Comparer les outils"
+
 #: ui/app_window/sidebar_panel.py:242
 #: ui/compare/classifier_actions_tab_qt.py:98
 #: ui/compare/classifier_management_window_qt.py:575
 msgid "Classifier Actions"
 msgstr "Actions du classificateur"
 
+#: ui/app_window/sidebar_panel.py:247
+msgid ""
+"Configure rules for automatically copying or moving files based on classifier results."
+msgstr ""
+"Configurer des règles pour copier ou déplacer automatiquement des fichiers en fonction des résultats du classificateur."
+
 #: ui/app_window/sidebar_panel.py:251
 #: ui/compare/hf_model_manager_window_qt.py:392
 msgid "Model Manager"
 msgstr "Gestionnaire de Modèles"
+
+#: ui/app_window/sidebar_panel.py:256
+msgid "Manage HuggingFace models used for media embeddings and comparison."
+msgstr ""
+"Gérer les modèles HuggingFace utilisés pour les émbedings des médias et la "
+"comparaison."
+
+#: ui/app_window/sidebar_panel.py:261
+msgid "Compare actions"
+msgstr "Comparer les actions"
 
 #: ui/app_window/sidebar_panel.py:264
 #: ui/compare/compare_settings_window_qt.py:88
@@ -2289,49 +2546,94 @@ msgstr "Gestionnaire de Modèles"
 msgid "Compare Settings"
 msgstr "Paramètres pour les comparaisons"
 
-#: ui/app_window/sidebar_panel.py:261
-msgid "Compare actions"
-msgstr "Comparer les actions"
+#: ui/app_window/sidebar_panel.py:269
+msgid "Configure settings for media comparison and duplicate detection."
+msgstr ""
+"Configurer les paramètres pour la comparaison de médias et la détection des "
+"doublons."
 
-#: ui/app_window/sidebar_panel.py:236
-msgid "Run image compare"
-msgstr "Lancer la comparaison d'images"
+#: ui/app_window/sidebar_panel.py:280
+msgid "Run media compare"
+msgstr "Exécuter media comparer"
+
+#: ui/app_window/sidebar_panel.py:285
+msgid ""
+"Run embedding-based similarity comparison on all media in the directory."
+msgstr ""
+"Effectuer une comparaison de similarité des encodages pour tous les fichiers"
+" multimédias du répertoire."
 
 #: ui/app_window/sidebar_panel.py:288
 msgid "Find duplicates"
 msgstr "Recherche de doublons"
 
-#: ui/image/media_details.py:163
-msgid "Image details"
-msgstr "Détails de l'image"
+#: ui/app_window/sidebar_panel.py:293
+msgid "Find duplicate or near-duplicate media in the directory."
+msgstr ""
+"Trouvez les doublons ou les quasi-doublons de fichiers dans le répertoire."
 
-#: ui/app_window/sidebar_panel.py:250
-msgid "Search current image"
-msgstr "Recherche de l'image actuelle"
+#: ui/app_window/sidebar_panel.py:296
+msgid "Media details"
+msgstr "Détails du média"
 
-#: ui/app_window/sidebar_panel.py:255
+#: ui/app_window/sidebar_panel.py:301
+msgid "Show detailed metadata and information about the current media file."
+msgstr ""
+"Afficher les méta-données détaillées et les informations concernant le "
+"fichier multimédia actuel."
+
+#: ui/app_window/sidebar_panel.py:306
+msgid "Search current media"
+msgstr "Rechercher les médias actuels"
+
+#: ui/app_window/sidebar_panel.py:311
 msgid ""
-"Search for images similar to the currently displayed image.\n"
+"Search for media similar to the currently displayed media.\n"
 "Uses embedding similarity matching."
 msgstr ""
-"Recherche des images similaires à l'image actuellement affichée.\n"
-"Utilise la correspondance par similarité d'intégration."
+"Rechercher des fichiers multimédias similaires à celui actuellement affiché.\n"
+"Utilise la correspondance par similarité d'encodage."
 
 #: ui/app_window/sidebar_panel.py:316
 msgid "File actions"
 msgstr "Actions du fichier"
 
-#: ui/app_window/sidebar_panel.py:267
-msgid "Copy image path"
-msgstr "Copier le chemin de l'image"
+#: ui/app_window/sidebar_panel.py:324
+msgid ""
+"Open the folder containing the current file in the system file manager."
+msgstr ""
+"Ouvrir le dossier contenant le fichier actuel dans le gestionnaire de "
+"fichiers système."
+
+#: ui/app_window/sidebar_panel.py:327
+msgid "Copy media path"
+msgstr "Copier le chemin du média"
+
+#: ui/app_window/sidebar_panel.py:332
+msgid "Copy the full file path of the current media file to the clipboard."
+msgstr ""
+"Copiez le chemin d'accès complet du fichier multimédia actuel dans le "
+"presse-papiers."
 
 #: ui/app_window/sidebar_panel.py:335
 msgid "Copy media basename"
 msgstr "Copier le nom de base du média"
 
+#: ui/app_window/sidebar_panel.py:340
+msgid ""
+"Copy the filename (without directory path) of the current file to the "
+"clipboard."
+msgstr ""
+"Copier le nom du fichier (sans le chemin d'accès du répertoire) du fichier "
+"actuel dans le presse-papiers."
+
 #: ui/app_window/sidebar_panel.py:343
 msgid "---- DELETE ----"
 msgstr "---- SUPPRIMER ----"
+
+#: ui/app_window/sidebar_panel.py:348
+msgid "Permanently delete the current media file from disk."
+msgstr "Supprimer définitivement le fichier multimédia actuel du disque dur."
 
 #: ui/app_window/sidebar_panel.py:514
 msgid "Ended slideshows"
@@ -2341,18 +2643,19 @@ msgstr "Diaporamas terminés"
 msgid "Please set a base directory first"
 msgstr "Veuillez d'abord définir un répertoire de base"
 
-#: ui/app_window/window_launcher.py:270
-msgid "(Open this image as part of a directory to see index details.)"
+#: ui/app_window/window_launcher.py:269
+msgid "(Open this media as part of a directory to see index details.)"
 msgstr ""
-"(Ouvrez cette image dans un répertoire pour voir les détails de l'index)."
+"(Ouvrez ce fichier multimédia dans un dossier pour afficher les détails de "
+"l'index.)"
+
+#: ui/app_window/window_launcher.py:348
+msgid "No media selected"
+msgstr "Aucunmédia n'aété sélectionné"
 
 #: ui/app_window/window_launcher.py:349
-msgid "No image selected"
-msgstr "Aucune image sélectionnée"
-
-#: ui/app_window/window_launcher.py:350
-msgid "No image was selected for comparison"
-msgstr "Aucune image n'a été sélectionnée pour la comparaison"
+msgid "No media file was selected for comparison"
+msgstr "Aucun fichier média n'a été sélectionné pour la comparaison"
 
 #: ui/app_window/window_launcher.py:366
 msgid ""
@@ -2361,6 +2664,14 @@ msgid ""
 msgstr ""
 "Êtes-vous sûr de vouloir effectuer toutes les prévalidations sur le "
 "répertoire {0} ? Ça peut prendre un moment."
+
+#: ui/app_window/window_launcher.py:422
+msgid ""
+"All prevalidations in this directory have finished.\n"
+"Files checked: {0} — outcomes: {1} — moves: {2} — copies: {3} — deletes: {4} — errors: {5}"
+msgstr ""
+"Toutes les prévalidations de ce répertoire sont terminées.\n"
+"Fichiers vérifiés : {0} — résultats : {1} — déplacements : {2} — copies : {3} — suppressions : {4} — erreurs : {5}"
 
 #: ui/app_window/window_launcher.py:436
 msgid "Prevalidations now running"
@@ -2861,6 +3172,14 @@ msgstr "Utiliser des invites"
 msgid "Use Embedding Prototype"
 msgstr "Utiliser le prototype d'intégration"
 
+#: ui/compare/classifier_management_window_qt.py:189
+msgid ""
+"Match pseudo-static dynamic media (video/GIF/PDF with no meaningful "
+"variation)"
+msgstr ""
+"Fichiers multimédias dynamiques pseudo-statiques (vidéos, GIF, PDF ne "
+"présentant pas de variations significatives)"
+
 #: ui/compare/classifier_management_window_qt.py:197
 msgid "Text Embedding Threshold"
 msgstr "Seuil d'intégration de texte"
@@ -3095,6 +3414,14 @@ msgstr "Ajouter un répertoire"
 #: ui/compare/directory_profile_window_qt.py:254
 msgid "Edit Directory"
 msgstr "Modifier le répertoire"
+
+#: ui/compare/directory_profile_window_qt.py:283
+msgid "Remove Directories"
+msgstr "Supprimer les dossiers"
+
+#: ui/compare/directory_profile_window_qt.py:284
+msgid "Remove {0} selected directories from this profile?"
+msgstr "Supprimer {0} dossiers sélectionnés de ce profil ?"
 
 #: ui/compare/directory_profile_window_qt.py:299
 msgid "Select directory to add subdirectories from"
@@ -3604,6 +3931,18 @@ msgstr "Ajouter la prévalidation"
 msgid "Clear prevalidations"
 msgstr "Prévalidations claires"
 
+#: ui/compare/prevalidations_tab_qt.py:359
+msgid "Clear prevalidation cache"
+msgstr "Vider le cache de prévalidation"
+
+#: ui/compare/prevalidations_tab_qt.py:361
+msgid ""
+"Discard cached prevalidation outcomes (this session and on disk).\n"
+"Rules, profiles, and lookaheads are not changed; media will be re-evaluated."
+msgstr ""
+"Supprimer les résultats de prévalidation mis en cache (pour cette session et sur le disque).\n"
+"Les règles, les profils et les analyses anticipées ne sont pas modifiés ; les médias seront réévalués."
+
 #: ui/compare/prevalidations_tab_qt.py:368
 msgid ""
 "When checked, the clear button evicts only the cached results\n"
@@ -3641,6 +3980,28 @@ msgstr "Seulement : {0}"
 #: ui/compare/prevalidations_tab_qt.py:864
 msgid "Clear results ({0})"
 msgstr "Effacer les résultats ({0})"
+
+#: ui/compare/prevalidations_tab_qt.py:880
+msgid "Confirm Clear Prevalidations"
+msgstr "Confirmer pour effacer les prévalidations"
+
+#: ui/compare/prevalidations_tab_qt.py:882
+msgid ""
+"Remove all prevalidation rules? Cached outcomes for this session will also be cleared.\n"
+"\n"
+"This cannot be undone."
+msgstr ""
+"Supprimer toutes les règles de prévalidation ? Les résultats mis en cache pour cette session seront également effacés.\n"
+"\n"
+"Cette action ne peut pas être annulée."
+
+#: ui/compare/prevalidations_tab_qt.py:931
+msgid ""
+"Prevalidation cache stats: ~{memory} — {items} items — {directories} "
+"directories"
+msgstr ""
+"Statistiques du cache de prévalidation : ~{memory} — {items} élément(s) — "
+"{directories} répertoires"
 
 #: ui/files/directory_notes_window_qt.py:51
 msgid "Directory Notes - {0}"
@@ -3970,8 +4331,8 @@ msgid "File Action History"
 msgstr "Historique des actions sur les fichiers"
 
 #: ui/files/file_actions_window_qt.py:102
-msgid "Search Image"
-msgstr "Recherche d'image"
+msgid "Search Media"
+msgstr "Rechercher les médias"
 
 #: ui/files/file_actions_window_qt.py:107
 msgid "Clear History"
@@ -4030,6 +4391,10 @@ msgstr "Voir"
 #: ui/files/file_actions_window_qt.py:365
 msgid "Copy Filename"
 msgstr "Copier le nom"
+
+#: ui/files/file_actions_window_qt.py:405
+msgid "Error opening media: "
+msgstr "Erreur d'ouverture du média: "
 
 #: ui/files/file_actions_window_qt.py:412
 msgid "Image does not exist: "
@@ -4431,6 +4796,10 @@ msgstr ""
 msgid "Set Image Comparison Directory"
 msgstr "Définir le répertoire de comparaison d'images"
 
+#: ui/files/recent_directory_window_qt.py:164
+msgid "Set image comparison directory"
+msgstr "Définir le répertoire de comparaison des images"
+
 #: ui/files/recent_directory_window_qt.py:184
 msgid "Invalid directory: %s"
 msgstr "Répertoire non valide : {0}"
@@ -4516,6 +4885,10 @@ msgstr ""
 #: ui/files/type_configuration_window_qt.py:327
 msgid "Media type configuration updated"
 msgstr "Configuration du type de média mise à jour"
+
+#: ui/image/media_details.py:163
+msgid "Image details"
+msgstr "Détails de l'image"
 
 #: ui/image/media_details.py:251
 msgid "(negative prompt not shown by config setting)"
@@ -5225,605 +5598,3 @@ msgstr "Accès Mot de passe Administration"
 #: utils/notification_manager.py:24
 msgid " etc."
 msgstr " etc."
-
-#: compare/classifier_action.py:1029
-msgid "pseudo-static dynamic media"
-msgstr "médias dynamiques pseudo-statiques"
-
-#: compare/compare_wrapper.py:220
-msgid "Skipped %s media."
-msgstr ""
-
-#: compare/compare_wrapper.py:226
-msgid "No Unrelated Media"
-msgstr ""
-
-#: compare/compare_wrapper.py:226
-msgid "No unrelated media found."
-msgstr ""
-
-#: compare/compare_wrapper.py:333
-msgid ""
-"Gathering media data... setup may take a while depending on number of files "
-"involved."
-msgstr ""
-"Collecte des données multimédia... La configuration peut prendre un certain "
-"temps selon le nombre de fichiers concernés."
-
-#: compare/compare_wrapper.py:356
-msgid ""
-"Search mode detected, please confirm switch to group mode before run. Group "
-"mode will take longer as all media in the base directory are compared."
-msgstr ""
-"Mode de recherche détecté. Veuillez confirmer le passage en mode groupe "
-"avant de lancer l'opération. Le mode groupe prendra plus de temps, car tous "
-"les fichiers multimédias du répertoire de base seront comparés."
-
-#: compare/compare_wrapper.py:363
-msgid "Gathering media data for comparison"
-msgstr ""
-
-#: compare/compare_wrapper.py:401
-msgid "Searching media..."
-msgstr ""
-
-#: compare/compare_wrapper.py:421
-msgid "%s possibly related media found."
-msgstr ""
-
-#: compare/compare_wrapper.py:429
-msgid "Running media comparisons..."
-msgstr ""
-
-#: compare/compare_wrapper.py:530
-msgid ""
-"There are no more media groups remaining for this directory and current "
-"filter settings."
-msgstr ""
-"Il n'y a plus aucun groupe de médias correspondant à ce répertoire et aux "
-"paramètres de filtrage actuels."
-
-#: ui/help_and_config_qt.py:75
-msgid "Search current media in new window"
-msgstr "Ouvrir la recherche de médias en cours dans une nouvelle fenêtre"
-
-#: ui/help_and_config_qt.py:101
-msgid "Go to first sorted media"
-msgstr ""
-
-#: ui/help_and_config_qt.py:102
-msgid "Go to last sorted media"
-msgstr ""
-
-#: ui/help_and_config_qt.py:103
-msgid "Show previous/next media"
-msgstr ""
-
-#: ui/help_and_config_qt.py:104
-msgid "Page through media"
-msgstr ""
-
-#: ui/help_and_config_qt.py:105
-msgid "Search current media in current window"
-msgstr ""
-
-#: ui/help_and_config_qt.py:106
-msgid "Clear all hidden media"
-msgstr ""
-
-#: ui/help_and_config_qt.py:108
-msgid "Show media details"
-msgstr ""
-
-#: ui/help_and_config_qt.py:109
-msgid "Delete media (or marked file group if marks window selected)"
-msgstr ""
-"Supprimer les fichiers multimédias (ou le groupe de fichiers sélectionnés si"
-" la fenêtre de sélection est ouverte)"
-
-#: ui/help_and_config_qt.py:116
-msgid "View last moved media mark"
-msgstr "Afficher le repère du dernier fichier multimédia déplacé"
-
-#: ui/help_and_config_qt.py:117
-msgid "View last system-moved media"
-msgstr "Afficher les fichiers multimédias récemment déplacés par le système"
-
-#: ui/help_and_config_qt.py:119
-msgid "Add or remove a mark for current media"
-msgstr ""
-
-#: ui/help_and_config_qt.py:128
-msgid "Hide current media"
-msgstr ""
-
-#: ui/help_and_config_qt.py:140
-msgid "Move Marks Window Shortcuts"
-msgstr "Raccourcis clavier de la fenêtre « Déplacer les repères »"
-
-#: ui/help_and_config_qt.py:143
-msgid ""
-"These shortcuts apply when the Move Marks dialog has keyboard focus (Ctrl+M "
-"full window, or Ctrl+K minimal). They take priority over the same keys in "
-"the main window while this dialog is active."
-msgstr ""
-"Ces raccourcis s'appliquent lorsque la boîte de dialogue « Déplacer les "
-"repères » a le focus (Ctrl+M pour la fenêtre complète, ou Ctrl+K pour la "
-"fenêtre réduite). Ils ont la priorité sur les touches équivalentes de la "
-"fenêtre principale tant que cette boîte de dialogue est active."
-
-#: ui/help_and_config_qt.py:160
-msgid "Close Move Marks window"
-msgstr ""
-
-#: ui/help_and_config_qt.py:161
-msgid ""
-"Move marked files to inferred target (filtered row, filter text, or last "
-"used)"
-msgstr ""
-
-#: ui/help_and_config_qt.py:162
-msgid "Copy marked files instead of move"
-msgstr ""
-
-#: ui/help_and_config_qt.py:163
-msgid "Choose destination folder, then move or copy"
-msgstr ""
-
-#: ui/help_and_config_qt.py:164
-msgid "Move or copy using the penultimate marks action target"
-msgstr ""
-
-#: ui/help_and_config_qt.py:165 ui/help_and_config_qt.py:174
-msgid "Delete all marked files"
-msgstr ""
-
-#: ui/help_and_config_qt.py:166
-msgid "Arm permanent mark target (next Move/Copy sets the permanent action)"
-msgstr ""
-"Activer la cible de la marque permanente (la prochaine action « "
-"Déplacer/Copier » définit l'action permanente)"
-
-#: ui/help_and_config_qt.py:167
-msgid "Sort filtered target directories by CLIP embedding (GUI mode only)"
-msgstr ""
-"Trier les répertoires cibles filtrés par embedding CLIP (mode interface "
-"graphique uniquement)"
-
-#: ui/help_and_config_qt.py:168
-msgid "Open hotkey actions configuration (password)"
-msgstr ""
-
-#: ui/help_and_config_qt.py:169
-msgid "Rotate the filtered target list in chunks"
-msgstr ""
-
-#: ui/help_and_config_qt.py:170
-msgid "Rotate the filtered target list one row (GUI updates the list)"
-msgstr ""
-
-#: ui/help_and_config_qt.py:171
-msgid "Remove last character from target name filter"
-msgstr ""
-
-#: ui/help_and_config_qt.py:172
-msgid "Letter keys"
-msgstr ""
-
-#: ui/help_and_config_qt.py:172
-msgid "Filter target directories by name (both window modes)"
-msgstr ""
-
-#: ui/help_and_config_qt.py:173
-msgid "Test marked files in directory (use Ctrl/Alt/Shift for variants)"
-msgstr ""
-"Testez les fichiers sélectionnés dans le répertoire (utilisez les touches "
-"Ctrl/Alt/Maj pour les variantes)"
-
-#: ui/help_and_config_qt.py:255
-msgid "Slideshow video sec (0=interval; >0=max; <0=full clip/VLC)"
-msgstr ""
-"Vidéo en diaporama (0 = intervalle ; >0 = durée maximale ; <0 = clip complet"
-" / VLC)"
-
-#: ui/help_and_config_qt.py:259
-msgid "Slideshow GIF/WebP sec (0=interval; >0=max; <0=one full loop)"
-msgstr ""
-"Diaporama GIF/WebP (en secondes) (0 = intervalle ; >0 = durée maximale ; <0 "
-"= une boucle complète)"
-
-#: ui/help_and_config_qt.py:263
-msgid ""
-"Slideshow PDF pages (0=interval; N>0=N×interval; N<0=file page "
-"count×interval)"
-msgstr ""
-"Diaporama des pages du PDF (0 = intervalle ; N > 0 = N × intervalle ; N < 0 "
-"= nombre de pages du fichier × intervalle)"
-
-#: ui/app_window/app_window.py:659
-msgid "Set media comparison directory"
-msgstr ""
-
-#: ui/app_window/app_window.py:675
-msgid ""
-"Path is not an existing directory:\n"
-"{0}"
-msgstr ""
-
-#: ui/app_window/app_window.py:1164
-msgid "Masonry view is only available in browse mode."
-msgstr ""
-
-#: ui/app_window/app_window.py:1177
-msgid "Masonry view"
-msgstr ""
-
-#: ui/app_window/app_window.py:1182
-msgid "Single view"
-msgstr ""
-
-#: ui/app_window/context_menu_builder.py:152
-msgid "Show Source Media"
-msgstr ""
-
-#: ui/app_window/context_menu_builder.py:156
-msgid "Find Related Media"
-msgstr ""
-
-#: ui/app_window/context_menu_builder.py:160
-msgid "Set Marks from Downstream Related Media"
-msgstr "Définir des repères à partir de supports connexes en aval"
-
-#: ui/app_window/context_menu_builder.py:170
-msgid "Set Current Media as Search Target"
-msgstr ""
-
-#: ui/app_window/context_menu_builder.py:174
-msgid "Add Current Media to Negative Search"
-msgstr ""
-
-#: ui/app_window/context_menu_builder.py:224
-msgid "Randomize filenames"
-msgstr ""
-
-#: ui/app_window/file_ops_controller.py:143
-msgid "Invalid action, search media not found"
-msgstr ""
-
-#: ui/app_window/file_ops_controller.py:367
-msgid ""
-"Hid current media.\n"
-"To unhide, press Shift+B."
-msgstr ""
-
-#: ui/app_window/file_ops_controller.py:373
-msgid "Cleared all hidden media."
-msgstr ""
-
-#: ui/app_window/file_ops_controller.py:662
-msgid "Moved search media to "
-msgstr "Les fichiers multimédias de recherche ont été déplacés vers : "
-
-#: ui/app_window/file_ops_controller.py:901
-msgid "No valid base directory for randomize filenames"
-msgstr ""
-"Répertoire de base non valide pour la randomisation des noms de fichiers"
-
-#: ui/app_window/file_ops_controller.py:907
-msgid ""
-"Randomize filenames script not found:\n"
-"{0}"
-msgstr ""
-"Script de génération aléatoire de noms de fichiers introuvable :\n"
-"{0}"
-
-#: ui/app_window/file_ops_controller.py:914
-msgid "Dry run"
-msgstr ""
-
-#: ui/app_window/file_ops_controller.py:915
-msgid "Execute"
-msgstr ""
-
-#: ui/app_window/file_ops_controller.py:917
-msgid "Randomize Filenames"
-msgstr ""
-
-#: ui/app_window/file_ops_controller.py:919
-msgid ""
-"Randomize media filenames under the entire base directory tree.\n"
-"\n"
-"{0}\n"
-"\n"
-"Log file:\n"
-"{1}\n"
-"\n"
-"Dry run — plan renames only; no files are changed.\n"
-"Execute — apply renames and update the mapping cache (irreversible)."
-msgstr ""
-"Randomiser les noms de fichiers multimédias dans l'ensemble de l'arborescence du répertoire de base.\n"
-"\n"
-"{0}\n"
-"\n"
-"Fichier journal :\n"
-"{1}\n"
-"\n"
-"Simulation — planification des changements de nom uniquement ; aucun fichier n'est modifié.\n"
-"Exécution — appliquer les changements de nom et mettre à jour le cache de mappage (irrémissible)."
-
-#: ui/app_window/file_ops_controller.py:938
-msgid "Confirm Randomize Filenames — Execute"
-msgstr "Confirmer la randomisation des noms de fichiers — Exécuter"
-
-#: ui/app_window/file_ops_controller.py:940
-msgid ""
-"This will rename media files on disk under:\n"
-"\n"
-"{0}\n"
-"\n"
-"Output log:\n"
-"{1}\n"
-"\n"
-"This cannot be undone from Weidr. Proceed?"
-msgstr ""
-"Cette opération renommera les fichiers multimédias présents sur le disque dans le répertoire :\n"
-"\n"
-"{0}\n"
-"\n"
-"Journal de sortie :\n"
-"{1}\n"
-"\n"
-"Cette opération ne peut pas être annulée depuis Weidr. Voulez-vous continuer ?"
-
-#: ui/app_window/file_ops_controller.py:973
-msgid "Failed to start randomize filenames: {0}"
-msgstr "Échec de la randomisation des noms de fichiers : {0}"
-
-#: ui/app_window/file_ops_controller.py:981
-msgid "Randomizing filenames under {0} — see {1}"
-msgstr "Génération aléatoire de noms de fichiers sous {0} — voir {1}"
-
-#: ui/app_window/file_ops_controller.py:985
-msgid "Randomize filenames dry run started for {0} — see {1}"
-msgstr ""
-"Lancement d'un test de simulation de la randomisation des noms de fichiers "
-"pour {0} — voir {1}"
-
-#: ui/app_window/media_frame.py:773
-msgid "Animated media format is not supported for playback: "
-msgstr " "
-
-#: ui/app_window/media_navigator.py:462
-msgid "Slideshow for new media started"
-msgstr ""
-
-#: ui/app_window/notification_controller.py:289
-msgid "No media files found"
-msgstr ""
-
-#: ui/app_window/notification_controller.py:291
-msgid "1 media file found"
-msgstr ""
-
-#: ui/app_window/notification_controller.py:293
-msgid "{0} media files found"
-msgstr ""
-
-#: ui/app_window/search_controller.py:127
-#: ui/app_window/search_controller.py:153
-msgid "No media file selected."
-msgstr ""
-
-#: ui/app_window/search_controller.py:191
-msgid "Select media file"
-msgstr ""
-
-#: ui/app_window/search_controller.py:193
-msgid "Media files"
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:97
-msgid "Switch between light and dark theme."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:106
-msgid "Set the base directory to browse or run comparisons on."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:120
-msgid "Open and edit notes associated with the current directory."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:162
-msgid "Media resize to full window"
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:182
-msgid ""
-"Set a media file to search for similar media.\n"
-"Uses embedding similarity to find visually similar media."
-msgstr ""
-"Sélectionnez un fichier multimédia pour rechercher des fichiers similaires.\n"
-"Utilise la similarité des vecteurs d'encodage pour trouver des fichiers multimédias visuellement similaires."
-
-#: ui/app_window/sidebar_panel.py:187
-msgid "Search media path..."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:200
-msgid ""
-"Set a media file to search away from — results will exclude media similar to"
-" this."
-msgstr ""
-"Définissez un fichier multimédia à exclure de la recherche : les résultats "
-"ne comprendront pas les fichiers multimédias similaires à celui-ci."
-
-#: ui/app_window/sidebar_panel.py:203
-msgid "Negative search media path..."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:216
-msgid ""
-"Positive text: Find media similar to this text.\n"
-"Negative text: Exclude media similar to this text.\n"
-"Both use embedding similarity matching."
-msgstr ""
-"Texte positif : rechercher des médias similaires à ce texte.\n"
-"Texte négatif : exclure les médias similaires à ce texte.\n"
-"Les deux utilisent la correspondance par similarité d'encodage."
-
-#: ui/app_window/sidebar_panel.py:239
-msgid "Compare tools"
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:247
-msgid ""
-"Configure rules for automatically copying or moving files\n"
-"based on classifier results."
-msgstr ""
-"Configurer des règles pour copier ou déplacer automatiquement des fichiers\n"
-"en fonction des résultats du classificateur."
-
-#: ui/app_window/sidebar_panel.py:256
-msgid "Manage HuggingFace models used for media embeddings and comparison."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:269
-msgid "Configure settings for media comparison and duplicate detection."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:280
-msgid "Run media compare"
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:285
-msgid ""
-"Run embedding-based similarity comparison on all media in the directory."
-msgstr ""
-"Effectuer une comparaison de similarité des encodages pour tous les fichiers"
-" multimédias du répertoire."
-
-#: ui/app_window/sidebar_panel.py:293
-msgid "Find duplicate or near-duplicate media in the directory."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:296
-msgid "Media details"
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:301
-msgid "Show detailed metadata and information about the current media file."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:306
-msgid "Search current media"
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:311
-msgid ""
-"Search for media similar to the currently displayed media.\n"
-"Uses embedding similarity matching."
-msgstr ""
-"Rechercher des fichiers multimédias similaires à celui actuellement affiché.\n"
-"Utilise la correspondance par similarité d'encodage."
-
-#: ui/app_window/sidebar_panel.py:324
-msgid ""
-"Open the folder containing the current file in the system file manager."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:327
-msgid "Copy media path"
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:332
-msgid "Copy the full file path of the current media file to the clipboard."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:340
-msgid ""
-"Copy the filename (without directory path) of the current file to the "
-"clipboard."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:348
-msgid "Permanently delete the current media file from disk."
-msgstr ""
-
-#: ui/app_window/window_launcher.py:269
-msgid "(Open this media as part of a directory to see index details.)"
-msgstr ""
-
-#: ui/app_window/window_launcher.py:348
-msgid "No media selected"
-msgstr ""
-
-#: ui/app_window/window_launcher.py:349
-msgid "No media file was selected for comparison"
-msgstr ""
-
-#: ui/app_window/window_launcher.py:422
-msgid ""
-"All prevalidations in this directory have finished.\n"
-"Files checked: {0} — outcomes: {1} — moves: {2} — copies: {3} — deletes: {4} — errors: {5}"
-msgstr ""
-"Toutes les prévalidations de ce répertoire sont terminées.\n"
-"Fichiers vérifiés : {0} — résultats : {1} — déplacements : {2} — copies : {3} — suppressions : {4} — erreurs : {5}"
-
-#: ui/compare/classifier_management_window_qt.py:189
-msgid ""
-"Match pseudo-static dynamic media (video/GIF/PDF with no meaningful "
-"variation)"
-msgstr ""
-"Fichiers multimédias dynamiques pseudo-statiques (vidéos, GIF, PDF ne "
-"présentant pas de variations significatives)"
-
-#: ui/compare/directory_profile_window_qt.py:283
-msgid "Remove Directories"
-msgstr ""
-
-#: ui/compare/directory_profile_window_qt.py:284
-msgid "Remove {0} selected directories from this profile?"
-msgstr ""
-
-#: ui/compare/prevalidations_tab_qt.py:359
-msgid "Clear prevalidation cache"
-msgstr "Vider le cache de prévalidation"
-
-#: ui/compare/prevalidations_tab_qt.py:361
-msgid ""
-"Discard cached prevalidation outcomes (this session and on disk).\n"
-"Rules, profiles, and lookaheads are not changed; media will be re-evaluated."
-msgstr ""
-"Supprimer les résultats de prévalidation mis en cache (pour cette session et sur le disque).\n"
-"Les règles, les profils et les analyses anticipées ne sont pas modifiés ; les médias seront réévalués."
-
-#: ui/compare/prevalidations_tab_qt.py:880
-msgid "Confirm Clear Prevalidations"
-msgstr "Confirmer pour effacer les prévalidations"
-
-#: ui/compare/prevalidations_tab_qt.py:882
-msgid ""
-"Remove all prevalidation rules? Cached outcomes for this session will also be cleared.\n"
-"\n"
-"This cannot be undone."
-msgstr ""
-"Supprimer toutes les règles de prévalidation ? Les résultats mis en cache pour cette session seront également effacés.\n"
-"\n"
-"Cette action ne peut pas être annulée."
-
-#: ui/compare/prevalidations_tab_qt.py:931
-msgid ""
-"Prevalidation cache stats: ~{memory} — {items} items — {directories} "
-"directories"
-msgstr ""
-"Statistiques du cache de prévalidation : ~{memory} — {items} élément(s) — "
-"{directories} répertoires"
-
-#: ui/files/file_actions_window_qt.py:102
-msgid "Search Media"
-msgstr "Rechercher les médias"
-
-#: ui/files/file_actions_window_qt.py:405
-msgid "Error opening media: "
-msgstr " "

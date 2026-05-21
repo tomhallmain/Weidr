@@ -244,8 +244,8 @@ class SidebarPanel(QWidget):
         )
         create_tooltip(
             self.classifier_actions_btn,
-            _("Configure rules for automatically copying or moving files\n"
-              "based on classifier results."),
+            _("Configure rules for automatically copying or moving files"
+              " based on classifier results."),
         )
         self.hf_model_manager_btn = self._make_button(
             _("Model Manager"),

@@ -2,9 +2,9 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: 1.0\n"
-"POT-Creation-Date: 2026-05-20 22:44-0400\n"
-"PO-Revision-Date: 2026-05-20 22:44-0400\n"
-"Last-Translator: Translator Name <translator@example.com>\n"
+"POT-Creation-Date: 2026-05-21 15:16-0400\n"
+"PO-Revision-Date: 2026-05-21 15:16-0400\n"
+"Last-Translator: Thomas Hall <tomhall.main@gmail.com>\n"
 "Language-Team: zh Team <<EMAIL>>\n"
 "Language: zh\n"
 "MIME-Version: 1.0\n"
@@ -116,6 +116,10 @@ msgstr "提示"
 msgid "prototype"
 msgstr "原型"
 
+#: compare/classifier_action.py:1029
+msgid "pseudo-static dynamic media"
+msgstr "伪静态动态媒体"
+
 #: compare/classifier_action.py:1037
 msgid "categories: {0}"
 msgstr "类别： {0}"
@@ -175,16 +179,16 @@ msgid "No matches found. Search again to find potential matches."
 msgstr "未找到匹配项。请再次搜索，以找到可能的匹配项。"
 
 #: compare/compare_wrapper.py:220
-msgid "Skipped %s images."
-msgstr "跳过 {0} 幅图像。"
+msgid "Skipped %s media."
+msgstr "跳过了 %s 媒体文件。"
 
 #: compare/compare_wrapper.py:226
-msgid "No Unrelated Images"
-msgstr "无不相关的图像"
+msgid "No Unrelated Media"
+msgstr "无无关媒体"
 
 #: compare/compare_wrapper.py:226
-msgid "No unrelated images found."
-msgstr "未找到不相关的图像 。"
+msgid "No unrelated media found."
+msgstr "未发现任何无关内容。"
 
 #: compare/compare_wrapper.py:263 compare/compare_wrapper.py:435
 msgid "No Groups Found"
@@ -192,9 +196,9 @@ msgstr "没有找到组"
 
 #: compare/compare_wrapper.py:333
 msgid ""
-"Gathering image data... setup may take a while depending on number of files "
+"Gathering media data... setup may take a while depending on number of files "
 "involved."
-msgstr "收集图像数据......根据所涉及文件的数量，设置可能需要一段时间。"
+msgstr "正在收集媒体数据……根据涉及的文件数量，设置过程可能需要一段时间。"
 
 #: compare/compare_wrapper.py:355
 msgid "Confirm group run"
@@ -203,16 +207,16 @@ msgstr "确认小组运行"
 #: compare/compare_wrapper.py:356
 msgid ""
 "Search mode detected, please confirm switch to group mode before run. Group "
-"mode will take longer as all images in the base directory are compared."
-msgstr "检测到搜索模式，请确认切换到组模式后再运行。群组模式将需要更长的时间，因为要对基本目录中的所有图像进行比较。"
+"mode will take longer as all media in the base directory are compared."
+msgstr "检测到搜索模式，请在运行前确认切换至分组模式。分组模式需要更长时间，因为会比较基目录中的所有媒体文件。"
 
 #: compare/compare_wrapper.py:363
-msgid "Gathering image data for comparison"
-msgstr "收集图像数据进行比较"
+msgid "Gathering media data for comparison"
+msgstr "收集媒体数据以进行比较"
 
 #: compare/compare_wrapper.py:401
-msgid "Searching images..."
-msgstr "正在搜索图像..."
+msgid "Searching media..."
+msgstr "正在查找媒体..."
 
 #: compare/compare_wrapper.py:407
 msgid "Set a directory and search file or search text."
@@ -227,12 +231,12 @@ msgid "None of the files match the search filters with current settings."
 msgstr "在当前设置下，没有任何文件符合搜索筛选条件。"
 
 #: compare/compare_wrapper.py:421
-msgid "%s possibly related images found."
-msgstr "{0} 可能找到相关的图像 。"
+msgid "%s possibly related media found."
+msgstr "找到 %s 条可能相关的媒体文件。"
 
 #: compare/compare_wrapper.py:429
-msgid "Running image comparisons..."
-msgstr "运行图像比较..."
+msgid "Running media comparisons..."
+msgstr "正在进行媒体比较..."
 
 #: compare/compare_wrapper.py:434 compare/compare_wrapper.py:449
 msgid "Set a directory and search file."
@@ -253,7 +257,7 @@ msgstr "根据当前设置，没有任何文件看起来是重复的。"
 
 #: compare/compare_wrapper.py:474
 msgid "Stranded Group Members Found"
-msgstr "找到受困的小组成员"
+msgstr "已找到受困群体的成员"
 
 #: compare/compare_wrapper.py:474
 msgid "Some group members were left stranded by the grouping process."
@@ -265,9 +269,9 @@ msgstr "没有更多组"
 
 #: compare/compare_wrapper.py:530
 msgid ""
-"There are no more image groups remaining for this directory and current "
+"There are no more media groups remaining for this directory and current "
 "filter settings."
-msgstr "此目录和当前过滤器设置已没有剩余的图像组。"
+msgstr "根据当前目录和筛选设置，已无更多媒体组。"
 
 #: compare/compare_wrapper.py:538 ui/app_window/sidebar_panel.py:86
 msgid "Set a directory to run comparison."
@@ -565,11 +569,11 @@ msgstr "找到已有文件名 !"
 
 #: files/marked_files.py:511
 msgid "WARNING: All file hashes match."
-msgstr "所有档案都匹配"
+msgstr "警告：所有文件哈希值均匹配。"
 
 #: files/marked_files.py:513
 msgid "WARNING: %s of %s file hashes match."
-msgstr "警告 : {0} {1} 文件散列匹配 。"
+msgstr "警告：{1} 个文件哈希值中有 {0} 个匹配。"
 
 #: files/marked_files.py:515
 msgid "INFO: %s files have identical content but different EXIF data."
@@ -693,7 +697,7 @@ msgstr "diff-pdf 未创建输出文件。"
 
 #: image/image_data_extractor.py:430
 msgid "(Unable to parse image prompt information for this file.)"
-msgstr "(无法解析此文件的图像提示信息。)"
+msgstr "（无法解析此文件的图像提示信息。）"
 
 #: image/video_ops.py:312
 msgid "Video ({0})"
@@ -850,8 +854,8 @@ msgid "Description"
 msgstr "说明"
 
 #: ui/help_and_config_qt.py:75
-msgid "Search current image in new window"
-msgstr "在新窗口中搜索当前图像"
+msgid "Search current media in new window"
+msgstr "在新窗口中搜索当前媒体"
 
 #: ui/help_and_config_qt.py:76
 msgid "Return to Browsing mode"
@@ -876,10 +880,6 @@ msgstr "打开 转到文件窗口"
 #: ui/help_and_config_qt.py:81
 msgid "Hide/show sidebar"
 msgstr "隐藏/ 显示侧边栏"
-
-#: ui/help_and_config_qt.py:82
-msgid "Open hotkeys window (*when marks window open)"
-msgstr "打开热键窗口(* 当标记窗口打开时)"
 
 #: ui/help_and_config_qt.py:82
 msgid "Open content filters window"
@@ -957,41 +957,41 @@ msgstr "撤消先前的标记更改"
 msgid "Toggle fullscreen"
 msgstr "切换全屏"
 
+#: ui/help_and_config_qt.py:101
+msgid "Go to first sorted media"
+msgstr "前往排序的媒体"
+
 #: ui/help_and_config_qt.py:102
-msgid "Go to first sorted image"
-msgstr "转到第一个排序的图像"
+msgid "Go to last sorted media"
+msgstr "请前往最后已排序的媒体"
 
 #: ui/help_and_config_qt.py:103
-msgid "Go to last sorted image"
-msgstr "转到上次排序的图像"
+msgid "Show previous/next media"
+msgstr "显示上一个/下一个媒体"
 
 #: ui/help_and_config_qt.py:104
-msgid "Show previous/next image"
-msgstr "显示上一个/ 下一个图像"
+msgid "Page through media"
+msgstr "浏览媒体内容"
 
 #: ui/help_and_config_qt.py:105
-msgid "Page through images"
-msgstr "通过图像页面"
+msgid "Search current media in current window"
+msgstr "在当前窗口搜索当前媒体"
 
 #: ui/help_and_config_qt.py:106
-msgid "Search current image in current window"
-msgstr "在当前窗口中搜索当前图像"
-
-#: ui/help_and_config_qt.py:107
-msgid "Clear all hidden images"
-msgstr "清除所有隐藏的图像"
+msgid "Clear all hidden media"
+msgstr "清除所有隐藏的媒体"
 
 #: ui/help_and_config_qt.py:107
 msgid "Clear marks list"
 msgstr "清除标记列表"
 
-#: ui/help_and_config_qt.py:109
-msgid "Show image details"
-msgstr "显示图像细节"
+#: ui/help_and_config_qt.py:108
+msgid "Show media details"
+msgstr "显示媒体详细信息"
 
-#: ui/help_and_config_qt.py:110
-msgid "Delete image (or marked file group if marks window selected)"
-msgstr "删除图像( 如果选中标记窗口, 则标记文件组)"
+#: ui/help_and_config_qt.py:109
+msgid "Delete media (or marked file group if marks window selected)"
+msgstr "删除媒体（或已选中的标记文件组，如果选中了“标记”窗口）"
 
 #: ui/help_and_config_qt.py:110
 msgid "Delete current base directory and all contents"
@@ -1017,17 +1017,21 @@ msgstr "打开上下文菜单"
 msgid "Run content filters for all files in the current directory"
 msgstr "运行当前目录中所有文件的内容过滤器"
 
+#: ui/help_and_config_qt.py:116
+msgid "View last moved media mark"
+msgstr "查看上次移动的媒体标记"
+
 #: ui/help_and_config_qt.py:117
-msgid "View last moved image mark"
-msgstr "查看上次移动的图像标记"
+msgid "View last system-moved media"
+msgstr "查看系统最近移动的媒体文件"
 
 #: ui/help_and_config_qt.py:118
 msgid "Toggle content filters"
 msgstr "切换内容过滤器"
 
 #: ui/help_and_config_qt.py:119
-msgid "Add or remove a mark for current image"
-msgstr "添加或删除当前图像的标记"
+msgid "Add or remove a mark for current media"
+msgstr "添加或移除当前媒体的标记"
 
 #: ui/help_and_config_qt.py:120
 msgid ""
@@ -1064,8 +1068,8 @@ msgid "Run refacdir"
 msgstr "运行 refacdir"
 
 #: ui/help_and_config_qt.py:128
-msgid "Hide current image"
-msgstr "隐藏当前图像"
+msgid "Hide current media"
+msgstr "隐藏当前媒体"
 
 #: ui/help_and_config_qt.py:129
 msgid "Set marks from downstream related images"
@@ -1074,6 +1078,81 @@ msgstr "从下游相关图像设置标记"
 #: ui/help_and_config_qt.py:131
 msgid "Show previous/next group"
 msgstr "显示上/下一组"
+
+#: ui/help_and_config_qt.py:140
+msgid "Move Marks Window Shortcuts"
+msgstr "“移动标记”窗口快捷键"
+
+#: ui/help_and_config_qt.py:143
+msgid ""
+"These shortcuts apply when the Move Marks dialog has keyboard focus (Ctrl+M "
+"full window, or Ctrl+K minimal). They take priority over the same keys in "
+"the main window while this dialog is active."
+msgstr ""
+"这些快捷键在“移动标记”对话框获得键盘焦点时生效（Ctrl+M 显示全屏窗口，或 Ctrl+K "
+"显示最小化窗口）。当此对话框处于活动状态时，这些快捷键的优先级高于主窗口中相同的按键。"
+
+#: ui/help_and_config_qt.py:160
+msgid "Close Move Marks window"
+msgstr "关闭 移动 标记窗口"
+
+#: ui/help_and_config_qt.py:161
+msgid ""
+"Move marked files to inferred target (filtered row, filter text, or last "
+"used)"
+msgstr "移动已标记的文件到推断的目标位置（过滤的行，过滤文本，或最近使用的位置）"
+
+#: ui/help_and_config_qt.py:162
+msgid "Copy marked files instead of move"
+msgstr "复制标记的文件而不是移动它们"
+
+#: ui/help_and_config_qt.py:163
+msgid "Choose destination folder, then move or copy"
+msgstr "选择目标文件夹，然后移动或复制"
+
+#: ui/help_and_config_qt.py:164
+msgid "Move or copy using the penultimate marks action target"
+msgstr "使用“倒数第二个标记”操作目标进行移动或复制"
+
+#: ui/help_and_config_qt.py:165 ui/help_and_config_qt.py:174
+msgid "Delete all marked files"
+msgstr "删除所有已标记的文件"
+
+#: ui/help_and_config_qt.py:166
+msgid "Arm permanent mark target (next Move/Copy sets the permanent action)"
+msgstr "为永久标记目标布防（下一次“移动/复制”操作将触发该永久动作）"
+
+#: ui/help_and_config_qt.py:167
+msgid "Sort filtered target directories by CLIP embedding (GUI mode only)"
+msgstr "按 CLIP 嵌入向量对筛选后的目标目录进行排序（仅限 GUI 模式）"
+
+#: ui/help_and_config_qt.py:168
+msgid "Open hotkey actions configuration (password)"
+msgstr "打开快捷键操作配置（密码）"
+
+#: ui/help_and_config_qt.py:169
+msgid "Rotate the filtered target list in chunks"
+msgstr "循环过滤后的目标列表分块"
+
+#: ui/help_and_config_qt.py:170
+msgid "Rotate the filtered target list one row (GUI updates the list)"
+msgstr "将过滤后的目标列表向下滚动一行（图形用户界面会更新列表）"
+
+#: ui/help_and_config_qt.py:171
+msgid "Remove last character from target name filter"
+msgstr "从目标名称过滤器中删除最后一个字符"
+
+#: ui/help_and_config_qt.py:172
+msgid "Letter keys"
+msgstr "字母键"
+
+#: ui/help_and_config_qt.py:172
+msgid "Filter target directories by name (both window modes)"
+msgstr "筛选目标目录按名称（两种窗口模式）"
+
+#: ui/help_and_config_qt.py:173
+msgid "Test marked files in directory (use Ctrl/Alt/Shift for variants)"
+msgstr "测试目录中的已标记文件（使用 Ctrl/Alt/Shift 键进行切换）"
 
 #: ui/help_and_config_qt.py:183
 msgid "Image Details Shortcuts"
@@ -1183,6 +1262,20 @@ msgstr "显示烤面包"
 #: ui/help_and_config_qt.py:252
 msgid "Slideshow Interval (sec)"
 msgstr "幻灯片放映间隔( 秒)"
+
+#: ui/help_and_config_qt.py:255
+msgid "Slideshow video sec (0=interval; >0=max; <0=full clip/VLC)"
+msgstr "幻灯片视频每秒帧数（0=间隔；>0=最大；<0=完整片段/VLC）"
+
+#: ui/help_and_config_qt.py:259
+msgid "Slideshow GIF/WebP sec (0=interval; >0=max; <0=one full loop)"
+msgstr "幻灯片 GIF/WebP 秒（0=间隔；>0=最大值；<0=完整循环一次）"
+
+#: ui/help_and_config_qt.py:263
+msgid ""
+"Slideshow PDF pages (0=interval; N>0=N×interval; N<0=file page "
+"count×interval)"
+msgstr "幻灯片 PDF 页面（0=间隔；N>0=N×间隔；N<0=文件页数×间隔）"
 
 #: ui/help_and_config_qt.py:267
 msgid "File Check Interval (sec)"
@@ -1306,9 +1399,17 @@ msgstr "此目录的标题栏颜色已重置。"
 msgid "Enter base directory..."
 msgstr "输入基目录..."
 
-#: ui/files/recent_directory_window_qt.py:164
-msgid "Set image comparison directory"
-msgstr "设定图像比较目录"
+#: ui/app_window/app_window.py:659
+msgid "Set media comparison directory"
+msgstr "设置媒体比较目录"
+
+#: ui/app_window/app_window.py:675
+msgid ""
+"Path is not an existing directory:\n"
+"{0}"
+msgstr ""
+"路径不存在的目录：\n"
+"{0}"
 
 #: ui/app_window/app_window.py:867
 msgid "Large Directory Detected: {0}"
@@ -1382,6 +1483,18 @@ msgstr ""
 "截图已保存到：\n"
 "{0}"
 
+#: ui/app_window/app_window.py:1164
+msgid "Masonry view is only available in browse mode."
+msgstr "Masonry视图 仅在 浏览模式 下 可用。"
+
+#: ui/app_window/app_window.py:1177
+msgid "Masonry view"
+msgstr "砌体观点"
+
+#: ui/app_window/app_window.py:1182
+msgid "Full-window view"
+msgstr "全屏视图"
+
 #: ui/app_window/app_window.py:1214
 msgid "Theme switched to {0}."
 msgstr "主题切换到{0} 。"
@@ -1446,25 +1559,25 @@ msgstr "禁用预验证"
 msgid "Run Prevalidations on Directory"
 msgstr "对目录运行预验证"
 
+#: ui/app_window/context_menu_builder.py:152
+msgid "Show Source Media"
+msgstr "显示源媒体"
+
 #: ui/app_window/context_menu_builder.py:156
-msgid "Show Source Image"
-msgstr "显示源图像"
+msgid "Find Related Media"
+msgstr "查找相关媒体内容"
 
 #: ui/app_window/context_menu_builder.py:160
-msgid "Find Related Images"
-msgstr "查找相关图片"
+msgid "Set Marks from Downstream Related Media"
+msgstr "从下游相关媒体设置标记"
 
-#: ui/app_window/context_menu_builder.py:164
-msgid "Set Marks from Downstream Related Images"
-msgstr "从下游相关图像中设置标记"
+#: ui/app_window/context_menu_builder.py:170
+msgid "Set Current Media as Search Target"
+msgstr "将当前媒介设为搜索目标"
 
 #: ui/app_window/context_menu_builder.py:174
-msgid "Set Current Image as Search Image"
-msgstr "将当前图像设置为搜索图像"
-
-#: ui/app_window/context_menu_builder.py:178
-msgid "Add Current Image to Negative Search"
-msgstr "将当前图像添加到负片搜索中"
+msgid "Add Current Media to Negative Search"
+msgstr "将当前媒体加入负面搜索"
 
 #: ui/app_window/context_menu_builder.py:184
 msgid "Copy file path"
@@ -1499,6 +1612,10 @@ msgstr "将单个目录中的 SVG 文件转换为 PNG 格式。"
 #: ui/app_window/context_menu_builder.py:217
 msgid "Save copies of all videos in directory without metadata"
 msgstr "将所有视频的副本保存到目录中，且不包含元数据"
+
+#: ui/app_window/context_menu_builder.py:224
+msgid "Randomize filenames"
+msgstr "随机化文件名"
 
 #: ui/app_window/context_menu_builder.py:228
 msgid "Run Refacdir"
@@ -1569,9 +1686,9 @@ msgstr ""
 msgid "Invalid action, no files found to delete"
 msgstr "无效操作，未找到要删除的文件"
 
-#: ui/app_window/file_ops_controller.py:147
-msgid "Invalid action, search image not found"
-msgstr "无效操作，未找到搜索图像"
+#: ui/app_window/file_ops_controller.py:143
+msgid "Invalid action, search media not found"
+msgstr "无效操作，搜索媒体未找到"
 
 #: ui/app_window/file_ops_controller.py:164
 msgid "Failed to delete current file, unable to get valid filepath"
@@ -1665,17 +1782,17 @@ msgstr "目录 {0} 已删除。"
 msgid "Moving directory contents: {0}"
 msgstr "正在移动目录内容：{0}"
 
-#: ui/app_window/file_ops_controller.py:381
+#: ui/app_window/file_ops_controller.py:367
 msgid ""
-"Hid current image.\n"
+"Hid current media.\n"
 "To unhide, press Shift+B."
 msgstr ""
-"隐藏当前图像。\n"
+"隐藏当前媒体。\n"
 "要取消隐藏，请按 Shift+B。"
 
-#: ui/app_window/file_ops_controller.py:387
-msgid "Cleared all hidden images."
-msgstr "清除所有隐藏图像"
+#: ui/app_window/file_ops_controller.py:373
+msgid "Cleared all hidden media."
+msgstr "清除所有隐藏的媒体文件。"
 
 #: ui/app_window/file_ops_controller.py:390 ui/image/temp_media_window.py:184
 msgid "Copied filepath to clipboard"
@@ -1784,9 +1901,9 @@ msgstr "{0} 个文件已转换，{1} 失败了，{2} 跳过了现有的。"
 msgid "Invalid target filepath for replacement: "
 msgstr "替换的目标文件路径无效： "
 
-#: ui/app_window/file_ops_controller.py:688
-msgid "Moved search image to "
-msgstr "将搜索图像移至 ： "
+#: ui/app_window/file_ops_controller.py:662
+msgid "Moved search media to "
+msgstr "已将搜索媒体移至： "
 
 #: ui/app_window/file_ops_controller.py:692
 msgid "Opening media file: {0}"
@@ -1900,13 +2017,95 @@ msgstr "在 GIMP 中打开当前文件失败，无法获取有效的文件路径
 msgid "Running refacdir"
 msgstr "运行 refacdir"
 
+#: ui/app_window/file_ops_controller.py:901
+msgid "No valid base directory for randomize filenames"
+msgstr "没有有效的基目录用于随机化文件名"
+
+#: ui/app_window/file_ops_controller.py:907
+msgid ""
+"Randomize filenames script not found:\n"
+"{0}"
+msgstr ""
+"未找到“随机化文件名”脚本：\n"
+"{0}"
+
+#: ui/app_window/file_ops_controller.py:914
+msgid "Dry run"
+msgstr "预演"
+
+#: ui/app_window/file_ops_controller.py:915
+msgid "Execute"
+msgstr "执行"
+
+#: ui/app_window/file_ops_controller.py:917
+msgid "Randomize Filenames"
+msgstr "打乱文件名顺序"
+
+#: ui/app_window/file_ops_controller.py:919
+msgid ""
+"Randomize media filenames under the entire base directory tree.\n"
+"\n"
+"{0}\n"
+"\n"
+"Log file:\n"
+"{1}\n"
+"\n"
+"Dry run — plan renames only; no files are changed.\n"
+"Execute — apply renames and update the mapping cache (irreversible)."
+msgstr ""
+"对整个基础目录树下的媒体文件名进行随机重命名。\n"
+"\n"
+"{0}\n"
+"\n"
+"日志文件：\n"
+"{1}\n"
+"\n"
+"模拟运行 — 仅规划重命名；不会修改任何文件。\n"
+"执行 — 应用重命名并更新映射缓存（不可逆）。"
+
+#: ui/app_window/file_ops_controller.py:938
+msgid "Confirm Randomize Filenames — Execute"
+msgstr "确认随机化文件名 — 执行"
+
+#: ui/app_window/file_ops_controller.py:940
+msgid ""
+"This will rename media files on disk under:\n"
+"\n"
+"{0}\n"
+"\n"
+"Output log:\n"
+"{1}\n"
+"\n"
+"This cannot be undone from Weidr. Proceed?"
+msgstr ""
+"这将重命名磁盘下以下路径中的媒体文件：\n"
+"\n"
+"{0}\n"
+"\n"
+"输出日志：\n"
+"{1}\n"
+"\n"
+"此操作无法在 Weidr 中撤销。继续吗？"
+
+#: ui/app_window/file_ops_controller.py:973
+msgid "Failed to start randomize filenames: {0}"
+msgstr "无法启动文件名随机化功能：{0}"
+
+#: ui/app_window/file_ops_controller.py:981
+msgid "Randomizing filenames under {0} — see {1}"
+msgstr "在 {0} 下对文件名进行随机化 — 参见 {1}"
+
+#: ui/app_window/file_ops_controller.py:985
+msgid "Randomize filenames dry run started for {0} — see {1}"
+msgstr "已为 {0} 启动文件名随机化预演 — 请参阅 {1}"
+
 #: ui/app_window/media_frame.py:357
 msgid "No displayable files found in this directory for the current settings."
 msgstr "在当前设置下，此目录中未找到可显示的文件。"
 
-#: ui/app_window/media_frame.py:759
-msgid "Animated image format is not supported for playback: "
-msgstr "动态图片格式不支持播放！ "
+#: ui/app_window/media_frame.py:773
+msgid "Animated media format is not supported for playback: "
+msgstr "动画媒体格式不支持播放： "
 
 #: ui/app_window/media_frame.py:840
 msgid "Video: "
@@ -1980,9 +2179,9 @@ msgstr "无效索引"
 msgid "Somehow, the search file is invalid"
 msgstr "不知何故, 搜索文件无效"
 
-#: ui/app_window/media_navigator.py:477
-msgid "Slideshow for new images started"
-msgstr "开始播放新图像的幻灯片"
+#: ui/app_window/media_navigator.py:462
+msgid "Slideshow for new media started"
+msgstr "幻灯片演示为新媒介已经开始"
 
 #: ui/app_window/media_navigator.py:465
 msgid "Slideshow started"
@@ -1998,26 +2197,26 @@ msgstr ""
 "第 {0} 组 {1}\n"
 "大小： {2}"
 
+#: ui/app_window/notification_controller.py:289
+msgid "No media files found"
+msgstr "未找到任何媒体文件"
+
+#: ui/app_window/notification_controller.py:291
+msgid "1 media file found"
+msgstr "找到 1 个媒体文件"
+
 #: ui/app_window/notification_controller.py:293
-msgid "No image files found"
-msgstr "未找到图像文件"
-
-#: ui/app_window/notification_controller.py:295
-msgid "1 image file found"
-msgstr "找到一个图像文件"
-
-#: ui/app_window/notification_controller.py:297
-msgid "{0} image files found"
-msgstr "找到 {0} 图像文件"
+msgid "{0} media files found"
+msgstr "{0} 个媒体文件已找到"
 
 #: ui/app_window/notification_controller.py:298
 msgid "(filtered)"
 msgstr "(过滤)"
 
-#: ui/app_window/search_controller.py:139
-#: ui/app_window/search_controller.py:169
-msgid "No image selected."
-msgstr "未选择图像 。"
+#: ui/app_window/search_controller.py:127
+#: ui/app_window/search_controller.py:153
+msgid "No media file selected."
+msgstr "未选择任何媒体文件。"
 
 #: ui/app_window/search_controller.py:127
 #: ui/app_window/search_controller.py:153
@@ -2029,13 +2228,13 @@ msgid ""
 "Compare mode must be set to an embedding mode to search text embeddings"
 msgstr "比较模式必须设置为嵌入模式，才能搜索文本嵌入内容"
 
-#: ui/app_window/search_controller.py:209
-msgid "Select image file"
-msgstr "选择图像文件"
+#: ui/app_window/search_controller.py:191
+msgid "Select media file"
+msgstr "选择媒体文件"
 
-#: ui/app_window/search_controller.py:211
-msgid "Image files"
-msgstr "图像文件"
+#: ui/app_window/search_controller.py:193
+msgid "Media files"
+msgstr "媒体文件"
 
 #: ui/app_window/search_controller.py:253
 msgid "Error running compare"
@@ -2057,10 +2256,11 @@ msgstr "未设置基本目录，将使用当前基本目录： "
 msgid "Are you sure you want to proceed?"
 msgstr "你确定要继续吗?"
 
-#: ui/app_window/search_controller.py:443
-#: ui/app_window/search_controller.py:482
-msgid "Failed to get active image filepath"
-msgstr "获取活动图像文件路径失败"
+#: ui/app_window/search_controller.py:391
+#: ui/app_window/search_controller.py:422
+#: ui/app_window/search_controller.py:599
+msgid "Failed to get active media filepath"
+msgstr "获取活动媒体文件路径失败"
 
 #: ui/app_window/search_controller.py:439
 msgid "No Text Search Presets Found"
@@ -2088,23 +2288,29 @@ msgstr "在目录上运行图像生成器： "
 msgid "No downstream related image(s) found in {0}"
 msgstr "在 {0} 中未发现与下游相关的图像"
 
-#: ui/app_window/search_controller.py:391
-#: ui/app_window/search_controller.py:422
-#: ui/app_window/search_controller.py:599
-msgid "Failed to get active media filepath"
-msgstr "获取活动媒体文件路径失败"
-
 #: ui/app_window/sidebar_panel.py:95
 msgid "Toggle theme"
 msgstr "切换主题"
+
+#: ui/app_window/sidebar_panel.py:97
+msgid "Switch between light and dark theme."
+msgstr "切换在浅色和深色主题之间。"
 
 #: ui/app_window/sidebar_panel.py:102
 msgid "Set directory"
 msgstr "设置目录"
 
+#: ui/app_window/sidebar_panel.py:106
+msgid "Set the base directory to browse or run comparisons on."
+msgstr "将基目录设为浏览位置或用于执行比较操作。"
+
 #: ui/app_window/sidebar_panel.py:115
 msgid "Directory notes"
 msgstr "目录注释"
+
+#: ui/app_window/sidebar_panel.py:120
+msgid "Open and edit notes associated with the current directory."
+msgstr "打开并编辑与当前目录关联的笔记。"
 
 #: ui/app_window/sidebar_panel.py:125
 msgid "Browsing options"
@@ -2122,9 +2328,9 @@ msgstr "浏览模式 - 排序"
 msgid "Recurse subdirectories"
 msgstr "递归子目录"
 
-#: ui/app_window/sidebar_panel.py:138
-msgid "Image resize to full window"
-msgstr "图像大小调整到全窗口"
+#: ui/app_window/sidebar_panel.py:162
+msgid "Media resize to full window"
+msgstr "媒体调整为全屏窗口"
 
 #: ui/app_window/sidebar_panel.py:167
 #: ui/compare/compare_settings_window_qt.py:249
@@ -2141,38 +2347,44 @@ msgstr "搜索"
 msgid "Set search file"
 msgstr "设定搜索文件"
 
-#: ui/app_window/sidebar_panel.py:158
+#: ui/app_window/sidebar_panel.py:182
 msgid ""
-"Set an image file to search for similar images.\n"
-"Uses embedding similarity to find visually similar images."
+"Set a media file to search for similar media.\n"
+"Uses embedding similarity to find visually similar media."
 msgstr ""
-"设置图像文件以搜索相似图像。\n"
-"使用嵌入相似性来查找视觉上相似的图像。"
+"选择一个媒体文件以搜索类似的媒体。\n"
+"利用嵌入向量相似性来查找视觉上相似的媒体。"
 
-#: ui/app_window/sidebar_panel.py:163
-msgid "Search image path..."
-msgstr "搜索图片路径..."
+#: ui/app_window/sidebar_panel.py:187
+msgid "Search media path..."
+msgstr "搜索媒体路径..."
 
 #: ui/app_window/sidebar_panel.py:195
 msgid "Set negative search file"
 msgstr "设置负面搜索文件"
 
-#: ui/app_window/sidebar_panel.py:175
-msgid "Negative search image path..."
-msgstr "负搜索图像路径..."
+#: ui/app_window/sidebar_panel.py:200
+msgid ""
+"Set a media file to search away from — results will exclude media similar to"
+" this."
+msgstr "设置一个媒体文件作为排除对象——搜索结果将排除与此类似的媒体文件。"
+
+#: ui/app_window/sidebar_panel.py:203
+msgid "Negative search media path..."
+msgstr "否定的搜索媒体路径..."
 
 #: ui/app_window/sidebar_panel.py:211
 msgid "Search text (embedding mode)"
 msgstr "搜索文本 (嵌入模式)"
 
-#: ui/app_window/sidebar_panel.py:188
+#: ui/app_window/sidebar_panel.py:216
 msgid ""
-"Positive text: Find images similar to this text.\n"
-"Negative text: Exclude images similar to this text.\n"
+"Positive text: Find media similar to this text.\n"
+"Negative text: Exclude media similar to this text.\n"
 "Both use embedding similarity matching."
 msgstr ""
-"正向文本：查找与该文本相似的图像。\n"
-"负向文本：排除与该文本相似的图像。\n"
+"正向文本：查找与该文本相似的媒体。\n"
+"负向文本：排除与该文本相似的媒体。\n"
 "两者均采用嵌入式相似度匹配。"
 
 #: ui/app_window/sidebar_panel.py:222
@@ -2183,16 +2395,33 @@ msgstr "积极文本："
 msgid "Negative text:"
 msgstr "负面文本："
 
+#: ui/app_window/sidebar_panel.py:239
+msgid "Compare tools"
+msgstr "比较工具"
+
 #: ui/app_window/sidebar_panel.py:242
 #: ui/compare/classifier_actions_tab_qt.py:98
 #: ui/compare/classifier_management_window_qt.py:575
 msgid "Classifier Actions"
 msgstr "分类器操作"
 
+#: ui/app_window/sidebar_panel.py:247
+msgid ""
+"Configure rules for automatically copying or moving files based on classifier results."
+msgstr "根据分类器结果配置自动复制或移动文件的规则。"
+
 #: ui/app_window/sidebar_panel.py:251
 #: ui/compare/hf_model_manager_window_qt.py:392
 msgid "Model Manager"
 msgstr "模型管理员"
+
+#: ui/app_window/sidebar_panel.py:256
+msgid "Manage HuggingFace models used for media embeddings and comparison."
+msgstr "管理用于媒体嵌入和对比的HuggingFace模型。"
+
+#: ui/app_window/sidebar_panel.py:261
+msgid "Compare actions"
+msgstr "比较动作"
 
 #: ui/app_window/sidebar_panel.py:264
 #: ui/compare/compare_settings_window_qt.py:88
@@ -2201,49 +2430,81 @@ msgstr "模型管理员"
 msgid "Compare Settings"
 msgstr "比较设置"
 
-#: ui/app_window/sidebar_panel.py:261
-msgid "Compare actions"
-msgstr "比较动作"
+#: ui/app_window/sidebar_panel.py:269
+msgid "Configure settings for media comparison and duplicate detection."
+msgstr "配置用于媒体比较和重复检测的设置。"
 
-#: ui/app_window/sidebar_panel.py:236
-msgid "Run image compare"
-msgstr "运行图像对比"
+#: ui/app_window/sidebar_panel.py:280
+msgid "Run media compare"
+msgstr "运行媒体比较"
+
+#: ui/app_window/sidebar_panel.py:285
+msgid ""
+"Run embedding-based similarity comparison on all media in the directory."
+msgstr "对目录中的所有媒体文件运行嵌入式相似度比较。"
 
 #: ui/app_window/sidebar_panel.py:288
 msgid "Find duplicates"
 msgstr "查找复制件"
 
-#: ui/image/media_details.py:163
-msgid "Image details"
-msgstr "图片详情"
+#: ui/app_window/sidebar_panel.py:293
+msgid "Find duplicate or near-duplicate media in the directory."
+msgstr "查找目录中的重复项或近似重复项的媒体文件。"
 
-#: ui/app_window/sidebar_panel.py:250
-msgid "Search current image"
-msgstr "搜索当前图像"
+#: ui/app_window/sidebar_panel.py:296
+msgid "Media details"
+msgstr "媒体详细信息"
 
-#: ui/app_window/sidebar_panel.py:255
+#: ui/app_window/sidebar_panel.py:301
+msgid "Show detailed metadata and information about the current media file."
+msgstr "显示当前媒体文件的详细元数据和相关信息。"
+
+#: ui/app_window/sidebar_panel.py:306
+msgid "Search current media"
+msgstr "搜索当前媒体"
+
+#: ui/app_window/sidebar_panel.py:311
 msgid ""
-"Search for images similar to the currently displayed image.\n"
+"Search for media similar to the currently displayed media.\n"
 "Uses embedding similarity matching."
 msgstr ""
-"搜索与当前显示图像相似的图片。\n"
-"采用嵌入式相似度匹配技术。"
+"搜索与当前显示的媒体相似的媒体。\n"
+"采用嵌入式相似度匹配。"
 
 #: ui/app_window/sidebar_panel.py:316
 msgid "File actions"
 msgstr "文件操作"
 
-#: ui/app_window/sidebar_panel.py:267
-msgid "Copy image path"
-msgstr "复制图像路径"
+#: ui/app_window/sidebar_panel.py:324
+msgid ""
+"Open the folder containing the current file in the system file manager."
+msgstr "打开包含当前文件的文件夹。"
+
+#: ui/app_window/sidebar_panel.py:327
+msgid "Copy media path"
+msgstr "复制媒体路径"
+
+#: ui/app_window/sidebar_panel.py:332
+msgid "Copy the full file path of the current media file to the clipboard."
+msgstr "复制当前媒体文件的完整文件路径到剪贴板。"
 
 #: ui/app_window/sidebar_panel.py:335
 msgid "Copy media basename"
 msgstr "复制文件的基名"
 
+#: ui/app_window/sidebar_panel.py:340
+msgid ""
+"Copy the filename (without directory path) of the current file to the "
+"clipboard."
+msgstr "复制当前文件的文件名（不带目录路径）到剪贴板。"
+
 #: ui/app_window/sidebar_panel.py:343
 msgid "---- DELETE ----"
 msgstr "---- 删除 ----"
+
+#: ui/app_window/sidebar_panel.py:348
+msgid "Permanently delete the current media file from disk."
+msgstr "永久删除当前媒体文件从磁盘。"
 
 #: ui/app_window/sidebar_panel.py:514
 msgid "Ended slideshows"
@@ -2253,23 +2514,31 @@ msgstr "结束幻灯片放映"
 msgid "Please set a base directory first"
 msgstr "请先设置一个基础目录"
 
-#: ui/app_window/window_launcher.py:270
-msgid "(Open this image as part of a directory to see index details.)"
-msgstr "(将此图片作为目录的一部分打开，可查看索引详情）。"
+#: ui/app_window/window_launcher.py:269
+msgid "(Open this media as part of a directory to see index details.)"
+msgstr "（将此媒体文件作为目录的一部分打开，即可查看索引详情。）"
+
+#: ui/app_window/window_launcher.py:348
+msgid "No media selected"
+msgstr "未选择任何媒体"
 
 #: ui/app_window/window_launcher.py:349
-msgid "No image selected"
-msgstr "未选择图像"
-
-#: ui/app_window/window_launcher.py:350
-msgid "No image was selected for comparison"
-msgstr "没有选择图像进行比较"
+msgid "No media file was selected for comparison"
+msgstr "未选择任何用于比较的媒体文件"
 
 #: ui/app_window/window_launcher.py:366
 msgid ""
 "Are you sure you want to run all prevalidations on directory {0} ? This may "
 "take a while."
 msgstr "您确定要在目录{0}上运行所有预验证吗？这可能需要一些时间。"
+
+#: ui/app_window/window_launcher.py:422
+msgid ""
+"All prevalidations in this directory have finished.\n"
+"Files checked: {0} — outcomes: {1} — moves: {2} — copies: {3} — deletes: {4} — errors: {5}"
+msgstr ""
+"该目录中的所有预验证操作均已完成。\n"
+"已检查文件：{0} — 结果：{1} — 移动：{2} — 复制：{3} — 删除：{4} — 错误：{5}"
 
 #: ui/app_window/window_launcher.py:436
 msgid "Prevalidations now running"
@@ -2749,6 +3018,12 @@ msgstr "使用提示"
 msgid "Use Embedding Prototype"
 msgstr "使用嵌入原型"
 
+#: ui/compare/classifier_management_window_qt.py:189
+msgid ""
+"Match pseudo-static dynamic media (video/GIF/PDF with no meaningful "
+"variation)"
+msgstr "匹配伪静态动态媒体（视频/GIF/PDF，且无实质性变化）"
+
 #: ui/compare/classifier_management_window_qt.py:197
 msgid "Text Embedding Threshold"
 msgstr "文本嵌入阈值"
@@ -2977,6 +3252,14 @@ msgstr "添加目录"
 #: ui/compare/directory_profile_window_qt.py:254
 msgid "Edit Directory"
 msgstr "编辑目录"
+
+#: ui/compare/directory_profile_window_qt.py:283
+msgid "Remove Directories"
+msgstr "删除目录"
+
+#: ui/compare/directory_profile_window_qt.py:284
+msgid "Remove {0} selected directories from this profile?"
+msgstr "从这个配置文件中移除{0}个选定目录？"
 
 #: ui/compare/directory_profile_window_qt.py:299
 msgid "Select directory to add subdirectories from"
@@ -3471,6 +3754,18 @@ msgstr "添加预验证"
 msgid "Clear prevalidations"
 msgstr "清除预先验证"
 
+#: ui/compare/prevalidations_tab_qt.py:359
+msgid "Clear prevalidation cache"
+msgstr "清除预验证缓存"
+
+#: ui/compare/prevalidations_tab_qt.py:361
+msgid ""
+"Discard cached prevalidation outcomes (this session and on disk).\n"
+"Rules, profiles, and lookaheads are not changed; media will be re-evaluated."
+msgstr ""
+"清除缓存的预验证结果（包括当前会话和磁盘上的）。\n"
+"规则、配置文件和前瞻性检查保持不变；媒体将重新进行评估。"
+
 #: ui/compare/prevalidations_tab_qt.py:368
 msgid ""
 "When checked, the clear button evicts only the cached results\n"
@@ -3508,6 +3803,26 @@ msgstr "仅限：{0}"
 #: ui/compare/prevalidations_tab_qt.py:864
 msgid "Clear results ({0})"
 msgstr "清除结果 ({0})"
+
+#: ui/compare/prevalidations_tab_qt.py:880
+msgid "Confirm Clear Prevalidations"
+msgstr "确认  清除预验证"
+
+#: ui/compare/prevalidations_tab_qt.py:882
+msgid ""
+"Remove all prevalidation rules? Cached outcomes for this session will also be cleared.\n"
+"\n"
+"This cannot be undone."
+msgstr ""
+"删除所有预验证规则？本会话的缓存结果也将被清除。\n"
+"\n"
+"此操作无法撤销。"
+
+#: ui/compare/prevalidations_tab_qt.py:931
+msgid ""
+"Prevalidation cache stats: ~{memory} — {items} items — {directories} "
+"directories"
+msgstr "预验证缓存统计信息：约 {memory} — {items} 个项目 — {directories} 个目录"
 
 #: ui/files/directory_notes_window_qt.py:51
 msgid "Directory Notes - {0}"
@@ -3829,8 +4144,8 @@ msgid "File Action History"
 msgstr "文件操作历史"
 
 #: ui/files/file_actions_window_qt.py:102
-msgid "Search Image"
-msgstr "搜索图片"
+msgid "Search Media"
+msgstr "搜索媒体"
 
 #: ui/files/file_actions_window_qt.py:107
 msgid "Clear History"
@@ -3889,6 +4204,10 @@ msgstr "视图"
 #: ui/files/file_actions_window_qt.py:365
 msgid "Copy Filename"
 msgstr "复制文件名"
+
+#: ui/files/file_actions_window_qt.py:405
+msgid "Error opening media: "
+msgstr "打开媒体时发生错误： "
 
 #: ui/files/file_actions_window_qt.py:412
 msgid "Image does not exist: "
@@ -4263,6 +4582,10 @@ msgstr ""
 msgid "Set Image Comparison Directory"
 msgstr "设置图像比较目录"
 
+#: ui/files/recent_directory_window_qt.py:164
+msgid "Set image comparison directory"
+msgstr "设定图像比较目录"
+
 #: ui/files/recent_directory_window_qt.py:184
 msgid "Invalid directory: %s"
 msgstr "无效目录： {0}"
@@ -4341,6 +4664,10 @@ msgstr "这将清除所有在开放窗口中的比较 。 继续?"
 #: ui/files/type_configuration_window_qt.py:327
 msgid "Media type configuration updated"
 msgstr "更新媒体类型配置"
+
+#: ui/image/media_details.py:163
+msgid "Image details"
+msgstr "图片详情"
 
 #: ui/image/media_details.py:251
 msgid "(negative prompt not shown by config setting)"
@@ -5038,569 +5365,3 @@ msgstr "访问密码管理"
 #: utils/notification_manager.py:24
 msgid " etc."
 msgstr " 等等"
-
-#: compare/classifier_action.py:1029
-msgid "pseudo-static dynamic media"
-msgstr "伪静态动态媒体"
-
-#: compare/compare_wrapper.py:220
-msgid "Skipped %s media."
-msgstr ""
-
-#: compare/compare_wrapper.py:226
-msgid "No Unrelated Media"
-msgstr ""
-
-#: compare/compare_wrapper.py:226
-msgid "No unrelated media found."
-msgstr ""
-
-#: compare/compare_wrapper.py:333
-msgid ""
-"Gathering media data... setup may take a while depending on number of files "
-"involved."
-msgstr "正在收集媒体数据……根据涉及的文件数量，设置过程可能需要一段时间。"
-
-#: compare/compare_wrapper.py:356
-msgid ""
-"Search mode detected, please confirm switch to group mode before run. Group "
-"mode will take longer as all media in the base directory are compared."
-msgstr "检测到搜索模式，请在运行前确认切换至分组模式。分组模式需要更长时间，因为会比较基目录中的所有媒体文件。"
-
-#: compare/compare_wrapper.py:363
-msgid "Gathering media data for comparison"
-msgstr ""
-
-#: compare/compare_wrapper.py:401
-msgid "Searching media..."
-msgstr ""
-
-#: compare/compare_wrapper.py:421
-msgid "%s possibly related media found."
-msgstr ""
-
-#: compare/compare_wrapper.py:429
-msgid "Running media comparisons..."
-msgstr ""
-
-#: compare/compare_wrapper.py:530
-msgid ""
-"There are no more media groups remaining for this directory and current "
-"filter settings."
-msgstr "根据当前目录和筛选设置，已无更多媒体组。"
-
-#: ui/help_and_config_qt.py:75
-msgid "Search current media in new window"
-msgstr "在新窗口中搜索当前媒体"
-
-#: ui/help_and_config_qt.py:101
-msgid "Go to first sorted media"
-msgstr ""
-
-#: ui/help_and_config_qt.py:102
-msgid "Go to last sorted media"
-msgstr ""
-
-#: ui/help_and_config_qt.py:103
-msgid "Show previous/next media"
-msgstr ""
-
-#: ui/help_and_config_qt.py:104
-msgid "Page through media"
-msgstr ""
-
-#: ui/help_and_config_qt.py:105
-msgid "Search current media in current window"
-msgstr ""
-
-#: ui/help_and_config_qt.py:106
-msgid "Clear all hidden media"
-msgstr ""
-
-#: ui/help_and_config_qt.py:108
-msgid "Show media details"
-msgstr ""
-
-#: ui/help_and_config_qt.py:109
-msgid "Delete media (or marked file group if marks window selected)"
-msgstr "删除媒体（或已选中的标记文件组，如果选中了“标记”窗口）"
-
-#: ui/help_and_config_qt.py:116
-msgid "View last moved media mark"
-msgstr "查看上次移动的媒体标记"
-
-#: ui/help_and_config_qt.py:117
-msgid "View last system-moved media"
-msgstr "查看系统最近移动的媒体文件"
-
-#: ui/help_and_config_qt.py:119
-msgid "Add or remove a mark for current media"
-msgstr ""
-
-#: ui/help_and_config_qt.py:128
-msgid "Hide current media"
-msgstr ""
-
-#: ui/help_and_config_qt.py:140
-msgid "Move Marks Window Shortcuts"
-msgstr "“移动标记”窗口快捷键"
-
-#: ui/help_and_config_qt.py:143
-msgid ""
-"These shortcuts apply when the Move Marks dialog has keyboard focus (Ctrl+M "
-"full window, or Ctrl+K minimal). They take priority over the same keys in "
-"the main window while this dialog is active."
-msgstr ""
-"这些快捷键在“移动标记”对话框获得键盘焦点时生效（Ctrl+M 显示全屏窗口，或 Ctrl+K "
-"显示最小化窗口）。当此对话框处于活动状态时，这些快捷键的优先级高于主窗口中相同的按键。"
-
-#: ui/help_and_config_qt.py:160
-msgid "Close Move Marks window"
-msgstr ""
-
-#: ui/help_and_config_qt.py:161
-msgid ""
-"Move marked files to inferred target (filtered row, filter text, or last "
-"used)"
-msgstr ""
-
-#: ui/help_and_config_qt.py:162
-msgid "Copy marked files instead of move"
-msgstr ""
-
-#: ui/help_and_config_qt.py:163
-msgid "Choose destination folder, then move or copy"
-msgstr ""
-
-#: ui/help_and_config_qt.py:164
-msgid "Move or copy using the penultimate marks action target"
-msgstr ""
-
-#: ui/help_and_config_qt.py:165 ui/help_and_config_qt.py:174
-msgid "Delete all marked files"
-msgstr ""
-
-#: ui/help_and_config_qt.py:166
-msgid "Arm permanent mark target (next Move/Copy sets the permanent action)"
-msgstr "为永久标记目标布防（下一次“移动/复制”操作将触发该永久动作）"
-
-#: ui/help_and_config_qt.py:167
-msgid "Sort filtered target directories by CLIP embedding (GUI mode only)"
-msgstr "按 CLIP 嵌入向量对筛选后的目标目录进行排序（仅限 GUI 模式）"
-
-#: ui/help_and_config_qt.py:168
-msgid "Open hotkey actions configuration (password)"
-msgstr ""
-
-#: ui/help_and_config_qt.py:169
-msgid "Rotate the filtered target list in chunks"
-msgstr ""
-
-#: ui/help_and_config_qt.py:170
-msgid "Rotate the filtered target list one row (GUI updates the list)"
-msgstr ""
-
-#: ui/help_and_config_qt.py:171
-msgid "Remove last character from target name filter"
-msgstr ""
-
-#: ui/help_and_config_qt.py:172
-msgid "Letter keys"
-msgstr ""
-
-#: ui/help_and_config_qt.py:172
-msgid "Filter target directories by name (both window modes)"
-msgstr ""
-
-#: ui/help_and_config_qt.py:173
-msgid "Test marked files in directory (use Ctrl/Alt/Shift for variants)"
-msgstr "测试目录中的已标记文件（使用 Ctrl/Alt/Shift 键进行切换）"
-
-#: ui/help_and_config_qt.py:255
-msgid "Slideshow video sec (0=interval; >0=max; <0=full clip/VLC)"
-msgstr "幻灯片视频每秒帧数（0=间隔；>0=最大；<0=完整片段/VLC）"
-
-#: ui/help_and_config_qt.py:259
-msgid "Slideshow GIF/WebP sec (0=interval; >0=max; <0=one full loop)"
-msgstr "幻灯片 GIF/WebP 秒（0=间隔；>0=最大值；<0=完整循环一次）"
-
-#: ui/help_and_config_qt.py:263
-msgid ""
-"Slideshow PDF pages (0=interval; N>0=N×interval; N<0=file page "
-"count×interval)"
-msgstr "幻灯片 PDF 页面（0=间隔；N>0=N×间隔；N<0=文件页数×间隔）"
-
-#: ui/app_window/app_window.py:659
-msgid "Set media comparison directory"
-msgstr ""
-
-#: ui/app_window/app_window.py:675
-msgid ""
-"Path is not an existing directory:\n"
-"{0}"
-msgstr ""
-
-#: ui/app_window/app_window.py:1164
-msgid "Masonry view is only available in browse mode."
-msgstr ""
-
-#: ui/app_window/app_window.py:1177
-msgid "Masonry view"
-msgstr ""
-
-#: ui/app_window/app_window.py:1182
-msgid "Single view"
-msgstr ""
-
-#: ui/app_window/context_menu_builder.py:152
-msgid "Show Source Media"
-msgstr ""
-
-#: ui/app_window/context_menu_builder.py:156
-msgid "Find Related Media"
-msgstr ""
-
-#: ui/app_window/context_menu_builder.py:160
-msgid "Set Marks from Downstream Related Media"
-msgstr "从下游相关媒体设置标记"
-
-#: ui/app_window/context_menu_builder.py:170
-msgid "Set Current Media as Search Target"
-msgstr ""
-
-#: ui/app_window/context_menu_builder.py:174
-msgid "Add Current Media to Negative Search"
-msgstr ""
-
-#: ui/app_window/context_menu_builder.py:224
-msgid "Randomize filenames"
-msgstr ""
-
-#: ui/app_window/file_ops_controller.py:143
-msgid "Invalid action, search media not found"
-msgstr ""
-
-#: ui/app_window/file_ops_controller.py:367
-msgid ""
-"Hid current media.\n"
-"To unhide, press Shift+B."
-msgstr ""
-
-#: ui/app_window/file_ops_controller.py:373
-msgid "Cleared all hidden media."
-msgstr ""
-
-#: ui/app_window/file_ops_controller.py:662
-msgid "Moved search media to "
-msgstr "已将搜索媒体移至： "
-
-#: ui/app_window/file_ops_controller.py:901
-msgid "No valid base directory for randomize filenames"
-msgstr "没有有效的基目录用于随机化文件名"
-
-#: ui/app_window/file_ops_controller.py:907
-msgid ""
-"Randomize filenames script not found:\n"
-"{0}"
-msgstr ""
-"未找到“随机化文件名”脚本：\n"
-"{0}"
-
-#: ui/app_window/file_ops_controller.py:914
-msgid "Dry run"
-msgstr ""
-
-#: ui/app_window/file_ops_controller.py:915
-msgid "Execute"
-msgstr ""
-
-#: ui/app_window/file_ops_controller.py:917
-msgid "Randomize Filenames"
-msgstr ""
-
-#: ui/app_window/file_ops_controller.py:919
-msgid ""
-"Randomize media filenames under the entire base directory tree.\n"
-"\n"
-"{0}\n"
-"\n"
-"Log file:\n"
-"{1}\n"
-"\n"
-"Dry run — plan renames only; no files are changed.\n"
-"Execute — apply renames and update the mapping cache (irreversible)."
-msgstr ""
-"对整个基础目录树下的媒体文件名进行随机重命名。\n"
-"\n"
-"{0}\n"
-"\n"
-"日志文件：\n"
-"{1}\n"
-"\n"
-"模拟运行 — 仅规划重命名；不会修改任何文件。\n"
-"执行 — 应用重命名并更新映射缓存（不可逆）。"
-
-#: ui/app_window/file_ops_controller.py:938
-msgid "Confirm Randomize Filenames — Execute"
-msgstr "确认随机化文件名 — 执行"
-
-#: ui/app_window/file_ops_controller.py:940
-msgid ""
-"This will rename media files on disk under:\n"
-"\n"
-"{0}\n"
-"\n"
-"Output log:\n"
-"{1}\n"
-"\n"
-"This cannot be undone from Weidr. Proceed?"
-msgstr ""
-"这将重命名磁盘下以下路径中的媒体文件：\n"
-"\n"
-"{0}\n"
-"\n"
-"输出日志：\n"
-"{1}\n"
-"\n"
-"此操作无法在 Weidr 中撤销。继续吗？"
-
-#: ui/app_window/file_ops_controller.py:973
-msgid "Failed to start randomize filenames: {0}"
-msgstr "无法启动文件名随机化功能：{0}"
-
-#: ui/app_window/file_ops_controller.py:981
-msgid "Randomizing filenames under {0} — see {1}"
-msgstr "在 {0} 下对文件名进行随机化 — 参见 {1}"
-
-#: ui/app_window/file_ops_controller.py:985
-msgid "Randomize filenames dry run started for {0} — see {1}"
-msgstr "已为 {0} 启动文件名随机化预演 — 请参阅 {1}"
-
-#: ui/app_window/media_frame.py:773
-msgid "Animated media format is not supported for playback: "
-msgstr " "
-
-#: ui/app_window/media_navigator.py:462
-msgid "Slideshow for new media started"
-msgstr ""
-
-#: ui/app_window/notification_controller.py:289
-msgid "No media files found"
-msgstr ""
-
-#: ui/app_window/notification_controller.py:291
-msgid "1 media file found"
-msgstr ""
-
-#: ui/app_window/notification_controller.py:293
-msgid "{0} media files found"
-msgstr ""
-
-#: ui/app_window/search_controller.py:127
-#: ui/app_window/search_controller.py:153
-msgid "No media file selected."
-msgstr ""
-
-#: ui/app_window/search_controller.py:191
-msgid "Select media file"
-msgstr ""
-
-#: ui/app_window/search_controller.py:193
-msgid "Media files"
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:97
-msgid "Switch between light and dark theme."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:106
-msgid "Set the base directory to browse or run comparisons on."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:120
-msgid "Open and edit notes associated with the current directory."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:162
-msgid "Media resize to full window"
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:182
-msgid ""
-"Set a media file to search for similar media.\n"
-"Uses embedding similarity to find visually similar media."
-msgstr ""
-"选择一个媒体文件以搜索类似的媒体。\n"
-"利用嵌入向量相似性来查找视觉上相似的媒体。"
-
-#: ui/app_window/sidebar_panel.py:187
-msgid "Search media path..."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:200
-msgid ""
-"Set a media file to search away from — results will exclude media similar to"
-" this."
-msgstr "设置一个媒体文件作为排除对象——搜索结果将排除与此类似的媒体文件。"
-
-#: ui/app_window/sidebar_panel.py:203
-msgid "Negative search media path..."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:216
-msgid ""
-"Positive text: Find media similar to this text.\n"
-"Negative text: Exclude media similar to this text.\n"
-"Both use embedding similarity matching."
-msgstr ""
-"正向文本：查找与该文本相似的媒体。\n"
-"负向文本：排除与该文本相似的媒体。\n"
-"两者均采用嵌入式相似度匹配。"
-
-#: ui/app_window/sidebar_panel.py:239
-msgid "Compare tools"
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:247
-msgid ""
-"Configure rules for automatically copying or moving files\n"
-"based on classifier results."
-msgstr "根据分类器结果配置自动复制或移动文件的规则。"
-
-#: ui/app_window/sidebar_panel.py:256
-msgid "Manage HuggingFace models used for media embeddings and comparison."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:269
-msgid "Configure settings for media comparison and duplicate detection."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:280
-msgid "Run media compare"
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:285
-msgid ""
-"Run embedding-based similarity comparison on all media in the directory."
-msgstr "对目录中的所有媒体文件运行嵌入式相似度比较。"
-
-#: ui/app_window/sidebar_panel.py:293
-msgid "Find duplicate or near-duplicate media in the directory."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:296
-msgid "Media details"
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:301
-msgid "Show detailed metadata and information about the current media file."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:306
-msgid "Search current media"
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:311
-msgid ""
-"Search for media similar to the currently displayed media.\n"
-"Uses embedding similarity matching."
-msgstr ""
-"搜索与当前显示的媒体相似的媒体。\n"
-"采用嵌入式相似度匹配。"
-
-#: ui/app_window/sidebar_panel.py:324
-msgid ""
-"Open the folder containing the current file in the system file manager."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:327
-msgid "Copy media path"
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:332
-msgid "Copy the full file path of the current media file to the clipboard."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:340
-msgid ""
-"Copy the filename (without directory path) of the current file to the "
-"clipboard."
-msgstr ""
-
-#: ui/app_window/sidebar_panel.py:348
-msgid "Permanently delete the current media file from disk."
-msgstr ""
-
-#: ui/app_window/window_launcher.py:269
-msgid "(Open this media as part of a directory to see index details.)"
-msgstr ""
-
-#: ui/app_window/window_launcher.py:348
-msgid "No media selected"
-msgstr ""
-
-#: ui/app_window/window_launcher.py:349
-msgid "No media file was selected for comparison"
-msgstr ""
-
-#: ui/app_window/window_launcher.py:422
-msgid ""
-"All prevalidations in this directory have finished.\n"
-"Files checked: {0} — outcomes: {1} — moves: {2} — copies: {3} — deletes: {4} — errors: {5}"
-msgstr ""
-"该目录中的所有预验证操作均已完成。\n"
-"已检查文件：{0} — 结果：{1} — 移动：{2} — 复制：{3} — 删除：{4} — 错误：{5}"
-
-#: ui/compare/classifier_management_window_qt.py:189
-msgid ""
-"Match pseudo-static dynamic media (video/GIF/PDF with no meaningful "
-"variation)"
-msgstr "匹配伪静态动态媒体（视频/GIF/PDF，且无实质性变化）"
-
-#: ui/compare/directory_profile_window_qt.py:283
-msgid "Remove Directories"
-msgstr ""
-
-#: ui/compare/directory_profile_window_qt.py:284
-msgid "Remove {0} selected directories from this profile?"
-msgstr ""
-
-#: ui/compare/prevalidations_tab_qt.py:359
-msgid "Clear prevalidation cache"
-msgstr "清除预验证缓存"
-
-#: ui/compare/prevalidations_tab_qt.py:361
-msgid ""
-"Discard cached prevalidation outcomes (this session and on disk).\n"
-"Rules, profiles, and lookaheads are not changed; media will be re-evaluated."
-msgstr ""
-"清除缓存的预验证结果（包括当前会话和磁盘上的）。\n"
-"规则、配置文件和前瞻性检查保持不变；媒体将重新进行评估。"
-
-#: ui/compare/prevalidations_tab_qt.py:880
-msgid "Confirm Clear Prevalidations"
-msgstr "确认  清除预验证"
-
-#: ui/compare/prevalidations_tab_qt.py:882
-msgid ""
-"Remove all prevalidation rules? Cached outcomes for this session will also be cleared.\n"
-"\n"
-"This cannot be undone."
-msgstr ""
-"删除所有预验证规则？本会话的缓存结果也将被清除。\n"
-"\n"
-"此操作无法撤销。"
-
-#: ui/compare/prevalidations_tab_qt.py:931
-msgid ""
-"Prevalidation cache stats: ~{memory} — {items} items — {directories} "
-"directories"
-msgstr "预验证缓存统计信息：约 {memory} — {items} 个项目 — {directories} 个目录"
-
-#: ui/files/file_actions_window_qt.py:102
-msgid "Search Media"
-msgstr "搜索媒体"
-
-#: ui/files/file_actions_window_qt.py:405
-msgid "Error opening media: "
-msgstr " "

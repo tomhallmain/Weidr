@@ -23,7 +23,7 @@ from ui.app_window.slideshow_dynamic_policy import (
     slideshow_poll_should_run,
 )
 from utils.config import config
-from utils.constants import Direction, Mode
+from utils.constants import Direction, Mode, ViewMode
 from utils.logging_setup import get_logger
 from utils.translations import I18N
 from utils.utils import Utils
@@ -192,7 +192,15 @@ class MediaNavigator:
             self._cm.set_current_group()
 
     def page_up(self, event=None) -> None:
-        """Jump backward by a page of files."""
+        """Jump backward by a page of files.
+
+        In masonry view, steps to the previous page of thumbnails instead of
+        navigating the file cursor — the grid has its own page concept.
+        """
+        if self._app.view_mode == ViewMode.MASONRY:
+            self._app.masonry_browser.prev_page()
+            return
+
         current_media = self.get_active_media_filepath()
         if self._app.mode == Mode.BROWSE:
             prev_media = self._fb.page_up()
@@ -209,7 +217,15 @@ class MediaNavigator:
         self._app.direction = Direction.BACKWARD
 
     def page_down(self, event=None) -> None:
-        """Jump forward by a page of files."""
+        """Jump forward by a page of files.
+
+        In masonry view, steps to the next page of thumbnails instead of
+        navigating the file cursor — the grid has its own page concept.
+        """
+        if self._app.view_mode == ViewMode.MASONRY:
+            self._app.masonry_browser.next_page()
+            return
+
         current_media = self.get_active_media_filepath()
         if self._app.mode == Mode.BROWSE:
             next_media = self._fb.page_down()

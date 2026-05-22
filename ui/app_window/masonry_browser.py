@@ -3,11 +3,14 @@ MasonryBrowser -- thumbnail grid panel for browse mode.
 
 Shows a masonry-style (variable-height, multi-column) grid of file thumbnails.
 Thumbnails are decoded asynchronously via QThreadPool so the UI stays responsive.
-Tile count is capped (TILE_CAP) to keep memory bounded; this is the §4.3
-"bounded window" approach described in docs/masonry-layout-prospect.md and is
-expected to be replaced with full virtualization in a later phase.
 
-Wheel events are consumed by the QScrollArea so they scroll the grid rather
+Pagination: files are shown PAGE_SIZE at a time. Press PgUp / PgDn to move
+between pages (handled in MediaNavigator.page_up/page_down when masonry view is
+active). A footer bar shows the current page and file range at all times. The
+page size is fixed — not scaled by total directory size — to keep per-page
+memory use predictable regardless of how large the directory is.
+
+Wheel events are consumed by the inner QScrollArea so they scroll the grid rather
 than triggering AppWindow's file-navigation handler.
 """
 
@@ -45,8 +48,8 @@ except ImportError:
 
 logger = get_logger("masonry_browser")
 
-# Maximum number of tiles rendered per populate() call.
-TILE_CAP = 500
+# Number of tiles shown per page (fixed, not scaled by directory size).
+PAGE_SIZE = 200
 # Maximum dimension (px) for thumbnail decoding.
 THUMB_MAX_DIM = 220
 # Default number of columns.
@@ -241,15 +244,23 @@ class MasonryTile(QFrame):
 # Masonry container
 # ---------------------------------------------------------------------------
 
-class MasonryBrowser(QScrollArea):
+class MasonryBrowser(QWidget):
     """
-    Scrollable masonry thumbnail grid.
+    Paginated masonry thumbnail grid.
 
-    Tile count is capped at TILE_CAP to keep memory bounded (phase 1).
     Files are distributed across N columns using a shortest-column-first
     heuristic.  Since tile heights are not known until thumbnails load,
     the initial placement approximates masonry; the final layout is correct
     once all thumbnails have loaded and the column QVBoxLayouts have settled.
+
+    PAGE_SIZE tiles are shown at a time to keep memory bounded — only the
+    current page of thumbnails exists as live widgets.  Use PgUp / PgDn to step between
+    pages; populate() automatically starts on the page that contains
+    current_file so the highlighted tile is always visible.
+
+    A footer bar below the scroll area shows the current page, the file range
+    within the full list, and a PgUp/PgDn navigation hint.  It is shown even
+    for a single page so the user knows the total file count at a glance.
 
     Signals
     -------
@@ -264,6 +275,23 @@ class MasonryBrowser(QScrollArea):
         self._columns = columns
         self._tiles: list[MasonryTile] = []
         self._current_file: Optional[str] = None
+        # Full file list supplied by the caller; only a page-sized slice is
+        # shown in the grid at any time.
+        self._all_files: list[str] = []
+        self._page: int = 0
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        # --- Scroll area (the grid lives here) ---
+        self._scroll_area = QScrollArea()
+        self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._scroll_area.setStyleSheet(
+            f"QScrollArea {{ background-color: {AppStyle.MEDIA_BG}; border: none; }}"
+        )
+        outer.addWidget(self._scroll_area)
 
         # Canvas widget that holds the column strip
         self._canvas = QWidget()
@@ -288,34 +316,100 @@ class MasonryBrowser(QScrollArea):
             self._col_heights.append(0)
             canvas_layout.addWidget(col)
 
-        self.setWidget(self._canvas)
-        self.setWidgetResizable(True)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.setStyleSheet(f"QScrollArea {{ background-color: {AppStyle.MEDIA_BG}; border: none; }}")
+        self._scroll_area.setWidget(self._canvas)
+        self._scroll_area.setWidgetResizable(True)
+
+        # --- Pagination footer bar ---
+        # Always visible once files are loaded so the user knows the total
+        # count and which page they are on.  Hidden only before first populate.
+        self._page_bar = QWidget()
+        self._page_bar.setStyleSheet(
+            f"background-color: {AppStyle.BG_COLOR}; "
+            f"border-top: 1px solid {AppStyle.BORDER_COLOR};"
+        )
+        page_bar_layout = QHBoxLayout(self._page_bar)
+        page_bar_layout.setContentsMargins(8, 4, 8, 4)
+        self._page_label = QLabel()
+        self._page_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._page_label.setStyleSheet(
+            f"color: {AppStyle.FG_COLOR}; font-size: 11px; border: none;"
+        )
+        page_bar_layout.addWidget(self._page_label, stretch=1)
+        self._page_bar.setVisible(False)
+        outer.addWidget(self._page_bar)
 
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
+    @property
+    def page_count(self) -> int:
+        if not self._all_files:
+            return 1
+        return max(1, (len(self._all_files) + PAGE_SIZE - 1) // PAGE_SIZE)
+
     def populate(self, filepaths: list[str], current_file: Optional[str] = None) -> None:
         """
         Rebuild the grid from *filepaths* (already sorted by the file browser).
 
-        Capped at TILE_CAP entries.  *current_file* is highlighted and scrolled
-        into view after the first layout pass.
+        Automatically starts on the page that contains *current_file* so the
+        highlighted tile is visible after toggle or directory reload.
+        *current_file* is highlighted and scrolled into view after the first
+        layout pass.
         """
-        self._clear()
+        self._all_files = filepaths
         self._current_file = current_file
+
+        # Start on the page that contains current_file so the user sees their
+        # position in the list immediately rather than always landing on page 1.
+        page = 0
+        if current_file and current_file in filepaths:
+            idx = filepaths.index(current_file)
+            page = idx // PAGE_SIZE
+        self._page = page
+
+        self._rebuild_tiles()
+
+    def update_current(self, current_file: Optional[str]) -> None:
+        """Update which tile appears highlighted without repopulating."""
+        self._current_file = current_file
+        self._highlight_current()
+
+    def next_page(self) -> None:
+        """Advance to the next page of thumbnails (bound to PgDn in masonry view)."""
+        if self._page < self.page_count - 1:
+            self._page += 1
+            self._rebuild_tiles()
+            # Scroll to the top of the new page so the first row is visible
+            self._scroll_area.verticalScrollBar().setValue(0)
+
+    def prev_page(self) -> None:
+        """Go back to the previous page of thumbnails (bound to PgUp in masonry view)."""
+        if self._page > 0:
+            self._page -= 1
+            self._rebuild_tiles()
+            # Scroll to the top of the new page so the first row is visible
+            self._scroll_area.verticalScrollBar().setValue(0)
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    def _rebuild_tiles(self) -> None:
+        """Clear existing tiles and build the grid for the current page."""
+        self._clear()
         self._col_heights = [0] * self._columns
 
+        start = self._page * PAGE_SIZE
+        end = start + PAGE_SIZE
+        page_files = self._all_files[start:end]
+
         tile_width = self._compute_tile_width()
-        capped = filepaths[:TILE_CAP]
 
         # Suppress intermediate repaints and layout passes during bulk creation.
         self._canvas.setUpdatesEnabled(False)
         try:
-            for filepath in capped:
+            for filepath in page_files:
                 col_idx = self._col_heights.index(min(self._col_heights))
                 tile = MasonryTile(filepath, tile_width, parent=self._col_widgets[col_idx])
                 tile.activated.connect(self.tile_activated)
@@ -327,20 +421,12 @@ class MasonryBrowser(QScrollArea):
             self._canvas.setUpdatesEnabled(True)
 
         self._highlight_current()
+        self._update_page_bar()
         # Defer scroll-to-current until after the layout pass
         QTimer.singleShot(0, self._scroll_to_current)
 
-    def update_current(self, current_file: Optional[str]) -> None:
-        """Update which tile appears highlighted without repopulating."""
-        self._current_file = current_file
-        self._highlight_current()
-
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
-
     def _compute_tile_width(self) -> int:
-        vw = self.viewport().width()
+        vw = self._scroll_area.viewport().width()
         if vw < 10:
             vw = 800  # fallback before first show
         usable = vw - TILE_MARGIN * (self._columns + 1)
@@ -368,5 +454,28 @@ class MasonryBrowser(QScrollArea):
     def _scroll_to_current(self) -> None:
         for tile in self._tiles:
             if tile.filepath == self._current_file:
-                self.ensureWidgetVisible(tile)
+                self._scroll_area.ensureWidgetVisible(tile)
                 return
+
+    def _update_page_bar(self) -> None:
+        """Refresh the footer bar text to reflect the current page and file range."""
+        total = len(self._all_files)
+        if total == 0:
+            self._page_bar.setVisible(False)
+            return
+
+        pages = self.page_count
+        start = self._page * PAGE_SIZE + 1
+        end = min(start + PAGE_SIZE - 1, total)
+
+        if pages <= 1:
+            # Single page — show total count without the navigation hint so the
+            # bar stays informative without implying there are more pages.
+            self._page_label.setText(f"Showing all {total} files")
+        else:
+            self._page_label.setText(
+                f"Page {self._page + 1} / {pages}"
+                f"  •  files {start}–{end} of {total}"
+                f"  •  PgUp / PgDn to navigate"
+            )
+        self._page_bar.setVisible(True)

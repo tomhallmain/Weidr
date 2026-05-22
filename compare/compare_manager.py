@@ -5,6 +5,7 @@ from enum import Enum
 
 from compare.compare_wrapper import CompareWrapper
 from compare.compare_args import CompareArgs
+from compare.base_compare import CompareCancelled
 from utils.config import config
 from utils.constants import CompareMode, Mode
 from utils.logging_setup import get_logger
@@ -738,11 +739,14 @@ class CompareManager:
         
         # Run each enabled instance
         instance_results: Dict[str, Dict[str, float]] = {}  # instance_id -> {file_path: score}
-        
-        for instance_id, config in self._mode_configs.items():
-            if not config.enabled:
-                continue
-            
+        enabled_configs = [(iid, cfg) for iid, cfg in self._mode_configs.items() if cfg.enabled]
+        total_instances = len(enabled_configs)
+
+        for run_index, (instance_id, config) in enumerate(enabled_configs, start=1):
+            self._app_actions._set_label_state(
+                f"Running composite ({run_index}/{total_instances}): {config.compare_mode.name}…"
+            )
+
             wrapper = self._ensure_wrapper(config.compare_mode)
             
             # Create instance-specific args
@@ -760,7 +764,7 @@ class CompareManager:
             # Run comparison
             try:
                 wrapper.run(instance_args)
-                
+
                 # Extract results
                 # run_search() returns {0: {file_path: score}}
                 files_grouped = wrapper.files_grouped
@@ -768,7 +772,10 @@ class CompareManager:
                     instance_results[instance_id] = files_grouped[0]
                 else:
                     instance_results[instance_id] = {}
-                    
+
+            except CompareCancelled:
+                instance_results[instance_id] = {}
+                raise  # propagate — abort the whole composite run
             except Exception as e:
                 logger.error(f"Error running instance {instance_id} ({config.compare_mode.name}): {e}")
                 instance_results[instance_id] = {}
@@ -834,17 +841,21 @@ class CompareManager:
         """AND logic: file must appear in ALL mode results."""
         if not mode_results:
             return {}
-        
+
         # Start with files from first mode
         result_sets = [set(mode_results[mode].keys()) for mode in mode_results]
         common_files = set.intersection(*result_sets) if result_sets else set()
-        
-        # For common files, use minimum score (most conservative)
+
+        # For common files, use geometric mean — preserves "must pass all modes" semantics
+        # without over-penalising strong matches the way min() does
         combined = {}
         for file_path in common_files:
             scores = [mode_results[mode][file_path] for mode in mode_results if file_path in mode_results[mode]]
-            combined[file_path] = min(scores)  # Most conservative
-        
+            product = 1.0
+            for s in scores:
+                product *= s
+            combined[file_path] = product ** (1.0 / len(scores))
+
         return combined
     
     def _combine_or(self, mode_results: Dict[CompareMode, Dict[str, float]]) -> Dict[str, float]:

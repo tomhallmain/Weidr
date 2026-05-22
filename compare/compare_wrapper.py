@@ -50,6 +50,17 @@ class CompareWrapper:
     def clear_compare(self):
         self._compare = None
 
+    def share_data_from(self, other: 'CompareWrapper') -> None:
+        """Reuse the already-loaded compare instance from a same-mode wrapper.
+
+        Sets self._compare to other's compare object so run() will skip the
+        data-loading phase when args are otherwise compatible, avoiding
+        redundant disk I/O and GPU inference. Only call when both wrappers
+        have the same compare_mode and the same base_dir.
+        """
+        if other._compare is not None:
+            self._compare = other._compare
+
     def has_compare(self):
         return self._compare is not None
 

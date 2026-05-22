@@ -49,8 +49,8 @@ class CompareManager:
         # Active compare mode configurations (keyed by instance_id)
         self._mode_configs: Dict[str, CompareConfig] = {}
         
-        # CompareWrapper instances (one per mode, shared across instances of same mode)
-        self._wrappers: Dict[CompareMode, CompareWrapper] = {}
+        # CompareWrapper instances (one per instance_id, not shared across same-mode instances)
+        self._wrappers: Dict[str, CompareWrapper] = {}
         
         # Instance counter for generating unique IDs
         self._instance_counter: int = 0
@@ -108,7 +108,22 @@ class CompareManager:
         """Generate a unique instance ID for a compare mode."""
         self._instance_counter += 1
         return f"{compare_mode.name}_{self._instance_counter}"
-    
+
+    @property
+    def _primary_instance_id(self) -> Optional[str]:
+        """Return the instance_id of the first enabled instance for the primary mode."""
+        if self._primary_mode is None:
+            return None
+        for instance_id, cfg in self._mode_configs.items():
+            if cfg.compare_mode == self._primary_mode and cfg.enabled:
+                return instance_id
+        return None
+
+    def _primary_wrapper(self) -> Optional[CompareWrapper]:
+        """Return the CompareWrapper for the primary instance, or None."""
+        iid = self._primary_instance_id
+        return self._wrappers.get(iid) if iid else None
+
     def set_primary_mode(self, compare_mode: CompareMode):
         """
         Set the primary comparison mode. For single-mode operations,
@@ -116,15 +131,19 @@ class CompareManager:
         mode used for result presentation and navigation.
         """
         self._primary_mode = compare_mode
-        # If no instances exist, create one for this mode
-        if not any(config.compare_mode == compare_mode for config in self._mode_configs.values()):
+        # Find or create an instance for this mode
+        existing = next((iid for iid, cfg in self._mode_configs.items()
+                         if cfg.compare_mode == compare_mode), None)
+        if existing is None:
             instance_id = self._generate_instance_id(compare_mode)
             self._mode_configs[instance_id] = CompareConfig(
                 instance_id=instance_id,
                 compare_mode=compare_mode,
                 enabled=True
             )
-        self._ensure_wrapper(compare_mode)
+        else:
+            instance_id = existing
+        self._ensure_wrapper(instance_id, compare_mode)
         self._is_composite_mode = len(self._mode_configs) > 1
         logger.info(f"Primary compare mode set to: {compare_mode.name} (composite mode: {self._is_composite_mode})")
 
@@ -165,7 +184,7 @@ class CompareManager:
             search_text_negative=search_text_negative,
             enabled=True
         )
-        self._ensure_wrapper(compare_mode)
+        self._ensure_wrapper(instance_id, compare_mode)
         self._is_composite_mode = len(self._mode_configs) > 1
         logger.info(f"Added compare mode instance: {instance_id} ({compare_mode.name}, weight={weight}, threshold={threshold}, composite={self._is_composite_mode})")
         return instance_id
@@ -185,7 +204,7 @@ class CompareManager:
         config = self._mode_configs[instance_id]
         compare_mode = config.compare_mode
         del self._mode_configs[instance_id]
-        # Don't delete wrapper - keep for potential reuse
+        self._wrappers.pop(instance_id, None)  # release wrapper for this instance
         
         # If this was the only instance of the primary mode, update primary
         if compare_mode == self._primary_mode:
@@ -245,13 +264,13 @@ class CompareManager:
         return [config for config in self._mode_configs.values() 
                 if config.compare_mode == compare_mode and config.enabled]
     
-    def _ensure_wrapper(self, compare_mode: CompareMode) -> CompareWrapper:
-        """Get or create CompareWrapper for a mode."""
-        if compare_mode not in self._wrappers:
-            self._wrappers[compare_mode] = CompareWrapper(
+    def _ensure_wrapper(self, instance_id: str, compare_mode: CompareMode) -> CompareWrapper:
+        """Get or create a CompareWrapper for a specific instance."""
+        if instance_id not in self._wrappers:
+            self._wrappers[instance_id] = CompareWrapper(
                 self._master, compare_mode, self._app_actions
             )
-        return self._wrappers[compare_mode]
+        return self._wrappers[instance_id]
     
     # ========== Filtering ==========
 
@@ -355,15 +374,10 @@ class CompareManager:
         logger.info(f" store checkpoints: {args.store_checkpoints}")
         
         # Filter settings
-        if self._size_filter and self._size_filter.is_active():
-            logger.info(f" size filter: min={self._size_filter.min_size}, max={self._size_filter.max_size}, exact={self._size_filter.exact_size}")
+        if self._data_filter and self._data_filter.is_active():
+            logger.info(f" data filter: {type(self._data_filter).__name__}")
         else:
-            logger.info(" size filter: None")
-        
-        if self._model_filter and self._model_filter.is_active():
-            logger.info(f" model filter: models={self._model_filter.models}, mode={self._model_filter.mode}, match_any={self._model_filter.match_any}, include_loras={self._model_filter.include_loras}")
-        else:
-            logger.info(" model filter: None")
+            logger.info(" data filter: None")
         
         logger.info("|--------------------------------------------------------------------|\n")
     
@@ -444,97 +458,97 @@ class CompareManager:
     @property
     def files_matched(self) -> List[str]:
         """Get matched files from primary wrapper (for backward compatibility)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].files_matched
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().files_matched
         return []
     
     @property
     def file_groups(self) -> Dict:
         """Get file groups from primary wrapper (for backward compatibility)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].file_groups
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().file_groups
         return {}
     
     @property
     def files_grouped(self) -> Dict:
         """Get grouped files from primary wrapper (for backward compatibility)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].files_grouped
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().files_grouped
         return {}
     
     @property
     def match_index(self) -> int:
         """Get match index from primary wrapper (for backward compatibility)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].match_index
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().match_index
         return 0
     
     @match_index.setter
     def match_index(self, value: int):
         """Set match index on primary wrapper (for backward compatibility)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            self._wrappers[self._primary_mode].match_index = value
+        if self._primary_wrapper() is not None:
+            self._primary_wrapper().match_index = value
     
     @property
     def current_group_index(self) -> int:
         """Get current group index from primary wrapper (for backward compatibility)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].current_group_index
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().current_group_index
         return 0
     
     @current_group_index.setter
     def current_group_index(self, value: int):
         """Set current group index on primary wrapper (for backward compatibility)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            self._wrappers[self._primary_mode].current_group_index = value
+        if self._primary_wrapper() is not None:
+            self._primary_wrapper().current_group_index = value
     
     @property
     def search_media_path(self) -> Optional[str]:
         """Get search file path from primary wrapper."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].search_media_path
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().search_media_path
         return None
     
     @search_media_path.setter
     def search_media_path(self, value: Optional[str]):
         """Set search file path on primary wrapper."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            self._wrappers[self._primary_mode].search_media_path = value
+        if self._primary_wrapper() is not None:
+            self._primary_wrapper().search_media_path = value
     
     @property
     def hidden_media(self) -> List[str]:
         """Get hidden media from primary wrapper."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].hidden_media
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().hidden_media
         return []
     
     @property
     def group_indexes(self) -> List[int]:
         """Get group indexes from primary wrapper."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].group_indexes
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().group_indexes
         return []
     
     @property
     def max_group_index(self) -> int:
         """Get max group index from primary wrapper."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].max_group_index
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().max_group_index
         return 0
     
     @property
     def has_media_matches(self) -> bool:
         """Get has_media_matches from primary wrapper."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].has_media_matches
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().has_media_matches
         return False
     
     # ========== Delegation Methods (for backward compatibility) ==========
     
     def has_compare(self) -> bool:
         """Check if primary wrapper has a compare instance."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].has_compare()
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().has_compare()
         return False
     
     def cancel(self):
@@ -549,90 +563,90 @@ class CompareManager:
     
     def get_args(self) -> CompareArgs:
         """Get args from primary wrapper."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].get_args()
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().get_args()
         return CompareArgs()
     
     def validate_compare_mode(self, required_compare_mode, error_text):
         """Validate compare mode (delegated to primary wrapper)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            self._wrappers[self._primary_mode].validate_compare_mode(
+        if self._primary_wrapper() is not None:
+            self._primary_wrapper().validate_compare_mode(
                 required_compare_mode, error_text
             )
     
     def current_match(self) -> Optional[str]:
         """Get current match from primary wrapper."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].current_match()
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().current_match()
         return None
     
     def show_prev_media(self, show_alert=True) -> bool:
         """Show previous media (delegated to primary wrapper)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].show_prev_media(show_alert)
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().show_prev_media(show_alert)
         return False
     
     def show_next_media(self, show_alert=True) -> bool:
         """Show next media (delegated to primary wrapper)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].show_next_media(show_alert)
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().show_next_media(show_alert)
         return False
     
     def skip_media(self, media_path: str) -> bool:
         """Check if media should be skipped (delegated to primary wrapper)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].skip_media(media_path)
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().skip_media(media_path)
         return False
     
     def show_prev_group(self, event=None, file_browser=None):
         """Show previous group (delegated to primary wrapper)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].show_prev_group(event, file_browser)
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().show_prev_group(event, file_browser)
     
     def show_next_group(self, event=None, file_browser=None):
         """Show next group (delegated to primary wrapper)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].show_next_group(event, file_browser)
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().show_next_group(event, file_browser)
     
     def set_current_group(self, start_match_index=0):
         """Set current group (delegated to primary wrapper)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].set_current_group(start_match_index)
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().set_current_group(start_match_index)
 
     def get_grouped_filepaths(self, app_mode) -> list:
         """Return all comparison files ordered group-by-group for masonry display."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].get_grouped_filepaths(app_mode)
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().get_grouped_filepaths(app_mode)
         return []
 
     def get_file_group_for_filepath(self, filepath: str, app_mode) -> Optional[tuple]:
         """Return (group_display_idx, file_idx_within_group) for a filepath, or None."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].get_file_group_for_filepath(filepath, app_mode)
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().get_file_group_for_filepath(filepath, app_mode)
         return None
     
     def page_down(self, half_length=False) -> Optional[str]:
         """Page down (delegated to primary wrapper)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].page_down(half_length)
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().page_down(half_length)
         return None
     
     def page_up(self, half_length=False) -> Optional[str]:
         """Page up (delegated to primary wrapper)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].page_up(half_length)
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().page_up(half_length)
         return None
     
     def select_series(self, start_file: str, end_file: str) -> List[str]:
         """Select series (delegated to primary wrapper)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].select_series(start_file, end_file)
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().select_series(start_file, end_file)
         return []
     
     def find_file_after_comparison(self, app_mode, search_text="", exact_match=False):
         """Find file after comparison (delegated to primary wrapper)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].find_file_after_comparison(
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().find_file_after_comparison(
                 app_mode, search_text, exact_match
             )
         return None, None
@@ -640,8 +654,8 @@ class CompareManager:
     def _update_groups_for_removed_file(self, app_mode, group_index, match_index, 
                                        set_group=True, show_next_media=None):
         """Update groups for removed file (delegated to primary wrapper)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode]._update_groups_for_removed_file(
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper()._update_groups_for_removed_file(
                 app_mode, group_index, match_index, set_group, show_next_media
             )
     
@@ -652,33 +666,33 @@ class CompareManager:
     
     def _get_file_group_map(self, app_mode):
         """Get file group map (delegated to primary wrapper)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode]._get_file_group_map(app_mode)
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper()._get_file_group_map(app_mode)
         return {}
     
     def find_next_unrelated_media(self, file_browser, forward=True):
         """Find next unrelated file (delegated to primary wrapper)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].find_next_unrelated_media(
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().find_next_unrelated_media(
                 file_browser, forward
             )
     
     def _get_prev_media(self):
         """Get previous file (delegated to primary wrapper)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode]._get_prev_media()
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper()._get_prev_media()
         return None
     
     def _get_next_media(self):
         """Get next file (delegated to primary wrapper)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode]._get_next_media()
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper()._get_next_media()
         return None
     
     def compare(self):
         """Get compare instance from primary wrapper (for backward compatibility)."""
-        if self._primary_mode and self._primary_mode in self._wrappers:
-            return self._wrappers[self._primary_mode].compare()
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().compare()
         raise Exception("No compare object created")
     
     # ========== Main Execution ==========
@@ -711,7 +725,10 @@ class CompareManager:
         
         # Single-mode operation (backward compatible)
         if not self._is_composite_mode:
-            wrapper = self._ensure_wrapper(self._primary_mode)
+            primary_iid = self._primary_instance_id
+            if primary_iid is None:
+                raise ValueError("No enabled instance for primary mode")
+            wrapper = self._ensure_wrapper(primary_iid, self._primary_mode)
             wrapper.run(args)
             return
         
@@ -747,8 +764,18 @@ class CompareManager:
                 f"Running composite ({run_index}/{total_instances}): {config.compare_mode.name}…"
             )
 
-            wrapper = self._ensure_wrapper(config.compare_mode)
-            
+            wrapper = self._ensure_wrapper(instance_id, config.compare_mode)
+
+            # Share already-loaded data from a prior same-mode instance to avoid
+            # redundant disk I/O and GPU inference.
+            for prior_iid, prior_cfg in enabled_configs[:run_index - 1]:
+                if (prior_cfg.compare_mode == config.compare_mode
+                        and prior_iid in self._wrappers
+                        and self._wrappers[prior_iid]._compare is not None):
+                    wrapper.share_data_from(self._wrappers[prior_iid])
+                    logger.debug(f"Instance {instance_id} sharing loaded data from {prior_iid}")
+                    break
+
             # Create instance-specific args
             instance_args = args.clone()
             instance_args.compare_mode = config.compare_mode
@@ -914,8 +941,11 @@ class CompareManager:
         """Apply combined results to primary wrapper for navigation."""
         if not self._primary_mode or not self._combined_results:
             return
-        
-        wrapper = self._ensure_wrapper(self._primary_mode)
+
+        primary_iid = self._primary_instance_id
+        if not primary_iid:
+            return
+        wrapper = self._ensure_wrapper(primary_iid, self._primary_mode)
         
         # Update wrapper's results structure
         wrapper.files_grouped = {0: self._combined_results}

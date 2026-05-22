@@ -759,6 +759,20 @@ class CompareManager:
         enabled_configs = [(iid, cfg) for iid, cfg in self._mode_configs.items() if cfg.enabled]
         total_instances = len(enabled_configs)
 
+        # Enforce exclusive run-mode paths: all instances must run GROUP or all must run SEARCH.
+        # An instance is SEARCH if global args carry search criteria, or the instance itself has
+        # search_text / search_text_negative configured.
+        def _is_search_instance(cfg: CompareConfig) -> bool:
+            return not args.not_searching() or bool(cfg.search_text or cfg.search_text_negative)
+
+        run_mode_flags = {_is_search_instance(cfg) for _, cfg in enabled_configs}
+        if len(run_mode_flags) > 1:
+            raise ValueError(
+                "All composite instances must run in the same mode. "
+                "Mix of GROUP and SEARCH instances is not supported — "
+                "ensure either all instances have search criteria, or none do."
+            )
+
         for run_index, (instance_id, config) in enumerate(enabled_configs, start=1):
             self._app_actions._set_label_state(
                 f"Running composite ({run_index}/{total_instances}): {config.compare_mode.name}…"
@@ -792,13 +806,19 @@ class CompareManager:
             try:
                 wrapper.run(instance_args)
 
-                # Extract results
-                # run_search() returns {0: {file_path: score}}
-                files_grouped = wrapper.files_grouped
-                if 0 in files_grouped:
-                    instance_results[instance_id] = files_grouped[0]
+                # Extract results into a flat {file_path: score} dict.
+                #
+                # SEARCH mode: wrapper.files_grouped = {0: {file_path: score}}
+                # GROUP mode:  wrapper.file_groups   = {group_idx: {file_path: score}}
+                #              wrapper.files_grouped = {file_idx: (group_idx, score)}
+                #              — we must flatten file_groups, not files_grouped.
+                if instance_args.not_searching():
+                    flat: Dict[str, float] = {}
+                    for group in wrapper.file_groups.values():
+                        flat.update(group)
+                    instance_results[instance_id] = flat
                 else:
-                    instance_results[instance_id] = {}
+                    instance_results[instance_id] = wrapper.files_grouped.get(0, {})
 
             except CompareCancelled:
                 instance_results[instance_id] = {}

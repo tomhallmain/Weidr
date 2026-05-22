@@ -241,6 +241,24 @@ class BaseCompare:
         else:
             raise Exception("No gather files function found.")
         self.files.sort()
+
+        data_filter = getattr(self.args, 'data_filter', None)
+        if data_filter and data_filter.is_active():
+            from compare.compare_filters import apply_filter
+            before = len(self.files)
+            self.files = apply_filter(self.files, data_filter)
+            # The search file is a reference, not a candidate — keep it even if the
+            # filter would exclude it (e.g. size filter, but reference is a diff size)
+            if self.is_run_search and self.search_media_path not in self.files:
+                logger.debug(
+                    "Data filter excluded the search reference file — "
+                    "re-adding it so search can still run"
+                )
+                self.files.insert(0, self.search_media_path)
+            logger.debug(
+                f"Data filter reduced file list from {before} to {len(self.files)}"
+            )
+
         self.compare_data.has_new_file_data = False
         self.max_files_processed = min(
             self.args.counter_limit, len(self.files))

@@ -1,7 +1,11 @@
 from copy import deepcopy
+from typing import TYPE_CHECKING, Optional
 
 from utils.config import config
 from utils.constants import CompareMode, Mode
+
+if TYPE_CHECKING:
+    from compare.compare_filters import CompareFilter
 
 
 class CompareArgs:
@@ -34,6 +38,7 @@ class CompareArgs:
         self.verbose = True
         self.use_matrix_comparison = use_matrix_comparison
         self.app_actions = app_actions
+        self.data_filter: Optional['CompareFilter'] = None
 
     def not_searching(self):
         def _empty(v):

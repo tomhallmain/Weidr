@@ -1,6 +1,6 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from enum import Enum
 
 from compare.compare_wrapper import CompareWrapper
@@ -31,33 +31,7 @@ class CompareConfig:
     search_text_negative: Optional[str] = None  # Negative search text for this instance
 
 
-# Filter classes (will be moved to compare_args.py when filtering is integrated)
-@dataclass
-class SizeFilter:
-    """Filter criteria for media dimensions."""
-    min_size: Optional[Tuple[int, int]] = None  # Minimum (width, height)
-    max_size: Optional[Tuple[int, int]] = None  # Maximum (width, height)
-    exact_size: Optional[Tuple[int, int]] = None  # Exact size match
-    tolerance: int = 0  # Pixel tolerance for exact match
-    
-    def is_active(self) -> bool:
-        """Check if any size filtering criteria is set."""
-        return (self.min_size is not None or 
-                self.max_size is not None or 
-                self.exact_size is not None)
-
-
-@dataclass
-class ModelFilter:
-    """Filter criteria for media models/loras."""
-    models: Optional[List[str]] = None  # Model names to filter by
-    mode: str = 'include'  # 'include' or 'exclude' - include/exclude matching models
-    match_any: bool = False  # If True, match any model; if False, match all models
-    include_loras: bool = True  # Include loras in model matching
-    
-    def is_active(self) -> bool:
-        """Check if model filtering criteria is set."""
-        return self.models is not None and len(self.models) > 0
+from compare.compare_filters import CompareFilter, SizeFilter, ModelFilter  # noqa: F401 (re-exported for UI imports)
 
 
 class CompareManager:
@@ -98,9 +72,8 @@ class CompareManager:
         # Combination logic for composite mode
         self._combination_logic: CombinationLogic = CombinationLogic.AND
         
-        # Filtering (from FILTERING_PROPOSAL.md)
-        self._size_filter: Optional[SizeFilter] = None
-        self._model_filter: Optional[ModelFilter] = None
+        # Pre-filter applied to file list before any scoring
+        self._data_filter: Optional[CompareFilter] = None
         
         # Compare settings (migrated from sidebar)
         self._threshold: Optional[float] = None
@@ -280,30 +253,16 @@ class CompareManager:
         return self._wrappers[compare_mode]
     
     # ========== Filtering ==========
-    
-    def set_size_filter(self, size_filter: Optional[SizeFilter]):
-        """Set size filtering criteria."""
-        self._size_filter = size_filter
-        if size_filter and size_filter.is_active():
-            logger.info(f"Size filter set: min={size_filter.min_size}, max={size_filter.max_size}, exact={size_filter.exact_size}")
+
+    def set_data_filter(self, f: Optional[CompareFilter]) -> None:
+        self._data_filter = f
+        if f and f.is_active():
+            logger.info(f"Data filter set: {type(f).__name__}")
         else:
-            logger.info("Size filter cleared")
-    
-    def get_size_filter(self) -> Optional[SizeFilter]:
-        """Get current size filter."""
-        return self._size_filter
-    
-    def set_model_filter(self, model_filter: Optional[ModelFilter]):
-        """Set model filtering criteria."""
-        self._model_filter = model_filter
-        if model_filter and model_filter.is_active():
-            logger.info(f"Model filter set: models={model_filter.models}, mode={model_filter.mode}, match_any={model_filter.match_any}, include_loras={model_filter.include_loras}")
-        else:
-            logger.info("Model filter cleared")
-    
-    def get_model_filter(self) -> Optional[ModelFilter]:
-        """Get current model filter."""
-        return self._model_filter
+            logger.info("Data filter cleared")
+
+    def get_data_filter(self) -> Optional[CompareFilter]:
+        return self._data_filter
     
     # ========== Compare Settings ==========
     
@@ -731,10 +690,8 @@ class CompareManager:
         if not self._primary_mode:
             raise ValueError("No compare mode set")
         
-        # Apply filters to args (from FILTERING_PROPOSAL.md)
-        # Note: This will be integrated into CompareArgs when filtering is implemented
-        # For now, filters are stored in manager but not yet applied to args
-        # TODO: Add size_filter and model_filter properties to CompareArgs
+        # Attach the pre-filter so BaseCompare.get_files() can apply it
+        args.data_filter = self._data_filter
         
         # Log comparison mode configuration
         if self._is_composite_mode:
@@ -759,7 +716,15 @@ class CompareManager:
         
         # Composite mode operation
         self._run_composite(args)
-    
+
+    @staticmethod
+    def _normalize_score(mode: CompareMode, score: float) -> float:
+        """Convert any mode's raw score to a [0, 1] similarity scale."""
+        if mode == CompareMode.COLOR_MATCHING:
+            from compare.compare_colors import CompareColors
+            return max(0.0, min(1.0, 1.0 - score / CompareColors.THRESHHOLD_GROUP_CUTOFF))
+        return score
+
     def _run_composite(self, args: CompareArgs):
         """
         Run composite comparison across multiple mode instances and combine results.
@@ -836,11 +801,12 @@ class CompareManager:
                 mode_results_for_combine[config.compare_mode] = {}
             # Merge results from multiple instances of same mode
             for file_path, score in results.items():
+                normalized = self._normalize_score(config.compare_mode, score)
                 if file_path not in mode_results_for_combine[config.compare_mode]:
-                    mode_results_for_combine[config.compare_mode][file_path] = score
+                    mode_results_for_combine[config.compare_mode][file_path] = normalized
                 else:
                     mode_results_for_combine[config.compare_mode][file_path] = max(
-                        mode_results_for_combine[config.compare_mode][file_path], score
+                        mode_results_for_combine[config.compare_mode][file_path], normalized
                     )
         
         self._combined_results = self._combine_results(mode_results_for_combine)

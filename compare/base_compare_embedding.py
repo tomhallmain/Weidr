@@ -258,7 +258,7 @@ class BaseCompareEmbedding(BaseCompare):
             file_group[_file] = diff_score
             self.compare_result.file_groups[group_index] = file_group
 
-        self.compare_result.finalize_group_result()
+        self.compare_result.finalize_group_result(store_checkpoints=store_checkpoints)
         return (self.compare_result.files_grouped, self.compare_result.file_groups)
 
     def _compute_matrix_similarities(self):

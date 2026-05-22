@@ -115,6 +115,9 @@ class CompareResult:
                 self.store()
         else:
             logger.warning("No similar images identified with current params.")
+            if store_checkpoints:
+                self.is_complete = True
+                self.store()
 
     def sort_groups(self, file_groups):
         return sorted(file_groups,
@@ -135,10 +138,10 @@ class CompareResult:
 
     @staticmethod
     def hash_dir_files(files):
-        hash_list = []
-        for f in files:
-            hash_list.append(hash(f))
-        return hash_list
+        # Store paths directly rather than hash() values. Python's built-in
+        # hash() for strings is randomised per-process (PYTHONHASHSEED), so
+        # a pkl written in one session would never match in the next.
+        return list(files)
 
     def validate_indices(self, files):
         """
@@ -167,6 +170,13 @@ class CompareResult:
             logger.error(f"Failed to load compare result from base dir {base_dir}")
             return CompareResult(base_dir, files)
         if not cached.equals_hash(files):
+            # Old pkls used Python's hash() on strings, which is randomised per-process.
+            # Those are always stale — discard silently and rebuild rather than surface a
+            # misleading error. New pkls (path strings) that genuinely don't match raise.
+            if (cached._dir_files_hash
+                    and isinstance(cached._dir_files_hash[0], int)):
+                logger.warning(f"Discarding {cache_path}: stored in legacy format, rebuilding checkpoint.")
+                return CompareResult(base_dir, files)
             raise ValueError(f"{cache_path} does not match {files}")
 
         # Validate that all indices in files_grouped are valid

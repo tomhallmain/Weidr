@@ -266,6 +266,41 @@ class FileMarksController:
             ui_class=MarkedFileMover
         )
 
+    @require_password(ProtectedActions.RUN_FILE_ACTIONS)
+    def run_file_action_set(self, event=None) -> None:
+        """Execute the currently selected file action set on the current file."""
+        from files.file_action_set import FileActionSets
+        selected = FileActionSets.get_selected_actions()
+        if not selected:
+            self._app.app_actions.warn(_("No file action set actions selected."))
+            return
+        if len(MarkedFiles.file_marks) == 0:
+            self.add_or_remove_mark(show_toast=False)
+        marks_snapshot = list(MarkedFiles.file_marks)
+        current_image = self._nav.get_active_media_filepath()
+        copy_actions = [s for s in selected if not s.is_move()]
+        move_actions = [s for s in selected if s.is_move()]
+        for step in copy_actions:
+            MarkedFiles.move_marks_to_dir_static(
+                self._app.app_actions,
+                target_dir=step.target,
+                move_func=Utils.copy_file,
+                files=marks_snapshot,
+                single_image=(len(marks_snapshot) == 1),
+                current_image=current_image,
+                get_target_dir_callback=MarkedFileMover.get_target_directory,
+            )
+        for step in move_actions:
+            MarkedFiles.move_marks_to_dir_static(
+                self._app.app_actions,
+                target_dir=step.target,
+                move_func=Utils.move_file,
+                files=marks_snapshot,
+                single_image=(len(marks_snapshot) == 1),
+                current_image=current_image,
+                get_target_dir_callback=MarkedFileMover.get_target_directory,
+            )
+
     def _check_marks(self, min_mark_size: int = 1) -> None:
         """Validate that enough marks exist for the intended operation."""
         if len(MarkedFiles.file_marks) < min_mark_size:

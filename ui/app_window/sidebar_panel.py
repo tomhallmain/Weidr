@@ -315,6 +315,14 @@ class SidebarPanel(QWidget):
 
         self._add_label(_("File actions"))
         # File action buttons
+        self.file_action_sets_btn = self._make_button(
+            _("File action sets"),
+            lambda: self._app.window_launcher.open_file_action_sets_window(),
+        )
+        create_tooltip(
+            self.file_action_sets_btn,
+            _("Configure and execute sets of file actions (copy/move) against the currently marked files."),
+        )
         self.open_media_location_btn = self._make_button(
             _("Open media location"),
             lambda: self._app.file_ops_ctrl.open_media_location(),

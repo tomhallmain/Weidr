@@ -8,7 +8,7 @@ class AppActions:
         "refocus", "set_mode", "get_active_media_filepath", "create_media", "show_next_media", 
         "play_media", "pause_media", "toggle_media_play_pause", "seek_media", "stop_media",
         "set_media_volume", "get_media_volume", "toggle_media_mute", "set_media_mute", "is_media_muted",
-        "get_media_details", "open_move_marks_window", "open_password_admin_window",
+        "get_media_details", "open_move_marks_window", "open_password_admin_window", "open_file_action_sets_window",
          "run_image_generation", "set_marks_from_downstream_related_images",
         "set_base_dir", "get_base_dir", "go_to_file", "go_to_file_by_index", "delete",
         "hide_current_media", "copy_media_path", 

@@ -219,6 +219,29 @@ class WindowLauncher:
         except Exception as e:
             self._handle_error(e, "File Actions Window Error")
 
+    @require_password(ProtectedActions.VIEW_FILE_ACTIONS)
+    def open_file_action_sets_window(self, event=None) -> None:
+        """Open the file action sets window."""
+        try:
+            from files.marked_files import MarkedFiles
+            from ui.files.file_action_sets_window_qt import FileActionSetsWindow
+            if FileActionSetsWindow._instance is not None:
+                try:
+                    if FileActionSetsWindow._instance.isVisible():
+                        FileActionSetsWindow._instance.raise_()
+                        FileActionSetsWindow._instance.activateWindow()
+                        return
+                except (RuntimeError, AttributeError):
+                    FileActionSetsWindow._instance = None
+            window = FileActionSetsWindow(
+                self._app,
+                self._app.app_actions,
+                MarkedFiles.move_marks_to_dir_static,
+            )
+            window.show()
+        except Exception as e:
+            self._handle_error(e, "File Action Sets Window Error")
+
     # ------------------------------------------------------------------
     # Auth / admin windows
     # ------------------------------------------------------------------

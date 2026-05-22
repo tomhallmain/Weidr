@@ -296,6 +296,7 @@ class KeyBindingManager:
         self._bind("Ctrl+E", app.file_marks_ctrl.run_penultimate_marks_action, guarded=False)
         self._bind("Ctrl+Shift+E", app.file_marks_ctrl.run_antepenultimate_marks_action, guarded=False)
         self._bind("Ctrl+T", app.file_marks_ctrl.run_permanent_marks_action, guarded=False)
+        self._bind("Ctrl+Shift+T", app.file_marks_ctrl.run_file_action_set, guarded=False)
         self._bind(
             "Ctrl+D",
             lambda: MarkedFiles.set_current_marks_from_previous(app.notification_ctrl.toast),

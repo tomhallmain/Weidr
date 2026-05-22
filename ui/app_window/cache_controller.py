@@ -51,6 +51,7 @@ class CacheController:
             from ui.files.marked_file_mover_qt import MarkedFiles
             from files.recent_directories import RecentDirectories
             from files.file_action import FileAction
+            from files.file_action_set import FileActionSets
             from ui.image.media_details import MediaDetails
             from ui.compare.classifier_management_window_qt import ClassifierManagementWindow
             from ui.files.favorites_window_qt import FavoritesWindow
@@ -60,6 +61,7 @@ class CacheController:
             MarkedFiles.load_target_dirs()
             RecentDirectories.load_recent_directories()
             FileAction.load_actions()
+            FileActionSets.load()
             MediaDetails.load_image_generation_mode()
             ClassifierManagementWindow.set_prevalidations()
             ClassifierManagementWindow.set_classifier_actions()
@@ -85,6 +87,7 @@ class CacheController:
         from ui.files.marked_file_mover_qt import MarkedFiles
         from files.recent_directories import RecentDirectories
         from files.file_action import FileAction
+        from files.file_action_set import FileActionSets
         from ui.image.media_details import MediaDetails
         from ui.compare.classifier_management_window_qt import ClassifierManagementWindow
         from ui.files.favorites_window_qt import FavoritesWindow
@@ -135,6 +138,7 @@ class CacheController:
         RecentDirectories.store_recent_directories()
         MarkedFiles.store_target_dirs()
         FileAction.store_actions()
+        FileActionSets.store()
         MediaDetails.store_image_generation_mode()
         ClassifierManagementWindow.store_prevalidations()
         ClassifierManagementWindow.store_classifier_actions()

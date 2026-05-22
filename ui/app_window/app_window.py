@@ -448,6 +448,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             "get_media_details": ts(self.window_launcher.open_media_details),
             "open_move_marks_window": ts(self.file_marks_ctrl.open_move_marks_window),
             "open_password_admin_window": ts(self.window_launcher.open_password_admin_window),
+            "open_file_action_sets_window": ts(self.window_launcher.open_file_action_sets_window),
             # Search / compare
             "run_image_generation": ts(self.search_ctrl.run_image_generation),
             "set_marks_from_downstream_related_images": ts(self.file_marks_ctrl.set_marks_from_downstream_related_images),

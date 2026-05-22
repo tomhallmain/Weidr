@@ -142,3 +142,15 @@ This window helps with efficient filing of file marks.
 The file actions window displays a certain number of completed actions, as defined in the config JSON. Similar to the move marks window, typing will add to a text filter that filters the actions by the target directory basenames.
 
 On this window the previous file action media can be viewed and reversed or the action can be modified if desired.
+
+---
+
+## File Action Sets
+
+File action sets let you combine multiple copy and/or move actions into a single operation. Open the window from the "File action sets" button in the File actions section of the sidebar.
+
+The top section shows all actions in the pool as cards. Click a card to select or deselect it — selected cards form the current set. Only one Move action may be selected at a time. Use **Add from Hotkeys** or **Add from Recent** to populate the pool; ✕ removes a card from the pool.
+
+**Execute** runs all selected actions against the current marks (auto-marking the active file if nothing is marked). Copies run before any move. Frequent selections can be saved as named presets and loaded by clicking a preset card.
+
+Press **Ctrl+Shift+T** in any app window to execute the current set on the active file without opening the window.

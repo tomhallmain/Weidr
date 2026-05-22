@@ -10,6 +10,7 @@ from utils.constants import CompareMode
 
 class CompareEmbeddingLaion(BaseCompareEmbedding):
     COMPARE_MODE = CompareMode.LAION_EMBEDDING
+    CACHE_FILENAME = "image_embeddings_laion.pkl"
     THRESHHOLD_POTENTIAL_DUPLICATE = config.threshold_potential_duplicate_embedding
     THRESHHOLD_PROBABLE_MATCH = 0.98
     THRESHHOLD_GROUP_CUTOFF = 4500  # TODO fix this for Embedding case

@@ -2,7 +2,6 @@ import os
 import pickle
 import sys
 
-from utils.constants import CompareMode
 from utils.logging_setup import get_logger
 
 logger = get_logger("compare_data")
@@ -10,69 +9,17 @@ logger = get_logger("compare_data")
 
 class CompareData:
 
-    EMBEDDINGS_DATA = "image_embeddings.pkl"
-    EMBEDDINGS_SIGLIP_DATA = "image_embeddings_siglip.pkl"
-    EMBEDDINGS_FLAVA_DATA = "image_embeddings_flava.pkl"
-    EMBEDDINGS_ALIGN_DATA = "image_embeddings_align.pkl"
-    EMBEDDINGS_XVLM_DATA = "image_embeddings_xvlm.pkl"
-    EMBEDDINGS_LAION_DATA = "image_embeddings_laion.pkl"
-    PROMPTS_DATA = "image_prompts.pkl"
-    PROMPTS_EXACT_DATA = "image_prompts_exact.pkl"
-    SIZE_DATA = "image_sizes.pkl"
-    MODELS_DATA = "image_models.pkl"
-    THUMB_COLORS_DATA = "image_thumb_colors.pkl"
-    TOP_COLORS_DATA = "image_top_colors.pkl"
     FACES_DATA = "image_faces.pkl"
 
-    def __init__(self, base_dir=".", mode=CompareMode.CLIP_EMBEDDING, use_thumb=False):
+    def __init__(self, base_dir=".", data_filename="image_data.pkl"):
         self.base_dir = base_dir
         self.has_new_file_data = False
         self.files_found = []
         self.n_files_found = 0
         self.file_data_dict = {}
         self.file_faces_dict = {}
-        self._file_faces_filepath = os.path.join(
-            base_dir, CompareData.FACES_DATA)
-        if mode == CompareMode.COLOR_MATCHING:
-            if use_thumb:
-                self._file_data_filepath = os.path.join(
-                    base_dir, CompareData.THUMB_COLORS_DATA)
-            else:
-                self._file_data_filepath = os.path.join(
-                    base_dir, CompareData.TOP_COLORS_DATA)
-        elif mode.is_embedding():
-            if mode == CompareMode.SIGLIP_EMBEDDING:
-                self._file_data_filepath = os.path.join(
-                    base_dir, CompareData.EMBEDDINGS_SIGLIP_DATA)
-            elif mode == CompareMode.FLAVA_EMBEDDING:
-                self._file_data_filepath = os.path.join(
-                    base_dir, CompareData.EMBEDDINGS_FLAVA_DATA)
-            elif mode == CompareMode.ALIGN_EMBEDDING:
-                self._file_data_filepath = os.path.join(
-                    base_dir, CompareData.EMBEDDINGS_ALIGN_DATA)
-            elif mode == CompareMode.XVLM_EMBEDDING:
-                self._file_data_filepath = os.path.join(
-                    base_dir, CompareData.EMBEDDINGS_XVLM_DATA)
-            elif mode == CompareMode.LAION_EMBEDDING:
-                self._file_data_filepath = os.path.join(
-                    base_dir, CompareData.EMBEDDINGS_LAION_DATA)
-            elif mode == CompareMode.PROMPTS:
-                self._file_data_filepath = os.path.join(
-                    base_dir, CompareData.PROMPTS_DATA)
-            else:
-                self._file_data_filepath = os.path.join(
-                    base_dir, CompareData.EMBEDDINGS_DATA)
-        elif mode == CompareMode.PROMPTS_EXACT:
-            self._file_data_filepath = os.path.join(
-                base_dir, CompareData.PROMPTS_EXACT_DATA)
-        elif mode == CompareMode.SIZE:
-            self._file_data_filepath = os.path.join(
-                base_dir, CompareData.SIZE_DATA)
-        elif mode == CompareMode.MODELS:
-            self._file_data_filepath = os.path.join(
-                base_dir, CompareData.MODELS_DATA)
-        else:
-            raise Exception("Invalid mode")
+        self._file_data_filepath = os.path.join(base_dir, data_filename)
+        self._file_faces_filepath = os.path.join(base_dir, CompareData.FACES_DATA)
 
     def load_data(self, overwrite=False, compare_faces=False):
         if overwrite or not os.path.exists(self._file_data_filepath):

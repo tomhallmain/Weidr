@@ -166,9 +166,7 @@ def compute_text_similarity(text1: str, text2: str) -> float:
 
 class ComparePromptsExact(BaseCompare):
     COMPARE_MODE = CompareMode.PROMPTS_EXACT
-    SEARCH_OUTPUT_FILE = "weidr_search_output.txt"
-    GROUPS_OUTPUT_FILE = "weidr_file_groups_output.txt"
-    PROMPTS_DATA = "image_prompts_exact.pkl"
+    CACHE_FILENAME = "image_prompts_exact.pkl"
     THRESHHOLD_POTENTIAL_DUPLICATE = 0.95  # High similarity threshold for exact matches
     THRESHHOLD_PROBABLE_MATCH = 0.85
     THRESHHOLD_GROUP_CUTOFF = 0.75
@@ -181,7 +179,7 @@ class ComparePromptsExact(BaseCompare):
         self._probable_duplicates = []
         self.settings_updated = False
         # Initialize compare_data for prompt comparison
-        self.compare_data = CompareData(base_dir=self.base_dir, mode=CompareMode.PROMPTS_EXACT)
+        self.compare_data = CompareData(base_dir=self.base_dir, data_filename=ComparePromptsExact.CACHE_FILENAME)
         # In-memory prompt caches aligned with compare_data.files_found order
         self._file_pos_texts = []
         self._file_neg_texts = []
@@ -191,9 +189,7 @@ class ComparePromptsExact(BaseCompare):
         Set the base directory and prepare cache file references.
         '''
         self.base_dir = base_dir
-        self.search_output_path = os.path.join(base_dir, ComparePromptsExact.SEARCH_OUTPUT_FILE)
-        self.groups_output_path = os.path.join(base_dir, ComparePromptsExact.GROUPS_OUTPUT_FILE)
-        self.compare_data = CompareData(base_dir=base_dir, mode=CompareMode.PROMPTS_EXACT)
+        self.compare_data = CompareData(base_dir=base_dir, data_filename=ComparePromptsExact.CACHE_FILENAME)
 
     def set_search_media_path(self, search_media_path):
         '''
@@ -543,7 +539,7 @@ class ComparePromptsExact(BaseCompare):
 
         overwrite = self.args.overwrite or not store_checkpoints
         self.compare_result = CompareResult.load(
-            self.base_dir, self.compare_data.files_found, overwrite=overwrite)
+            self.base_dir, self.compare_data.files_found, mode=self.COMPARE_MODE, overwrite=overwrite)
         if self.compare_result.is_complete:
             return (self.compare_result.files_grouped, self.compare_result.file_groups)
 

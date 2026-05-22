@@ -10,6 +10,7 @@ from utils.constants import CompareMode
 
 class CompareEmbeddingXVLM(BaseCompareEmbedding):
     COMPARE_MODE = CompareMode.XVLM_EMBEDDING
+    CACHE_FILENAME = "image_embeddings_xvlm.pkl"
     THRESHHOLD_POTENTIAL_DUPLICATE = config.threshold_potential_duplicate_embedding
     THRESHHOLD_PROBABLE_MATCH = 0.98
     THRESHHOLD_GROUP_CUTOFF = 4500  # TODO fix this for Embedding case

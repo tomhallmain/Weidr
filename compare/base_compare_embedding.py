@@ -191,7 +191,7 @@ class BaseCompareEmbedding(BaseCompare):
         '''
         overwrite = self.args.overwrite or not store_checkpoints
         logger.debug(f"Store checkpoints: {store_checkpoints}")
-        self.compare_result = CompareResult.load(self.base_dir, self.compare_data.files_found, overwrite=overwrite)
+        self.compare_result = CompareResult.load(self.base_dir, self.compare_data.files_found, mode=self.COMPARE_MODE, overwrite=overwrite)
         if self.compare_result.is_complete:
             return (self.compare_result.files_grouped, self.compare_result.file_groups)
 
@@ -746,8 +746,6 @@ def usage():
 
 def main(compare_class):
     base_dir = "."
-    search_output_path = "weidr_search_output.txt"
-    groups_output_path = "weidr_file_groups_output.txt"
     overwrite = False
     search_media_path = None
     verbose = False
@@ -756,8 +754,6 @@ def main(compare_class):
     counter_limit = 10000
     inclusion_pattern = None
     embedding_similarity_threshold = None
-    search_output_path = os.path.join(base_dir, search_output_path)
-    groups_output_path = os.path.join(base_dir, groups_output_path)
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], "bcfist:hov", [

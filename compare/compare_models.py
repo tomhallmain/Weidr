@@ -68,9 +68,7 @@ def model_similarity(models1: List[str], loras1: List[str],
 
 class CompareModels(BaseCompare):
     COMPARE_MODE = CompareMode.MODELS
-    SEARCH_OUTPUT_FILE = "weidr_search_output.txt"
-    GROUPS_OUTPUT_FILE = "weidr_file_groups_output.txt"
-    MODELS_DATA = "image_models.pkl"
+    CACHE_FILENAME = "image_models.pkl"
     THRESHOLD_MATCH = 0.7  # Default threshold for model matching
 
     def __init__(self, args=CompareArgs(), gather_files_func=gather_files):
@@ -78,7 +76,7 @@ class CompareModels(BaseCompare):
         self.threshold_match = CompareModels.THRESHOLD_MATCH
         self.settings_updated = False
         # Initialize compare_data for model comparison
-        self.compare_data = CompareData(base_dir=self.base_dir, mode=CompareMode.MODELS)
+        self.compare_data = CompareData(base_dir=self.base_dir, data_filename=CompareModels.CACHE_FILENAME)
         # Set initial threshold from args
         if hasattr(args, 'threshold'):
             self.set_similarity_threshold(args.threshold)
@@ -88,9 +86,7 @@ class CompareModels(BaseCompare):
         Set the base directory and prepare cache file references.
         '''
         self.base_dir = base_dir
-        self.search_output_path = os.path.join(base_dir, CompareModels.SEARCH_OUTPUT_FILE)
-        self.groups_output_path = os.path.join(base_dir, CompareModels.GROUPS_OUTPUT_FILE)
-        self.compare_data = CompareData(base_dir=base_dir, mode=CompareMode.MODELS)
+        self.compare_data = CompareData(base_dir=base_dir, data_filename=CompareModels.CACHE_FILENAME)
 
     def set_search_media_path(self, search_media_path):
         '''
@@ -325,7 +321,7 @@ class CompareModels(BaseCompare):
         '''
         overwrite = self.args.overwrite or not store_checkpoints
         self.compare_result = CompareResult.load(
-            self.base_dir, self.compare_data.files_found, overwrite=overwrite)
+            self.base_dir, self.compare_data.files_found, mode=self.COMPARE_MODE, overwrite=overwrite)
         if self.compare_result.is_complete:
             return (self.compare_result.files_grouped, self.compare_result.file_groups)
 

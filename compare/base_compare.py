@@ -74,7 +74,7 @@ class BaseCompare:
         if self.compare_faces:
             self._set_face_cascade()
         self.gather_files_func = gather_files_func
-        self.compare_result = CompareResult(base_dir=self.args.base_dir)
+        self.compare_result = CompareResult(base_dir=self.args.base_dir, mode=self.args.compare_mode)
 
     def is_runnable(self):
         return True
@@ -177,13 +177,13 @@ class BaseCompare:
         Set the base directory and prepare cache file references.
         '''
         self.base_dir = base_dir
-        if self.args.compare_mode == CompareMode.COLOR_MATCHING:
-            self.compare_data = CompareData(
-                base_dir=base_dir, mode=self.args.compare_mode, use_thumb=self.use_thumb)
-        else:
-            self.compare_data = CompareData(
-                base_dir=base_dir, mode=self.args.compare_mode)
-        self.compare_result = CompareResult(base_dir=base_dir)
+        cache_filename = getattr(self, 'CACHE_FILENAME', None)
+        if cache_filename is None:
+            raise AttributeError(
+                f"{type(self).__name__} must define a CACHE_FILENAME class attribute"
+            )
+        self.compare_data = CompareData(base_dir=base_dir, data_filename=cache_filename)
+        self.compare_result = CompareResult(base_dir=base_dir, mode=self.args.compare_mode)
 
     def set_search_media_path(self, search_media_path):
         '''

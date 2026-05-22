@@ -46,9 +46,7 @@ def prompt_embedding_from_image(image_path):
 
 class ComparePrompts(BaseCompareEmbedding):
     COMPARE_MODE = CompareMode.PROMPTS
-    SEARCH_OUTPUT_FILE = "weidr_search_output.txt"
-    GROUPS_OUTPUT_FILE = "weidr_file_groups_output.txt"
-    PROMPTS_DATA = "image_prompts.pkl"
+    CACHE_FILENAME = "image_prompts.pkl"
     THRESHHOLD_POTENTIAL_DUPLICATE = 0.95  # High similarity threshold for prompts
     THRESHHOLD_PROBABLE_MATCH = 0.85
     THRESHHOLD_GROUP_CUTOFF = 0.75
@@ -67,7 +65,7 @@ class ComparePrompts(BaseCompareEmbedding):
         self.multi_embedding_cache = ComparePrompts.MULTI_EMBEDDING_CACHE
         self._probable_duplicates = []
         self.settings_updated = False
-        self.compare_data = CompareData(base_dir=self.base_dir, mode=CompareMode.PROMPTS)
+        self.compare_data = CompareData(base_dir=self.base_dir, data_filename=ComparePrompts.CACHE_FILENAME)
         
         # Set up image embeddings function for text search
         self.image_embeddings_func = prompt_embedding_from_image
@@ -77,9 +75,7 @@ class ComparePrompts(BaseCompareEmbedding):
         Set the base directory and prepare cache file references.
         '''
         self.base_dir = base_dir
-        self.search_output_path = os.path.join(base_dir, ComparePrompts.SEARCH_OUTPUT_FILE)
-        self.groups_output_path = os.path.join(base_dir, ComparePrompts.GROUPS_OUTPUT_FILE)
-        self.compare_data = CompareData(base_dir=base_dir, mode=CompareMode.PROMPTS)
+        self.compare_data = CompareData(base_dir=base_dir, data_filename=ComparePrompts.CACHE_FILENAME)
 
     def set_search_media_path(self, search_media_path):
         '''
@@ -303,7 +299,7 @@ class ComparePrompts(BaseCompareEmbedding):
         '''
         overwrite = self.args.overwrite or not store_checkpoints
         self.compare_result = CompareResult.load(
-            self.base_dir, self.compare_data.files_found, overwrite=overwrite)
+            self.base_dir, self.compare_data.files_found, mode=self.COMPARE_MODE, overwrite=overwrite)
         if self.compare_result.is_complete:
             return (self.compare_result.files_grouped, self.compare_result.file_groups)
 

@@ -156,12 +156,16 @@ def get_image_array(filepath):
 
 class CompareColors(BaseCompare):
     COMPARE_MODE = CompareMode.COLOR_MATCHING
+    CACHE_FILENAME_TOP   = "image_top_colors.pkl"
+    CACHE_FILENAME_THUMB = "image_thumb_colors.pkl"
     THRESHHOLD_POTENTIAL_DUPLICATE = 50
     THRESHHOLD_PROBABLE_MATCH = 1000
     THRESHHOLD_GROUP_CUTOFF = 4500
 
     def __init__(self, args=CompareArgs(), use_thumb=True, gather_files_func=gather_files):
         self.use_thumb = use_thumb
+        self.CACHE_FILENAME = (CompareColors.CACHE_FILENAME_THUMB if use_thumb
+                               else CompareColors.CACHE_FILENAME_TOP)
         super().__init__(args, gather_files_func)
         self.compare_faces = self.args.compare_faces
         if self.use_thumb:
@@ -426,7 +430,7 @@ class CompareColors(BaseCompare):
         '''
         overwrite = self.args.overwrite or not store_checkpoints
         self.compare_result = CompareResult.load(
-            self.base_dir, self.compare_data.files_found, overwrite=overwrite)
+            self.base_dir, self.compare_data.files_found, mode=self.COMPARE_MODE, overwrite=overwrite)
         if self.compare_result.is_complete:
             return (self.compare_result.files_grouped, self.compare_result.file_groups)
         n_files_found_even = Utils.round_up(self.compare_data.n_files_found, 5)
@@ -582,8 +586,6 @@ class CompareColors(BaseCompare):
 
 if __name__ == "__main__":
     base_dir = "."
-    search_output_path = "weidr_search_output.txt"
-    groups_output_path = "weidr_file_groups_output.txt"
     run_search = False
     overwrite = False
     search_file_index = None
@@ -595,8 +597,6 @@ if __name__ == "__main__":
     counter_limit = 10000
     inclusion_pattern = None
     color_diff_threshold = None
-    search_output_path = os.path.join(base_dir, search_output_path)
-    groups_output_path = os.path.join(base_dir, groups_output_path)
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], "bcfist:hov", [

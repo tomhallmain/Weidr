@@ -87,9 +87,7 @@ def size_similarity(size1: Tuple[int, int], size2: Tuple[int, int], tolerance: i
 
 class CompareSize(BaseCompare):
     COMPARE_MODE = CompareMode.SIZE
-    SEARCH_OUTPUT_FILE = "weidr_search_output.txt"
-    GROUPS_OUTPUT_FILE = "weidr_file_groups_output.txt"
-    SIZE_DATA = "image_sizes.pkl"
+    CACHE_FILENAME = "image_sizes.pkl"
     THRESHOLD_MATCH = 0.95  # For exact size matches
 
     def __init__(self, args=CompareArgs(), gather_files_func=gather_files):
@@ -98,7 +96,7 @@ class CompareSize(BaseCompare):
         self.threshold_tolerance = 0  # Pixel tolerance for size matching
         self.settings_updated = False
         # Initialize compare_data for size comparison
-        self.compare_data = CompareData(base_dir=self.base_dir, mode=CompareMode.SIZE)
+        self.compare_data = CompareData(base_dir=self.base_dir, data_filename=CompareSize.CACHE_FILENAME)
         # Set initial tolerance from args
         if hasattr(args, 'threshold'):
             self.set_similarity_threshold(args.threshold)
@@ -108,9 +106,7 @@ class CompareSize(BaseCompare):
         Set the base directory and prepare cache file references.
         '''
         self.base_dir = base_dir
-        self.search_output_path = os.path.join(base_dir, CompareSize.SEARCH_OUTPUT_FILE)
-        self.groups_output_path = os.path.join(base_dir, CompareSize.GROUPS_OUTPUT_FILE)
-        self.compare_data = CompareData(base_dir=base_dir, mode=CompareMode.SIZE)
+        self.compare_data = CompareData(base_dir=base_dir, data_filename=CompareSize.CACHE_FILENAME)
 
     def set_search_media_path(self, search_media_path):
         '''

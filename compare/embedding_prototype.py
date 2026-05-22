@@ -362,7 +362,10 @@ class EmbeddingPrototype:
         current_time = time.time()
         
         if abs_dir not in _directory_caches:
-            _directory_caches[abs_dir] = CompareData(base_dir=abs_dir, mode=CompareMode.CLIP_EMBEDDING)
+            # Intentionally shares image_embeddings_clip.pkl with CompareEmbeddingClip so
+            # embeddings computed by a regular compare run are reused here and vice versa.
+            # Concurrent writes to the same directory are unlikely in practice.
+            _directory_caches[abs_dir] = CompareData(base_dir=abs_dir, data_filename="image_embeddings_clip.pkl")
             _directory_caches[abs_dir].load_data(overwrite=False)
             _cache_access_times[abs_dir] = current_time
         else:

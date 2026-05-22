@@ -111,6 +111,69 @@ class CompareFilterGroup(CompareFilter):
 
 
 # ---------------------------------------------------------------------------
+# Serialization helpers
+# ---------------------------------------------------------------------------
+
+def filter_to_dict(f: Optional[CompareFilter]) -> Optional[dict]:
+    """Serialize a filter tree to a JSON-safe dict, or return None."""
+    if f is None:
+        return None
+    if isinstance(f, SizeFilter):
+        return {
+            "type": "size",
+            "min_size": list(f.min_size) if f.min_size else None,
+            "max_size": list(f.max_size) if f.max_size else None,
+            "exact_size": list(f.exact_size) if f.exact_size else None,
+            "size_tolerance": f.size_tolerance,
+        }
+    if isinstance(f, ModelFilter):
+        return {
+            "type": "model",
+            "models": f.models,
+            "mode": f.mode,
+            "match_any": f.match_any,
+            "include_loras": f.include_loras,
+        }
+    if isinstance(f, CompareFilterGroup):
+        return {
+            "type": "group",
+            "operator": f.operator.value,
+            "filters": [filter_to_dict(c) for c in f.filters],
+        }
+    return None
+
+
+def filter_from_dict(d: Optional[dict]) -> Optional[CompareFilter]:
+    """Deserialize a filter tree from a dict produced by filter_to_dict."""
+    if not d:
+        return None
+    t = d.get("type")
+    if t == "size":
+        return SizeFilter(
+            min_size=tuple(d["min_size"]) if d.get("min_size") else None,
+            max_size=tuple(d["max_size"]) if d.get("max_size") else None,
+            exact_size=tuple(d["exact_size"]) if d.get("exact_size") else None,
+            size_tolerance=d.get("size_tolerance", 0),
+        )
+    if t == "model":
+        return ModelFilter(
+            models=d.get("models"),
+            mode=d.get("mode", "include"),
+            match_any=d.get("match_any", False),
+            include_loras=d.get("include_loras", True),
+        )
+    if t == "group":
+        children = [filter_from_dict(c) for c in d.get("filters", [])]
+        children = [c for c in children if c is not None]
+        try:
+            op = FilterOperator(d.get("operator", "and"))
+        except ValueError:
+            op = FilterOperator.AND
+        return CompareFilterGroup(operator=op, filters=children)
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
 

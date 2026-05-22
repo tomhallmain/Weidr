@@ -704,7 +704,14 @@ class CompareManager:
         """
         if not self._primary_mode:
             raise ValueError("No compare mode set")
-        
+
+        # Record this run in the persistent recent-history list.
+        try:
+            from compare.compare_history import CompareHistory
+            CompareHistory.record(self.snapshot(args.base_dir))
+        except Exception as _e:
+            logger.debug(f"Failed to record compare history: {_e}")
+
         # Attach the pre-filter so BaseCompare.get_files() can apply it
         args.data_filter = self._data_filter
         
@@ -967,26 +974,26 @@ class CompareManager:
         if not primary_iid:
             return
         wrapper = self._ensure_wrapper(primary_iid, self._primary_mode)
-        
+
         # Update wrapper's results structure
         wrapper.files_grouped = {0: self._combined_results}
         wrapper.file_groups = deepcopy(wrapper.files_grouped)
-        
+
         # Sort files by combined score
         reverse = self._primary_mode.is_embedding()
         wrapper.files_matched = []
-        for f in sorted(self._combined_results.keys(), 
-                       key=lambda f: self._combined_results[f], 
+        for f in sorted(self._combined_results.keys(),
+                       key=lambda f: self._combined_results[f],
                        reverse=reverse):
             wrapper.files_matched.append(f)
-        
+
         # Set up navigation state
         wrapper.group_indexes = [0]
         wrapper.current_group_index = 0
         wrapper.max_group_index = 0
         wrapper.match_index = 0
         wrapper.has_media_matches = len(wrapper.files_matched) > 0
-        
+
         if wrapper.has_media_matches:
             self._app_actions._set_label_state(
                 f"{len(wrapper.files_matched)} matches found (composite search)"
@@ -999,4 +1006,81 @@ class CompareManager:
                 "No Match Found",
                 "None of the files match the composite search criteria."
             )
+
+    # ========== History / Snapshot ==========
+
+    def snapshot(self, directory: str) -> "CompareHistory":
+        """Capture current configuration as a CompareHistory entry."""
+        from compare.compare_history import CompareHistory
+        from compare.compare_filters import filter_to_dict
+        from datetime import datetime
+        instances = [
+            {
+                "instance_id": cfg.instance_id,
+                "compare_mode": cfg.compare_mode.value,
+                "weight": cfg.weight,
+                "threshold": cfg.threshold,
+                "enabled": cfg.enabled,
+                "search_text": cfg.search_text,
+                "search_text_negative": cfg.search_text_negative,
+            }
+            for cfg in self._mode_configs.values()
+        ]
+        return CompareHistory(
+            directory=directory,
+            timestamp=datetime.now().isoformat(),
+            instances=instances,
+            combination_logic=self._combination_logic.value,
+            filter_dict=filter_to_dict(self._data_filter),
+        )
+
+    def apply_snapshot(self, h: "CompareHistory") -> None:
+        """Restore configuration from a CompareHistory snapshot."""
+        from compare.compare_filters import filter_from_dict
+        # Remove all current instances
+        for iid in list(self._mode_configs.keys()):
+            self.remove_mode_instance(iid)
+        # Re-add from snapshot
+        for i, inst in enumerate(h.instances):
+            mode_str = inst.get("compare_mode", CompareMode.CLIP_EMBEDDING.value)
+            try:
+                mode = CompareMode(mode_str)
+            except ValueError:
+                try:
+                    mode = CompareMode[mode_str]
+                except KeyError:
+                    logger.warning(f"Unknown compare mode in snapshot: {mode_str!r}")
+                    continue
+            if i == 0:
+                self.set_primary_mode(mode)
+                primary_iid = self._primary_instance_id
+                if primary_iid and primary_iid in self._mode_configs:
+                    cfg = self._mode_configs[primary_iid]
+                    cfg.weight = inst.get("weight", 1.0)
+                    cfg.threshold = inst.get("threshold")
+                    cfg.search_text = inst.get("search_text")
+                    cfg.search_text_negative = inst.get("search_text_negative")
+            else:
+                self.add_mode_instance(
+                    compare_mode=mode,
+                    weight=inst.get("weight", 1.0),
+                    threshold=inst.get("threshold"),
+                    search_text=inst.get("search_text"),
+                    search_text_negative=inst.get("search_text_negative"),
+                )
+        # Restore combination logic
+        try:
+            self.set_combination_logic(CombinationLogic(h.combination_logic))
+        except ValueError:
+            logger.warning(f"Unknown combination logic in snapshot: {h.combination_logic!r}")
+        # Restore filter
+        self.set_data_filter(filter_from_dict(h.filter_dict))
+
+    def reset_to_default(self) -> None:
+        """Clear all instances and restore a single CLIP_EMBEDDING with no filter."""
+        for iid in list(self._mode_configs.keys()):
+            self.remove_mode_instance(iid)
+        self.set_primary_mode(CompareMode.CLIP_EMBEDDING)
+        self.set_combination_logic(CombinationLogic.AND)
+        self.set_data_filter(None)
 

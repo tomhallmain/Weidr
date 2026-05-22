@@ -18,10 +18,11 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFrame, QHBoxLayout,
-    QLabel, QLineEdit, QPushButton, QScrollArea,
+    QLabel, QLineEdit, QMessageBox, QPushButton, QScrollArea,
     QVBoxLayout, QWidget,
 )
 
+from compare.compare_history import CompareHistory
 from compare.compare_manager import CompareManager, CombinationLogic
 from lib.multi_display_qt import SmartDialog
 from ui.app_style import AppStyle
@@ -177,6 +178,29 @@ class CompareSettingsWindow(SmartDialog):
         logic_row.addStretch()
         left.addLayout(logic_row)
 
+        left.addWidget(_h_separator())
+
+        # Recent Analyses
+        recent_title = QLabel(_("Recent Analyses"))
+        recent_title.setFont(section_font)
+        recent_title.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
+        left.addWidget(recent_title)
+
+        recent_scroll = QScrollArea()
+        recent_scroll.setWidgetResizable(True)
+        recent_scroll.setFrameShape(QFrame.Shape.StyledPanel)
+        recent_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        recent_scroll.setMinimumHeight(100)
+        recent_scroll.setMaximumHeight(220)
+
+        self._recent_inner = QWidget()
+        self._recent_layout = QVBoxLayout(self._recent_inner)
+        self._recent_layout.setContentsMargins(4, 4, 4, 4)
+        self._recent_layout.setSpacing(2)
+        self._recent_layout.addStretch()
+        recent_scroll.setWidget(self._recent_inner)
+        left.addWidget(recent_scroll)
+
         left.addStretch()
         body.addLayout(left, 1)
 
@@ -276,10 +300,17 @@ class CompareSettingsWindow(SmartDialog):
         btn_row.addWidget(cancel_btn)
 
         btn_row.addStretch()
+
+        reset_btn = QPushButton(_("Reset to Default"))
+        reset_btn.setToolTip(_("Reset to a single CLIP Embedding instance with no filters"))
+        reset_btn.clicked.connect(self._on_reset_to_default)
+        btn_row.addWidget(reset_btn)
+
         outer.addLayout(btn_row)
 
-        # Populate instance list after all widgets exist
+        # Populate instance list and recent history after all widgets exist
         self._refresh_instance_list()
+        self._refresh_recent_history()
 
     # ------------------------------------------------------------------
     # Instance list
@@ -473,6 +504,87 @@ class CompareSettingsWindow(SmartDialog):
         self._compare_manager.set_data_filter(self._filter_panel.get_filter())
 
         self.close()
+
+    # ------------------------------------------------------------------
+    # Recent history
+    # ------------------------------------------------------------------
+    def _refresh_recent_history(self) -> None:
+        """Rebuild the recent-analyses list from persisted history."""
+        _clear_layout(self._recent_layout)
+        history = CompareHistory.load_recent()
+
+        if not history:
+            empty_lbl = QLabel(_("No recent analyses."))
+            empty_lbl.setStyleSheet(
+                f"color: {AppStyle.FG_COLOR}; font-size: 9pt; font-style: italic;"
+            )
+            insert_pos = max(0, self._recent_layout.count() - 1)
+            self._recent_layout.insertWidget(insert_pos, empty_lbl)
+            return
+
+        for h in history:
+            row = QHBoxLayout()
+            row.setSpacing(6)
+
+            lbl = QLabel(h.label())
+            lbl.setStyleSheet(f"color: {AppStyle.FG_COLOR}; font-size: 9pt;")
+            lbl.setWordWrap(False)
+            row.addWidget(lbl, 1)
+
+            load_btn = QPushButton(_("Load"))
+            load_btn.setFixedWidth(50)
+            load_btn.clicked.connect(
+                lambda _checked, entry=h: self._on_load_history(entry)
+            )
+            row.addWidget(load_btn)
+
+            remove_btn = QPushButton("✕")
+            remove_btn.setFixedWidth(28)
+            remove_btn.setToolTip(_("Remove from history"))
+            remove_btn.clicked.connect(
+                lambda _checked, entry=h: self._on_remove_history(entry)
+            )
+            row.addWidget(remove_btn)
+
+            container = QWidget()
+            container.setLayout(row)
+            insert_pos = max(0, self._recent_layout.count() - 1)
+            self._recent_layout.insertWidget(insert_pos, container)
+
+    def _on_load_history(self, entry: CompareHistory) -> None:
+        self._compare_manager.apply_snapshot(entry)
+        self._filter_panel.set_filter(self._compare_manager.get_data_filter())
+        self._logic_combo.setCurrentText(
+            self._compare_manager.get_combination_logic().value
+        )
+        self._refresh_instance_list()
+
+    def _on_remove_history(self, entry: CompareHistory) -> None:
+        CompareHistory.remove(entry)
+        self._refresh_recent_history()
+
+    # ------------------------------------------------------------------
+    # Reset to default
+    # ------------------------------------------------------------------
+    def _on_reset_to_default(self) -> None:
+        reply = QMessageBox.question(
+            self,
+            _("Reset to Default"),
+            _(
+                "Reset all compare settings to a single CLIP Embedding instance "
+                "with no filters?\n\nThis will clear all current instances and filters."
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        self._compare_manager.reset_to_default()
+        self._filter_panel.set_filter(None)
+        self._logic_combo.setCurrentText(
+            self._compare_manager.get_combination_logic().value
+        )
+        self._refresh_instance_list()
 
     # ------------------------------------------------------------------
     # Lifecycle

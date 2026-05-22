@@ -827,42 +827,52 @@ class CompareManager:
             config = self._mode_configs[instance_id]
             logger.info(f"Instance {instance_id} ({config.compare_mode.name}) found {len(results)} matches")
         
-        # Combine results based on logic (convert instance_results to mode-based for combination)
-        mode_results_for_combine = {}
+        # Normalize all instance results to [0, 1] similarity scale
+        instance_results_normalized: Dict[str, Dict[str, float]] = {}
         for instance_id, results in instance_results.items():
-            config = self._mode_configs[instance_id]
-            if config.compare_mode not in mode_results_for_combine:
-                mode_results_for_combine[config.compare_mode] = {}
-            # Merge results from multiple instances of same mode
-            for file_path, score in results.items():
-                normalized = self._normalize_score(config.compare_mode, score)
-                if file_path not in mode_results_for_combine[config.compare_mode]:
-                    mode_results_for_combine[config.compare_mode][file_path] = normalized
+            cfg = self._mode_configs[instance_id]
+            instance_results_normalized[instance_id] = {
+                fp: self._normalize_score(cfg.compare_mode, score)
+                for fp, score in results.items()
+            }
+
+        # For AND/OR: aggregate per mode (merge same-mode instances via max score)
+        mode_results_for_combine: Dict[CompareMode, Dict[str, float]] = {}
+        for instance_id, results in instance_results_normalized.items():
+            cfg = self._mode_configs[instance_id]
+            if cfg.compare_mode not in mode_results_for_combine:
+                mode_results_for_combine[cfg.compare_mode] = {}
+            for file_path, normalized in results.items():
+                if file_path not in mode_results_for_combine[cfg.compare_mode]:
+                    mode_results_for_combine[cfg.compare_mode][file_path] = normalized
                 else:
-                    mode_results_for_combine[config.compare_mode][file_path] = max(
-                        mode_results_for_combine[config.compare_mode][file_path], normalized
+                    mode_results_for_combine[cfg.compare_mode][file_path] = max(
+                        mode_results_for_combine[cfg.compare_mode][file_path], normalized
                     )
-        
-        self._combined_results = self._combine_results(mode_results_for_combine)
+
+        self._combined_results = self._combine_results(mode_results_for_combine, instance_results_normalized)
         logger.info(f"Combined results using {self._combination_logic.value} logic: {len(self._combined_results)} matches")
         
         # Update primary wrapper with combined results
         self._apply_combined_results_to_primary()
     
-    def _combine_results(self, mode_results: Dict[CompareMode, Dict[str, float]]) -> Dict[str, float]:
+    def _combine_results(self, mode_results: Dict[CompareMode, Dict[str, float]],
+                         instance_results: Optional[Dict[str, Dict[str, float]]] = None) -> Dict[str, float]:
         """
         Combine results from multiple comparison modes.
         Returns dict mapping file_path -> combined_score
         """
+        if self._combination_logic == CombinationLogic.WEIGHTED:
+            # WEIGHTED operates at instance level to preserve per-instance weights
+            return self._combine_weighted(instance_results or {})
+
         if not mode_results:
             return {}
-        
+
         if self._combination_logic == CombinationLogic.AND:
             return self._combine_and(mode_results)
-        elif self._combination_logic == CombinationLogic.OR:
+        else:  # OR
             return self._combine_or(mode_results)
-        else:  # WEIGHTED
-            return self._combine_weighted(mode_results)
     
     def _combine_and(self, mode_results: Dict[CompareMode, Dict[str, float]]) -> Dict[str, float]:
         """AND logic: file must appear in ALL mode results."""
@@ -901,40 +911,31 @@ class CompareManager:
         
         return combined
     
-    def _combine_weighted(self, mode_results: Dict[CompareMode, Dict[str, float]]) -> Dict[str, float]:
-        """Weighted combination: weighted average of scores."""
-        # Collect all files
-        all_files = set()
-        for mode_results_dict in mode_results.values():
-            all_files.update(mode_results_dict.keys())
-        
-        # Calculate total weight for normalization (sum weights of enabled instances)
-        total_weight = sum(config.weight for config in self._mode_configs.values() if config.enabled)
-        if total_weight == 0:
-            total_weight = 1.0
-        
+    def _combine_weighted(self, instance_results: Dict[str, Dict[str, float]]) -> Dict[str, float]:
+        """Weighted combination: weighted average of per-instance scores.
+
+        Each instance contributes score * weight independently. A file absent from
+        an instance contributes 0 * weight (that instance's weight is still in the
+        denominator), so cross-instance comparisons remain meaningful.
+        """
+        # Collect all files that appear in any instance
+        all_files: set = set()
+        for results in instance_results.values():
+            all_files.update(results.keys())
+
         combined = {}
         for file_path in all_files:
             weighted_sum = 0.0
             weight_sum = 0.0
-            
-            # For each mode, use the average weight of its instances
-            for compare_mode in mode_results:
-                if file_path in mode_results[compare_mode]:
-                    # Get average weight of enabled instances for this mode
-                    mode_instances = [config for config in self._mode_configs.values() 
-                                    if config.compare_mode == compare_mode and config.enabled]
-                    if mode_instances:
-                        avg_weight = sum(inst.weight for inst in mode_instances) / len(mode_instances)
-                        score = mode_results[compare_mode][file_path]
-                        weighted_sum += score * avg_weight
-                        weight_sum += avg_weight
-            
-            if weight_sum > 0:
-                combined[file_path] = weighted_sum / weight_sum
-            else:
-                combined[file_path] = 0.0
-        
+            for instance_id, results in instance_results.items():
+                cfg = self._mode_configs.get(instance_id)
+                if cfg is None or not cfg.enabled:
+                    continue
+                score = results.get(file_path, 0.0)
+                weighted_sum += score * cfg.weight
+                weight_sum += cfg.weight
+            combined[file_path] = weighted_sum / weight_sum if weight_sum > 0 else 0.0
+
         return combined
     
     def _apply_combined_results_to_primary(self):

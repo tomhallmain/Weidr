@@ -1,6 +1,7 @@
 from copy import deepcopy
 import os
 import pprint
+from typing import Optional
 
 from compare.compare_args import CompareArgs
 from compare.compare_colors import CompareColors
@@ -406,6 +407,8 @@ class CompareWrapper:
             self.has_media_matches = False
             self._app_actions._set_label_state(_("Set a directory and search file or search text."))
             self._app_actions.alert(_("No Match Found"), _("None of the files match the search filters with current settings."))
+            self.group_indexes = []
+            self._app_actions.refresh_masonry()
             return
 
         reverse = self.compare_mode.is_embedding()
@@ -422,6 +425,7 @@ class CompareWrapper:
 
         self._app_actions._add_buttons_for_mode()
         self._app_actions.create_media(self.files_matched[self.match_index])
+        self._app_actions.refresh_masonry()
 
     def run_group(self, args=CompareArgs()) -> None:
         assert self._compare is not None
@@ -433,6 +437,8 @@ class CompareWrapper:
             self.has_media_matches = False
             self._app_actions._set_label_state(_("Set a directory and search file."))
             self._app_actions.alert(_("No Groups Found"), _("None of the files can be grouped with current settings."))
+            self.group_indexes = []
+            self._app_actions.refresh_masonry()
             return
 
         self.group_indexes = self._compare.compare_result.sort_groups(self.file_groups)
@@ -448,6 +454,8 @@ class CompareWrapper:
                 self.has_media_matches = False
                 self._app_actions._set_label_state(_("Set a directory and search file."))
                 self._app_actions.alert(_("No Duplicates Found"), _("None of the files appear to be duplicates based on the current settings."))
+                # group_indexes was already cleared above; refresh keeps masonry visible but empty
+                self._app_actions.refresh_masonry()
                 return
             self._app_actions.set_mode(Mode.DUPLICATES, do_update=True)
             logger.info("Probable duplicates:")
@@ -462,6 +470,7 @@ class CompareWrapper:
                 duplicate_group_count += 1
             self.max_group_index = duplicate_group_count
             self.set_current_group()
+            self._app_actions.refresh_masonry()
         else:
             has_found_stranded_group_members = False
 
@@ -470,6 +479,7 @@ class CompareWrapper:
                 self.current_group_index += 1
 
             self.set_current_group()
+            self._app_actions.refresh_masonry()
             if has_found_stranded_group_members:
                 self._app_actions.alert(_("Stranded Group Members Found"), _("Some group members were left stranded by the grouping process."))
 
@@ -566,6 +576,19 @@ class CompareWrapper:
 
     def update_compare_for_readded_file(self, readded_file):
         self._compare.readd_files([readded_file])
+
+    def get_grouped_filepaths(self, app_mode) -> list:
+        """Return all comparison files ordered group-by-group.
+
+        Files are ordered by group (in group_indexes order), then by similarity
+        score within each group. This flat list is the correct display order for
+        the masonry grid in compare mode.
+        """
+        return list(self._get_file_group_map(app_mode).keys())
+
+    def get_file_group_for_filepath(self, filepath: str, app_mode) -> Optional[tuple]:
+        """Return (group_display_idx, file_idx_within_group) for a filepath, or None."""
+        return self._get_file_group_map(app_mode).get(filepath)
 
     def _get_file_group_map(self, app_mode):
         if app_mode == Mode.BROWSE:

@@ -16,6 +16,7 @@ class AppActions:
         "_add_buttons_for_mode", "_set_label_state",
         "_set_toggled_view_matches", "refresh_all_compares",
         "start_loading_spinner", "stop_loading_spinner",
+        "refresh_masonry",
     }
     
     def __init__(self, actions: Dict[str, Callable[..., Any]], master: Optional[object] = None):

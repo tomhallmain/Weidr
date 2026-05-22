@@ -463,6 +463,8 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             "release_media_canvas": ts(self.release_media_canvas),
             # Persistence
             "store_info_cache": self.cache_ctrl.store_info_cache,
+            # Masonry grid
+            "refresh_masonry": ts(self._refresh_masonry_if_active),
             # Internal (prefixed with _)
             "_set_toggled_view_matches": ts(self.media_navigator.set_toggled_view_matches),
             "_set_label_state": ts(self.notification_ctrl.set_label_state),
@@ -1158,11 +1160,21 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             # Ctrl+H does not reopen it at an oversized width.
             QTimer.singleShot(0, self._apply_default_sidebar_width)
 
+    def _get_masonry_files(self) -> list:
+        """Return the ordered file list appropriate for the current mode.
+
+        In browse mode this is the file browser's sorted list. In compare modes
+        (GROUP, DUPLICATES, SEARCH) the list is ordered group-by-group so that
+        related files appear together in the grid.
+        """
+        if self.mode == Mode.BROWSE:
+            return self.file_browser.get_files()
+        if self.compare_manager.has_compare():
+            return self.compare_manager.get_grouped_filepaths(self.mode)
+        return []
+
     def toggle_masonry_view(self, event=None) -> None:
         """Toggle between the single-media viewer and the masonry thumbnail grid."""
-        if self.mode != Mode.BROWSE:
-            self.notification_ctrl.toast(_("Masonry view is only available in browse mode."))
-            return
         if self.view_mode == ViewMode.FULL:
             self.view_mode = ViewMode.MASONRY
             if hasattr(self.media_frame, "pause_video_if_playing"):
@@ -1171,7 +1183,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             # Defer populate by one event-loop tick so the viewport is laid out
             # and viewport().width() returns the correct value before tile widths
             # are computed.
-            files = self.file_browser.get_files()
+            files = self._get_masonry_files()
             current = self.media_path
             QTimer.singleShot(0, lambda: self.masonry_browser.populate(files, current_file=current))
             self.notification_ctrl.toast(_("Masonry view"))
@@ -1184,23 +1196,40 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
     def _refresh_masonry_if_active(self) -> None:
         """Repopulate the masonry grid if view_mode is MASONRY and reveal it.
 
-        Called after a directory load completes (both incremental and non-incremental
-        paths) so the grid reflects the new file list without forcing the user to
-        re-toggle. The masonry widget retains its viewport size while hidden by the
-        QStackedWidget, so populate() can run synchronously before revealing.
+        Called after a directory load completes and after a comparison finishes
+        so the grid always reflects current state without forcing the user to
+        re-toggle. In compare modes the file list is ordered group-by-group so
+        related files appear together. An empty list (no results) is passed
+        through as-is so the grid stays visible but blank rather than disappearing.
         """
         if self.view_mode != ViewMode.MASONRY:
             return
         self.masonry_browser.populate(
-            self.file_browser.get_files(), current_file=self.media_path
+            self._get_masonry_files(), current_file=self.media_path
         )
         self.media_frame.pause_video_if_playing()
         QTimer.singleShot(0, lambda: self._media_stack.setCurrentIndex(1))
 
     def _on_masonry_tile_activated(self, filepath: str) -> None:
-        """Handle a tile click: navigate to the file and return to single view."""
-        self.file_browser.go_to_file(filepath)
-        self.media_navigator.create_media(filepath)
+        """Handle a tile click: set context and return to single view.
+
+        In browse mode the file cursor is set on the file browser.
+        In compare modes the correct group is located first so that the sidebar
+        group counter, the files_matched list, and all navigation (next/prev
+        within group) are correct immediately after the transition.
+        """
+        if self.mode == Mode.BROWSE:
+            self.file_browser.go_to_file(filepath)
+            self.media_navigator.create_media(filepath)
+        else:
+            group_info = self.compare_manager.get_file_group_for_filepath(filepath, self.mode)
+            if group_info is not None:
+                group_idx, file_idx = group_info
+                self.compare_manager.current_group_index = group_idx
+                self.compare_manager.set_current_group(start_match_index=file_idx)
+            else:
+                # Fallback: file not found in any group (e.g. grid is stale)
+                self.media_navigator.create_media(filepath)
         self.view_mode = ViewMode.FULL
         self._media_stack.setCurrentIndex(0)
         self.media_frame.setFocus()

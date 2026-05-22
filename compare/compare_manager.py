@@ -638,6 +638,18 @@ class CompareManager:
         """Set current group (delegated to primary wrapper)."""
         if self._primary_mode and self._primary_mode in self._wrappers:
             return self._wrappers[self._primary_mode].set_current_group(start_match_index)
+
+    def get_grouped_filepaths(self, app_mode) -> list:
+        """Return all comparison files ordered group-by-group for masonry display."""
+        if self._primary_mode and self._primary_mode in self._wrappers:
+            return self._wrappers[self._primary_mode].get_grouped_filepaths(app_mode)
+        return []
+
+    def get_file_group_for_filepath(self, filepath: str, app_mode) -> Optional[tuple]:
+        """Return (group_display_idx, file_idx_within_group) for a filepath, or None."""
+        if self._primary_mode and self._primary_mode in self._wrappers:
+            return self._wrappers[self._primary_mode].get_file_group_for_filepath(filepath, app_mode)
+        return None
     
     def page_down(self, half_length=False) -> Optional[str]:
         """Page down (delegated to primary wrapper)."""

@@ -156,7 +156,7 @@ class MarkedFiles():
         toast_callback(_("Set current marks from previous.") + "\n" + _("Total set: {0}").format(len(MarkedFiles.file_marks)))
 
     @staticmethod
-    def run_previous_action(app_actions, current_image=None, ui_class=None):
+    def run_previous_action(app_actions, current_media=None, ui_class=None, progress_callback=None):
         previous_action = FileAction.get_history_action(start_index=0)
         if previous_action is None:
             return False, False
@@ -166,12 +166,13 @@ class MarkedFiles():
                                              target_dir=previous_action.target,
                                              move_func=previous_action.action,
                                              single_image=(len(MarkedFiles.file_marks)==1),
-                                             current_image=current_image,
-                                             get_target_dir_callback=ui_class.get_target_directory
+                                             current_media=current_media,
+                                             get_target_dir_callback=ui_class.get_target_directory,
+                                             progress_callback=progress_callback,
                                              )
 
     @staticmethod
-    def run_penultimate_action(app_actions, current_image=None, ui_class=None):
+    def run_penultimate_action(app_actions, current_media=None, ui_class=None, progress_callback=None):
         penultimate_action = FileAction.get_history_action(start_index=1)
         if penultimate_action is None:
             return False, False
@@ -181,12 +182,13 @@ class MarkedFiles():
                                              target_dir=penultimate_action.target,
                                              move_func=penultimate_action.action,
                                              single_image=(len(MarkedFiles.file_marks)==1),
-                                             current_image=current_image,
-                                             get_target_dir_callback=ui_class.get_target_directory
+                                             current_media=current_media,
+                                             get_target_dir_callback=ui_class.get_target_directory,
+                                             progress_callback=progress_callback,
                                              )
 
     @staticmethod
-    def run_antepenultimate_action(app_actions, current_image=None, ui_class=None):
+    def run_antepenultimate_action(app_actions, current_media=None, ui_class=None, progress_callback=None):
         antepenultimate_action = FileAction.get_history_action(start_index=2)
         if antepenultimate_action is None:
             return False, False
@@ -196,12 +198,13 @@ class MarkedFiles():
                                              target_dir=antepenultimate_action.target,
                                              move_func=antepenultimate_action.action,
                                              single_image=(len(MarkedFiles.file_marks)==1),
-                                             current_image=current_image,
-                                             get_target_dir_callback=ui_class.get_target_directory
+                                             current_media=current_media,
+                                             get_target_dir_callback=ui_class.get_target_directory,
+                                             progress_callback=progress_callback,
                                              )
 
     @staticmethod
-    def run_permanent_action(app_actions, current_image=None, ui_class=None):
+    def run_permanent_action(app_actions, current_media=None, ui_class=None, progress_callback=None):
         if not FileAction.permanent_action:
             app_actions.toast(_("NO_MARK_TARGET_SET"))
             return False, False
@@ -211,12 +214,13 @@ class MarkedFiles():
                                              target_dir=FileAction.permanent_action.target,
                                              move_func=FileAction.permanent_action.action,
                                              single_image=(len(MarkedFiles.file_marks)==1),
-                                             current_image=current_image,
-                                             get_target_dir_callback=ui_class.get_target_directory
+                                             current_media=current_media,
+                                             get_target_dir_callback=ui_class.get_target_directory,
+                                             progress_callback=progress_callback,
                                              )
 
     @staticmethod
-    def run_hotkey_action(app_actions, current_image=None, number=-1, shift_key_pressed=False, ui_class=None):
+    def run_hotkey_action(app_actions, current_media=None, number=-1, shift_key_pressed=False, ui_class=None, progress_callback=None):
         assert number in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
         if number not in FileAction.hotkey_actions:
             app_actions.toast(_("NO_HOTKEY_ACTION_SET").format(number, number))
@@ -228,8 +232,9 @@ class MarkedFiles():
                                              target_dir=file_action.target,
                                              move_func=file_action.get_action(do_flip=shift_key_pressed),
                                              single_image=(len(MarkedFiles.file_marks)==1),
-                                             current_image=current_image,
-                                             get_target_dir_callback=ui_class.get_target_directory
+                                             current_media=current_media,
+                                             get_target_dir_callback=ui_class.get_target_directory,
+                                             progress_callback=progress_callback,
                                              )
 
 
@@ -240,9 +245,10 @@ class MarkedFiles():
         move_func=Utils.move_file,
         files=None,
         single_image=False,
-        current_image=None,
+        current_media=None,
         get_base_dir_callback=None,
         get_target_dir_callback=None,
+        progress_callback: Optional[Callable[[int, int], None]] = None,
     ) -> Tuple[bool, bool]:
         """
         Move or copy the marked files to the target directory.
@@ -263,6 +269,8 @@ class MarkedFiles():
         exceptions = {}
         invalid_files = []
         set_last_moved_file = False
+        files_done = 0
+        total_files = len(files_to_move)
         for marked_file in files_to_move:
             if MarkedFiles.is_cancelled_action:
                 break
@@ -273,13 +281,13 @@ class MarkedFiles():
                 cached_png = FrameCache.get_cached_path(marked_file)
                 if cached_png and os.path.isfile(cached_png):
                     if config.marked_file_svg_move_type == "png":
-                        if is_moving and MarkedFiles._paths_match(current_image, marked_file) and app_actions:
+                        if is_moving and MarkedFiles._paths_match(current_media, marked_file) and app_actions:
                             app_actions.release_media_canvas()
                         source_path = cached_png
                         moved_svg_as_png = True
                     elif is_moving:
                         # Move SVG: release media and remove temp PNG so we don't hold handles
-                        if MarkedFiles._paths_match(current_image, marked_file) and app_actions:
+                        if MarkedFiles._paths_match(current_media, marked_file) and app_actions:
                             app_actions.release_media_canvas()
                         FrameCache.remove_from_cache(marked_file, delete_temp_file=True)
             new_filename = os.path.join(target_dir, os.path.basename(source_path))
@@ -287,7 +295,7 @@ class MarkedFiles():
                 MarkedFiles.last_moved_image = new_filename
                 set_last_moved_file = True
             success, result = MarkedFiles._process_single_file_operation(
-                marked_file, target_dir, move_func, new_filename, current_image, app_actions,
+                marked_file, target_dir, move_func, new_filename, current_media, app_actions,
                 overwrite_existing=config.move_marks_overwrite_existing_file,
                 source_path=source_path
             )
@@ -306,6 +314,9 @@ class MarkedFiles():
                 exceptions[marked_file] = (result, new_filename)  # result is error message
                 if not os.path.exists(marked_file):
                     invalid_files.append(marked_file)
+            files_done += 1
+            if progress_callback is not None:
+                progress_callback(files_done, total_files)
         if MarkedFiles.is_cancelled_action:
             MarkedFiles.is_cancelled_action = False
             MarkedFiles.is_performing_action = False
@@ -349,7 +360,7 @@ class MarkedFiles():
                                 if MarkedFiles._check_delete_source_file(marked_file, target_dir, target_filepath, app_actions):
                                     # The other effect of this operation would have been to remove the
                                     # file from source, so try to do that
-                                    MarkedFiles._auto_delete_source_file(marked_file, current_image, app_actions)
+                                    MarkedFiles._auto_delete_source_file(marked_file, current_media, app_actions)
                         elif ImageOps.compare_image_content_without_exif(marked_file, target_filepath):
                             # Hash comparison failed, but check if image content is identical
                             # (different EXIF data but same visual content)
@@ -358,7 +369,7 @@ class MarkedFiles():
                             try:
                                 # Replace target with source file (source has more information)
                                 success, result = MarkedFiles._process_single_file_operation(
-                                    marked_file, os.path.dirname(target_filepath), move_func, target_filepath, current_image, app_actions,
+                                    marked_file, os.path.dirname(target_filepath), move_func, target_filepath, current_media, app_actions,
                                     overwrite_existing=True
                                 )
                                 if success:
@@ -614,7 +625,7 @@ class MarkedFiles():
     @staticmethod
     def _auto_delete_source_file(
         marked_file: str,
-        current_image: Optional[str] = None,
+        current_media: Optional[str] = None,
         app_actions=None,
     ) -> None:
         """
@@ -622,7 +633,7 @@ class MarkedFiles():
         This simulates what would have happened if the move had succeeded.
         """
         try:
-            if MarkedFiles._paths_match(current_image, marked_file):
+            if MarkedFiles._paths_match(current_media, marked_file):
                 app_actions.release_media_canvas()
             app_actions.delete(marked_file)
             if marked_file in MarkedFiles.file_marks:
@@ -639,7 +650,7 @@ class MarkedFiles():
         target_dir: str,
         move_func: Callable,
         new_filename: str,
-        current_image: Optional[str] = None,
+        current_media: Optional[str] = None,
         app_actions=None,
         overwrite_existing: bool = False,
         source_path: Optional[str] = None,
@@ -665,7 +676,7 @@ class MarkedFiles():
             # re-acquire the same non-re-entrant threading.Lock and the main
             # thread deadlocks with itself.  Moving the canvas release out of
             # the locked section avoids that re-entrancy entirely.
-            if is_moving and current_image == marked_file:
+            if is_moving and current_media == marked_file:
                 if app_actions:
                     app_actions.release_media_canvas()
 

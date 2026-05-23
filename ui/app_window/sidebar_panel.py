@@ -302,12 +302,12 @@ class SidebarPanel(QWidget):
         )
 
         # Search current media
-        self.search_current_image_btn = self._make_button(
+        self.search_current_media_btn = self._make_button(
             _("Search current media"),
             lambda: self._app.search_ctrl.set_current_media_run_search(),
         )
         create_tooltip(
-            self.search_current_image_btn,
+            self.search_current_media_btn,
             _("Search for media similar to the currently displayed media.\n"
               "Uses embedding similarity matching."),
         )
@@ -430,14 +430,14 @@ class SidebarPanel(QWidget):
             cm = self._app.compare_manager
             if (cm.search_media_path
                     and cm.search_media_path.strip() != ""
-                    and "toggle_image_view_btn" not in self._dynamic_buttons):
+                    and "toggle_media_view_btn" not in self._dynamic_buttons):
                 self.add_button(
-                    "toggle_image_view_btn",
+                    "toggle_media_view_btn",
                     "Toggle media view",
                     self._app.media_navigator.toggle_media_view,
                 )
                 self.add_button(
-                    "replace_current_image_btn",
+                    "replace_current_media_btn",
                     "Replace with search media",
                     self._app.file_ops_ctrl.replace_current_media_with_search_media,
                 )
@@ -468,7 +468,7 @@ class SidebarPanel(QWidget):
 
     def remove_search_mode_buttons(self) -> None:
         """Remove buttons specific to search mode."""
-        for name in ("toggle_image_view_btn", "replace_current_image_btn"):
+        for name in ("toggle_media_view_btn", "replace_current_media_btn"):
             self.destroy_button(name)
 
     def remove_group_mode_buttons(self) -> None:

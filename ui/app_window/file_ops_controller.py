@@ -676,11 +676,11 @@ class FileOpsController:
 
     def handle_remove_files_from_groups(self, files: list[str]) -> None:
         """Remove the given files from compare groups."""
-        current_image = self._cm.current_match()
+        current_media = self._cm.current_match()
         for filepath in files:
             if filepath == self._cm.search_media_path:
                 self._cm.search_media_path = None
-            show_next_media = self._app.direction if current_image == filepath else None
+            show_next_media = self._app.direction if current_media == filepath else None
             file_group_map = self._cm._get_file_group_map(self._app.mode)
             try:
                 group_indexes = file_group_map[filepath]

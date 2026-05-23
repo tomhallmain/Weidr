@@ -23,7 +23,7 @@ from typing import Optional
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QHBoxLayout, QLabel, QPushButton,
+    QHBoxLayout, QLabel, QProgressDialog, QPushButton,
     QScrollArea, QVBoxLayout, QWidget,
 )
 
@@ -65,6 +65,53 @@ class MarkedFileMover(SmartDialog):
     MAX_HEIGHT: int = 900
     COL_0_WIDTH: int = 600
     LARGE_FILE_OP_CONFIRM_THRESHOLD: int = 25
+    LARGE_FILE_OP_SHOW_PROGRESS_THRESHOLD: int = 100
+
+    @staticmethod
+    def build_marks_progress(parent, total: int, move_func=None):
+        """
+        Return (QProgressDialog, callback) for large operations, or (None, None) when
+        the count is below LARGE_FILE_OP_CONFIRM_THRESHOLD.  The callback updates the
+        dialog and sets MarkedFiles.is_cancelled_action if the user cancels.
+        """
+        if total < MarkedFileMover.LARGE_FILE_OP_SHOW_PROGRESS_THRESHOLD:
+            return None, None
+        if move_func == Utils.copy_file:
+            label = _("Copying {0} files...").format(total)
+        elif move_func == Utils.move_file:
+            label = _("Moving {0} files...").format(total)
+        else:
+            label = _("Processing {0} files...").format(total)
+        progress = QProgressDialog(label, _("Cancel"), 0, total, parent)
+        progress.setWindowTitle(_("File Operation"))
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setValue(0)
+
+        def _callback(done: int, _total: int) -> None:
+            progress.setValue(done)
+            if progress.wasCanceled():
+                MarkedFiles.is_cancelled_action = True
+
+        return progress, _callback
+
+    @staticmethod
+    def run_marks_action_with_progress(app, current_media, action_func, move_func) -> None:
+        """
+        Build a progress dialog for the current marks, call action_func, then
+        ensure the dialog is closed.  action_func must accept
+        (app_actions, current_media=, *, ui_class=, progress_callback=).
+        """
+        total = len(MarkedFiles.file_marks)
+        progress, callback = MarkedFileMover.build_marks_progress(app, total, move_func)
+        action_func(
+            app.app_actions,
+            current_media=current_media,
+            ui_class=MarkedFileMover,
+            progress_callback=callback,
+        )
+        if progress is not None:
+            progress.setValue(total)
 
     # ==================================================================
     # Static helper methods
@@ -116,7 +163,7 @@ class MarkedFileMover(SmartDialog):
         master,
         is_gui: bool,
         single_image,
-        current_image,
+        current_media,
         app_mode,
         app_actions,
         base_dir: str = ".",
@@ -144,7 +191,7 @@ class MarkedFileMover(SmartDialog):
             master,
             is_gui,
             single_image,
-            current_image,
+            current_media,
             app_mode,
             app_actions,
             base_dir,
@@ -160,7 +207,7 @@ class MarkedFileMover(SmartDialog):
         master: QWidget,
         is_gui: bool,
         single_image,
-        current_image,
+        current_media,
         app_mode,
         app_actions: AppActions,
         base_dir: str = ".",
@@ -177,7 +224,7 @@ class MarkedFileMover(SmartDialog):
 
         self._is_gui = is_gui
         self._single_image = single_image
-        self._current_image = current_image
+        self._current_media = current_media
         self._app_mode = app_mode
         self._app_actions = app_actions
         self._base_dir = os.path.normpath(base_dir)
@@ -478,13 +525,18 @@ class MarkedFileMover(SmartDialog):
             )
             self._do_set_hotkey_action = -1
 
+        total = len(MarkedFiles.file_marks)
+        progress, callback = MarkedFileMover.build_marks_progress(self, total, move_func)
         MarkedFiles.move_marks_to_dir_static(
             self._app_actions,
             target_dir=target_dir,
             move_func=move_func,
             single_image=self._single_image,
-            current_image=self._current_image,
+            current_media=self._current_media,
+            progress_callback=callback,
         )
+        if progress is not None:
+            progress.setValue(total)
         self.close_windows()
 
     def _confirm_large_file_operation(self, target_dir: str, move_func) -> bool:
@@ -530,13 +582,20 @@ class MarkedFileMover(SmartDialog):
         ):
             return
 
-        if self._current_image and self._current_image in MarkedFiles.file_marks:
+        if self._current_media and self._current_media in MarkedFiles.file_marks:
             self._app_actions.release_media_canvas()
 
         removed_files: list[str] = []
         failed_to_delete: list[str] = []
+        total = len(MarkedFiles.file_marks)
+        # build_marks_progress uses move_func=None → "Processing N files..." label.
+        # Override label and strip the cancel button: deletion is not reversible mid-run.
+        progress, _ = MarkedFileMover.build_marks_progress(self, total, move_func=None)
+        if progress is not None:
+            progress.setLabelText(_("Deleting {0} files...").format(total))
+            progress.setCancelButton(None)
 
-        for filepath in MarkedFiles.file_marks:
+        for i, filepath in enumerate(MarkedFiles.file_marks):
             try:
                 if config.enable_svgs and filepath.lower().endswith(".svg"):
                     FrameCache.remove_from_cache(
@@ -548,6 +607,8 @@ class MarkedFileMover(SmartDialog):
                 logger.error(f"Failed to delete {filepath}: {e}")
                 if os.path.exists(filepath):
                     failed_to_delete.append(filepath)
+            if progress is not None:
+                progress.setValue(i + 1)
 
         MarkedFiles.file_marks.clear()
         if failed_to_delete:
@@ -651,7 +712,7 @@ class MarkedFileMover(SmartDialog):
         if len(self._filtered_target_dirs) < 2:
             return
 
-        pivot_image = self._current_image
+        pivot_image = self._current_media
         if not pivot_image or not isinstance(pivot_image, str) or not os.path.isfile(
             pivot_image
         ):

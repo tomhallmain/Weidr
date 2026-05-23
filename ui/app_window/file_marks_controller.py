@@ -11,10 +11,12 @@ set_marks_from_downstream_related_images.
 from __future__ import annotations
 
 import os
+from functools import partial
 from typing import TYPE_CHECKING, Optional
 
 from PySide6.QtWidgets import QApplication
 
+from files.file_action import FileAction
 from files.marked_files import MarkedFiles
 from ui.files.marked_file_mover_qt import MarkedFileMover
 from ui.auth.password_utils import require_password
@@ -213,8 +215,10 @@ class FileMarksController:
         """Re-run the previously used marks action."""
         if len(MarkedFiles.file_marks) == 0:
             self.add_or_remove_mark(show_toast=False)
-        MarkedFiles.run_previous_action(
-            self._app.app_actions, self._nav.get_active_media_filepath(), ui_class=MarkedFileMover
+        prev = FileAction.get_history_action(start_index=0)
+        MarkedFileMover.run_marks_action_with_progress(
+            self._app, self._nav.get_active_media_filepath(),
+            MarkedFiles.run_previous_action, prev.action if prev else None,
         )
 
     @require_password(ProtectedActions.RUN_FILE_ACTIONS)
@@ -222,19 +226,21 @@ class FileMarksController:
         """Re-run the second-to-last marks action."""
         if len(MarkedFiles.file_marks) == 0:
             self.add_or_remove_mark(show_toast=False)
-        MarkedFiles.run_penultimate_action(
-            self._app.app_actions, self._nav.get_active_media_filepath(), ui_class=MarkedFileMover
+        prev = FileAction.get_history_action(start_index=1)
+        MarkedFileMover.run_marks_action_with_progress(
+            self._app, self._nav.get_active_media_filepath(),
+            MarkedFiles.run_penultimate_action, prev.action if prev else None,
         )
 
     @require_password(ProtectedActions.RUN_FILE_ACTIONS)
     def run_antepenultimate_marks_action(self, event=None) -> None:
-        """
-        Re-run the third-to-last marks action.
-        """
+        """Re-run the third-to-last marks action."""
         if len(MarkedFiles.file_marks) == 0:
             self.add_or_remove_mark(show_toast=False)
-        MarkedFiles.run_antepenultimate_action(
-            self._app.app_actions, self._nav.get_active_media_filepath(), ui_class=MarkedFileMover
+        prev = FileAction.get_history_action(start_index=2)
+        MarkedFileMover.run_marks_action_with_progress(
+            self._app, self._nav.get_active_media_filepath(),
+            MarkedFiles.run_antepenultimate_action, prev.action if prev else None,
         )
 
     @require_password(ProtectedActions.RUN_FILE_ACTIONS)
@@ -242,8 +248,10 @@ class FileMarksController:
         """Run the permanently-configured marks action."""
         if len(MarkedFiles.file_marks) == 0:
             self.add_or_remove_mark(show_toast=False)
-        MarkedFiles.run_permanent_action(
-            self._app.app_actions, self._nav.get_active_media_filepath(), ui_class=MarkedFileMover
+        perm = FileAction.permanent_action
+        MarkedFileMover.run_marks_action_with_progress(
+            self._app, self._nav.get_active_media_filepath(),
+            MarkedFiles.run_permanent_action, perm.action if perm else None,
         )
 
     @require_password(ProtectedActions.RUN_FILE_ACTIONS)
@@ -258,12 +266,12 @@ class FileMarksController:
         """
         if len(MarkedFiles.file_marks) == 0:
             self.add_or_remove_mark(show_toast=False)
-        MarkedFiles.run_hotkey_action(
-            self._app.app_actions,
-            self._nav.get_active_media_filepath(),
-            number,
-            shift_pressed,
-            ui_class=MarkedFileMover
+        hotkey = FileAction.hotkey_actions.get(number)
+        move_func = hotkey.get_action(do_flip=shift_pressed) if hotkey else None
+        MarkedFileMover.run_marks_action_with_progress(
+            self._app, self._nav.get_active_media_filepath(),
+            partial(MarkedFiles.run_hotkey_action, number=number, shift_key_pressed=shift_pressed),
+            move_func,
         )
 
     @require_password(ProtectedActions.RUN_FILE_ACTIONS)
@@ -277,29 +285,42 @@ class FileMarksController:
         if len(MarkedFiles.file_marks) == 0:
             self.add_or_remove_mark(show_toast=False)
         marks_snapshot = list(MarkedFiles.file_marks)
-        current_image = self._nav.get_active_media_filepath()
+        current_media = self._nav.get_active_media_filepath()
         copy_actions = [s for s in selected if not s.is_move()]
         move_actions = [s for s in selected if s.is_move()]
+        total = len(marks_snapshot)
         for step in copy_actions:
+            progress, callback = MarkedFileMover.build_marks_progress(
+                self._app, total, Utils.copy_file
+            )
             MarkedFiles.move_marks_to_dir_static(
                 self._app.app_actions,
                 target_dir=step.target,
                 move_func=Utils.copy_file,
                 files=marks_snapshot,
                 single_image=(len(marks_snapshot) == 1),
-                current_image=current_image,
+                current_media=current_media,
                 get_target_dir_callback=MarkedFileMover.get_target_directory,
+                progress_callback=callback,
             )
+            if progress is not None:
+                progress.setValue(total)
         for step in move_actions:
+            progress, callback = MarkedFileMover.build_marks_progress(
+                self._app, total, Utils.move_file
+            )
             MarkedFiles.move_marks_to_dir_static(
                 self._app.app_actions,
                 target_dir=step.target,
                 move_func=Utils.move_file,
                 files=marks_snapshot,
                 single_image=(len(marks_snapshot) == 1),
-                current_image=current_image,
+                current_media=current_media,
                 get_target_dir_callback=MarkedFileMover.get_target_directory,
+                progress_callback=callback,
             )
+            if progress is not None:
+                progress.setValue(total)
 
     def _check_marks(self, min_mark_size: int = 1) -> None:
         """Validate that enough marks exist for the intended operation."""

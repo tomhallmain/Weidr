@@ -187,12 +187,12 @@ class TempMediaWindow(SmartWindow):
         if not self._require_media():
             return
         base_dir = self._app_actions.get_base_dir()
-        current_image_dir = os.path.dirname(self._media_path)
+        current_media_dir = os.path.dirname(self._media_path)
         if (
             base_dir
             and base_dir != ""
             and os.path.normpath(base_dir)
-            != os.path.normpath(current_image_dir)
+            != os.path.normpath(current_media_dir)
         ):
             new_file = os.path.join(
                 base_dir, os.path.basename(self._media_path)

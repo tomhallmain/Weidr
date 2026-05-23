@@ -27,7 +27,7 @@ from utils.config import config
 from utils.constants import ActionType, Mode, ProtectedActions, Sort, SortBy
 from utils.logging_setup import get_logger
 from utils.running_tasks_registry import start_thread
-from utils.translations import I18N
+from utils.translations import I18N, compare_running_warn
 from utils.utils import Utils
 
 if TYPE_CHECKING:
@@ -109,6 +109,10 @@ class FileOpsController:
     def delete_media(self, event=None) -> None:
         """Delete the currently displayed media file from the filesystem."""
         from files.marked_files import MarkedFiles
+
+        if self._app.is_compare_running():
+            self._app.app_actions.warn(compare_running_warn(_("delete files")))
+            return
 
         if self._app.delete_lock:
             self._app.app_actions.warn(_("DELETE_LOCK"))
@@ -407,6 +411,10 @@ class FileOpsController:
         from image.frame_cache import FrameCache
         from image.image_ops import ImageOps
 
+        if self._app.is_compare_running():
+            self._app.app_actions.warn(compare_running_warn(_("convert files")))
+            return
+
         base_dir = self._app.get_base_dir()
         if not base_dir or not os.path.isdir(base_dir):
             self._app.app_actions.warn(_("No valid base directory to convert"))
@@ -549,8 +557,13 @@ class FileOpsController:
         Convert all SVG files in the current file-browser scope to PNG.
         """
         from image.frame_cache import FrameCache
+
+        if self._app.is_compare_running():
+            self._app.app_actions.warn(compare_running_warn(_("convert files")))
+            return
+
         base_dir = self._app.get_base_dir()
-        
+
         if not base_dir or not os.path.isdir(base_dir):
             self._app.app_actions.warn(_("No valid base directory to convert"))
             return
@@ -703,6 +716,10 @@ class FileOpsController:
         from image.video_ops import VideoOps
         from utils.media_utils import is_video_file
 
+        if self._app.is_compare_running():
+            self._app.app_actions.warn(compare_running_warn(_("strip audio")))
+            return
+
         filepath = self._nav.get_active_media_filepath()
         if not filepath:
             return
@@ -744,6 +761,10 @@ class FileOpsController:
         """
         from image.video_ops import VideoOps
         from utils.media_utils import is_video_file
+
+        if self._app.is_compare_running():
+            self._app.app_actions.warn(compare_running_warn(_("copy video")))
+            return
 
         filepath = self._nav.get_active_media_filepath()
         if not filepath:
@@ -787,6 +808,10 @@ class FileOpsController:
         """
         from image.video_ops import VideoOps
         from utils.media_utils import is_video_file
+
+        if self._app.is_compare_running():
+            self._app.app_actions.warn(compare_running_warn(_("copy videos without metadata")))
+            return
 
         if not getattr(config, "enable_videos", True):
             self._app.app_actions.warn(_("Video support is disabled in configuration"))
@@ -883,6 +908,10 @@ class FileOpsController:
         """Run the RefacDir client on the current image."""
         from extensions.refacdir_client import RefacDirClient
 
+        if self._app.is_compare_running():
+            self._app.app_actions.warn(compare_running_warn(_("run RefacDir")))
+            return
+
         refacdir_client = RefacDirClient()
         refacdir_client.run(self._app.media_path)
         self._app.notification_ctrl.toast(_("Running refacdir"))
@@ -896,6 +925,10 @@ class FileOpsController:
 
     def run_randomize_filenames(self, event=None) -> None:
         """Spawn randomize_filenames.py on the base directory (dry run or execute)."""
+        if self._app.is_compare_running():
+            self._app.app_actions.warn(compare_running_warn(_("randomize filenames")))
+            return
+
         base_dir = self._app.get_base_dir()
         if not base_dir or not os.path.isdir(base_dir):
             self._app.app_actions.warn(_("No valid base directory for randomize filenames"))

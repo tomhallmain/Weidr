@@ -9,7 +9,7 @@ from utils.app_info_cache import app_info_cache
 from utils.config import config
 from utils.constants import ActionType
 from utils.logging_setup import get_logger
-from utils.translations import I18N
+from utils.translations import I18N, compare_running_warn
 from utils.utils import Utils
 
 _ = I18N._
@@ -247,9 +247,13 @@ class MarkedFiles():
         """
         Move or copy the marked files to the target directory.
         """
+        is_moving = move_func == Utils.move_file
+        if is_moving and app_actions is not None and app_actions.is_compare_running():
+            app_actions.warn(compare_running_warn(_("move files")))
+            return False, False
+
         MarkedFiles.is_performing_action = True
         some_files_already_present = False
-        is_moving = move_func == Utils.move_file
         action_part1 = _("Moving") if is_moving else _("Copying")
         MarkedFiles.previous_marks.clear()
         files_to_move = MarkedFiles.file_marks if files is None else files

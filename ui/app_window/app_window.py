@@ -462,6 +462,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             "hide_current_media": ts(self.file_ops_ctrl.hide_current_media),
             "copy_media_path": ts(self.file_ops_ctrl.copy_media_path),
             "release_media_canvas": ts(self.release_media_canvas),
+            "is_compare_running": self.is_compare_running,
             # Persistence
             "store_info_cache": self.cache_ctrl.store_info_cache,
             # Masonry grid
@@ -1087,6 +1088,10 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         else:
             out_dir = os.path.join(os.path.expanduser("~"), "Pictures", "Screenshots")
         return os.path.normpath(out_dir)
+
+    def is_compare_running(self) -> bool:
+        """Return True while a compare worker is active in the background."""
+        return self.search_ctrl.is_compare_running()
 
     def release_media_canvas(self) -> None:
         """Release media resources and flush deferred Qt cleanup work."""

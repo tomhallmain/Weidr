@@ -5,18 +5,19 @@ from ui.app_style import AppStyle
 class AppActions:
     REQUIRED_ACTIONS = {
         "new_window", "get_window", "toast", "_alert", "title_notify", "refresh",
-        "refocus", "set_mode", "get_active_media_filepath", "create_media", "show_next_media", 
+        "refocus", "set_mode", "get_active_media_filepath", "create_media", "show_next_media",
         "play_media", "pause_media", "toggle_media_play_pause", "seek_media", "stop_media",
         "set_media_volume", "get_media_volume", "toggle_media_mute", "set_media_mute", "is_media_muted",
         "get_media_details", "open_move_marks_window", "open_password_admin_window", "open_file_action_sets_window",
          "run_image_generation", "set_marks_from_downstream_related_images",
         "set_base_dir", "get_base_dir", "go_to_file", "go_to_file_by_index", "delete",
-        "hide_current_media", "copy_media_path", 
-        "release_media_canvas", "store_info_cache", 
+        "hide_current_media", "copy_media_path",
+        "release_media_canvas", "store_info_cache",
         "_add_buttons_for_mode", "_set_label_state",
         "_set_toggled_view_matches", "refresh_all_compares",
         "start_loading_spinner", "stop_loading_spinner",
         "refresh_masonry",
+        "is_compare_running",
     }
     
     def __init__(self, actions: Dict[str, Callable[..., Any]], master: Optional[object] = None):

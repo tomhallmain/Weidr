@@ -38,7 +38,7 @@ from utils.app_actions import AppActions
 from utils.config import config
 from utils.constants import Mode, ProtectedActions
 from utils.logging_setup import get_logger
-from utils.translations import I18N
+from utils.translations import I18N, compare_running_warn
 from utils.utils import Utils
 
 _ = I18N._
@@ -515,6 +515,10 @@ class MarkedFileMover(SmartDialog):
         )
 
     def _delete_marked_files(self) -> None:
+        if self._app_actions.is_compare_running():
+            self._app_actions.warn(compare_running_warn(_("delete files")))
+            return
+
         if not self._app_actions.alert(
             _("Confirm Delete"),
             _("Deleting {0} marked files - Are you sure you want to proceed?").format(

@@ -290,7 +290,7 @@ class WindowLauncher:
         # Build index text
         if preset_media_path:
             index_text = _("(Open this media as part of a directory to see index details.)")
-        elif self._app.mode == Mode.BROWSE:
+        elif self._app.mode == Mode.BROWSE or self._app.is_compare_running():
             index_text = self._app.file_browser.get_index_details()
         else:
             cm = self._app.compare_manager

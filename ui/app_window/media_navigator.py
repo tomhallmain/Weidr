@@ -75,7 +75,7 @@ class MediaNavigator:
         """
         self._app.direction = Direction.BACKWARD
 
-        if self._app.mode == Mode.BROWSE:
+        if self._app.mode == Mode.BROWSE or self._app.search_ctrl.is_compare_running():
             start_media = self._fb.current_file()
             previous_media = self._fb.previous_file()
             if self._app.media_path == previous_media:
@@ -95,7 +95,7 @@ class MediaNavigator:
         """Navigate to the next media file."""
         self._app.direction = Direction.FORWARD
 
-        if self._app.mode == Mode.BROWSE:
+        if self._app.mode == Mode.BROWSE or self._app.search_ctrl.is_compare_running():
             start_media = self._fb.current_file()
             next_media = self._fb.next_file()
             if self._app.media_path == next_media:
@@ -125,7 +125,7 @@ class MediaNavigator:
         """Jump to the first or last file."""
         from ui.files.marked_file_mover_qt import MarkedFiles
 
-        if self._app.mode == Mode.BROWSE:
+        if self._app.mode == Mode.BROWSE or self._app.search_ctrl.is_compare_running():
             current_media = self.get_active_media_filepath()
             if not self._fb.is_incremental_loading:
                 self._fb.refresh()
@@ -202,13 +202,13 @@ class MediaNavigator:
             return
 
         current_media = self.get_active_media_filepath()
-        if self._app.mode == Mode.BROWSE:
+        if self._app.mode == Mode.BROWSE or self._app.search_ctrl.is_compare_running():
             prev_media = self._fb.page_up()
         else:
             prev_media = self._cm.page_up()
 
         while self._cm.skip_media(prev_media) and prev_media != current_media:
-            if self._app.mode == Mode.BROWSE:
+            if self._app.mode == Mode.BROWSE or self._app.search_ctrl.is_compare_running():
                 prev_media = self._fb.previous_file()
             else:
                 prev_media = self._cm._get_prev_media()
@@ -227,13 +227,13 @@ class MediaNavigator:
             return
 
         current_media = self.get_active_media_filepath()
-        if self._app.mode == Mode.BROWSE:
+        if self._app.mode == Mode.BROWSE or self._app.search_ctrl.is_compare_running():
             next_media = self._fb.page_down()
         else:
             next_media = self._cm.page_down()
 
         while self._cm.skip_media(next_media) and next_media != current_media:
-            if self._app.mode == Mode.BROWSE:
+            if self._app.mode == Mode.BROWSE or self._app.search_ctrl.is_compare_running():
                 next_media = self._fb.next_file()
             else:
                 next_media = self._cm._get_next_media()
@@ -270,7 +270,7 @@ class MediaNavigator:
             search_text = os.path.basename(search_text)
 
         # --- Search in current window ---
-        if self._app.mode == Mode.BROWSE:
+        if self._app.mode == Mode.BROWSE or self._app.search_ctrl.is_compare_running():
             if not self._fb.is_incremental_loading:
                 self._fb.refresh()
             if config.debug:

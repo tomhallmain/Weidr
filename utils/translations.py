@@ -34,6 +34,10 @@ class I18N:
         except KeyError:
             return s
 
+
+def compare_running_warn(action: str) -> str:
+    return I18N._("Compare is running, action not available: {0}").format(action)
+
     '''
     NOTE when gathering the translation strings, set _() == to gettext.gettext() instead of the above, and run:
 

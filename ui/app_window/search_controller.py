@@ -245,6 +245,10 @@ class SearchController:
         self._worker = worker
         worker.start()
 
+    def is_compare_running(self) -> bool:
+        """Return True while a compare worker is active in the background."""
+        return self._worker is not None
+
     def _on_worker_finished(self) -> None:
         self._sidebar.stop_progress_bar()
         self._worker = None

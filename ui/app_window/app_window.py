@@ -426,6 +426,8 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             "_alert": ts(self.notification_ctrl.alert),
             "start_loading_spinner": self.notification_ctrl.start_loading_spinner,
             "stop_loading_spinner": self.notification_ctrl.stop_loading_spinner,
+            "start_progress_bar": self.search_ctrl._sidebar.start_progress_bar,
+            "stop_progress_bar": self.search_ctrl._sidebar.stop_progress_bar,
             # Navigation / display
             "refresh": ts(self.refresh),
             "refocus": ts(self.refocus),

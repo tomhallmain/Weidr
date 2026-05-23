@@ -16,6 +16,7 @@ class AppActions:
         "_add_buttons_for_mode", "_set_label_state",
         "_set_toggled_view_matches", "refresh_all_compares",
         "start_loading_spinner", "stop_loading_spinner",
+        "start_progress_bar", "stop_progress_bar",
         "refresh_masonry",
         "is_compare_running",
     }

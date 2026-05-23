@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any, Optional
 from ui.auth.password_utils import require_password, check_session_expired
 from utils.constants import ClassifierActionType, Mode, ProtectedActions
 from utils.logging_setup import get_logger, set_logger_level
-from utils.translations import I18N
+from utils.translations import I18N, compare_running_warn
 
 if TYPE_CHECKING:
     from ui.app_window.app_window import AppWindow
@@ -394,6 +394,10 @@ class WindowLauncher:
                 logger.info("User canceled prevalidations task")
                 return
 
+        if self._app.is_compare_running():
+            self._app.app_actions.warn(compare_running_warn(_("run prevalidations")))
+            return
+
         logger.warning("Running prevalidations for " + self._app.get_base_dir())
         from PySide6.QtWidgets import QApplication
         from files.marked_files import MarkedFiles
@@ -401,7 +405,9 @@ class WindowLauncher:
         # Same sidebar badge as dynamic (video/GIF/PDF) prevalidation on navigate
         # (compare_wrapper._run_dynamic_prevalidation_with_spinner); here the work
         # runs on the main thread with processEvents, so the spinner still animates.
+        total_files = fb.count()
         self._app.app_actions.start_loading_spinner(force=True)
+        self._app.app_actions.start_progress_bar()
         try:
             directory_was_excluded = PrevalidationsTab.remove_directory_from_exclusion_list(self._app.get_base_dir())
             files_checked = 0
@@ -432,6 +438,9 @@ class WindowLauncher:
                 except Exception as e:
                     errors += 1
                     logger.error(e)
+                self._app.app_actions._set_label_state(
+                    _("Prevalidations: {0} / {1}").format(files_checked, total_files)
+                )
                 # Keep the UI responsive during long-running prevalidation
                 QApplication.processEvents()
             if directory_was_excluded:
@@ -449,6 +458,7 @@ class WindowLauncher:
             )
         finally:
             self._app.app_actions.stop_loading_spinner()
+            self._app.app_actions.stop_progress_bar()
 
     @require_password(ProtectedActions.RUN_PREVALIDATIONS)
     def toggle_prevalidations(self, event=None) -> None:

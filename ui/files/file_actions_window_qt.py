@@ -406,6 +406,32 @@ class FileActionsWindow(SmartWindow):
             )
 
     def _undo(self, action: FileAction, specific_image: str | None = None) -> None:
+        # If this was an automated prevalidation action, confirm that the user
+        # wants to create an override so it won't fire on these files again.
+        override_paths: list[str] = []
+        if action.auto:
+            if specific_image is not None:
+                try:
+                    idx = action.new_files.index(specific_image)
+                    override_paths = [action.original_marks[idx]]
+                except (ValueError, IndexError):
+                    override_paths = []
+            else:
+                override_paths = list(action.original_marks)
+
+            confirmed = self._app_actions.alert(
+                _("Override Prevalidation?"),
+                _(
+                    "This action was performed automatically by a prevalidation. "
+                    "Undoing it will create a prevalidation override for this file.\n\n"
+                    "Proceed?"
+                ),
+                kind="askyesno",
+                master=self,
+            )
+            if not confirmed:
+                return
+
         invoked_move_callback = False
         if specific_image is not None:
             if not os.path.isfile(specific_image):
@@ -445,6 +471,11 @@ class FileActionsWindow(SmartWindow):
                 invoked_move_callback = True
             else:
                 action.remove_new_files()
+
+        if override_paths:
+            from compare.classifier_actions_manager import ClassifierActionsManager
+            for path in override_paths:
+                ClassifierActionsManager.record_prevalidation_override(path)
 
         if invoked_move_callback:
             # MarkedFiles.move_marks_to_dir_static() can refocus the main window.

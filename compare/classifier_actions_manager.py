@@ -56,6 +56,7 @@ class ClassifierActionsManager:
     prevalidations: List['Prevalidation'] = []
     classifier_actions: List['ClassifierAction'] = []
     prevalidated_cache: Dict[str, Optional[ClassifierActionType]] = {}
+    user_prevalidation_overrides: set = set()
     directories_to_exclude: list[str] = []
     _prevalidations_initialized: bool = False
 
@@ -98,6 +99,11 @@ class ClassifierActionsManager:
         return m
 
     @staticmethod
+    def record_prevalidation_override(media_path: str) -> None:
+        """Mark *media_path* as user-overridden so prevalidation is skipped for it."""
+        ClassifierActionsManager.user_prevalidation_overrides.add(media_path)
+
+    @staticmethod
     def _invalidate_after_prevalidation_policy_change() -> None:
         """Call when rules or models that affect prevalidation outcomes change."""
         logger.info(
@@ -105,6 +111,7 @@ class ClassifierActionsManager:
         )
         invalidate_policy_caches()
         ClassifierActionsManager.prevalidated_cache.clear()
+        ClassifierActionsManager.user_prevalidation_overrides.clear()
 
     @staticmethod
     def load_prevalidation_file_cache_from_disk() -> None:
@@ -117,6 +124,11 @@ class ClassifierActionsManager:
             return
         if disk_sig != ClassifierActionsManager.get_prevalidation_signature():
             return
+        overrides = raw.get("user_overrides")
+        if isinstance(overrides, list):
+            ClassifierActionsManager.user_prevalidation_overrides.update(
+                p for p in overrides if isinstance(p, str)
+            )
         for item in entries:
             if not isinstance(item, dict):
                 continue
@@ -164,6 +176,7 @@ class ClassifierActionsManager:
         payload = {
             "signature": ClassifierActionsManager.get_prevalidation_signature(),
             "entries": entries,
+            "user_overrides": list(ClassifierActionsManager.user_prevalidation_overrides),
         }
         app_info_cache.set_meta(ClassifierActionsManager.PREVALIDATION_FILE_CACHE_META_KEY, payload)
 
@@ -286,6 +299,9 @@ class ClassifierActionsManager:
 
         base_dir = get_base_dir_func()
         if len(ClassifierActionsManager.directories_to_exclude) > 0 and base_dir in ClassifierActionsManager.directories_to_exclude:
+            return None
+
+        if not force and media_path in ClassifierActionsManager.user_prevalidation_overrides:
             return None
 
         bucket = get_file_bucket_for_media(media_path)

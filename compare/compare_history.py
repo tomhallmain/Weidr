@@ -17,7 +17,6 @@ Usage (from UI to restore):
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Optional
@@ -70,13 +69,14 @@ class CompareHistory:
     # ------------------------------------------------------------------
     def label(self) -> str:
         """Short human-readable label for the history list."""
-        dir_name = os.path.basename(self.directory.rstrip("/\\")) or self.directory
+        from utils.utils import Utils
+        dir_raw = Utils.get_relative_dirpath(self.directory, levels=2) or self.directory
+        dir_display = Utils.get_centrally_truncated_string(dir_raw, 34)
         modes = ", ".join(i.get("compare_mode", "?") for i in self.instances)
-        ts = self.timestamp[:16].replace("T", " ")  # "2026-05-22 14:30"
         logic = self.combination_logic
         if len(self.instances) > 1:
-            return f"{ts}  {dir_name}  [{modes}] ({logic})"
-        return f"{ts}  {dir_name}  [{modes}]"
+            return f"{dir_display}  [{modes}] ({logic})"
+        return f"{dir_display}  [{modes}]"
 
     def _identity_key(self) -> str:
         """JSON key for deduplication — everything except the timestamp."""

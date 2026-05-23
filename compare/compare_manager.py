@@ -89,7 +89,18 @@ class CompareManager:
         
         # State management (delegated to primary wrapper for single-mode)
         self._is_composite_mode: bool = False
-    
+
+        # Restore the most recent compare configuration from persistent history.
+        # apply_snapshot only touches _mode_configs / _combination_logic / _data_filter,
+        # so it is safe to call before set_app_actions wires in the real app_actions.
+        try:
+            from compare.compare_history import CompareHistory
+            recent = CompareHistory.load_recent()
+            if recent:
+                self.apply_snapshot(recent[0])
+        except Exception as _e:
+            logger.debug(f"Could not restore compare history on init: {_e}")
+
     def set_app_actions(self, master, app_actions):
         """Set master and app_actions after construction.
 

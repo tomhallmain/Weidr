@@ -46,6 +46,7 @@ class CompareWrapper:
         self.group_indexes = []
         self.max_group_index = 0
         self.hidden_media = []
+        self.label_suffix = ""  # appended to every group label (e.g. " (composite)")
 
     def clear_compare(self):
         self._compare = None
@@ -283,7 +284,8 @@ class CompareWrapper:
         for f in sorted(self.current_group, key=lambda f: self.current_group[f]):
             self.files_matched.append(f)
 
-        self._app_actions._set_label_state(group_number=self.current_group_index, size=len(self.files_matched))
+        self._app_actions._set_label_state(group_number=self.current_group_index, size=len(self.files_matched),
+                                            suffix=self.label_suffix)
         self._master.update()
         self._app_actions.create_media(self.current_match())
 

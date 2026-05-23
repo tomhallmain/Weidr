@@ -262,7 +262,8 @@ class NotificationController:
     # Sidebar label state
     # ------------------------------------------------------------------
     def set_label_state(
-        self, text: Optional[str] = None, group_number: Optional[int] = None, size: int = -1
+        self, text: Optional[str] = None, group_number: Optional[int] = None,
+        size: int = -1, suffix: str = ""
     ) -> None:
         """Update the sidebar state label with the current file position info."""
         if text is not None:
@@ -278,7 +279,7 @@ class NotificationController:
                     len(self._app.compare_manager.file_groups),
                     size,
                 )
-                label_text = _("GROUP_DETAILS").format(*args)
+                label_text = _("GROUP_DETAILS").format(*args) + suffix
                 self._app.sidebar_panel.update_state_label(label_text)
             return
 

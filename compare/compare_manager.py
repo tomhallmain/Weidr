@@ -878,10 +878,13 @@ class CompareManager:
                     )
 
         self._combined_results = self._combine_results(mode_results_for_combine, instance_results_normalized)
-        logger.info(f"Combined results using {self._combination_logic.value} logic: {len(self._combined_results)} matches")
-        
+        logger.info(f"Combined results using {self._combination_logic.value} logic: {len(self._combined_results)} files")
+
+        # is_group_mode is consistent across all instances (enforced by pre-flight validation)
+        is_group_mode = args.not_searching()
+
         # Update primary wrapper with combined results
-        self._apply_combined_results_to_primary()
+        self._apply_combined_results_to_primary(is_group_mode=is_group_mode)
     
     def _combine_results(self, mode_results: Dict[CompareMode, Dict[str, float]],
                          instance_results: Optional[Dict[str, Dict[str, float]]] = None) -> Dict[str, float]:
@@ -965,8 +968,15 @@ class CompareManager:
 
         return combined
     
-    def _apply_combined_results_to_primary(self):
-        """Apply combined results to primary wrapper for navigation."""
+    def _apply_combined_results_to_primary(self, is_group_mode: bool = False):
+        """Apply combined results to the primary wrapper for UI navigation.
+
+        GROUP mode:  rebuilds file_groups by filtering the primary instance's existing
+                     groups down to files that survived the composite combine, then
+                     delegates to set_current_group() so the label and navigation
+                     behave identically to a single-compare group run.
+        SEARCH mode: stores a flat group-0 result and drives create_media() directly.
+        """
         if not self._primary_mode or not self._combined_results:
             return
 
@@ -975,37 +985,79 @@ class CompareManager:
             return
         wrapper = self._ensure_wrapper(primary_iid, self._primary_mode)
 
-        # Update wrapper's results structure
-        wrapper.files_grouped = {0: self._combined_results}
-        wrapper.file_groups = deepcopy(wrapper.files_grouped)
+        if is_group_mode:
+            # Filter the primary instance's groups to only files in combined results.
+            combined_file_set = set(self._combined_results.keys())
+            original_groups = dict(wrapper.file_groups)  # snapshot before overwriting
 
-        # Sort files by combined score
-        reverse = self._primary_mode.is_embedding()
-        wrapper.files_matched = []
-        for f in sorted(self._combined_results.keys(),
-                       key=lambda f: self._combined_results[f],
-                       reverse=reverse):
-            wrapper.files_matched.append(f)
+            new_idx = 0
+            filtered_groups: Dict[int, Dict[str, float]] = {}
+            for _, group_files in sorted(original_groups.items()):
+                kept = {fp: s for fp, s in group_files.items() if fp in combined_file_set}
+                if len(kept) > 1:  # discard groups left with only one member
+                    filtered_groups[new_idx] = kept
+                    new_idx += 1
 
-        # Set up navigation state
-        wrapper.group_indexes = [0]
-        wrapper.current_group_index = 0
-        wrapper.max_group_index = 0
-        wrapper.match_index = 0
-        wrapper.has_media_matches = len(wrapper.files_matched) > 0
+            if not filtered_groups:
+                wrapper.has_media_matches = False
+                wrapper.file_groups = {}
+                wrapper.files_grouped = {}
+                wrapper.group_indexes = []
+                self._app_actions._set_label_state("No matching groups found")
+                self._app_actions.alert(
+                    "No Match Found",
+                    "No groups survived the composite filter criteria."
+                )
+                return
 
-        if wrapper.has_media_matches:
-            self._app_actions._set_label_state(
-                f"{len(wrapper.files_matched)} matches found (composite search)"
+            wrapper.file_groups = filtered_groups
+            wrapper.files_grouped = deepcopy(filtered_groups)
+            wrapper.group_indexes = list(range(len(filtered_groups)))
+            wrapper.max_group_index = max(filtered_groups.keys())
+            wrapper.current_group_index = 0
+            wrapper.has_media_matches = True
+            wrapper.label_suffix = " (composite)"
+
+            logger.info(
+                f"Composite GROUP result: {len(filtered_groups)} group(s) "
+                f"({sum(len(g) for g in filtered_groups.values())} files)"
             )
             self._app_actions._add_buttons_for_mode()
-            self._app_actions.create_media(wrapper.files_matched[0])
+            # set_current_group sets files_matched, calls _set_label_state(group_number, size)
+            # and create_media — identical behaviour to a single-compare group run.
+            wrapper.set_current_group()
+            self._app_actions.refresh_masonry()
+
         else:
-            self._app_actions._set_label_state("No matches found")
-            self._app_actions.alert(
-                "No Match Found",
-                "None of the files match the composite search criteria."
-            )
+            # SEARCH mode — flat results in a single pseudo-group
+            wrapper.files_grouped = {0: self._combined_results}
+            wrapper.file_groups = deepcopy(wrapper.files_grouped)
+
+            reverse = self._primary_mode.is_embedding()
+            wrapper.files_matched = []
+            for f in sorted(self._combined_results.keys(),
+                           key=lambda f: self._combined_results[f],
+                           reverse=reverse):
+                wrapper.files_matched.append(f)
+
+            wrapper.group_indexes = [0]
+            wrapper.current_group_index = 0
+            wrapper.max_group_index = 0
+            wrapper.match_index = 0
+            wrapper.has_media_matches = len(wrapper.files_matched) > 0
+
+            if wrapper.has_media_matches:
+                self._app_actions._set_label_state(
+                    f"{len(wrapper.files_matched)} matches found (composite search)"
+                )
+                self._app_actions._add_buttons_for_mode()
+                self._app_actions.create_media(wrapper.files_matched[0])
+            else:
+                self._app_actions._set_label_state("No matches found")
+                self._app_actions.alert(
+                    "No Match Found",
+                    "None of the files match the composite search criteria."
+                )
 
     # ========== History / Snapshot ==========
 

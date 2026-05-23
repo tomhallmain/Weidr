@@ -791,6 +791,8 @@ class CompareManager:
                 "ensure either all instances have search criteria, or none do."
             )
 
+        skipped_instance_ids: set = set()
+
         for run_index, (instance_id, config) in enumerate(enabled_configs, start=1):
             self._app_actions._set_label_state(
                 f"Running composite ({run_index}/{total_instances}): {config.compare_mode.name}…"
@@ -813,13 +815,35 @@ class CompareManager:
             instance_args.compare_mode = config.compare_mode
             if config.threshold is not None:
                 instance_args.threshold = config.threshold
-            
+
             # Apply instance-specific search text
             if config.search_text:
                 instance_args.search_text = config.search_text
             if config.search_text_negative:
                 instance_args.search_text_negative = config.search_text_negative
-            
+
+            # Non-embedding modes do not support semantic text search.
+            # Strip any text that was inherited from global args so these modes
+            # don't attempt (and fail) a text-based search. Instance-specific
+            # text (explicitly configured per-instance) is left untouched above.
+            if not config.compare_mode.is_embedding():
+                if not config.search_text:
+                    instance_args.search_text = None
+                if not config.search_text_negative:
+                    instance_args.search_text_negative = None
+
+            # If the overall run is a search and this instance has no remaining
+            # search criteria (no image path, no text), skip it rather than
+            # silently switching it to a full GROUP compare.
+            if not args.not_searching() and instance_args.not_searching():
+                logger.warning(
+                    f"Skipping instance {instance_id} ({config.compare_mode.name}) in search run: "
+                    f"mode does not support text search and no image search path is set."
+                )
+                instance_results[instance_id] = {}
+                skipped_instance_ids.add(instance_id)
+                continue
+
             # Run comparison
             try:
                 wrapper.run(instance_args)
@@ -844,7 +868,16 @@ class CompareManager:
             except Exception as e:
                 logger.error(f"Error running instance {instance_id} ({config.compare_mode.name}): {e}")
                 instance_results[instance_id] = {}
-        
+
+        # If every enabled instance was skipped because none support text search,
+        # raise a user-visible error instead of silently returning empty results.
+        if not args.not_searching() and skipped_instance_ids == {iid for iid, _ in enabled_configs}:
+            raise ValueError(
+                "Text search is not supported by any mode in this composite bundle. "
+                "Add an embedding mode (e.g. CLIP, SigLIP) to use text search, "
+                "or remove the search text."
+            )
+
         # Store individual results (convert to mode-based for backward compatibility)
         self._last_results = {}
         for instance_id, results in instance_results.items():

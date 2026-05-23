@@ -60,6 +60,8 @@ class WindowManager:
         if window in cls._windows:
             cls._windows.remove(window)
         cls._secondary_toplevels.pop(window.window_id, None)
+        from utils.notification_manager import notification_manager
+        notification_manager.unregister_window(window.window_id)
 
     # ------------------------------------------------------------------
     # Queries

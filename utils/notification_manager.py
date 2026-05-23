@@ -76,6 +76,12 @@ class NotificationManager:
         debug_log(f"Setting app_actions for window {window_id}")
         self._app_actions[window_id] = app_actions
 
+    def unregister_window(self, window_id: int) -> None:
+        """Remove a closed window from all tracking dicts."""
+        debug_log(f"Unregistering window {window_id}")
+        self._app_actions.pop(window_id, None)
+        self._current_titles.pop(window_id, None)
+
     def cleanup_threads(self):
         """Clean up all threads."""
         logger.info("Cleaning up all threads")

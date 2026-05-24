@@ -10,7 +10,7 @@
   "compare_mode": "CLIP_EMBEDDING",
   "max_search_results": 200,
   "search_only_return_closest": false,
-  "file_actions_history_max": 200,
+  "file_actions_history_max": 500,
   "file_actions_window_rows_max": 300,
   "store_checkpoints": false,
   "embedding_similarity_threshold": 0.9,

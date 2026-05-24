@@ -122,7 +122,7 @@ class HelpAndConfig(SmartDialog):
             "Shift+P": _("Open image in GIMP"),
             "Shift+Q": _("Randomly modify image"),
             "Shift+R": _("View related image (controlnet, etc.)"),
-            "Shift+S": _("Capture screenshot"),
+            "Shift+S": _("Capture screenshot or copy PDF/SVG/HTML image"),
             "Shift+T": _("Find related images in open window"),
             "Shift+U": _("Run refacdir"),
             "Shift+V": _("Hide current media"),

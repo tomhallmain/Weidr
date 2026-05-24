@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 from typing import Optional
 
@@ -66,7 +66,7 @@ class FileAction():
     @staticmethod
     def load_actions():
         action_history_dicts = app_info_cache.get_meta("file_actions", default_val=[])
-        for action_dict in action_history_dicts:
+        for action_dict in action_history_dicts[:FileAction.MAX_ACTIONS]:
             FileAction.action_history.append(FileAction.from_dict(action_dict))
         FileAction.setup_permanent_action()
         FileAction.setup_hotkey_actions()
@@ -222,26 +222,21 @@ class FileAction():
         """Paths that identify what was affected: original_marks for deletes, new_files otherwise."""
         return self.original_marks if self.is_delete_action() else self.new_files
 
+    _DAY_START_HOUR = 5  # "today" begins at 5 AM; actions before this belong to the previous session
+
     def is_today(self):
-        """Check if this action was performed today or within 24 hours if it's early morning."""
+        """Check if this action falls within the current session day (since 5 AM today, or since 5 AM yesterday if it's still before 5 AM)."""
         if not self.timestamp:
             return False
-        
+
         now = datetime.now()
-        today = now.date()
-        action_date = self.timestamp.date()
-        
-        # If it's the same date, it's definitely today
-        if action_date == today:
-            return True
-        
-        # If it's early morning (before 5 AM), include actions from the past 24 hours
-        if now.hour < 5:
-            # Check if the action was within the last 24 hours
-            time_diff = now - self.timestamp
-            return time_diff.total_seconds() <= 24 * 3600  # 24 hours in seconds
-        
-        return False
+        if now.hour < self._DAY_START_HOUR:
+            day_start = (now - timedelta(days=1)).replace(
+                hour=self._DAY_START_HOUR, minute=0, second=0, microsecond=0
+            )
+        else:
+            day_start = now.replace(hour=self._DAY_START_HOUR, minute=0, second=0, microsecond=0)
+        return self.timestamp >= day_start
 
     def any_new_files_exist(self):
         for file in self.new_files:

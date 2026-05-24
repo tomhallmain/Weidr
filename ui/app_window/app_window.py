@@ -1103,43 +1103,84 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         if app is not None:
             app.processEvents()
 
+    def _copy_cached_media_to_clipboard(self, media_path: str) -> tuple[bool, str]:
+        """Copy the FrameCache raster for *media_path* to the system clipboard."""
+        from PySide6.QtGui import QGuiApplication, QImageReader
+
+        from image.frame_cache import FrameCache
+
+        cached_path = FrameCache.get_cached_path(media_path)
+        if not cached_path:
+            try:
+                cached_path = FrameCache.get_image_path(media_path)
+            except Exception as e:
+                return False, str(e)
+        if not cached_path or not os.path.isfile(cached_path):
+            return False, _("No cached image for this file.")
+        img = QImageReader(cached_path).read()
+        if img.isNull():
+            return False, _("Could not read cached image.")
+        clipboard = QGuiApplication.clipboard()
+        if clipboard is None:
+            return False, _("Clipboard unavailable.")
+        clipboard.setImage(img)
+        return True, ""
+
     def take_media_screenshot(self, event=None) -> None:
-        """Save screenshot for active time-based media and alert the user."""
-        if not self.media_frame.has_time_based_media():
-            self.app_actions.warn(
-                _("Screenshots are available for videos and animated GIF files.")
+        """Save screenshot for time-based media, or copy cached raster for PDF/SVG/HTML."""
+        from utils.constants import MediaType
+        from utils.media_utils import get_media_type_for_path
+
+        active_path = self.media_navigator.get_active_media_filepath()
+        if not active_path:
+            return
+
+        if self.media_frame.has_time_based_media():
+            out_dir = self._get_screenshot_directory(active_path=active_path)
+            try:
+                os.makedirs(out_dir, exist_ok=True)
+            except Exception as e:
+                self.notification_ctrl.alert(
+                    _("Screenshot Failed"),
+                    _("Unable to create screenshot directory:\n{0}\n\n{1}").format(out_dir, str(e)),
+                    kind="error",
+                )
+                return
+
+            stem = os.path.splitext(os.path.basename(active_path))[0] or "media"
+            safe_stem = "".join(ch if (ch.isalnum() or ch in ("-", "_")) else "_" for ch in stem).strip("_") or "media"
+            filename = f"{safe_stem}_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')[:-3]}.png"
+            out_path = os.path.join(out_dir, filename)
+
+            ok, error = self.media_frame.save_media_screenshot(out_path)
+            if not ok:
+                self.notification_ctrl.alert(
+                    _("Screenshot Failed"),
+                    _("Unable to save screenshot.\n\n{0}").format(error),
+                    kind="error",
+                )
+                return
+
+            self.app_actions.success(
+                _("Screenshot saved to:\n{0}").format(out_path)
             )
             return
 
-        active_path = self.media_navigator.get_active_media_filepath() or ""
-        out_dir = self._get_screenshot_directory(active_path=active_path)
-        try:
-            os.makedirs(out_dir, exist_ok=True)
-        except Exception as e:
-            self.notification_ctrl.alert(
-                _("Screenshot Failed"),
-                _("Unable to create screenshot directory:\n{0}\n\n{1}").format(out_dir, str(e)),
-                kind="error",
-            )
+        media_type = get_media_type_for_path(active_path)
+        if media_type in (MediaType.PDF, MediaType.SVG, MediaType.HTML):
+            ok, error = self._copy_cached_media_to_clipboard(active_path)
+            if not ok:
+                self.notification_ctrl.alert(
+                    _("Screenshot Failed"),
+                    _("Unable to copy image to clipboard.\n\n{0}").format(error),
+                    kind="error",
+                )
+                return
+            self.app_actions.success(_("Copied image to clipboard."))
             return
 
-        active_path = active_path or "media"
-        stem = os.path.splitext(os.path.basename(active_path))[0] or "media"
-        safe_stem = "".join(ch if (ch.isalnum() or ch in ("-", "_")) else "_" for ch in stem).strip("_") or "media"
-        filename = f"{safe_stem}_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')[:-3]}.png"
-        out_path = os.path.join(out_dir, filename)
-
-        ok, error = self.media_frame.save_media_screenshot(out_path)
-        if not ok:
-            self.notification_ctrl.alert(
-                _("Screenshot Failed"),
-                _("Unable to save screenshot.\n\n{0}").format(error),
-                kind="error",
-            )
-            return
-
-        self.app_actions.success(
-            _("Screenshot saved to:\n{0}").format(out_path)
+        self.app_actions.warn(
+            _("Screenshots are available for videos, animated GIFs, and PDF/SVG/HTML files.")
         )
 
     # ------------------------------------------------------------------

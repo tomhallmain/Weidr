@@ -211,9 +211,27 @@ class FileActionsWindow(SmartWindow):
     # Statistics section
     # ------------------------------------------------------------------
     def _build_statistics(self) -> QFrame | None:
-        stats = FileAction.get_action_statistics(today_only=self._show_today_only)
+        stats = FileAction.get_action_statistics(today_only=self._show_today_only, kind=self._action_type_filter)
         if not stats:
             return None
+
+        # When a single type is active, show only that column (Total would equal
+        # it, so it is omitted). When showing all, show the full breakdown.
+        if self._action_type_filter is None:
+            col_defs = [
+                (_("Moved"), "moved"),
+                (_("Copied"), "copied"),
+                (_("Deleted"), "deleted"),
+                (_("Total"), "total"),
+            ]
+        else:
+            col_defs = [
+                {
+                    FileActionKind.MOVE: (_("Moved"), "moved"),
+                    FileActionKind.COPY: (_("Copied"), "copied"),
+                    FileActionKind.DELETE: (_("Deleted"), "deleted"),
+                }[self._action_type_filter]
+            ]
 
         sorted_stats = sorted(
             stats.items(), key=lambda x: x[1]["total"], reverse=True
@@ -228,11 +246,12 @@ class FileActionsWindow(SmartWindow):
         grid = QGridLayout(frame)
         grid.setContentsMargins(5, 5, 5, 5)
         grid.setSpacing(2)
+
+        # col 0 = directory, cols 1..n = data; toggle shares the last data col
+        total_cols = 1 + len(col_defs)
         grid.setColumnStretch(0, 3)
-        grid.setColumnStretch(1, 1)
-        grid.setColumnStretch(2, 1)
-        grid.setColumnStretch(3, 1)
-        grid.setColumnStretch(4, 1)
+        for i in range(1, total_cols):
+            grid.setColumnStretch(i, 1)
 
         # Title + toggle button (row 0)
         kind_stat_labels = {
@@ -249,22 +268,22 @@ class FileActionsWindow(SmartWindow):
         title = QLabel(title_text)
         title.setStyleSheet(f"font-weight: bold; color: {AppStyle.FG_COLOR};")
         title.setAlignment(Qt.AlignCenter)
-        grid.addWidget(title, 0, 0, 1, 4)
+        grid.addWidget(title, 0, 0, 1, total_cols - 1)  # span all but last data col
 
         toggle_btn = QPushButton(
             _("All Time") if self._show_today_only else _("Today Only")
         )
         toggle_btn.clicked.connect(self._toggle_statistics_view)
-        grid.addWidget(toggle_btn, 0, 4, Qt.AlignRight)
+        grid.addWidget(toggle_btn, 0, total_cols - 1, Qt.AlignRight)  # shares last data col
 
         # Headers (row 1)
-        for col, text in enumerate(
-            [_("Target Directory"), _("Moved"), _("Copied"), _("Deleted"), _("Total")]
-        ):
-            lbl = QLabel(text)
+        dir_hdr = QLabel(_("Target Directory"))
+        dir_hdr.setStyleSheet(f"font-weight: bold; color: {AppStyle.FG_COLOR};")
+        grid.addWidget(dir_hdr, 1, 0, Qt.AlignLeft)
+        for col_offset, (header_text, _key) in enumerate(col_defs):
+            lbl = QLabel(header_text)
             lbl.setStyleSheet(f"font-weight: bold; color: {AppStyle.FG_COLOR};")
-            align = Qt.AlignLeft if col == 0 else Qt.AlignRight
-            grid.addWidget(lbl, 1, col, align)
+            grid.addWidget(lbl, 1, 1 + col_offset, Qt.AlignRight)
 
         # Data rows
         for i, (target_dir, counts) in enumerate(display_stats):
@@ -272,36 +291,25 @@ class FileActionsWindow(SmartWindow):
             target_display = Utils.get_relative_dirpath(target_dir, levels=2)
             if len(target_display) > 30:
                 target_display = Utils.get_centrally_truncated_string(target_display, 30)
-
             self._add_stat_cell(grid, target_display, row, 0, Qt.AlignLeft)
-            self._add_stat_cell(grid, str(counts["moved"]), row, 1, Qt.AlignRight)
-            self._add_stat_cell(grid, str(counts["copied"]), row, 2, Qt.AlignRight)
-            self._add_stat_cell(grid, str(counts["deleted"]), row, 3, Qt.AlignRight)
-            self._add_stat_cell(grid, str(counts["total"]), row, 4, Qt.AlignRight)
+            for col_offset, (_header, key) in enumerate(col_defs):
+                self._add_stat_cell(grid, str(counts[key]), row, 1 + col_offset, Qt.AlignRight)
 
         # "etc." row
         if remaining_stats:
             row = len(display_stats) + 2
-            rem_moved = sum(c["moved"] for _, c in remaining_stats)
-            rem_copied = sum(c["copied"] for _, c in remaining_stats)
-            rem_deleted = sum(c["deleted"] for _, c in remaining_stats)
-            rem_total = sum(c["total"] for _, c in remaining_stats)
-
             self._add_stat_cell(
-                grid,
-                _("... and {0} more").format(len(remaining_stats)),
-                row, 0, Qt.AlignLeft,
+                grid, _("... and {0} more").format(len(remaining_stats)), row, 0, Qt.AlignLeft
             )
-            self._add_stat_cell(grid, str(rem_moved), row, 1, Qt.AlignRight)
-            self._add_stat_cell(grid, str(rem_copied), row, 2, Qt.AlignRight)
-            self._add_stat_cell(grid, str(rem_deleted), row, 3, Qt.AlignRight)
-            self._add_stat_cell(grid, str(rem_total), row, 4, Qt.AlignRight)
+            for col_offset, (_header, key) in enumerate(col_defs):
+                rem_val = sum(c[key] for _, c in remaining_stats)
+                self._add_stat_cell(grid, str(rem_val), row, 1 + col_offset, Qt.AlignRight)
 
         return frame
 
     @staticmethod
     def _add_stat_cell(grid: QGridLayout, text: str, row: int, col: int, align) -> None:
-        lbl = QLabel(text)
+        lbl = QLabel("-" if text == "0" else text)
         lbl.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
         grid.addWidget(lbl, row, col, align)
 

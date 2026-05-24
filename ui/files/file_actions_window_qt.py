@@ -201,6 +201,7 @@ class FileActionsWindow(SmartWindow):
         grid.setColumnStretch(1, 1)
         grid.setColumnStretch(2, 1)
         grid.setColumnStretch(3, 1)
+        grid.setColumnStretch(4, 1)
 
         # Title + toggle button (row 0)
         title_text = (
@@ -211,17 +212,17 @@ class FileActionsWindow(SmartWindow):
         title = QLabel(title_text)
         title.setStyleSheet(f"font-weight: bold; color: {AppStyle.FG_COLOR};")
         title.setAlignment(Qt.AlignCenter)
-        grid.addWidget(title, 0, 0, 1, 3)
+        grid.addWidget(title, 0, 0, 1, 4)
 
         toggle_btn = QPushButton(
             _("All Time") if self._show_today_only else _("Today Only")
         )
         toggle_btn.clicked.connect(self._toggle_statistics_view)
-        grid.addWidget(toggle_btn, 0, 3, Qt.AlignRight)
+        grid.addWidget(toggle_btn, 0, 4, Qt.AlignRight)
 
         # Headers (row 1)
         for col, text in enumerate(
-            [_("Target Directory"), _("Moved"), _("Copied"), _("Total")]
+            [_("Target Directory"), _("Moved"), _("Copied"), _("Deleted"), _("Total")]
         ):
             lbl = QLabel(text)
             lbl.setStyleSheet(f"font-weight: bold; color: {AppStyle.FG_COLOR};")
@@ -238,13 +239,15 @@ class FileActionsWindow(SmartWindow):
             self._add_stat_cell(grid, target_display, row, 0, Qt.AlignLeft)
             self._add_stat_cell(grid, str(counts["moved"]), row, 1, Qt.AlignRight)
             self._add_stat_cell(grid, str(counts["copied"]), row, 2, Qt.AlignRight)
-            self._add_stat_cell(grid, str(counts["total"]), row, 3, Qt.AlignRight)
+            self._add_stat_cell(grid, str(counts["deleted"]), row, 3, Qt.AlignRight)
+            self._add_stat_cell(grid, str(counts["total"]), row, 4, Qt.AlignRight)
 
         # "etc." row
         if remaining_stats:
             row = len(display_stats) + 2
             rem_moved = sum(c["moved"] for _, c in remaining_stats)
             rem_copied = sum(c["copied"] for _, c in remaining_stats)
+            rem_deleted = sum(c["deleted"] for _, c in remaining_stats)
             rem_total = sum(c["total"] for _, c in remaining_stats)
 
             self._add_stat_cell(
@@ -254,7 +257,8 @@ class FileActionsWindow(SmartWindow):
             )
             self._add_stat_cell(grid, str(rem_moved), row, 1, Qt.AlignRight)
             self._add_stat_cell(grid, str(rem_copied), row, 2, Qt.AlignRight)
-            self._add_stat_cell(grid, str(rem_total), row, 3, Qt.AlignRight)
+            self._add_stat_cell(grid, str(rem_deleted), row, 3, Qt.AlignRight)
+            self._add_stat_cell(grid, str(rem_total), row, 4, Qt.AlignRight)
 
         return frame
 
@@ -280,6 +284,9 @@ class FileActionsWindow(SmartWindow):
                 or (last_action is not None and len(last_action.new_files) != 1)
             )
 
+            is_delete = action.is_delete_action()
+            file_count = len(action.relevant_files)
+
             if need_header:
                 # Insert a separator only when the target directory changes
                 if last_target is not None and action.target != last_target:
@@ -304,8 +311,8 @@ class FileActionsWindow(SmartWindow):
                 header = QHBoxLayout()
 
                 action_text = Utils.get_relative_dirpath(action.target, levels=2)
-                if len(action.new_files) > 1:
-                    action_text += _(" ({0} files)").format(len(action.new_files))
+                if file_count > 1:
+                    action_text += _(" ({0} files)").format(file_count)
                 if action.auto:
                     action_text += " " + _("(auto)")
 
@@ -314,16 +321,19 @@ class FileActionsWindow(SmartWindow):
                 dir_lbl.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
                 header.addWidget(dir_lbl, 1)
 
-                type_lbl = QLabel(
-                    _("Move") if action.is_move_action() else _("Copy")
-                )
+                if is_delete:
+                    type_lbl = QLabel(_("Delete"))
+                elif action.is_move_action():
+                    type_lbl = QLabel(_("Move"))
+                else:
+                    type_lbl = QLabel(_("Copy"))
                 type_lbl.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
                 header.addWidget(type_lbl)
 
                 # Only show header-level Undo/Modify when the group
                 # has multiple files; for single-file groups the
                 # file row already provides identical buttons.
-                if len(action.new_files) > 1:
+                if not is_delete and len(action.new_files) > 1:
                     undo_btn = QPushButton(_("Undo"))
                     undo_btn.clicked.connect(
                         lambda _=False, a=action: self._undo(a)
@@ -342,7 +352,7 @@ class FileActionsWindow(SmartWindow):
             last_action = action
 
             # File rows
-            for filename in action.new_files:
+            for filename in action.relevant_files:
                 file_row = QHBoxLayout()
 
                 display_name = os.path.basename(filename)
@@ -356,11 +366,12 @@ class FileActionsWindow(SmartWindow):
                 name_lbl.setWordWrap(True)
                 file_row.addWidget(name_lbl, 1)
 
-                view_btn = QPushButton(_("View"))
-                view_btn.clicked.connect(
-                    lambda _=False, p=filename: self._view(p)
-                )
-                file_row.addWidget(view_btn)
+                if not is_delete:
+                    view_btn = QPushButton(_("View"))
+                    view_btn.clicked.connect(
+                        lambda _=False, p=filename: self._view(p)
+                    )
+                    file_row.addWidget(view_btn)
 
                 copy_btn = QPushButton(_("Copy Filename"))
                 copy_btn.clicked.connect(
@@ -368,19 +379,20 @@ class FileActionsWindow(SmartWindow):
                 )
                 file_row.addWidget(copy_btn)
 
-                undo_file_btn = QPushButton(_("Undo"))
-                undo_file_btn.clicked.connect(
-                    lambda _=False, a=action, p=filename: self._undo(
-                        a, specific_image=p
+                if not is_delete:
+                    undo_file_btn = QPushButton(_("Undo"))
+                    undo_file_btn.clicked.connect(
+                        lambda _=False, a=action, p=filename: self._undo(
+                            a, specific_image=p
+                        )
                     )
-                )
-                file_row.addWidget(undo_file_btn)
+                    file_row.addWidget(undo_file_btn)
 
-                modify_file_btn = QPushButton(_("Modify"))
-                modify_file_btn.clicked.connect(
-                    lambda _=False, p=filename: self._modify(p)
-                )
-                file_row.addWidget(modify_file_btn)
+                    modify_file_btn = QPushButton(_("Modify"))
+                    modify_file_btn.clicked.connect(
+                        lambda _=False, p=filename: self._modify(p)
+                    )
+                    file_row.addWidget(modify_file_btn)
 
                 if current_group_layout is not None:
                     current_group_layout.addLayout(file_row)
@@ -538,21 +550,21 @@ class FileActionsWindow(SmartWindow):
         temp: list[FileAction] = []
         # Pass 1: exact path match
         for action in FileAction.action_history:
-            for f in action.new_files:
+            for f in action.relevant_files:
                 if f == media_path:
                     temp.append(action)
                     break
         # Pass 2: basename match
         for action in FileAction.action_history:
             if action not in temp:
-                for f in action.new_files:
+                for f in action.relevant_files:
                     if os.path.basename(os.path.normpath(f)).lower() == search_basename:
                         temp.append(action)
                         break
         # Pass 3: basename prefix match
         for action in FileAction.action_history:
             if action not in temp:
-                for f in action.new_files:
+                for f in action.relevant_files:
                     if os.path.basename(os.path.normpath(f)).lower().startswith(
                         basename_no_ext
                     ):
@@ -646,7 +658,7 @@ class FileActionsWindow(SmartWindow):
         elif ctrl:
             self._modify(action)
         else:
-            if action.new_files:
+            if not action.is_delete_action() and action.new_files:
                 self._view(action.new_files[0])
 
     # ==================================================================

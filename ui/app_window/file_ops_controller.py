@@ -176,6 +176,7 @@ class FileOpsController:
         is_directory: bool = False,
     ) -> None:
         """Execute a delete operation on the given file or directory."""
+        from files.file_action import FileAction
         from files.marked_files import MarkedFiles
 
         MarkedFiles.set_delete_lock()  # Undo deleting action is not supported
@@ -195,6 +196,14 @@ class FileOpsController:
         else:
             logger.info(f"Removing {'directory' if is_directory else 'file'}: {filepath}")
 
+        rest_path = None
+        if (
+            not is_directory
+            and not config.delete_instantly
+            and config.trash_folder is not None
+        ):
+            rest_path = os.path.join(config.trash_folder, os.path.basename(filepath))
+
         try:
             Utils.remove_path(
                 filepath,
@@ -202,6 +211,8 @@ class FileOpsController:
                 trash_folder=config.trash_folder,
                 is_directory=is_directory,
             )
+            if not is_directory:
+                FileAction.add_delete_action(filepath, rest_path=rest_path, auto=not manual_delete)
         except Exception as e:
             logger.error(e)
             alert = self._app.notification_ctrl.alert
@@ -229,6 +240,8 @@ class FileOpsController:
                     )
                 try:
                     Utils.remove_path(filepath, delete_instantly=True, trash_folder=None, is_directory=is_directory)
+                    if not is_directory:
+                        FileAction.add_delete_action(filepath, rest_path=None, auto=not manual_delete)
                 except Exception as e2:
                     logger.error(e2)
                     alert(_("Warning"), _("Failed to delete item: {0}").format(filepath))

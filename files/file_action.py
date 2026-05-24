@@ -10,6 +10,10 @@ from utils.logging_setup import get_logger
 logger = get_logger("file_action")
 
 
+def _delete_file_sentinel(path: str, *args, **kwargs) -> str:
+    return path
+
+
 class FileAction():
     MAX_ACTIONS = config.file_actions_history_max
     MAX_ACTION_ROWS = config.file_actions_window_rows_max
@@ -67,13 +71,17 @@ class FileAction():
         FileAction.setup_hotkey_actions()
 
     @staticmethod
-    def get_history_action(start_index=0, auto=False):
+    def get_history_action(start_index=0, auto=False, include_deletes=False):
         # Get a previous action that is not equivalent to the permanent action if possible.
         action = None
         seen_actions = []
         for i in range(len(FileAction.action_history)):
             action = FileAction.action_history[i]
-            is_returnable_action = action != FileAction.permanent_action and (auto is None or action.auto == auto)
+            is_returnable_action = (
+                action != FileAction.permanent_action
+                and (auto is None or action.auto == auto)
+                and (include_deletes or not action.is_delete_action())
+            )
             if not is_returnable_action or action in seen_actions:
                 start_index += 1
             seen_actions.append(action)
@@ -115,6 +123,24 @@ class FileAction():
             del FileAction.action_history[-1]
 
     @staticmethod
+    def add_delete_action(
+        deleted_path: str,
+        *,
+        rest_path: str | None = None,
+        auto: bool = False,
+    ) -> None:
+        source_dir = os.path.normpath(os.path.dirname(deleted_path))
+        new_files = [rest_path] if rest_path else []
+        entry = FileAction(
+            _delete_file_sentinel,
+            source_dir,
+            [deleted_path],
+            new_files,
+            auto,
+        )
+        FileAction.update_history(entry)
+
+    @staticmethod
     def add_file_action(action, source, target, auto=True, overwrite_existing=False):
         # Use lock to ensure thread-safe file operations
         with Utils.file_operation_lock:
@@ -136,19 +162,25 @@ class FileAction():
             # Skip if filtering for today and action is not from today
             if action.auto or (today_only and not action.is_today()):
                 continue
-                
+
             target_dir = action.target
             if target_dir not in stats:
-                stats[target_dir] = {"moved": 0, "copied": 0}
-            
-            if action.is_move_action():
+                stats[target_dir] = {"moved": 0, "copied": 0, "deleted": 0}
+
+            if action.is_delete_action():
+                stats[target_dir]["deleted"] += len(action.original_marks)
+            elif action.is_move_action():
                 stats[target_dir]["moved"] += len(action.new_files)
             else:
                 stats[target_dir]["copied"] += len(action.new_files)
-        
+
         # Add total count for each directory
         for target_dir in stats:
-            stats[target_dir]["total"] = stats[target_dir]["moved"] + stats[target_dir]["copied"]
+            stats[target_dir]["total"] = (
+                stats[target_dir]["moved"]
+                + stats[target_dir]["copied"]
+                + stats[target_dir]["deleted"]
+            )
         
         return stats
 
@@ -169,7 +201,15 @@ class FileAction():
         return os.path.dirname(os.path.abspath(self.original_marks[-1]))
 
     def is_move_action(self):
-        return self.action.__name__.startswith("move")
+        return self.action is not None and self.action.__name__.startswith("move")
+
+    def is_delete_action(self) -> bool:
+        return self.action is _delete_file_sentinel
+
+    @property
+    def relevant_files(self) -> list[str]:
+        """Paths that identify what was affected: original_marks for deletes, new_files otherwise."""
+        return self.original_marks if self.is_delete_action() else self.new_files
 
     def is_today(self):
         """Check if this action was performed today or within 24 hours if it's early morning."""
@@ -247,6 +287,10 @@ class FileAction():
         return hash((self.action, self.target))
 
     def __str__(self):
+        if self.action is None:
+            return "unknown action to " + self.target
+        if self.is_delete_action():
+            return "delete_file from " + self.target
         return self.action.__name__ + " to " + self.target
 
     @staticmethod
@@ -255,6 +299,8 @@ class FileAction():
             return Utils.move_file
         elif action_text == "copy_file":
             return Utils.copy_file
+        elif action_text == "delete_file":
+            return _delete_file_sentinel
         else:
             return None
 
@@ -264,6 +310,8 @@ class FileAction():
             return "move_file"
         elif action_func == Utils.copy_file:
             return "copy_file"
+        elif action_func is _delete_file_sentinel:
+            return "delete_file"
         else:
             return None
 

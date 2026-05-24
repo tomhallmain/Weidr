@@ -357,6 +357,8 @@ class FileActionSetsWindow(SmartWindow):
         seen: set = set()
         unique: list = []
         for action in history:
+            if action.is_delete_action():
+                continue
             key = (FileAction.convert_action_to_text(action.action), action.target)
             if key not in seen:
                 seen.add(key)

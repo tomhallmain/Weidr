@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
 
 from ui.files.marked_file_mover_qt import MarkedFiles
 from ui.files.file_actions_window_qt import FileActionsWindow
+from files.file_action import FileAction
 from lib.multi_display_qt import SmartDialog
 from ui.app_style import AppStyle
 from utils.app_actions import AppActions

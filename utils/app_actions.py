@@ -11,7 +11,7 @@ class AppActions:
         "get_media_details", "open_move_marks_window", "open_password_admin_window", "open_file_action_sets_window",
          "run_image_generation", "set_marks_from_downstream_related_images",
         "set_base_dir", "get_base_dir", "go_to_file", "go_to_file_by_index", "delete",
-        "hide_current_media", "copy_media_path",
+        "hide_current_media", "request_media_blur", "copy_media_path",
         "release_media_canvas", "store_info_cache",
         "_add_buttons_for_mode", "_set_label_state",
         "_set_toggled_view_matches", "refresh_all_compares",

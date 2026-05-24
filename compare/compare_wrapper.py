@@ -169,9 +169,15 @@ class CompareWrapper:
                     self._app_actions.hide_current_media,
                     self._app_actions.title_notify,
                     MarkedFiles.add_mark_if_not_present,
+                    blur_callback=self._app_actions.request_media_blur,
                 )
             if prevalidation_action is not None:
-                return prevalidation_action != ClassifierActionType.NOTIFY
+                if prevalidation_action == ClassifierActionType.BLUR:
+                    self._app_actions.request_media_blur(media_path)
+                return prevalidation_action not in (
+                    ClassifierActionType.NOTIFY,
+                    ClassifierActionType.BLUR,
+                )
         return False
 
     def _run_dynamic_prevalidation_with_spinner(self, media_path):
@@ -204,6 +210,7 @@ class CompareWrapper:
                     app_actions.hide_current_media,
                     app_actions.title_notify,
                     _collect_mark,
+                    blur_callback=app_actions.request_media_blur,
                 )
 
         loop = QEventLoop()

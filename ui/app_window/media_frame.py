@@ -21,8 +21,9 @@ from PySide6.QtWidgets import (
     QDialog,
 )
 from PySide6.QtCore import Qt, QRectF, QSize, QPoint, QRect, QEvent, QTimer, Signal, QObject, QThread, Slot
-from PySide6.QtGui import QImage, QPixmap, QImageReader, QPainter, QCursor, QMovie
+from PySide6.QtGui import QColor, QImage, QPixmap, QImageReader, QPainter, QCursor, QMovie
 
+from lib.blur_overlay_qt import BlurOverlay
 from ui.app_style import AppStyle
 from ui.app_window.media_controls_overlay import MediaControlsOverlay, OVERLAY_HEIGHT
 from utils.config import config
@@ -336,6 +337,10 @@ class MediaFrame(QFrame):
         self._controls_overlay.play_pause_requested.connect(self.play_pause_requested.emit)
         self._controls_overlay.volume_changed.connect(self.volume_requested.emit)
         self._controls_overlay.mute_toggled.connect(self.mute_requested.emit)
+
+        self._blur_overlay = BlurOverlay(self)
+        self._blur_overlay.attach(self)
+        self._pending_blur_path: str | None = None
         self._window_filter_installed = False
         self._mouse_inside = False
         self._last_cursor_pos = None
@@ -356,6 +361,25 @@ class MediaFrame(QFrame):
         self._empty_directory_message = _(
             "No displayable files found in this directory for the current settings."
         )
+
+    def request_blur(self, path: str) -> None:
+        """Record that the blur overlay should be shown when path is displayed."""
+        self._pending_blur_path = path
+
+    def apply_pending_blur(self, path: str) -> None:
+        """Apply or remove the blur overlay after show_media has rendered path."""
+        if self._pending_blur_path == path:
+            self._blur_overlay.sync_geometry(self)
+            # grab() works for all Qt-rendered content (images and the black
+            # placeholder shown for blurred video — see _show_black_frame).
+            snapshot = self.grab()
+            if self._blur_overlay.is_blur_active():
+                self._blur_overlay.update_blur(snapshot=snapshot)
+            else:
+                self._blur_overlay.show_blur(snapshot=snapshot)
+        else:
+            self._blur_overlay.hide_blur()
+        self._pending_blur_path = None
 
     def set_background_color(self, background_color):
         color = background_color or AppStyle.MEDIA_BG
@@ -823,6 +847,9 @@ class MediaFrame(QFrame):
             return
         # Video dispatch: use VLC if available, otherwise show placeholder
         if is_video_for_display(path):
+            if self._pending_blur_path == path:
+                self._show_black_frame()
+                return
             if _VLC_AVAILABLE and self.vlc_media_player:
                 # Broken single-frame stream (buffer-deadlock): show the one
                 # extractable frame as a static image and let VLC handle audio
@@ -1298,6 +1325,8 @@ class MediaFrame(QFrame):
         return self._last_known_muted
 
     def clear(self):
+        self._pending_blur_path = None
+        self._blur_overlay.hide_blur()
         self._invalidate_pending_image_promotion()
         if isinstance(self._video_ui, VideoUI):
             self.video_stop()
@@ -1317,6 +1346,19 @@ class MediaFrame(QFrame):
         self._controls_overlay.set_audio_controls_visible(True)
         self._controls_overlay.set_no_seek_index(False)
         self._controls_overlay.dismiss()
+
+    def _show_black_frame(self) -> None:
+        """Show a solid black pixmap without starting VLC.
+
+        Used as a temporary stand-in when a blur prevalidation targets a video
+        file, since the blur overlay cannot render above VLC's native surface.
+        TODO: replace with a proper solution once VLC z-order is resolved.
+        """
+        self._video_ui = None
+        black = QPixmap(self.size())
+        black.fill(QColor(0, 0, 0))
+        self._pixmap_item.setPixmap(black)
+        self.media_displayed = True
 
     def _show_placeholder(self, text: str) -> None:
         """Clear the view and show a text placeholder (e.g. for unsupported video)."""

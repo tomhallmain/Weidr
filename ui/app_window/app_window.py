@@ -462,6 +462,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             # File operations
             "delete": ts(self.file_ops_ctrl.handle_delete),
             "hide_current_media": ts(self.file_ops_ctrl.hide_current_media),
+            "request_media_blur": ts(self.media_frame.request_blur),
             "copy_media_path": ts(self.file_ops_ctrl.copy_media_path),
             "release_media_canvas": ts(self.release_media_canvas),
             "is_compare_running": self.is_compare_running,

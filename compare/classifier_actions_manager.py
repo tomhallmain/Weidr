@@ -287,6 +287,7 @@ class ClassifierActionsManager:
         hide_callback,
         notify_callback,
         add_mark_callback,
+        blur_callback=None,
         force: bool = False,
     ) -> Optional[ClassifierActionType]:
         # Lazy initialization - ensure prevalidations are initialized before first use
@@ -326,6 +327,7 @@ class ClassifierActionsManager:
                     hide_callback,
                     notify_callback,
                     add_mark_callback,
+                    blur_callback=blur_callback,
                     base_directory=base_dir,
                 )
                 if prevalidation_action is not None:

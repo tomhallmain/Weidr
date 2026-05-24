@@ -266,6 +266,7 @@ class PrevalidationsTab(QWidget):
         hide_callback,
         notify_callback,
         add_mark_callback,
+        blur_callback=None,
         force: bool = False,
     ):
         """Run prevalidations and return action type or None."""
@@ -275,6 +276,7 @@ class PrevalidationsTab(QWidget):
             hide_callback,
             notify_callback,
             add_mark_callback,
+            blur_callback=blur_callback,
             force=force,
         )
 

@@ -608,7 +608,7 @@ class CompareManager:
         if self._primary_wrapper() is not None:
             return self._primary_wrapper().skip_media(media_path)
         return False
-    
+
     def show_prev_group(self, event=None, file_browser=None):
         """Show previous group (delegated to primary wrapper)."""
         if self._primary_wrapper() is not None:

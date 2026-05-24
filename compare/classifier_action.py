@@ -494,6 +494,7 @@ class ClassifierAction:
         hide_callback,
         notify_callback,
         add_mark_callback=None,
+        blur_callback=None,
         base_directory: Optional[str] = None,
     ) -> Optional[ClassifierActionType]:
         if not self.can_run:
@@ -578,6 +579,7 @@ class ClassifierAction:
                         hide_callback,
                         notify_callback,
                         add_mark_callback,
+                        blur_callback=blur_callback,
                         base_directory=base_directory or os.path.dirname(media_path),
                         resolved_category=resolved_match_category,
                     )
@@ -589,6 +591,7 @@ class ClassifierAction:
                 hide_callback,
                 notify_callback,
                 add_mark_callback,
+                blur_callback=blur_callback,
                 base_directory=base_directory or os.path.dirname(media_path),
             )
         except Exception as e:
@@ -603,6 +606,7 @@ class ClassifierAction:
                 hide_callback,
                 notify_callback,
                 add_mark_callback,
+                blur_callback=blur_callback,
                 base_directory=base_directory or os.path.dirname(media_path),
             )
 
@@ -612,6 +616,7 @@ class ClassifierAction:
         hide_callback,
         notify_callback,
         add_mark_callback=None,
+        blur_callback=None,
         base_directory: Optional[str] = None,
     ) -> Optional[ClassifierActionType]:
         if not self.can_run:
@@ -623,6 +628,7 @@ class ClassifierAction:
                 hide_callback,
                 notify_callback,
                 add_mark_callback,
+                blur_callback=blur_callback,
                 base_directory=base_directory,
                 resolved_category=matched_category,
             )
@@ -674,6 +680,7 @@ class ClassifierAction:
         hide_callback,
         notify_callback,
         add_mark_callback=None,
+        blur_callback=None,
         base_directory: Optional[str] = None,
         resolved_category: Optional[str] = None,
     ):
@@ -764,6 +771,10 @@ class ClassifierAction:
                     logger.info("Deleted file at " + image_path)
             except Exception as e:
                 logger.error("Error deleting file at " + image_path + ": " + str(e))
+        elif self.action == ClassifierActionType.BLUR:
+            notify_callback("\n" + base_message + _(" - blurred"), base_message=base_message, action_type=ActionType.SYSTEM, is_manual=False)
+            if blur_callback is not None:
+                blur_callback(image_path)
         return self.action
 
     def get_negatives_str(self):
@@ -1139,6 +1150,7 @@ class Prevalidation(ClassifierAction):
         hide_callback,
         notify_callback,
         add_mark_callback=None,
+        blur_callback=None,
         base_directory: Optional[str] = None,
     ) -> Optional[ClassifierActionType]:
         # Lazy load the image classifier if needed
@@ -1148,6 +1160,7 @@ class Prevalidation(ClassifierAction):
             hide_callback,
             notify_callback,
             add_mark_callback,
+            blur_callback=blur_callback,
             base_directory=base_directory,
         )
 
@@ -1157,6 +1170,7 @@ class Prevalidation(ClassifierAction):
         hide_callback,
         notify_callback,
         add_mark_callback=None,
+        blur_callback=None,
         base_directory: Optional[str] = None,
     ) -> Optional[ClassifierActionType]:
         # Keep lazy image-classifier loading behavior for sampled media paths too.
@@ -1166,6 +1180,7 @@ class Prevalidation(ClassifierAction):
             hide_callback,
             notify_callback,
             add_mark_callback,
+            blur_callback=blur_callback,
             base_directory=base_directory,
         )
 

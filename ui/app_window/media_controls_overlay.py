@@ -255,6 +255,7 @@ class MediaControlsOverlay(QWidget):
         if not self._has_track:
             return
         self.show()
+        self.raise_()
         self._fade_in()
         self._restart_autohide()
 

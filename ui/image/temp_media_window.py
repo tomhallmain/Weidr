@@ -232,7 +232,7 @@ class TempMediaWindow(SmartWindow):
             _("Copy File Path"),
             self._copy_media_path,
         )
-        menu.exec(event.globalPos())
+        menu.exec(event.globalPosition().toPoint())
 
     def closeEvent(self, event) -> None:  # noqa: N802
         try:

@@ -1446,7 +1446,7 @@ class MediaFrame(QFrame):
         if self._has_visible_child_dialog(top_window):
             self._mouse_inside = False
             self._controls_overlay.dismiss()
-            self._last_cursor_pos = QCursor.pos()
+            self._last_cursor_pos = QCursor.position().toPoint()
             return
 
         # Hide controls whenever a different top-level window is active
@@ -1455,10 +1455,10 @@ class MediaFrame(QFrame):
         if active_window is None or active_window is not top_window:
             self._mouse_inside = False
             self._controls_overlay.dismiss()
-            self._last_cursor_pos = QCursor.pos()
+            self._last_cursor_pos = QCursor.position().toPoint()
             return
 
-        cursor = QCursor.pos()
+        cursor = QCursor.position().toPoint()
         frame_rect = QRect(self.mapToGlobal(QPoint(0, 0)), self.size())
         overlay_geo = self._controls_overlay.geometry()
         inside = frame_rect.contains(cursor) or overlay_geo.contains(cursor)

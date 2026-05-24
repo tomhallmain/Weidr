@@ -1257,7 +1257,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
     # ------------------------------------------------------------------
     def contextMenuEvent(self, event):  # noqa: N802
         """Show the right-click context menu at the cursor position."""
-        self.context_menu_builder.show(event.globalPos())
+        self.context_menu_builder.show(event.globalPosition().toPoint())
 
     # ------------------------------------------------------------------
     # Middle-click → delete media file

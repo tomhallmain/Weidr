@@ -419,6 +419,8 @@ class WindowLauncher:
             for media_path in fb.get_files():
                 files_checked += 1
                 try:
+                    # No blur_callback: this pass does not navigate to each file, so a
+                    # display-only BLUR action would have nothing to apply to.
                     result = PrevalidationsTab.prevalidate(
                         media_path,
                         self._app.get_base_dir,

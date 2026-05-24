@@ -344,7 +344,7 @@ class CustomTitleBar(QWidget):
         """Handle mouse press for window dragging."""
         if event.button() == Qt.LeftButton:
             # Don't start drag if clicking on buttons (title bar buttons or menu buttons)
-            widget = self.childAt(event.pos())
+            widget = self.childAt(event.position().toPoint())
             if isinstance(widget, (TitleBarButton, TitleBarMenuButton)):
                 event.ignore()
                 return
@@ -354,7 +354,7 @@ class CustomTitleBar(QWidget):
                 return
             
             self._is_dragging = True
-            self._drag_position = event.globalPos() - self._parent_window.frameGeometry().topLeft()
+            self._drag_position = event.globalPosition().toPoint() - self._parent_window.frameGeometry().topLeft()
             event.accept()
             
     def mouseMoveEvent(self, event: QMouseEvent):
@@ -365,7 +365,8 @@ class CustomTitleBar(QWidget):
                 if self._parent_window.isMaximized():
                     # Calculate relative position within the title bar
                     title_bar_width = self.width()
-                    relative_x = event.pos().x() / title_bar_width
+                    local_pos = event.position().toPoint()
+                    relative_x = local_pos.x() / title_bar_width
                     
                     # Restore window
                     self._parent_window.showNormal()
@@ -375,10 +376,10 @@ class CustomTitleBar(QWidget):
                     new_width = self._parent_window.width()
                     self._drag_position = QPoint(
                         int(relative_x * new_width),
-                        event.pos().y()
+                        local_pos.y()
                     )
                 
-                new_pos = event.globalPos() - self._drag_position
+                new_pos = event.globalPosition().toPoint() - self._drag_position
                 self._parent_window.move(new_pos)
             event.accept()
             
@@ -391,7 +392,7 @@ class CustomTitleBar(QWidget):
         """Handle double-click to maximize/restore."""
         if event.button() == Qt.LeftButton:
             # Don't maximize if double-clicking on buttons
-            widget = self.childAt(event.pos())
+            widget = self.childAt(event.position().toPoint())
             if isinstance(widget, TitleBarButton):
                 return
                 
@@ -402,12 +403,12 @@ class CustomTitleBar(QWidget):
     def contextMenuEvent(self, event: QContextMenuEvent):
         """Emit context menu signal for right-click on the title bar."""
         # Don't show context menu when right-clicking on buttons
-        widget = self.childAt(event.pos())
+        widget = self.childAt(event.position().toPoint())
         if isinstance(widget, (TitleBarButton, TitleBarMenuButton)):
             return
         if widget and isinstance(widget.parent(), (TitleBarButton, TitleBarMenuButton)):
             return
-        self.context_menu_requested.emit(event.globalPos())
+        self.context_menu_requested.emit(event.globalPosition().toPoint())
         event.accept()
 
 
@@ -556,7 +557,7 @@ class WindowResizeHandler(QObject):
     
     def _handle_mouse_move(self, event: QMouseEvent) -> bool:
         """Handle mouse move for resize cursor and resizing."""
-        global_pos = event.globalPos()
+        global_pos = event.globalPosition().toPoint()
 
         # Once a resize drag starts, keep resizing regardless of which widget is
         # currently under the cursor. This avoids edge-resize being interrupted
@@ -600,7 +601,7 @@ class WindowResizeHandler(QObject):
             return False
         
         # Check if clicked widget is a button - don't intercept button clicks
-        widget_at_pos = QApplication.widgetAt(event.globalPos())
+        widget_at_pos = QApplication.widgetAt(event.globalPosition().toPoint())
         if widget_at_pos is not None:
             # Let independent tool windows process their own mouse events.
             if widget_at_pos.window() is not self._window:
@@ -612,7 +613,7 @@ class WindowResizeHandler(QObject):
             if parent is not None and isinstance(parent, QPushButton):
                 return False
         
-        global_pos = event.globalPos()
+        global_pos = event.globalPosition().toPoint()
         edge = self._get_edge_from_global_pos(global_pos)
         
         if edge != ResizeGrip.EDGE_NONE:

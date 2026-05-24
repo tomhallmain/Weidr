@@ -497,7 +497,7 @@ class ClassifierActionModifyWindow(SmartDialog):
         ca.action = ClassifierActionType.get_action(
             self._action_combo.currentText()
         )
-        ca.action_modifier = self._action_modifier_edit.text()
+        ca.action_modifier = self._action_modifier_edit.text().strip()
 
         ca.image_classifier_selected_categories = [
             item.text() for item in self._ic_cat_list.selectedItems()

@@ -290,6 +290,41 @@ class ClassifierActionsManager:
         blur_callback=None,
         force: bool = False,
     ) -> Optional[ClassifierActionType]:
+        """Run active prevalidations for *media_path* while browsing *base_dir*.
+
+        Gating uses the app's current base directory (from *get_base_dir_func*), not
+        the parent folder of *media_path*. Recursive subdirectory listing only
+        changes which files appear in the browser; it does not treat each file's
+        directory as the effective base for profile or exclusion checks.
+
+        Relevant behavior today:
+
+        - **Directory profile:** If a prevalidation has a profile, it runs only when
+          ``base_dir`` is listed in ``profile.directories`` (exact path match).
+          Files under other folders are not skipped on that basis alone.
+
+        - **MOVE/COPY into current dir:** MOVE and COPY prevalidations whose target
+          (``action_modifier``) equals ``base_dir`` are skipped so files are not
+          moved or copied into the directory being browsed.
+
+        - **MOVE/COPY target exclusion:** Each MOVE and COPY prevalidation's target
+          directory is recorded in ``directories_to_exclude``. When the user sets
+          ``base_dir`` to one of those paths (e.g. a subdirectory that received files
+          from an earlier bulk or per-file run on the parent), this function returns
+          immediately and no prevalidations run for any media there. That is why
+          browsing inside a former move/copy target can appear to skip prevalidation
+          entirely.
+
+        - **Idempotent MOVE:** When a match fires but the file is already in the MOVE
+          target (``dirname(media_path) == target``), no file I/O runs. That MOVE
+          result is stored in ``prevalidated_cache`` and the file bucket (same as
+          cache-type actions), so later navigations skip re-running the classifier.
+
+        - **User override:** If *media_path* is present in
+          ``user_prevalidation_overrides``, the function returns ``None`` immediately
+          and no prevalidation runs. ``force=True`` bypasses this check (and the
+          cache) to unconditionally re-evaluate the file.
+        """
         # Lazy initialization - ensure prevalidations are initialized before first use
         if not ClassifierActionsManager._prevalidations_initialized:
             ClassifierActionsManager._prevalidations_post_init()
@@ -316,6 +351,7 @@ class ClassifierActionsManager:
                 return cached_action
 
         prevalidation_action = None
+        matched_prevalidation: Optional[Prevalidation] = None
         for prevalidation in ClassifierActionsManager.prevalidations:
             if prevalidation.is_active and prevalidation.can_run:
                 if prevalidation.is_move_action() and prevalidation.action_modifier == base_dir:
@@ -331,9 +367,12 @@ class ClassifierActionsManager:
                     base_directory=base_dir,
                 )
                 if prevalidation_action is not None:
+                    matched_prevalidation = prevalidation
                     break
 
-        if prevalidation_action is None or prevalidation_action.is_cache_type():
+        if ClassifierActionsManager._should_persist_prevalidation_cache(
+            prevalidation_action, matched_prevalidation, media_path
+        ):
             ClassifierActionsManager.prevalidated_cache[media_path] = prevalidation_action
             pv_sig = ClassifierActionsManager.get_prevalidation_signature()
             bucket.set((media_path,), prevalidation_action, pv_sig)
@@ -344,6 +383,24 @@ class ClassifierActionsManager:
             ClassifierActionsManager.prevalidated_cache.pop(media_path, None)
             bucket.clear()
         return prevalidation_action
+
+    @staticmethod
+    def _should_persist_prevalidation_cache(
+        action: Optional[ClassifierActionType],
+        matched_prevalidation: Optional[Prevalidation],
+        media_path: str,
+    ) -> bool:
+        if action is None or action.is_cache_type():
+            return True
+        if (
+            action == ClassifierActionType.MOVE
+            and matched_prevalidation is not None
+            and matched_prevalidation.action_modifier
+            and os.path.normpath(os.path.dirname(media_path))
+                == os.path.normpath(matched_prevalidation.action_modifier)
+        ):
+            return True
+        return False
     
     @staticmethod
     def get_profile_usage(profile_name: str) -> dict:

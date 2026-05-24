@@ -661,9 +661,8 @@ class ClassifierAction:
         base_directory: Optional[str] = None,
         resolved_category: Optional[str] = None,
     ) -> Optional[str]:
-        explicit_dir = (self.action_modifier or "").strip()
-        if explicit_dir:
-            return explicit_dir
+        if self.action_modifier:
+            return self.action_modifier
         if not self.is_move_action():
             return None
         category = resolved_category or self._resolve_classifier_target_category(image_path)
@@ -714,7 +713,11 @@ class ClassifierAction:
                             "Invalid move target directory for classifier action "
                             + self.name + ": " + target_directory + f" ({e})"
                         )
-                if os.path.normpath(os.path.dirname(image_path)) != os.path.normpath(target_directory):
+                already_at_target = (
+                    os.path.normpath(os.path.dirname(image_path))
+                    == os.path.normpath(target_directory)
+                )
+                if not already_at_target:
                     action_modifier_name = Utils.get_relative_dirpath(target_directory, levels=2)
                     action_type = ActionType.MOVE_FILE if self.action == ClassifierActionType.MOVE else ActionType.COPY_FILE
                     specific_message = _("Moving file: ") + os.path.basename(image_path) + " -> " + action_modifier_name
@@ -846,13 +849,12 @@ class ClassifierAction:
                 self._resolve_model_strategy_positive_categories()
         
         if self.is_move_action():
-            action_modifier = (self.action_modifier or "").strip()
-            if action_modifier and not os.path.isdir(action_modifier):
+            if self.action_modifier and not os.path.isdir(self.action_modifier):
                 raise Exception('Action modifier must be a valid directory')
-            if not action_modifier and not self.use_image_classifier:
+            if not self.action_modifier and not self.use_image_classifier:
                 raise Exception('Action modifier must be set when image classifier is disabled')
             if (
-                not action_modifier
+                not self.action_modifier
                 and self.use_image_classifier
                 and self.classification_mode == ImageClassifierClassificationMode.SELECTED_CATEGORIES
                 and not self.image_classifier_selected_categories

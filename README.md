@@ -90,7 +90,7 @@ The application includes a flexible prevalidation system that can automatically 
 <details>
 <summary>View Use Cases</summary>
 <ul>
-<li>Automatically skipping, hiding, or deleting unwanted media</li>
+<li>Automatically skipping, hiding, blurring or deleting unwanted media</li>
 <li>Moving or copying media to specific directories based on content</li>
 <li>Filtering media using CLIP embeddings, embedding prototypes, H5 image classifiers, PyTorch image classifiers, prompt string detection</li>
 <li>Setting up rules that apply to specific directories</li>
@@ -107,7 +107,7 @@ Prevalidation rules and classifier actions can be configured with:
 <li>Positive and negative text prompts shared across embedding and prompt validation</li>
 <li><strong>Embedding prototypes</strong>: Create prototype embeddings from directories of sample images, then compare images against these prototypes. Supports both positive and negative prototypes with configurable weighting (lambda) for fine-tuning similarity matching</li>
 <li>Custom thresholds for embedding-based matching</li>
-<li>Different actions (skip, hide, notify, move, copy, delete, add mark)</li>
+<li>Different actions (skip, hide, notify, move, copy, delete, add mark, blur)</li>
 <li>Directory-specific rules</li>
 <li>H5 model-based classification rules</li>
 <li>PyTorch model-based classification rules (supports .pth, .pt, .safetensors, and .bin formats)</li>

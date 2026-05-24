@@ -4,6 +4,7 @@ import os
 import pprint
 import re
 import sys
+from typing import Optional
 
 from PIL import Image
 
@@ -41,6 +42,7 @@ class ImageDataExtractor:
     COMFYUI_PROMPT_KEY = "prompt"
     A1111_PARAMS_KEY = "parameters"
     RELATED_IMAGE_KEY = "related_image"
+    SDR_ORIGINAL_POSITIVE_TAGS_KEY = "SDR_OriginalPositiveTags"
 
     def __init__(self):
         pass
@@ -378,6 +380,46 @@ class ImageDataExtractor:
         if not has_imported_sd_prompt_reader:
             raise Exception("Stable diffusion prompt reader failed to import. Please check log and config.json file.")
         return ImageDataReader(image_path)
+
+    def _read_top_level_metadata_string(self, info: dict, key: str) -> Optional[str]:
+        """Read a string value from PIL image ``info`` (top-level metadata key)."""
+        if not isinstance(info, dict) or key not in info:
+            return None
+        val = info[key]
+        if isinstance(val, bytes):
+            val = val.decode("utf-8", errors="replace")
+        if isinstance(val, str):
+            stripped = val.strip()
+            return stripped if stripped else None
+        return None
+
+    def extract_positive_prompt_for_rerun(self, image_path: str) -> tuple[str, str]:
+        """
+        Positive/negative strings for rerun-prompt editing and SD Runner requests.
+
+        Prefer ``SDR_OriginalPositiveTags`` from top-level image metadata when set;
+        otherwise use the same positive extraction as :meth:`extract_prompts_all_strategies`.
+        Negative prompt always uses the standard extraction path.
+        """
+        original_positive = None
+        try:
+            with Image.open(image_path) as img:
+                info = img.info
+            if isinstance(info, dict):
+                original_positive = self._read_top_level_metadata_string(
+                    info, ImageDataExtractor.SDR_ORIGINAL_POSITIVE_TAGS_KEY
+                )
+        except Exception as e:
+            logger.debug(f"Could not read {ImageDataExtractor.SDR_ORIGINAL_POSITIVE_TAGS_KEY}: {e}")
+
+        positive, negative = self.extract_prompts_all_strategies(image_path)
+        if original_positive is not None:
+            positive = original_positive
+        if positive is None:
+            positive = ""
+        if negative is None:
+            negative = ""
+        return positive, negative
 
     def _prompt_to_str_or_none(self, val):
         """Return a string or None from a library/extract result. Avoids returning dict/bytes to callers."""

@@ -105,7 +105,14 @@ class SDRunnerClient:
             except Exception as e:
                 logger.error(f"Error in worker thread: {e}")
 
-    def _run_internal(self, _type, base_image, append=False):
+    def _run_internal(
+        self,
+        _type,
+        base_image,
+        append=False,
+        positive_prompt=None,
+        negative_prompt=None,
+    ):
         """Internal method that performs the actual run operation."""
         if not isinstance(_type, ImageGenerationType):
             raise TypeError(f'{_type} is not a valid ImageGenerationType')
@@ -114,6 +121,10 @@ class SDRunnerClient:
         self.validate_connection()
         try:
             args = {'image': base_image, 'append': append}
+            if positive_prompt is not None:
+                args['positive_prompt'] = positive_prompt
+            if negative_prompt is not None:
+                args['negative_prompt'] = negative_prompt
             command  = {'command': 'run', 'type': _type.value, 'args': args}
             resp = self.send(command)
             if "error" in resp:
@@ -129,12 +140,26 @@ class SDRunnerClient:
                pass
             raise Exception(f'Failed to start run on SD Runner: {e}')
 
-    def run(self, _type, base_image, append=False):
+    def run(
+        self,
+        _type,
+        base_image,
+        append=False,
+        positive_prompt=None,
+        negative_prompt=None,
+    ):
         """Queue a run request and wait for it to complete."""
         self._start_worker()  # Lazy initialization
         result_container = {'done': False, 'result': None, 'exception': None}
         condition = threading.Condition()
-        self._request_queue.put(('run', (_type, base_image, append), result_container, condition))
+        self._request_queue.put(
+            (
+                'run',
+                (_type, base_image, append, positive_prompt, negative_prompt),
+                result_container,
+                condition,
+            )
+        )
         
         # Wait for completion
         with condition:

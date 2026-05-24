@@ -24,7 +24,7 @@ from compare.compare_args import CompareArgs
 from lib.debounce_qt import QtDebouncer
 from ui.auth.password_utils import require_password
 from utils.config import config
-from utils.constants import CompareMode, Mode, ProtectedActions, SortBy
+from utils.constants import CompareMode, ImageGenerationType, Mode, ProtectedActions, SortBy
 from utils.logging_setup import get_logger
 from utils.translations import I18N
 from utils.utils import Utils
@@ -463,6 +463,12 @@ class SearchController:
     # ==================================================================
     # Image generation
     # ==================================================================
+    def _prompt_for_redo_prompt_adjustment(self, media_path: str) -> Optional[tuple[str, str]]:
+        """Show the rerun prompt editor; returns ``(positive, negative)`` or ``None`` on cancel."""
+        from ui.image.rerun_prompt_adjustment_window_qt import RerunPromptAdjustmentWindow
+
+        return RerunPromptAdjustmentWindow.prompt_adjustment(self._app, media_path)
+
     def trigger_image_generation(self, event=None) -> None:
         """Open the image generation dialog."""
         from ui.image.media_details import MediaDetails
@@ -491,10 +497,20 @@ class SearchController:
         if _type is None:
             _type = MediaDetails.get_image_specific_generation_mode()
 
+        prompt_overrides = None
+        if _type == ImageGenerationType.REDO_PROMPT:
+            prompt_overrides = self._prompt_for_redo_prompt_adjustment(media_path)
+            if prompt_overrides is None:
+                return
+
         sd_client = SDRunnerClient()
 
         def _do_run() -> None:
-            sd_client.run(_type, media_path, append=modify_call)
+            run_kwargs = {"append": modify_call}
+            if prompt_overrides is not None:
+                run_kwargs["positive_prompt"] = prompt_overrides[0]
+                run_kwargs["negative_prompt"] = prompt_overrides[1]
+            sd_client.run(_type, media_path, **run_kwargs)
             MediaDetails.previous_image_generation_adapter_path = media_path
 
         worker = _CompareWorker(_do_run, [])

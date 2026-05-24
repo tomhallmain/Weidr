@@ -3,6 +3,7 @@ import os
 from typing import Optional
 
 from utils.config import config
+from utils.constants import FileActionKind
 from utils.utils import Utils
 from utils.app_info_cache import app_info_cache
 from utils.logging_setup import get_logger
@@ -205,6 +206,13 @@ class FileAction():
 
     def is_delete_action(self) -> bool:
         return self.action is _delete_file_sentinel
+
+    def action_kind(self) -> FileActionKind:
+        if self.is_delete_action():
+            return FileActionKind.DELETE
+        if self.is_move_action():
+            return FileActionKind.MOVE
+        return FileActionKind.COPY
 
     @property
     def relevant_files(self) -> list[str]:

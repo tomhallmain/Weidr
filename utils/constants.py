@@ -426,8 +426,15 @@ class CompareMediaType(Enum):
 MediaType = CompareMediaType
 
 
+class FileActionKind(Enum):
+    """The kind of a persisted file action history entry."""
+    MOVE = "move"
+    COPY = "copy"
+    DELETE = "delete"
+
+
 class ActionType(Enum):
-    """Enumeration of supported action types for notifications."""
+    """Enumeration of supported action types."""
     MOVE_FILE = "move_file"
     COPY_FILE = "copy_file"
     REMOVE_FILE = "remove_file"

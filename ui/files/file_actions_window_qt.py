@@ -19,7 +19,7 @@ from typing import Callable, Optional
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QApplication, QFrame, QGridLayout, QHBoxLayout, QLabel,
+    QApplication, QComboBox, QFrame, QGridLayout, QHBoxLayout, QLabel,
     QPushButton, QScrollArea, QVBoxLayout, QWidget,
 )
 
@@ -29,6 +29,7 @@ from ui.app_style import AppStyle
 from utils.app_actions import AppActions
 from utils.app_info_cache import app_info_cache
 from utils.config import config
+from utils.constants import FileActionKind
 from utils.logging_setup import get_logger
 from utils.translations import I18N
 from utils.utils import Utils
@@ -85,6 +86,7 @@ class FileActionsWindow(SmartWindow):
         self._filtered_history: list[FileAction] = FileAction.action_history[:]
         self._show_today_only: bool = False
         self._visible_count: int = self.INITIAL_PAGE_SIZE
+        self._action_type_filter: FileActionKind | None = None  # None means "all"
 
         root = QVBoxLayout(self)
         root.setContentsMargins(10, 10, 10, 10)
@@ -98,6 +100,17 @@ class FileActionsWindow(SmartWindow):
         )
         header.addWidget(title_lbl)
         header.addStretch()
+
+        self._type_combo = QComboBox()
+        for label, kind in [
+            (_("All"), None),
+            (_("Move"), FileActionKind.MOVE),
+            (_("Copy"), FileActionKind.COPY),
+            (_("Delete"), FileActionKind.DELETE),
+        ]:
+            self._type_combo.addItem(label, kind)
+        self._type_combo.currentIndexChanged.connect(self._on_type_filter_changed)
+        header.addWidget(self._type_combo)
 
         search_btn = QPushButton(_("Search Media"))
         # clicked emits bool(checked); ignore so it is never passed as media_path.
@@ -162,6 +175,24 @@ class FileActionsWindow(SmartWindow):
         # Action rows (paginated)
         self._build_action_rows()
 
+        # Empty-state hint when filters exclude everything
+        if not self._filtered_history and FileAction.action_history:
+            kind_labels = {
+                FileActionKind.MOVE: _("moves"),
+                FileActionKind.COPY: _("copies"),
+                FileActionKind.DELETE: _("deletes"),
+            }
+            if self._action_type_filter is not None and not self._filter_text and not self._show_today_only:
+                msg = _("No {0} in history.").format(kind_labels[self._action_type_filter])
+            else:
+                msg = _("No actions match the current filter.")
+            hint = QLabel(msg)
+            hint.setStyleSheet(
+                f"color: {AppStyle.FG_COLOR}; font-style: italic; padding: 8px;"
+            )
+            hint.setAlignment(Qt.AlignCenter)
+            self._scroll_layout.addWidget(hint)
+
         # "Load More" button
         remaining = len(self._filtered_history) - self._visible_count
         if remaining > 0:
@@ -204,11 +235,17 @@ class FileActionsWindow(SmartWindow):
         grid.setColumnStretch(4, 1)
 
         # Title + toggle button (row 0)
-        title_text = (
-            _("Today's File Actions")
-            if self._show_today_only
-            else _("File Action Statistics")
-        )
+        kind_stat_labels = {
+            FileActionKind.MOVE: _("Move Statistics"),
+            FileActionKind.COPY: _("Copy Statistics"),
+            FileActionKind.DELETE: _("Delete Statistics"),
+        }
+        if self._show_today_only:
+            title_text = _("Today's File Actions")
+        elif self._action_type_filter is not None:
+            title_text = kind_stat_labels[self._action_type_filter]
+        else:
+            title_text = _("File Action Statistics")
         title = QLabel(title_text)
         title.setStyleSheet(f"font-weight: bold; color: {AppStyle.FG_COLOR};")
         title.setAlignment(Qt.AlignCenter)
@@ -516,6 +553,86 @@ class FileActionsWindow(SmartWindow):
             self._app_actions.toast(f"Copied filename: {filename}")
 
     # ==================================================================
+    # Type filter
+    # ==================================================================
+    def _on_type_filter_changed(self, _index: int) -> None:
+        self._action_type_filter = self._type_combo.currentData()
+        self._update_filter_label()
+        self._refresh_filtered_history()
+
+    def _filter_by_action_type(self, actions: list[FileAction]) -> list[FileAction]:
+        kind = self._action_type_filter
+        if kind is None:
+            return actions
+        return [a for a in actions if a.action_kind() == kind]
+
+    # ==================================================================
+    # Unified filter pipeline
+    # ==================================================================
+    def _refresh_filtered_history(self) -> None:
+        actions = FileAction.action_history[:]
+        actions = self._filter_by_action_type(actions)
+        if self._show_today_only:
+            actions = [a for a in actions if a.is_today()]
+        ft = self._filter_text.strip().lower()
+        if ft:
+            actions = self._filter_by_directory_text(actions, ft)
+        self._filtered_history = actions
+        self._visible_count = self.INITIAL_PAGE_SIZE
+        self._rebuild_content()
+
+    def _filter_by_directory_text(
+        self, actions: list[FileAction], ft: str
+    ) -> list[FileAction]:
+        temp: list[FileAction] = []
+        # Pass 1: directory basename exact match
+        for action in actions:
+            basename = os.path.basename(os.path.normpath(action.target))
+            if basename.lower() == ft:
+                temp.append(action)
+        # Pass 2: directory basename starts-with
+        for action in actions:
+            if not FileAction._is_matching_action_in_list(temp, action):
+                basename = os.path.basename(os.path.normpath(action.target))
+                if basename.lower().startswith(ft):
+                    temp.append(action)
+        # Pass 3: parent directory starts-with
+        for action in actions:
+            if not FileAction._is_matching_action_in_list(temp, action):
+                dirname = os.path.basename(
+                    os.path.dirname(os.path.normpath(action.target))
+                )
+                if dirname and dirname.lower().startswith(ft):
+                    temp.append(action)
+        # Pass 4: substring match in basename
+        for action in actions:
+            if not FileAction._is_matching_action_in_list(temp, action):
+                basename = os.path.basename(os.path.normpath(action.target))
+                if basename and (
+                    f" {ft}" in basename.lower()
+                    or f"_{ft}" in basename.lower()
+                ):
+                    temp.append(action)
+        return temp
+
+    def _update_filter_label(self) -> None:
+        parts = []
+        if self._filter_text:
+            parts.append(self._filter_text)
+        if self._action_type_filter is not None:
+            kind_labels = {
+                FileActionKind.MOVE: _("moves only"),
+                FileActionKind.COPY: _("copies only"),
+                FileActionKind.DELETE: _("deletes only"),
+            }
+            parts.append(kind_labels[self._action_type_filter])
+        if parts:
+            self._filter_label.setText(_("Filter: {}").format(" — ".join(parts)))
+            self._filter_label.setVisible(True)
+        else:
+            self._filter_label.setVisible(False)
+
+    # ==================================================================
     # Load More / Clear / Toggle
     # ==================================================================
     def _load_more(self) -> None:
@@ -525,12 +642,16 @@ class FileActionsWindow(SmartWindow):
     def _clear_action_history(self) -> None:
         FileAction.action_history.clear()
         self._filtered_history.clear()
+        self._action_type_filter = None
+        self._type_combo.setCurrentIndex(0)
+        self._filter_text = ""
+        self._update_filter_label()
         self._visible_count = self.INITIAL_PAGE_SIZE
         self._rebuild_content()
 
     def _toggle_statistics_view(self) -> None:
         self._show_today_only = not self._show_today_only
-        self._rebuild_content()
+        self._refresh_filtered_history()
 
     # ==================================================================
     # Search for active media
@@ -571,7 +692,7 @@ class FileActionsWindow(SmartWindow):
                         temp.append(action)
                         break
 
-        self._filtered_history = temp[:]
+        self._filtered_history = self._filter_by_action_type(temp)
         self._visible_count = self.INITIAL_PAGE_SIZE
         self._rebuild_content()
 
@@ -579,68 +700,8 @@ class FileActionsWindow(SmartWindow):
     # Filter by typing
     # ==================================================================
     def _apply_filter(self) -> None:
-        # Update indicator
-        if self._filter_text:
-            self._filter_label.setText(_("Filter: {}").format(self._filter_text))
-            self._filter_label.setVisible(True)
-        else:
-            self._filter_label.setVisible(False)
-
-        ft = self._filter_text.strip().lower()
-
-        if not ft:
-            if self._show_today_only:
-                self._filtered_history = [
-                    a for a in FileAction.action_history if a.is_today()
-                ]
-            else:
-                self._filtered_history = FileAction.action_history[:]
-        else:
-            if self._show_today_only:
-                actions = [
-                    a for a in FileAction.action_history if a.is_today()
-                ]
-            else:
-                actions = FileAction.action_history[:]
-
-            temp: list[FileAction] = []
-
-            # Pass 1: directory basename exact match
-            for action in actions:
-                basename = os.path.basename(os.path.normpath(action.target))
-                if basename.lower() == ft:
-                    temp.append(action)
-
-            # Pass 2: directory basename starts-with
-            for action in actions:
-                if not FileAction._is_matching_action_in_list(temp, action):
-                    basename = os.path.basename(os.path.normpath(action.target))
-                    if basename.lower().startswith(ft):
-                        temp.append(action)
-
-            # Pass 3: parent directory starts-with
-            for action in actions:
-                if not FileAction._is_matching_action_in_list(temp, action):
-                    dirname = os.path.basename(
-                        os.path.dirname(os.path.normpath(action.target))
-                    )
-                    if dirname and dirname.lower().startswith(ft):
-                        temp.append(action)
-
-            # Pass 4: substring match in basename
-            for action in actions:
-                if not FileAction._is_matching_action_in_list(temp, action):
-                    basename = os.path.basename(os.path.normpath(action.target))
-                    if basename and (
-                        f" {ft}" in basename.lower()
-                        or f"_{ft}" in basename.lower()
-                    ):
-                        temp.append(action)
-
-            self._filtered_history = temp[:]
-
-        self._visible_count = self.INITIAL_PAGE_SIZE
-        self._rebuild_content()
+        self._update_filter_label()
+        self._refresh_filtered_history()
 
     # ==================================================================
     # Enter-key action dispatch

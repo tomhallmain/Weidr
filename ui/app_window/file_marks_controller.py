@@ -23,7 +23,7 @@ from ui.auth.password_utils import require_password
 from utils.config import config
 from utils.constants import Mode, ProtectedActions
 from utils.logging_setup import get_logger
-from utils.translations import I18N
+from utils.translations import I18N, marks_transfer_running_warn
 from utils.utils import ModifierKey, Utils
 
 if TYPE_CHECKING:
@@ -62,6 +62,10 @@ class FileMarksController:
         self, event=None, show_toast: bool = True, filepath: Optional[str] = None
     ) -> None:
         """Toggle a mark on the current (or specified) file."""
+        if not MarkedFiles.guard_mark_mutation(
+            self._app.app_actions, _("Add or remove a mark")
+        ):
+            return
         if filepath is None:
             filepath = self._app.media_path
         if self._app.delete_lock:
@@ -95,6 +99,10 @@ class FileMarksController:
         In BROWSE mode, selects files between the last mark and the current media file.
         In compare modes, Alt selects all matches; otherwise selects series.
         """
+        if not MarkedFiles.guard_mark_mutation(
+            self._app.app_actions, _("Add marks from group")
+        ):
+            return
         if self._app.mode == Mode.BROWSE:
             if self._app.media_path in MarkedFiles.file_marks:
                 return
@@ -178,11 +186,18 @@ class FileMarksController:
                     kind="error",
                 )
                 return
-            MarkedFiles.add_mark_if_not_present(filepath)
+            if not MarkedFiles.add_mark_if_not_present(
+                filepath, app_actions=self._app.app_actions
+            ):
+                return
         else:
             filepath = self._nav.get_active_media_filepath()
 
         if len(override_marks) > 0:
+            if not MarkedFiles.guard_mark_mutation(
+                self._app.app_actions, _("Add marks")
+            ):
+                return
             logger.debug(_("Including marks: {0}").format(override_marks))
             MarkedFiles.file_marks.extend(override_marks)
 
@@ -278,6 +293,11 @@ class FileMarksController:
     def run_file_action_set(self, event=None) -> None:
         """Execute the currently selected file action set on the current file."""
         from files.file_action_set import FileActionSets
+        if MarkedFiles.is_transfer_running():
+            self._app.app_actions.warn(
+                marks_transfer_running_warn(_("Run file action set"))
+            )
+            return
         selected = FileActionSets.get_selected_actions()
         if not selected:
             self._app.app_actions.warn(_("No file action set actions selected."))
@@ -378,6 +398,10 @@ class FileMarksController:
             media_to_use, base_dir, self._app.app_actions, force_refresh=True
         )
         if downstream_related_images is not None:
+            if not MarkedFiles.guard_mark_mutation(
+                self._app.app_actions, _("Set marks from related media")
+            ):
+                return
             MarkedFiles.file_marks = downstream_related_images
             self._app.notification_ctrl.toast(
                 _("{0} file marks set").format(len(downstream_related_images))

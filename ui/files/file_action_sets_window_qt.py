@@ -473,6 +473,13 @@ class FileActionSetsWindow(SmartWindow):
     @require_password(ProtectedActions.RUN_FILE_ACTIONS)
     def _execute(self) -> None:
         from files.marked_files import MarkedFiles
+        from utils.translations import marks_transfer_running_warn
+
+        if MarkedFiles.is_transfer_running():
+            self._app_actions.warn(
+                marks_transfer_running_warn(_("run file action set"))
+            )
+            return
 
         selected = FileActionSets.get_selected_actions()
         if not selected:

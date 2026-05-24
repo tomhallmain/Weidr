@@ -9,7 +9,7 @@ from utils.app_info_cache import app_info_cache
 from utils.config import config
 from utils.constants import ActionType
 from utils.logging_setup import get_logger
-from utils.translations import I18N, compare_running_warn
+from utils.translations import I18N, compare_running_warn, marks_transfer_running_warn
 from utils.utils import Utils
 
 _ = I18N._
@@ -38,6 +38,27 @@ class MarkedFiles():
     # Per-target preference: True means this target requires GUI mode
     # (prevents accidental non-GUI quick targeting).
     mark_target_require_gui = {}
+
+    @staticmethod
+    def is_transfer_running() -> bool:
+        """True while a marks move/copy transfer is in progress."""
+        return MarkedFiles.is_performing_action
+
+    @staticmethod
+    def guard_mark_mutation(app_actions=None, action_label: Optional[str] = None) -> bool:
+        """
+        Return True if mark-list mutations are allowed.
+
+        While a transfer runs, mutations are blocked so the snapshot used for
+        I/O cannot race with keyboard shortcuts or other windows.
+        """
+        if not MarkedFiles.is_performing_action:
+            return True
+        if app_actions is not None:
+            app_actions.warn(
+                marks_transfer_running_warn(action_label or _("change marks"))
+            )
+        return False
 
     @staticmethod
     def load_target_dirs():
@@ -116,11 +137,13 @@ class MarkedFiles():
             del MarkedFiles.mark_target_require_gui[normalized]
 
     @staticmethod
-    def add_mark_if_not_present(filepath):
+    def add_mark_if_not_present(filepath, app_actions=None):
         """
         Add a file to the marks list if it's not already present.
         Returns True if the file was added, False if it was already present.
         """
+        if not MarkedFiles.guard_mark_mutation(app_actions, _("add mark")):
+            return False
         if filepath not in MarkedFiles.file_marks:
             MarkedFiles.file_marks.append(filepath)
             return True
@@ -131,9 +154,11 @@ class MarkedFiles():
         MarkedFiles.delete_lock = delete_lock
 
     @staticmethod
-    def clear_file_marks(toast_callback):
+    def clear_file_marks(app_actions) -> None:
+        if not MarkedFiles.guard_mark_mutation(app_actions, _("clear marks")):
+            return
         MarkedFiles.file_marks = []
-        toast_callback(_("Marks cleared."))
+        app_actions.toast(_("Marks cleared."))
 
     @staticmethod
     def _paths_match(path_a: Optional[str], path_b: Optional[str]) -> bool:
@@ -149,11 +174,19 @@ class MarkedFiles():
         return norm_a == norm_b
 
     @staticmethod
-    def set_current_marks_from_previous(toast_callback):
+    def set_current_marks_from_previous(app_actions) -> None:
+        if not MarkedFiles.guard_mark_mutation(
+            app_actions, _("restore marks from previous")
+        ):
+            return
         for f in MarkedFiles.previous_marks:
             if f not in MarkedFiles.file_marks and os.path.exists(f):
                 MarkedFiles.file_marks.append(f)
-        toast_callback(_("Set current marks from previous.") + "\n" + _("Total set: {0}").format(len(MarkedFiles.file_marks)))
+        app_actions.toast(
+            _("Set current marks from previous.")
+            + "\n"
+            + _("Total set: {0}").format(len(MarkedFiles.file_marks))
+        )
 
     @staticmethod
     def run_previous_action(app_actions, current_media=None, ui_class=None, progress_callback=None):
@@ -258,12 +291,54 @@ class MarkedFiles():
             app_actions.warn(compare_running_warn(_("move files")))
             return False, False
 
+        if MarkedFiles.is_performing_action:
+            if app_actions is not None:
+                app_actions.warn(
+                    marks_transfer_running_warn(_("move or copy marked files"))
+                )
+            return False, False
+
+        files_to_move = list(files) if files is not None else list(MarkedFiles.file_marks)
+
         MarkedFiles.is_performing_action = True
-        some_files_already_present = False
+        MarkedFiles.is_cancelled_action = False
         action_part1 = _("Moving") if is_moving else _("Copying")
         MarkedFiles.previous_marks.clear()
-        files_to_move = MarkedFiles.file_marks if files is None else files
-        action = FileAction(move_func, target_dir, MarkedFiles.file_marks)
+        action = FileAction(move_func, target_dir, files_to_move)
+        try:
+            return MarkedFiles._move_marks_to_dir_impl(
+                app_actions=app_actions,
+                target_dir=target_dir,
+                move_func=move_func,
+                files_to_move=files_to_move,
+                single_image=single_image,
+                current_media=current_media,
+                get_base_dir_callback=get_base_dir_callback,
+                get_target_dir_callback=get_target_dir_callback,
+                progress_callback=progress_callback,
+                is_moving=is_moving,
+                action=action,
+                action_part1=action_part1,
+            )
+        finally:
+            MarkedFiles.is_performing_action = False
+
+    @staticmethod
+    def _move_marks_to_dir_impl(
+        app_actions,
+        target_dir,
+        move_func,
+        files_to_move,
+        single_image,
+        current_media,
+        get_base_dir_callback,
+        get_target_dir_callback,
+        progress_callback,
+        is_moving,
+        action,
+        action_part1,
+    ) -> Tuple[bool, bool]:
+        some_files_already_present = False
         if len(files_to_move) > 1:
             logger.warning(f"{action_part1} {len(files_to_move)} files to directory: {target_dir}")
         exceptions = {}
@@ -319,10 +394,17 @@ class MarkedFiles():
                 progress_callback(files_done, total_files)
         if MarkedFiles.is_cancelled_action:
             MarkedFiles.is_cancelled_action = False
-            MarkedFiles.is_performing_action = False
             logger.warning(f"Cancelled {action_part1} to {target_dir}")
             if len(MarkedFiles.previous_marks) > 0:
-                MarkedFiles.undo_move_marks(app_actions.get_base_dir(), app_actions, get_base_dir_callback, get_target_dir_callback)
+                # Release session lock before undo; outer finally has not run yet and
+                # undo_move_marks treats is_performing_action as "cancel in-flight".
+                MarkedFiles.is_performing_action = False
+                MarkedFiles.undo_move_marks(
+                    app_actions.get_base_dir(),
+                    app_actions,
+                    get_base_dir_callback,
+                    get_target_dir_callback,
+                )
             return False, False
         if len(exceptions) < len(files_to_move):
             FileAction.update_history(action)
@@ -335,7 +417,6 @@ class MarkedFiles():
             logger.warning(message.replace("\n", " "))
             app_actions.title_notify(message, base_message=target_dir_name, action_type=action_type)
             MarkedFiles.delete_lock = False
-        MarkedFiles.file_marks.clear()
         exceptions_present = len(exceptions) > 0
         if exceptions_present:
             action_part3 = "move" if is_moving else "copy"
@@ -348,9 +429,6 @@ class MarkedFiles():
                 target_filepath = exc_tuple[1]
                 logger.error(error_msg)
                 if marked_file not in invalid_files:
-                    if not config.clear_marks_with_errors_after_move and not single_image:
-                        # Just in case some of them failed to move for whatever reason.
-                        MarkedFiles.file_marks.append(marked_file)
                     if error_msg.startswith("File already exists"):
                         if Utils.calculate_hash(marked_file) == Utils.calculate_hash(target_filepath):
                             matching_files = True
@@ -410,7 +488,9 @@ class MarkedFiles():
                 if names_are_short:
                     warning += "\n" + _("WARNING: Short filenames.")
                 app_actions.warn(warning)
-        MarkedFiles.is_performing_action = False
+        MarkedFiles._apply_file_marks_after_transfer(
+            files_to_move, exceptions, invalid_files, single_image
+        )
         if len(MarkedFiles.previous_marks) > 0:
             MarkedFiles.last_set_target_dir = target_dir
             if is_moving:
@@ -420,6 +500,22 @@ class MarkedFiles():
             if not exceptions_present:
                 app_actions.refocus()
         return some_files_already_present, exceptions_present
+
+    @staticmethod
+    def _apply_file_marks_after_transfer(
+        files_to_move: list,
+        exceptions: dict,
+        invalid_files: list,
+        single_image: bool,
+    ) -> None:
+        """Clear marks for the transferred snapshot and re-add paths that failed to move/copy."""
+        MarkedFiles.file_marks.clear()
+        if not config.clear_marks_with_errors_after_move and not single_image:
+            for marked_file in files_to_move:
+                if marked_file in exceptions and marked_file not in invalid_files:
+                    MarkedFiles.file_marks.append(marked_file)
+        if MarkedFiles.mark_cursor >= len(MarkedFiles.file_marks):
+            MarkedFiles.mark_cursor = max(-1, len(MarkedFiles.file_marks) - 1)
 
     @staticmethod
     def undo_move_marks(base_dir, app_actions, get_base_dir_callback=None, get_target_dir_callback=None):
@@ -494,7 +590,6 @@ class MarkedFiles():
         """
         Check if the marked files are in the target directory.
         """
-        MarkedFiles.is_performing_action = True
         if len(MarkedFiles.file_marks) > 1:
             logger.info(f"Checking if {len(MarkedFiles.file_marks)} files are in directory: {target_dir}")
         found_files = []
@@ -551,6 +646,8 @@ class MarkedFiles():
 
     @staticmethod
     def remove_marks_for_base_dir(base_dir, app_actions):
+        if not MarkedFiles.guard_mark_mutation(app_actions, _("remove marks for directory")):
+            return
         if len(MarkedFiles.file_marks) > 0 and base_dir and base_dir != "":
             removed_count = 0
             i = 0

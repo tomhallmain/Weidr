@@ -229,7 +229,7 @@ class KeyBindingManager:
         self._bind("Shift+M", app.file_marks_ctrl.add_or_remove_mark)
         self._bind("Shift+N", app.file_marks_ctrl.add_all_marks_from_last_or_current_group)
         self._bind("Shift+G", app.file_marks_ctrl.go_to_mark)
-        self._bind("Shift+C", lambda: MarkedFiles.clear_file_marks(app.notification_ctrl.toast))
+        self._bind("Shift+C", lambda: MarkedFiles.clear_file_marks(app.app_actions))
         self._bind("Ctrl+C", app.file_marks_ctrl.copy_marks_list)
 
         # Digit keys (0-9) for hotkey marks actions.
@@ -299,7 +299,7 @@ class KeyBindingManager:
         self._bind("Ctrl+Shift+T", app.file_marks_ctrl.run_file_action_set, guarded=False)
         self._bind(
             "Ctrl+D",
-            lambda: MarkedFiles.set_current_marks_from_previous(app.notification_ctrl.toast),
+            lambda: MarkedFiles.set_current_marks_from_previous(app.app_actions),
             guarded=False,
         )
         self._bind("Ctrl+Z", app.file_marks_ctrl.revert_last_marks_change, guarded=False)

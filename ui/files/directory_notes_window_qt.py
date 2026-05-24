@@ -471,6 +471,11 @@ class DirectoryNotesWindow(SmartDialog):
             if not replace:
                 return
 
+        if not MarkedFiles.guard_mark_mutation(
+            self._app_actions, _("set marks from directory notes")
+        ):
+            return
+
         MarkedFiles.file_marks = list(marked_files)
         MarkedFiles.mark_cursor = -1
         self._app_actions.toast(

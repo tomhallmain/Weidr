@@ -17,7 +17,7 @@ from PySide6.QtWidgets import QMenu, QVBoxLayout, QWidget
 
 from lib.multi_display_qt import SmartWindow
 from ui.app_window.media_frame import MediaFrame
-from ui.files.marked_file_mover_qt import MarkedFiles
+from files.marked_files import MarkedFiles
 from utils.config import config
 from utils.translations import I18N
 from utils.utils import Utils
@@ -141,10 +141,20 @@ class TempMediaWindow(SmartWindow):
         )
         self.clear_media()
 
+    def _ensure_media_marked_for_quick_action(self) -> bool:
+        """Ensure current media is in marks; return False only if transfer guard blocks."""
+        if not MarkedFiles.guard_mark_mutation(self._app_actions, _("add mark")):
+            return False
+        MarkedFiles.add_mark_if_not_present(
+            self._media_path, app_actions=self._app_actions
+        )
+        return True
+
     def _run_previous_marks_action(self) -> None:
         if not self._require_media():
             return
-        MarkedFiles.file_marks.append(self._media_path)
+        if not self._ensure_media_marked_for_quick_action():
+            return
         _, exceptions_present = MarkedFiles.run_previous_action(
             self._app_actions
         )
@@ -154,7 +164,8 @@ class TempMediaWindow(SmartWindow):
     def _run_penultimate_marks_action(self) -> None:
         if not self._require_media():
             return
-        MarkedFiles.file_marks.append(self._media_path)
+        if not self._ensure_media_marked_for_quick_action():
+            return
         _, exceptions_present = MarkedFiles.run_penultimate_action(
             self._app_actions
         )
@@ -164,7 +175,8 @@ class TempMediaWindow(SmartWindow):
     def _run_permanent_marks_action(self) -> None:
         if not self._require_media():
             return
-        MarkedFiles.file_marks.append(self._media_path)
+        if not self._ensure_media_marked_for_quick_action():
+            return
         _, exceptions_present = MarkedFiles.run_permanent_action(
             self._app_actions
         )

@@ -221,7 +221,7 @@ class CompareWrapper:
         loop.exec()
         app_actions.stop_loading_spinner()
         for path in deferred_marks:
-            MarkedFiles.add_mark_if_not_present(path)
+            MarkedFiles.add_mark_if_not_present(path, app_actions=app_actions)
         return result[0]
 
     def find_next_unrelated_media(self, file_browser, forward=True):

@@ -1,70 +1,21 @@
 """
 UI integration tests for the main AppWindow.
 
-Covers:
-  - Window construction and initial state
-  - Sidebar widget presence and initial values
-  - set_base_dir with a real temp directory
-  - Arrow-key and Home/End navigation between files
+Covers construction, sidebar, set_base_dir, and keyboard navigation.
+See also: test_search_controller, test_slideshow, test_masonry_view,
+test_window_launcher.
 """
 
 import io
 import os
 import pytest
 
-from PIL import Image
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
 from ui.app_window.app_window import AppWindow
 from utils.constants import Mode, SortBy
 from utils.config import config
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _make_png(path: str, color: tuple = (255, 0, 0)) -> None:
-    """Write a minimal 10×10 RGB PNG to *path*."""
-    img = Image.new("RGB", (10, 10), color)
-    img.save(path, format="PNG")
-
-
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
-@pytest.fixture
-def media_dir(tmp_path):
-    """Temp directory containing three small PNG files, alphabetically named."""
-    for i, color in enumerate([(255, 0, 0), (0, 255, 0), (0, 0, 255)], start=1):
-        _make_png(str(tmp_path / f"img{i:02d}.png"), color)
-    return str(tmp_path)
-
-
-@pytest.fixture
-def window(qtbot):
-    """A fresh AppWindow with no initial directory."""
-    win = AppWindow()
-    qtbot.addWidget(win)
-    win.show()
-    qtbot.waitExposed(win)
-    yield win
-    win.on_closing()
-
-
-@pytest.fixture
-def window_with_dir(qtbot, media_dir):
-    """AppWindow with *media_dir* pre-loaded."""
-    win = AppWindow()
-    qtbot.addWidget(win)
-    win.show()
-    qtbot.waitExposed(win)
-    win.set_base_dir(media_dir)
-    qtbot.waitUntil(lambda: win.base_dir == media_dir, timeout=2000)
-    yield win, media_dir
-    win.on_closing()
 
 
 # ---------------------------------------------------------------------------
@@ -118,7 +69,7 @@ class TestSidebarWidgets:
         assert cb.isChecked() == config.search_only_return_closest
 
     def test_search_image_entry_exists(self, window):
-        assert window.sidebar_panel.search_img_path_box is not None
+        assert window.sidebar_panel.search_media_path_box is not None
 
     def test_search_text_entry_exists(self, window):
         assert window.sidebar_panel.search_text_box is not None
@@ -135,7 +86,7 @@ class TestSetBaseDir:
 
     def test_set_base_dir_populates_file_browser(self, window_with_dir):
         win, _ = window_with_dir
-        assert win.file_browser.get_number_of_files() == 3
+        assert win.file_browser.count() == 3
 
     def test_set_base_dir_invalid_path_ignored(self, window):
         window.set_base_dir("/this/path/does/not/exist")
@@ -156,46 +107,46 @@ class TestSetBaseDir:
 class TestNavigation:
     def test_first_file_shown_after_set_dir(self, window_with_dir):
         win, _ = window_with_dir
-        assert win.img_path is not None
-        assert win.img_path.endswith(".png")
+        assert win.media_path is not None
+        assert win.media_path.endswith(".png")
 
     def test_right_arrow_advances_to_next_file(self, window_with_dir, qtbot):
         win, _ = window_with_dir
-        first = win.img_path
+        first = win.media_path
         qtbot.keyClick(win, Qt.Key.Key_Right)
-        qtbot.waitUntil(lambda: win.img_path != first, timeout=2000)
-        assert win.img_path != first
+        qtbot.waitUntil(lambda: win.media_path != first, timeout=2000)
+        assert win.media_path != first
 
     def test_left_arrow_goes_back(self, window_with_dir, qtbot):
         win, _ = window_with_dir
         # Move forward first
         qtbot.keyClick(win, Qt.Key.Key_Right)
         qtbot.waitUntil(
-            lambda: win.img_path is not None and win.img_path.endswith("img02.png"),
+            lambda: win.media_path is not None and win.media_path.endswith("img02.png"),
             timeout=2000,
         )
-        second = win.img_path
+        second = win.media_path
         qtbot.keyClick(win, Qt.Key.Key_Left)
-        qtbot.waitUntil(lambda: win.img_path != second, timeout=2000)
-        assert win.img_path != second
+        qtbot.waitUntil(lambda: win.media_path != second, timeout=2000)
+        assert win.media_path != second
 
     def test_home_key_goes_to_first_file(self, window_with_dir, qtbot):
         win, _ = window_with_dir
         # Advance a step first
         qtbot.keyClick(win, Qt.Key.Key_Right)
-        qtbot.waitUntil(lambda: win.img_path is not None and "img02" in win.img_path, timeout=2000)
+        qtbot.waitUntil(lambda: win.media_path is not None and "img02" in win.media_path, timeout=2000)
         qtbot.keyClick(win, Qt.Key.Key_Home)
-        qtbot.waitUntil(lambda: win.img_path is not None and "img01" in win.img_path, timeout=2000)
+        qtbot.waitUntil(lambda: win.media_path is not None and "img01" in win.media_path, timeout=2000)
 
     def test_end_key_goes_to_last_file(self, window_with_dir, qtbot):
         win, _ = window_with_dir
         qtbot.keyClick(win, Qt.Key.Key_End)
-        qtbot.waitUntil(lambda: win.img_path is not None and "img03" in win.img_path, timeout=2000)
+        qtbot.waitUntil(lambda: win.media_path is not None and "img03" in win.media_path, timeout=2000)
 
     def test_navigation_wraps_forward(self, window_with_dir, qtbot):
         """Right-arrow past the last file should wrap to the first."""
         win, _ = window_with_dir
         qtbot.keyClick(win, Qt.Key.Key_End)
-        qtbot.waitUntil(lambda: win.img_path is not None and "img03" in win.img_path, timeout=2000)
+        qtbot.waitUntil(lambda: win.media_path is not None and "img03" in win.media_path, timeout=2000)
         qtbot.keyClick(win, Qt.Key.Key_Right)
-        qtbot.waitUntil(lambda: win.img_path is not None and "img01" in win.img_path, timeout=2000)
+        qtbot.waitUntil(lambda: win.media_path is not None and "img01" in win.media_path, timeout=2000)

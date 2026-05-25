@@ -13,6 +13,25 @@ import shutil
 import sys
 import tempfile
 
+# ---------------------------------------------------------------------------
+# Manual / prospective scripts that live in tests/ but are NOT pytest suites.
+# Exclude them from collection so `pytest tests/` never accidentally runs them.
+#
+# test_notifications.py      — uses notification_manager as an undefined fixture;
+#                              has 10+ second time.sleep() calls; run via __main__
+# test_gegl_operations.py    — requires GIMP 3 + a CLI image path argument
+# test_gimp_gegl_direct.py   — requires GIMP 3; invokes it via raw subprocess
+# test_compare_embedding_matrix.py — calls input() (blocks on stdin); reads from
+#                              a hardcoded user path; imports tests.analysis
+# ---------------------------------------------------------------------------
+_here = os.path.dirname(os.path.abspath(__file__))
+collect_ignore = [
+    os.path.join(_here, "test_notifications.py"),
+    os.path.join(_here, "test_gegl_operations.py"),
+    os.path.join(_here, "test_gimp_gegl_direct.py"),
+    os.path.join(_here, "test_compare_embedding_matrix.py"),
+]
+
 # Ensure the project root is on sys.path so that app packages (ui/, utils/,
 # etc.) are importable regardless of which directory pytest is invoked from.
 _project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -50,8 +69,84 @@ def isolated_singletons(tmp_path, monkeypatch):
     import utils.app_info_cache as aic
     import utils.config as cfg
 
-    monkeypatch.setattr(aic, "app_info_cache", aic.AppInfoCache())
+    new_cache = aic.AppInfoCache()
+    monkeypatch.setattr(aic, "app_info_cache", new_cache)
+
+    # cache_controller.py holds a module-level `from utils.app_info_cache import
+    # app_info_cache` that bypasses the monkeypatch above.  Patch it directly so
+    # AppWindow.__init__ reads from the fresh per-test cache, not a stale one.
+    try:
+        import ui.app_window.cache_controller as _cc
+        monkeypatch.setattr(_cc, "app_info_cache", new_cache)
+    except Exception:
+        pass
+
+    try:
+        import files.file_action as _fa
+        monkeypatch.setattr(_fa, "app_info_cache", new_cache)
+    except Exception:
+        pass
 
     # Silence startup log spam; patch before instantiation so __init__ skips the print.
     monkeypatch.setattr(cfg.Config, "print_config_settings", lambda self: None)
     monkeypatch.setattr(cfg, "config", cfg.Config())
+
+
+@pytest.fixture(autouse=True)
+def reset_app_globals():
+    """Reset class-level mutable state on the shared singletons that are not
+    covered by isolated_singletons (which only handles config + app_info_cache).
+
+    Runs before each test so any state leaked by a previous test does not
+    pollute the next one.  Teardown after yield is a courtesy reset so that a
+    failing test leaves the process in a clean state for potential post-run
+    inspection fixtures.
+    """
+    def _reset():
+        # MarkedFiles
+        try:
+            from files.marked_files import MarkedFiles
+            MarkedFiles.file_marks = []
+            MarkedFiles.is_performing_action = False
+            MarkedFiles.delete_lock = False
+        except Exception:
+            pass
+
+        # FileAction
+        try:
+            from files.file_action import FileAction
+            FileAction.action_history = []
+            FileAction.permanent_action = None
+            FileAction.hotkey_actions = {}
+        except Exception:
+            pass
+
+        # ClassifierActionsManager
+        try:
+            from compare.classifier_actions_manager import ClassifierActionsManager
+            ClassifierActionsManager.prevalidated_cache.clear()
+            ClassifierActionsManager.prevalidations = []
+            ClassifierActionsManager._prevalidations_initialized = False
+        except Exception:
+            pass
+
+        # FrameCache — clear in-memory dicts only; leave temp dir intact
+        try:
+            from image.frame_cache import FrameCache
+            FrameCache.clear()
+        except Exception:
+            pass
+
+        # WindowManager — UI tests should unregister on close; reset if any leaked
+        try:
+            from ui.app_window.window_manager import WindowManager
+            WindowManager._windows.clear()
+            WindowManager._primary = None
+            WindowManager._secondary_toplevels.clear()
+            WindowManager._cycle_index = 0
+        except Exception:
+            pass
+
+    _reset()
+    yield
+    _reset()

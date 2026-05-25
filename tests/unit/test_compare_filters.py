@@ -30,7 +30,7 @@ FILES = ["/img/a.png", "/img/b.png", "/img/c.png"]
 def _size_reader(sizes: dict):
     """Return a patcher for extract_size_from_image keyed by file path."""
     return patch(
-        "compare.compare_filters.extract_size_from_image",
+        "compare.compare_size.extract_size_from_image",
         side_effect=lambda fp: sizes.get(fp),
     )
 

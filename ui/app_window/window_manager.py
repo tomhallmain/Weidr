@@ -59,6 +59,8 @@ class WindowManager:
         """Remove a window from the tracking list."""
         if window in cls._windows:
             cls._windows.remove(window)
+        if cls._primary is window:
+            cls._primary = None
         cls._secondary_toplevels.pop(window.window_id, None)
         from utils.notification_manager import notification_manager
         notification_manager.unregister_window(window.window_id)

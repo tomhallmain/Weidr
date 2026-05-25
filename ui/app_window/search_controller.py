@@ -225,6 +225,10 @@ class SearchController:
         )
         self._debouncer.schedule()
 
+    def refresh_compare(self, compare_args: CompareArgs = CompareArgs()) -> None:
+        """Re-run comparison for windows with an active compare (see WindowManager)."""
+        self.run_compare(compare_args=compare_args)
+
     def _debounced_run_compare(
         self, compare_args: CompareArgs, find_duplicates: bool
     ) -> None:

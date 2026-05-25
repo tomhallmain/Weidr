@@ -121,10 +121,10 @@ class Utils:
         max_y = max_dims[1]
         if x <= max_x and y <= max_y:
             if maximize:
-                if x < max_x:
-                    return (int(x * max_y/y), max_y)
-                elif y < max_y:
-                    return (max_x, int(y * max_x/x))
+                x_scale = max_x / x
+                y_scale = max_y / y
+                scale = min(x_scale, y_scale)
+                return (int(x * scale), int(y * scale))
             return (x, y)
         elif x <= max_x:
             return (int(x * max_y/y), max_y)

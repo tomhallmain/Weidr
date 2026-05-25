@@ -412,6 +412,8 @@ class AppInfoCache(InflationMonitor):
 
     def set(self, directory, key, value):
         with self._lock:
+            if not directory or (isinstance(directory, str) and not directory.strip()):
+                raise Exception(f"Invalid directory provided to app_info_cache.set(). key={key} value={value}")
             directory = AppInfoCache.normalize_directory_key(directory)
             if directory is None or directory.strip() == "":
                 raise Exception(f"Invalid directory provided to app_info_cache.set(). key={key} value={value}")

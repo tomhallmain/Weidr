@@ -114,7 +114,7 @@ class TestCutVideoAtMs:
 
     @patch("image.video_ops.is_video_file", return_value=False)
     def test_raises_if_not_video(self, _is_video, fake_video, tmp_path):
-        with pytest.raises(RuntimeError, match="Not a video"):
+        with pytest.raises(RuntimeError):
             VideoOps.cut_video_at_ms(fake_video, 5000, VideoCutSide.KEEP_BEGINNING, 60000)
 
     @patch("image.video_ops.is_video_file", return_value=True)

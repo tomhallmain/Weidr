@@ -93,6 +93,8 @@ class CompareMode(Enum):
             return _("Color diff threshold")
         if self.is_embedding():
             return _("Embedding similarity threshold")
+        elif self == CompareMode.PROMPTS_EXACT:
+            return _("Prompts similarity threshold")
         elif self == CompareMode.SIZE:
             return _("Size tolerance")
         elif self == CompareMode.MODELS:

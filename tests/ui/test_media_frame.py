@@ -19,7 +19,7 @@ import os
 import pytest
 
 from ui.app_window.media_frame import _VLC_AVAILABLE
-from tests.test_utils import MALFORMED_WEBM, HangingVlcPlayer
+from tests.helpers import MALFORMED_WEBM, HangingVlcPlayer
 
 pytestmark = pytest.mark.skipif(
     not _VLC_AVAILABLE, reason="python-vlc not installed"

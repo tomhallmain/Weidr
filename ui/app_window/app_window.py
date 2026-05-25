@@ -626,8 +626,11 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         return self.window_id != 0
 
     @property
-    def base_dir(self) -> str:
-        return self.file_browser.directory if self.file_browser else ""
+    def base_dir(self):
+        d = self.file_browser.directory if self.file_browser else None
+        # "." is the FileBrowser default before any directory is selected;
+        # treat it as "no directory" so callers can do `if base_dir:` safely.
+        return d if d and d != "." else None
 
     def get_base_dir(self) -> str:
         return self.base_dir
@@ -1375,6 +1378,8 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             for win in list(WindowManager.get_open_windows()):
                 if win is not self:
                     win.cache_ctrl.store_info_cache()
+
+            WindowManager.unregister(self)
 
     def closeEvent(self, event):
         """Qt close event handler."""

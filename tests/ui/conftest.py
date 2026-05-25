@@ -1,5 +1,7 @@
 import os
 
+import pytest
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 if "WEIDR_CACHE_DIR" not in os.environ:
@@ -16,3 +18,62 @@ if "WEIDR_CACHE_DIR" not in os.environ:
 # Importing a fixture into conftest.py makes it available to all tests in this
 # directory — the pytest-idiomatic way to share fixtures from a fixtures/ module.
 from tests.fixtures.media_fixtures import media_frame  # noqa: F401
+from tests.fixtures.show_media_assets import show_media_files  # noqa: F401
+from tests.ui.app_window_fixtures import media_dir, window, window_with_dir  # noqa: F401
+
+
+@pytest.fixture
+def bypass_password(monkeypatch):
+    """Run password-gated controller methods without prompting."""
+
+    def _noop_decorator(*_actions, **_kwargs):
+        def decorator(func):
+            return func
+
+        return decorator
+
+    monkeypatch.setattr("ui.auth.password_utils.require_password", _noop_decorator)
+
+
+@pytest.fixture
+def immediate_compare_debounce(monkeypatch):
+    """Invoke compare immediately instead of waiting on QtDebouncer."""
+
+    def _apply(search_ctrl):
+        monkeypatch.setattr(
+            search_ctrl._debouncer, "schedule", search_ctrl._fire_pending_compare
+        )
+
+    return _apply
+
+
+@pytest.fixture(autouse=True)
+def ui_app_window_test_hygiene(monkeypatch):
+    """
+    Keep UI tests from leaking AppWindow instances and cache-store work.
+
+    Primary windows were not removed from WindowManager on teardown, so each
+    test's on_closing() stored the info cache once per stale window (slowing the
+    suite over time). Session restore and periodic cache timers are disabled here.
+    """
+    from ui.app_window.app_window import AppWindow
+    from ui.app_window.cache_controller import CacheController
+    from ui.app_window.window_manager import WindowManager
+
+    def _reset_window_manager() -> None:
+        WindowManager._windows.clear()
+        WindowManager._primary = None
+        WindowManager._secondary_toplevels.clear()
+        WindowManager._cycle_index = 0
+
+    _reset_window_manager()
+    monkeypatch.setattr(AppWindow, "_refocus_primary", lambda self: None)
+    monkeypatch.setattr(AppWindow, "_restore_secondary_windows", lambda self: None)
+    monkeypatch.setattr(CacheController, "start_periodic_store", lambda self: None)
+    yield
+    _reset_window_manager()
+    from PySide6.QtWidgets import QApplication
+
+    app = QApplication.instance()
+    if app is not None:
+        app.processEvents()

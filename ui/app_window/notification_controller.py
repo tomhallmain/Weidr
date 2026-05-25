@@ -28,6 +28,23 @@ _ = I18N._
 logger = get_logger("notification_controller")
 
 
+def _safe_close_widget(widget: QWidget | None) -> None:
+    """Close *widget* if the underlying Qt object still exists."""
+    if widget is None:
+        return
+    try:
+        import shiboken6
+
+        if not shiboken6.isValid(widget):
+            return
+    except Exception:
+        pass
+    try:
+        widget.close()
+    except RuntimeError:
+        pass
+
+
 class _NotificationSignals(QObject):
     """Signals for cross-thread toast / title-notify delivery."""
     toast_requested = Signal(str, int, str)       # message, seconds, bg_color
@@ -135,7 +152,7 @@ class NotificationController:
         # Auto-destruct after the specified time (WA_DeleteOnClose makes close() delete)
         QTimer.singleShot(
             time_in_seconds * 1000,
-            lambda tw=toast_widget: tw.close(),
+            lambda tw=toast_widget: _safe_close_widget(tw),
         )
 
     # ------------------------------------------------------------------

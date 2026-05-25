@@ -59,13 +59,8 @@ def sweep_qt_media_widgets() -> None:
             if isinstance(widget, MediaFrame):
                 _teardown_media_frame(widget)
 
-    for widget in list(app.topLevelWidgets()):
-        try:
-            widget.close()
-            widget.deleteLater()
-        except RuntimeError:
-            pass
-
+    # Do not close arbitrary top-level widgets (toasts, dialogs, AppWindow);
+    # their QTimer callbacks would hit deleted C++ objects after processEvents().
     app.processEvents()
 
 

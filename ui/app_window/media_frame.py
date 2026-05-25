@@ -1124,6 +1124,10 @@ class MediaFrame(QFrame):
             return True
         return False
 
+    def get_video_playback_ms(self) -> tuple[int, int]:
+        """(position_ms, duration_ms) for embedded VLC video; (0, 0) otherwise."""
+        return self.slideshow_vlc_time_ms()
+
     def has_time_based_media(self) -> bool:
         return isinstance(self._video_ui, VideoUI) or (self._gif_movie is not None and self._gif_is_animated)
 

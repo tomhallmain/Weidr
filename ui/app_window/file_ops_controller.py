@@ -814,6 +814,91 @@ class FileOpsController:
         self._app.refresh()
         self._app.notification_ctrl.toast(_("Saved copy without metadata: {0}").format(out_path))
 
+    def cut_current_video_at_playback_position(self, event=None) -> None:
+        """
+        Trim the active video at the current VLC playback position, writing a new
+        sibling file.  The user chooses which half to keep via a confirmation dialog.
+        Runs ffmpeg on a background thread so the UI stays responsive.
+        """
+        from image.video_ops import VideoCutSide, VideoOps
+        from utils.media_utils import is_video_file
+
+        if self._app.is_compare_running():
+            self._app.app_actions.warn(compare_running_warn(_("cut video")))
+            return
+
+        filepath = self._nav.get_active_media_filepath()
+        if not filepath:
+            return
+        if not is_video_file(filepath):
+            self._app.app_actions.warn(_("Not a video file"))
+            return
+        if not VideoOps.find_ffmpeg_executable():
+            self._app.app_actions.warn(_("ffmpeg not found on PATH. Install ffmpeg to cut video."))
+            return
+
+        pos_ms, dur_ms = self._app.media_frame.get_video_playback_ms()
+        if dur_ms <= 0:
+            self._app.app_actions.warn(_("Video duration is unknown. Seek to a position first."))
+            return
+        if pos_ms <= 0:
+            self._app.app_actions.warn(_("Cannot cut at the very start. Seek to a later position."))
+            return
+        if pos_ms >= dur_ms:
+            self._app.app_actions.warn(_("Cannot cut at or past the end of the video."))
+            return
+
+        def _fmt(ms: int) -> str:
+            total_s, frac = divmod(ms, 1000)
+            m, s = divmod(total_s, 60)
+            return f"{m:02d}:{s:02d}.{frac:03d}"
+
+        beginning_dur = _fmt(pos_ms)
+        end_dur = _fmt(dur_ms - pos_ms)
+        planned_before = VideoOps.default_output_path_cut(filepath, VideoCutSide.KEEP_BEGINNING, pos_ms)
+        planned_after = VideoOps.default_output_path_cut(filepath, VideoCutSide.KEEP_END, pos_ms)
+
+        choice = self._app.notification_ctrl.alert(
+            _("Cut video at current position"),
+            _(
+                "Cut at {0} of {1}\n\n"
+                "Keep beginning — writes ~{2} of footage (start → cut)\n"
+                "  Output: {3}\n\n"
+                "Keep end — writes ~{4} of footage (cut → end)\n"
+                "  Output: {5}\n\n"
+                "Note: stream copy snaps to the nearest keyframe.\n"
+                "The original file is not modified."
+            ).format(
+                _fmt(pos_ms), _fmt(dur_ms),
+                beginning_dur, planned_before,
+                end_dur, planned_after,
+            ),
+            kind="askyesnocancel",
+            yes_text=_("Keep beginning"),
+            no_text=_("Keep end"),
+        )
+        if choice is None:
+            return
+        side = VideoCutSide.KEEP_BEGINNING if choice else VideoCutSide.KEEP_END
+
+        if hasattr(self._app.media_frame, "pause_video_if_playing"):
+            self._app.media_frame.pause_video_if_playing()
+
+        _cutting = [True]
+
+        def _do_cut():
+            try:
+                out_path = VideoOps.cut_video_at_ms(filepath, pos_ms, side, dur_ms)
+                self._app.notification_ctrl.toast(_("Cut video saved: {0}").format(out_path))
+                self._app.refresh()
+            except Exception as e:
+                logger.warning("Cut video failed: %s", e)
+                self._app.notification_ctrl.toast(_("Cut video failed: {0}").format(e))
+            finally:
+                _cutting[0] = False
+
+        start_thread(_do_cut, use_asyncio=False)
+
     def copy_directory_videos_without_metadata(self, event=None) -> None:
         """
         For each video in the current file-browser scope, write a sibling copy with

@@ -202,6 +202,10 @@ class ContextMenuBuilder:
                 _("Save copy without metadata"),
                 lambda: app.file_ops_ctrl.copy_current_video_without_metadata(),
             )
+            menu.addAction(
+                _("Cut video at current position…"),
+                lambda: app.file_ops_ctrl.cut_current_video_at_playback_position(),
+            )
 
         menu.addAction(
             _("Convert directory images to JPG"),

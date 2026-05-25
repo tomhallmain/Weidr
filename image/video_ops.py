@@ -19,6 +19,7 @@ import json
 import os
 import shutil
 import subprocess
+from enum import Enum
 from typing import Any
 
 from utils.logging_setup import get_logger
@@ -27,6 +28,12 @@ from utils.translations import I18N
 
 logger = get_logger("video_ops")
 _ = I18N._
+
+
+class VideoCutSide(Enum):
+    """Which half of a video to keep when cutting at a single position."""
+    KEEP_BEGINNING = "before"
+    KEEP_END = "after"
 
 
 class VideoOps:
@@ -227,6 +234,120 @@ class VideoOps:
             raise RuntimeError(f"ffmpeg failed{detail}")
 
         logger.info("Wrote video without metadata: %s -> %s", video_path, out)
+        return out
+
+    @staticmethod
+    def default_output_path_cut(video_path: str, side: "VideoCutSide", cut_ms: int) -> str:
+        """
+        ``dir/foo.ext`` → ``dir/foo_cut_before_01m23s456.ext`` (keep beginning)
+        or ``dir/foo_cut_after_01m23s456.ext`` (keep end), collision-safe.
+        """
+        dirname = os.path.dirname(os.path.abspath(video_path)) or "."
+        stem, ext = os.path.splitext(os.path.basename(video_path))
+        total_s, ms = divmod(cut_ms, 1000)
+        total_m, s = divmod(total_s, 60)
+        tag = f"{total_m:02d}m{s:02d}s{ms:03d}"
+        label = "before" if side == VideoCutSide.KEEP_BEGINNING else "after"
+        base = os.path.join(dirname, f"{stem}_cut_{label}_{tag}")
+        candidate = f"{base}{ext}"
+        n = 1
+        while os.path.exists(candidate):
+            candidate = f"{base}_{n}{ext}"
+            n += 1
+        return candidate
+
+    @staticmethod
+    def cut_video_at_ms(
+        video_path: str,
+        cut_ms: int,
+        side: "VideoCutSide",
+        duration_ms: int,
+        output_path: str | None = None,
+    ) -> str:
+        """
+        Write a new sibling file trimmed at *cut_ms* milliseconds.
+
+        *side* controls which segment is kept:
+
+        - ``KEEP_BEGINNING`` — ``[0, cut_ms]`` via output-side ``-to`` (output from start).
+        - ``KEEP_END`` — ``[cut_ms, duration_ms]`` via input-side ``-ss`` + ``-t`` duration.
+
+        Stream copy (no re-encode); keyframe snapping applies.
+        The source file is never modified.
+
+        Returns:
+            Path to the written output file.
+
+        Raises:
+            RuntimeError: Validation failure, missing ffmpeg, or ffmpeg error.
+        """
+        if not is_video_file(video_path):
+            raise RuntimeError(_("Not a video file"))
+        ffmpeg = VideoOps.find_ffmpeg_executable()
+        if not ffmpeg:
+            raise RuntimeError(_("ffmpeg not found on PATH"))
+
+        if cut_ms <= 0:
+            raise RuntimeError(_("Cut position must be after the start of the video"))
+        if cut_ms >= duration_ms:
+            raise RuntimeError(_("Cut position must be before the end of the video"))
+
+        out = output_path or VideoOps.default_output_path_cut(video_path, side, cut_ms)
+        out = os.path.abspath(out)
+        if os.path.abspath(video_path) == out:
+            raise RuntimeError(_("Output path must differ from the source file"))
+        if os.path.exists(out):
+            raise RuntimeError(_("Output file already exists: {0}").format(out))
+
+        t_sec = cut_ms / 1000.0
+
+        if side == VideoCutSide.KEEP_BEGINNING:
+            cmd = [
+                ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
+                "-i", video_path,
+                "-to", str(t_sec),
+                "-map", "0", "-c", "copy",
+                out,
+            ]
+        else:
+            remain_sec = (duration_ms - cut_ms) / 1000.0
+            cmd = [
+                ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
+                "-ss", str(t_sec), "-i", video_path,
+                "-t", str(remain_sec),
+                "-map", "0", "-c", "copy",
+                out,
+            ]
+
+        try:
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                stdin=subprocess.DEVNULL,
+                timeout=3600,
+            )
+        except subprocess.TimeoutExpired:
+            try:
+                if os.path.isfile(out):
+                    os.unlink(out)
+            except OSError:
+                pass
+            raise RuntimeError(_("ffmpeg timed out while cutting video")) from None
+        except OSError as e:
+            raise RuntimeError(_("Failed to run ffmpeg: {0}").format(e)) from e
+
+        if proc.returncode != 0:
+            try:
+                if os.path.isfile(out):
+                    os.unlink(out)
+            except OSError:
+                pass
+            err = (proc.stderr or proc.stdout or "").strip()
+            detail = f": {err}" if err else ""
+            raise RuntimeError(f"ffmpeg failed{detail}")
+
+        logger.info("Cut video (%s) at %d ms → %s", side.value, cut_ms, out)
         return out
 
     @staticmethod

@@ -88,10 +88,13 @@ class ImageOps:
         # Randomly decide whether to use texture based on probability
         use_texture = random.random() < texture_probability
         
+        if image is None:
+            logger.error("rotate_image_partial: could not read %s", image_path)
+            return None
         rotated = ImageOps._rotate_image_partial(image, angle=angle, center=center, scale=scale, use_texture=use_texture)
         new_filepath = ImageOps.new_filepath(image_path, append_part="_rot")
         cv2.imwrite(new_filepath, rotated)
-        image.close()
+        return new_filepath
 
     @staticmethod
     def get_random_color(true_random_chance=0.75):

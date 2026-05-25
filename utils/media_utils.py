@@ -19,6 +19,14 @@ DEFAULT_VIDEO_EXTENSIONS = (
     ".webm", ".m4v", ".ogv", ".mpeg", ".mpg",
 )
 
+# Matroska/WebM containers where VLC stop() may hang without a Cues index.
+MATROSKA_EXTENSIONS = frozenset({".webm", ".mkv", ".mka", ".mks"})
+
+# Extensions that may use QMovie when Qt reports animation (see MediaFrame).
+ANIMATED_IMAGE_SUFFIXES = (
+    ".gif", ".webp", ".apng", ".jpg", ".jpeg", ".jpe", ".jfif",
+)
+
 
 def get_video_extensions() -> tuple[str, ...]:
     """Configured video extensions, lowercased. Missing attribute uses :data:`DEFAULT_VIDEO_EXTENSIONS`; an empty list stays empty."""
@@ -188,6 +196,84 @@ def get_pdf_page_count(path: str) -> int:
     except OSError:
         return 0
     return _pdf_page_count_cached(os.path.normcase(os.path.abspath(path)), mtime_ns)
+
+
+def is_animated_image_candidate(path: str) -> bool:
+    """True for paths that may carry animation frames (GIF/WebP/APNG, etc.)."""
+    if not path:
+        return False
+    return path.lower().endswith(ANIMATED_IMAGE_SUFFIXES)
+
+
+def scale_dims(
+    dims: tuple[int, int],
+    max_dims: tuple[int, int],
+    maximize: bool = False,
+) -> tuple[int, int]:
+    """Return (width, height) to fit *dims* inside *max_dims*. If *maximize*, fill when smaller."""
+    x, y = dims[0], dims[1]
+    max_x, max_y = max_dims[0], max_dims[1]
+    if x <= max_x and y <= max_y:
+        if maximize:
+            if x < max_x:
+                return (int(x * max_y / y), max_y)
+            if y < max_y:
+                return (max_x, int(y * max_x / x))
+        return (x, y)
+    if x <= max_x:
+        return (int(x * max_y / y), max_y)
+    if y <= max_y:
+        return (max_x, int(y * max_x / x))
+    x_scale = max_x / x
+    y_scale = max_y / y
+    if x_scale < y_scale:
+        return (int(x * x_scale), int(y * x_scale))
+    return (int(x * y_scale), int(y * y_scale))
+
+
+def large_image_dim_threshold() -> int:
+    return max(1, int(getattr(config, "large_image_dim_threshold_px", 5000)))
+
+
+def large_preview_overscan() -> float:
+    return max(1.0, float(getattr(config, "large_image_preview_overscan", 1.5)))
+
+
+def large_preview_max_dim() -> int:
+    return max(512, int(getattr(config, "large_image_preview_max_dim", 4096)))
+
+
+def large_hq_downscale_enabled() -> bool:
+    return bool(getattr(config, "large_image_enable_hq_idle_downscale", True))
+
+
+def large_hq_downscale_ratio_threshold() -> float:
+    return max(1.1, float(getattr(config, "large_image_hq_downscale_ratio_threshold", 1.8)))
+
+
+def large_image_full_res_promotion_enabled() -> bool:
+    return bool(getattr(config, "large_image_enable_full_res_promotion", True))
+
+
+def large_image_promotion_min_free_ram_gb() -> float:
+    return max(0.0, float(getattr(config, "large_image_promotion_min_free_ram_gb", 1.0)))
+
+
+def large_image_promotion_max_estimated_mb() -> int:
+    return max(64, int(getattr(config, "large_image_promotion_max_estimated_mb", 512)))
+
+
+def large_image_promotion_available_ram_fraction() -> float:
+    value = float(getattr(config, "large_image_promotion_available_ram_fraction", 0.25))
+    return min(max(value, 0.05), 0.9)
+
+
+def is_large_image_dims(dims: tuple[int, int]) -> bool:
+    w, h = dims
+    if w <= 0 or h <= 0:
+        return False
+    threshold = large_image_dim_threshold()
+    return w > threshold or h > threshold
 
 
 def is_classifier_dynamic_media_path(path: str) -> bool:

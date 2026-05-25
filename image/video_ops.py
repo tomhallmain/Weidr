@@ -465,3 +465,33 @@ class VideoOps:
             lines = [f"{k}: {v}" for k, v in sorted(tags.items())]
             positive = "\n".join(lines)
         return positive, negative, [], [], False
+
+
+def probe_has_video_stream(path: str) -> bool:
+    """
+    Return True if *path* contains at least one video stream.
+
+    Checks with PyAV first, then OpenCV. Falls back to True when neither library
+    is available so callers are never worse off than before this guard existed.
+    """
+    try:
+        import av as _av
+
+        container = _av.open(path, metadata_errors="ignore")
+        try:
+            return bool(container.streams.video)
+        finally:
+            container.close()
+    except Exception:
+        pass
+    try:
+        import cv2 as _cv2
+
+        cap = _cv2.VideoCapture(path)
+        try:
+            return cap.isOpened() and cap.get(_cv2.CAP_PROP_FRAME_HEIGHT) > 0
+        finally:
+            cap.release()
+    except Exception:
+        pass
+    return True

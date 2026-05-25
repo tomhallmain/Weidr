@@ -4,7 +4,12 @@ import pytest
 
 from utils.config import config
 from utils.constants import MediaType
-from utils.media_utils import get_media_type_for_path
+from utils.media_utils import (
+    get_media_type_for_path,
+    is_animated_image_candidate,
+    is_large_image_dims,
+    scale_dims,
+)
 
 
 @pytest.mark.parametrize(
@@ -41,6 +46,16 @@ def test_get_media_type_htm_uses_html_flag(monkeypatch, tmp_path):
 
     monkeypatch.setattr(config, "enable_html", False)
     assert get_media_type_for_path(path) == MediaType.UNCONFIGURED
+
+
+def test_scale_dims_fits_inside_max():
+    assert scale_dims((400, 200), (100, 200)) == (100, 50)
+
+
+def test_is_large_image_dims_uses_config_threshold(monkeypatch):
+    monkeypatch.setattr(config, "large_image_dim_threshold_px", 1000)
+    assert is_large_image_dims((1001, 500))
+    assert not is_large_image_dims((1000, 500))
 
 
 def test_get_media_type_plain_image_when_enabled(monkeypatch, tmp_path):

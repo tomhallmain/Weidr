@@ -29,11 +29,24 @@ from ui.app_window.media_controls_overlay import MediaControlsOverlay, OVERLAY_H
 from utils.config import config
 from utils.logging_setup import get_logger
 from image.frame_cache import FrameCache
+from image.video_ops import probe_has_video_stream
 from utils.media_utils import (
+    MATROSKA_EXTENSIONS,
+    is_animated_image_candidate,
     is_audio_for_display,
+    is_large_image_dims,
     is_video_for_display,
     is_video_path_by_extension,
     is_video_container_signature,
+    large_hq_downscale_enabled,
+    large_hq_downscale_ratio_threshold,
+    large_image_full_res_promotion_enabled,
+    large_image_promotion_available_ram_fraction,
+    large_image_promotion_max_estimated_mb,
+    large_image_promotion_min_free_ram_gb,
+    large_preview_max_dim,
+    large_preview_overscan,
+    scale_dims,
 )
 from utils.utils import Utils
 from utils.translations import I18N
@@ -69,13 +82,6 @@ except ImportError:
     _SHIBOKEN_AVAILABLE = False
 
 
-_MATROSKA_EXTENSIONS = {".webm", ".mkv", ".mka", ".mks"}
-
-# Extensions that may use QMovie when Qt reports animation (see _show_animated_media).
-ANIMATED_IMAGE_SUFFIXES = (
-    ".gif", ".webp", ".apng", ".jpg", ".jpeg", ".jpe", ".jfif",
-)
-
 # Minimum wall-clock seconds that must elapse before a VLC State.Ended is
 # treated as a real end for slideshow advancement.  Prevents buffer-deadlock
 # videos (which report Ended in milliseconds with zero playback time) from
@@ -96,59 +102,6 @@ class VideoUI:
         self.active = False
         self.has_video = bool(has_video)
         self.has_cues = bool(has_cues)
-
-
-def _probe_has_video_stream(path: str) -> bool:
-    """Return True if the file contains at least one video stream.
-
-    Checks with pyav first, then OpenCV. Falls back to True (old behaviour)
-    when neither library is available, so the caller is never worse off than
-    before this guard was added.
-    """
-    try:
-        import av as _av
-        container = _av.open(path, metadata_errors="ignore")
-        try:
-            return bool(container.streams.video)
-        finally:
-            container.close()
-    except Exception:
-        pass
-    try:
-        import cv2 as _cv2
-        cap = _cv2.VideoCapture(path)
-        try:
-            return cap.isOpened() and cap.get(_cv2.CAP_PROP_FRAME_HEIGHT) > 0
-        finally:
-            cap.release()
-    except Exception:
-        pass
-    return True
-
-
-
-
-def scale_dims(dims, max_dims, maximize=False):
-    """Return (width, height) to fit dims inside max_dims. If maximize, fill when smaller."""
-    x, y = dims[0], dims[1]
-    max_x, max_y = max_dims[0], max_dims[1]
-    if x <= max_x and y <= max_y:
-        if maximize:
-            if x < max_x:
-                return (int(x * max_y / y), max_y)
-            elif y < max_y:
-                return (max_x, int(y * max_x / x))
-        return (x, y)
-    elif x <= max_x:
-        return (int(x * max_y / y), max_y)
-    elif y <= max_y:
-        return (max_x, int(y * max_x / x))
-    else:
-        x_scale = max_x / x
-        y_scale = max_y / y
-        if x_scale < y_scale:
-            return (int(x * x_scale), int(y * x_scale))
-        return (int(x * y_scale), int(y * y_scale))
 
 
 class ZoomableGraphicsView(QGraphicsView):
@@ -396,40 +349,6 @@ class MediaFrame(QFrame):
         self.setStyleSheet(f"background-color: {color};")
         self._graphics_view.setStyleSheet(f"background-color: {color};")
 
-    def _is_animated_image_candidate(self, path: str) -> bool:
-        """Return True for formats that may carry animation frames."""
-        if not path:
-            return False
-        return path.lower().endswith(ANIMATED_IMAGE_SUFFIXES)
-
-    def _large_image_dim_threshold(self) -> int:
-        return max(1, int(getattr(config, "large_image_dim_threshold_px", 5000)))
-
-    def _large_preview_overscan(self) -> float:
-        return max(1.0, float(getattr(config, "large_image_preview_overscan", 1.5)))
-
-    def _large_preview_max_dim(self) -> int:
-        return max(512, int(getattr(config, "large_image_preview_max_dim", 4096)))
-
-    def _large_hq_downscale_enabled(self) -> bool:
-        return bool(getattr(config, "large_image_enable_hq_idle_downscale", True))
-
-    def _large_hq_ratio_threshold(self) -> float:
-        return max(1.1, float(getattr(config, "large_image_hq_downscale_ratio_threshold", 1.8)))
-
-    def _large_enable_full_res_promotion(self) -> bool:
-        return bool(getattr(config, "large_image_enable_full_res_promotion", True))
-
-    def _promotion_min_free_ram_gb(self) -> float:
-        return max(0.0, float(getattr(config, "large_image_promotion_min_free_ram_gb", 1.0)))
-
-    def _promotion_max_estimated_mb(self) -> int:
-        return max(64, int(getattr(config, "large_image_promotion_max_estimated_mb", 512)))
-
-    def _promotion_available_ram_fraction(self) -> float:
-        value = float(getattr(config, "large_image_promotion_available_ram_fraction", 0.25))
-        return min(max(value, 0.05), 0.9)
-
     def _next_request_id(self) -> int:
         self._image_request_id += 1
         return self._image_request_id
@@ -465,13 +384,6 @@ class MediaFrame(QFrame):
                 pass
         return 0, 0
 
-    def _is_large_image_dims(self, dims: tuple[int, int]) -> bool:
-        w, h = dims
-        if w <= 0 or h <= 0:
-            return False
-        threshold = self._large_image_dim_threshold()
-        return w > threshold or h > threshold
-
     def _preview_target_size(self, source_dims: tuple[int, int]) -> QSize:
         src_w, src_h = source_dims
         if src_w <= 0 or src_h <= 0:
@@ -479,14 +391,14 @@ class MediaFrame(QFrame):
         viewport_size = self._graphics_view.viewport().size()
         view_w = max(1, viewport_size.width())
         view_h = max(1, viewport_size.height())
-        overscan = self._large_preview_overscan()
-        max_dim = self._large_preview_max_dim()
+        overscan = large_preview_overscan()
+        max_dim = large_preview_max_dim()
         target_w = min(int(view_w * overscan), max_dim, src_w)
         target_h = min(int(view_h * overscan), max_dim, src_h)
         return QSize(max(1, target_w), max(1, target_h))
 
     def _should_use_hq_downscale(self, source_dims: tuple[int, int], target_size: QSize | None) -> bool:
-        if not self._large_hq_downscale_enabled() or target_size is None:
+        if not large_hq_downscale_enabled() or target_size is None:
             return False
         src_w, src_h = source_dims
         if src_w <= 0 or src_h <= 0:
@@ -494,7 +406,7 @@ class MediaFrame(QFrame):
         target_w = max(1, int(target_size.width()))
         target_h = max(1, int(target_size.height()))
         ratio = min(src_w / target_w, src_h / target_h)
-        return ratio >= self._large_hq_ratio_threshold()
+        return ratio >= large_hq_downscale_ratio_threshold()
 
     def _qimage_from_pillow(self, pil_img: "Image.Image") -> QImage:
         rgb = pil_img.convert("RGB")
@@ -594,17 +506,19 @@ class MediaFrame(QFrame):
         self.media_displayed = True
 
     def _can_promote_large_image(self, source_dims: tuple[int, int]) -> bool:
-        if not self._large_enable_full_res_promotion():
+        if not large_image_full_res_promotion_enabled():
             return False
         src_w, src_h = source_dims
         if src_w <= 0 or src_h <= 0:
             return False
         available_ram_gb = Utils.calculate_available_ram()
-        if available_ram_gb < self._promotion_min_free_ram_gb():
+        if available_ram_gb < large_image_promotion_min_free_ram_gb():
             return False
         estimated_bytes = int(src_w) * int(src_h) * 4
-        max_estimated_bytes = self._promotion_max_estimated_mb() * 1024 * 1024
-        available_budget_bytes = int(available_ram_gb * (1024 ** 3) * self._promotion_available_ram_fraction())
+        max_estimated_bytes = large_image_promotion_max_estimated_mb() * 1024 * 1024
+        available_budget_bytes = int(
+            available_ram_gb * (1024 ** 3) * large_image_promotion_available_ram_fraction()
+        )
         qt_limit_bytes = int(self._qt_image_allocation_limit_mb() * 1024 * 1024 * 0.9)
         allowed = min(max_estimated_bytes, available_budget_bytes, qt_limit_bytes)
         return estimated_bytes <= allowed
@@ -769,7 +683,7 @@ class MediaFrame(QFrame):
         request_id = self._next_request_id()
         self._cancel_decode_worker()
         source_dims = self._probe_image_size(path)
-        if self._is_large_image_dims(source_dims):
+        if is_large_image_dims(source_dims):
             preview_target = self._preview_target_size(source_dims)
             qimg = self._load_image_to_qimage(
                 path,
@@ -879,7 +793,7 @@ class MediaFrame(QFrame):
             else:
                 self._show_placeholder(_("Video: ") + os.path.basename(path))
             return
-        if self._is_animated_image_candidate(path) and self._show_animated_media(path):
+        if is_animated_image_candidate(path) and self._show_animated_media(path):
             return
         self._video_ui = None
         self.imscale = 1.0
@@ -918,7 +832,7 @@ class MediaFrame(QFrame):
             self.clear()
             self._graphics_view.set_interaction_enabled(False)
             self._graphics_view.reset_interaction()
-        has_video = _probe_has_video_stream(path)
+        has_video = probe_has_video_stream(path)
         has_cues = path not in _matroska_missing_cues_paths
         self._video_ui = VideoUI(path, has_video=has_video, has_cues=has_cues)
         self.path = path
@@ -1006,7 +920,7 @@ class MediaFrame(QFrame):
                     "Cues element; abandoning hung player and creating a fresh instance",
                     self.path,
                 )
-                if self.path and os.path.splitext(self.path)[1].lower() in _MATROSKA_EXTENSIONS:
+                if self.path and os.path.splitext(self.path)[1].lower() in MATROSKA_EXTENSIONS:
                     _matroska_missing_cues_paths.add(self.path)
                 self._hung_stop_thread = _t
                 self._replace_vlc_player()
@@ -1041,6 +955,46 @@ class MediaFrame(QFrame):
         except Exception:
             self.vlc_media_player = None
 
+    def dispose_vlc_for_test_teardown(self) -> None:
+        """
+        Non-blocking VLC teardown for pytest.
+
+        Skips :meth:`video_stop` and does not ``join`` hung libvlc stop threads
+        (see :data:`_vlc_instances_pending_cleanup`); avoids pytest hanging at 100%.
+        """
+        if self._vlc_disposed:
+            return
+        self._vlc_disposed = True
+        self._playback_timer.stop()
+        if _VLC_AVAILABLE and self.vlc_media_player:
+            try:
+                if platform.system() == "Windows":
+                    self.vlc_media_player.set_hwnd(0)
+            except Exception:
+                pass
+            try:
+                self.vlc_media_player.release()
+            except Exception:
+                pass
+            self.vlc_media_player = None
+        if _VLC_AVAILABLE and self.vlc_instance:
+            hung = self._hung_stop_thread
+            self._hung_stop_thread = None
+            if hung is not None and hung.is_alive():
+                _vlc_instances_pending_cleanup.append(self.vlc_instance)
+            else:
+                try:
+                    self.vlc_instance.release()
+                except Exception:
+                    pass
+            self.vlc_instance = None
+        if _VLC_AVAILABLE and self._vlc_eq is not None:
+            try:
+                self._vlc_eq.release()
+            except Exception:
+                pass
+            self._vlc_eq = None
+
     def dispose_vlc(self):
         """Fully tear down VLC resources for this widget instance."""
         if self._vlc_disposed:
@@ -1051,6 +1005,7 @@ class MediaFrame(QFrame):
             self.video_stop()
         except Exception:
             pass
+
         if _VLC_AVAILABLE and self.vlc_media_player:
             try:
                 # Detach video output from this window handle before release.

@@ -17,6 +17,7 @@ if "WEIDR_CACHE_DIR" not in os.environ:
 
 # Importing a fixture into conftest.py makes it available to all tests in this
 # directory — the pytest-idiomatic way to share fixtures from a fixtures/ module.
+from tests.fixtures.compare_image_fixtures import compare_colors_dir  # noqa: F401
 from tests.fixtures.media_fixtures import media_frame  # noqa: F401
 from tests.fixtures.show_media_assets import show_media_files  # noqa: F401
 from tests.ui.app_window_fixtures import media_dir, window, window_with_dir  # noqa: F401

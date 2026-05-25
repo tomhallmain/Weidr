@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QGridLayout, QLabel, QPushButton, QWidget,
 )
 
-from ui.files.file_actions_window_qt import FileActionsWindow
+from files.file_action import FileAction
 from lib.multi_display_qt import SmartDialog
 from ui.app_style import AppStyle
 from ui.auth.password_utils import require_password
@@ -102,9 +102,9 @@ class HotkeyActionsWindow(SmartDialog):
 
         # Resolve current target
         if is_index:
-            action = FileActionsWindow.hotkey_actions.get(key_index, _("(unset)"))
+            action = FileAction.hotkey_actions.get(key_index, _("(unset)"))
         else:
-            action = FileActionsWindow.permanent_action or _("(unset)")
+            action = FileAction.permanent_action or _("(unset)")
 
         self._add_label(str(action), grid_row, 1, wrap_width=self.COL_1_WIDTH)
 

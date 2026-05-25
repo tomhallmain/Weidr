@@ -381,6 +381,7 @@ class CompareMediaType(Enum):
     PDF = "pdf"
     SVG = "svg"
     HTML = "html"
+    AUDIO = "audio"
     #: Path missing/invalid, or extension matches a disabled media category (see :func:`~utils.media_utils.get_media_type_for_path`).
     UNCONFIGURED = "unconfigured"
 
@@ -398,12 +399,17 @@ class CompareMediaType(Enum):
             return _("SVG")
         elif self == CompareMediaType.HTML:
             return _("HTML")
+        elif self == CompareMediaType.AUDIO:
+            return _("Audio")
         elif self == CompareMediaType.UNCONFIGURED:
             return _("Unconfigured")
         raise Exception("Unhandled media type translation: " + str(self))
 
     def is_video(self) -> bool:
         return self == CompareMediaType.VIDEO
+
+    def is_audio(self) -> bool:
+        return self == CompareMediaType.AUDIO
 
     def is_non_video(self) -> bool:
         """True for any type other than :data:`VIDEO` (includes :data:`UNCONFIGURED`)."""
@@ -420,6 +426,7 @@ class CompareMediaType(Enum):
         """True when the details dialog can use FrameCache + PIL / prompt extraction (not video or unconfigured)."""
         return self not in (
             CompareMediaType.VIDEO,
+            CompareMediaType.AUDIO,
             CompareMediaType.UNCONFIGURED,
         )
 

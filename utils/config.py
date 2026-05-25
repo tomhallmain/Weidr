@@ -105,6 +105,11 @@ class Config:
             ".mp4", ".mkv", ".avi", ".wmv", ".mov", ".flv",
             ".webm", ".m4v", ".ogv", ".mpeg", ".mpg",
         ]
+        self.audio_types = [
+            ".mp3", ".flac", ".ogg", ".opus", ".wav", ".m4a", ".m4b",
+            ".aac", ".wma", ".weba", ".aiff", ".aif", ".au", ".ape", ".wv",
+        ]
+        self.enable_audio = True
         self.image_classifier_models = []
         self.enable_videos = True
         self.enable_gifs = True
@@ -166,6 +171,7 @@ class Config:
             self.set_values(list,
                             "image_types",
                             "video_types",
+                            "audio_types",
                             "text_embedding_search_presets",
                             "directories_to_search_for_related_images",
                             "image_classifier_models")
@@ -195,6 +201,7 @@ class Config:
                             "fill_canvas",
                             "save_screenshot_to_same_dir",
                             "enable_videos",
+                            "enable_audio",
                             "enable_gifs",
                             "enable_pdfs",
                             "enable_svgs",
@@ -252,17 +259,7 @@ class Config:
                             "slideshow_dynamic_video_max_seconds",
                             "slideshow_dynamic_gif_max_seconds")
 
-            self.file_types = list(self.image_types)
-            if self.enable_videos:
-                self.file_types.extend(list(self.video_types))
-            if self.enable_gifs:
-                self.file_types.append(".gif")
-            if self.enable_pdfs:
-                self.file_types.append(".pdf")
-            if self.enable_svgs:
-                self.file_types.append(".svg")
-            if self.enable_html:
-                self.file_types.extend([".html", ".htm"])
+            self._rebuild_file_types()
 
             if not os.environ.get("PYTEST_CURRENT_TEST"):
                 try:
@@ -279,6 +276,8 @@ class Config:
                 self.sort_by = SortBy[self.dict["sort_by"]]
             except Exception:
                 raise AssertionError("Invalid sort type for sort_by config setting. Must be one of NAME, FULL_PATH, CREATION_TIME, TYPE")
+        else:
+            self._rebuild_file_types()
 
         self.set_directories_to_search_for_related_images()
         self.check_image_edit_configuration()
@@ -648,11 +647,25 @@ class Config:
             logger.info(f" - GIMP integration: Not found")
         logger.info(f" - Max files per compare: {self.file_counter_limit}")
 
-    def toggle_video_mode(self):
-        self.enable_videos = not self.enable_videos
+    def _rebuild_file_types(self) -> None:
+        """Merge enabled category extension lists into ``file_types`` (browse)."""
         self.file_types = list(self.image_types)
         if self.enable_videos:
             self.file_types.extend(list(self.video_types))
+        if getattr(self, "enable_audio", False):
+            self.file_types.extend(list(getattr(self, "audio_types", [])))
+        if self.enable_gifs:
+            self.file_types.append(".gif")
+        if self.enable_pdfs:
+            self.file_types.append(".pdf")
+        if self.enable_svgs:
+            self.file_types.append(".svg")
+        if self.enable_html:
+            self.file_types.extend([".html", ".htm"])
+
+    def toggle_video_mode(self):
+        self.enable_videos = not self.enable_videos
+        self._rebuild_file_types()
         return self.enable_videos
 
 

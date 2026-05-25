@@ -17,6 +17,7 @@ from compare.compare_size import CompareSize
 from compare.compare_models import CompareModels
 from compare.classifier_actions_manager import ClassifierActionsManager
 from files.marked_files import MarkedFiles
+from utils.audio_media import is_audio_for_display
 from utils.config import config
 from utils.constants import Mode, CompareMode, Direction, ClassifierActionType
 from utils.logging_setup import get_logger
@@ -160,6 +161,8 @@ class CompareWrapper:
         if media_path in self.hidden_media:
             return True
         if config.enable_prevalidations:
+            if is_audio_for_display(media_path):
+                return False
             if ClassifierActionsManager.is_dynamic_prevalidation_media(media_path):
                 prevalidation_action = self._run_dynamic_prevalidation_with_spinner(media_path)
             else:

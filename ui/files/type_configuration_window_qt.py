@@ -51,6 +51,9 @@ class TypeConfigurationWindow(SmartDialog):
         CompareMediaType.PDF: _("PDF documents - First page will be extracted"),
         CompareMediaType.SVG: _("Vector graphics - Will be converted to raster image"),
         CompareMediaType.HTML: _("HTML files - Will be rendered and converted to image"),
+        CompareMediaType.AUDIO: _(
+            "Audio files (MP3, FLAC, etc.) - Browse and playback; not used in embedding compare"
+        ),
     }
 
     DEPENDENCY_INFO: dict[CompareMediaType, dict] = {
@@ -118,6 +121,7 @@ class TypeConfigurationWindow(SmartDialog):
             CompareMediaType.PDF: config.enable_pdfs,
             CompareMediaType.SVG: config.enable_svgs,
             CompareMediaType.HTML: config.enable_html,
+            CompareMediaType.AUDIO: config.enable_audio,
         }
 
         cls._instance = cls(parent=master, app_actions=app_actions)
@@ -244,6 +248,7 @@ class TypeConfigurationWindow(SmartDialog):
             CompareMediaType.PDF: config.enable_pdfs,
             CompareMediaType.SVG: config.enable_svgs,
             CompareMediaType.HTML: config.enable_html,
+            CompareMediaType.AUDIO: config.enable_audio,
             CompareMediaType.UNCONFIGURED: False,
         }.get(media_type, False)
 
@@ -321,6 +326,15 @@ class TypeConfigurationWindow(SmartDialog):
                             config.file_types.append(ext)
                 else:
                     config.file_types = [e for e in config.file_types if e not in [".html", ".htm"]]
+            elif media_type == CompareMediaType.AUDIO:
+                config.enable_audio = enabled
+                if enabled:
+                    for ext in config.audio_types:
+                        if ext not in config.file_types:
+                            config.file_types.append(ext)
+                else:
+                    audio_set = set(config.audio_types)
+                    config.file_types = [e for e in config.file_types if e not in audio_set]
 
         if app_actions is not None:
             app_actions.refresh_all_compares()

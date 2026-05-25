@@ -29,7 +29,12 @@ from ui.app_window.media_controls_overlay import MediaControlsOverlay, OVERLAY_H
 from utils.config import config
 from utils.logging_setup import get_logger
 from image.frame_cache import FrameCache
-from utils.media_utils import is_video_for_display, is_video_path_by_extension, is_video_container_signature
+from utils.media_utils import (
+    is_audio_for_display,
+    is_video_for_display,
+    is_video_path_by_extension,
+    is_video_container_signature,
+)
 from utils.utils import Utils
 from utils.translations import I18N
 
@@ -847,6 +852,10 @@ class MediaFrame(QFrame):
         if not path or path == "." or path.strip() == "" or not os.path.exists(path):
             self.clear()
             return
+        if is_audio_for_display(path):
+            from ui.app_window.audio_playback import show_in_frame
+            show_in_frame(self, path)
+            return
         # Video dispatch: use VLC if available, otherwise show placeholder
         if is_video_for_display(path):
             if self._pending_blur_path == path:
@@ -897,7 +906,11 @@ class MediaFrame(QFrame):
         """
         if not _VLC_AVAILABLE or not self.vlc_media_player:
             return
-        if not is_video_path_by_extension(path) and not is_video_container_signature(path):
+        if (
+            not is_audio_for_display(path)
+            and not is_video_path_by_extension(path)
+            and not is_video_container_signature(path)
+        ):
             return
         if not freeze_frame:
             self.clear()

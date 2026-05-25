@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
 )
 
 from ui.app_style import AppStyle
+from utils.audio_media import MASONRY_AUDIO_TILE_LABEL, is_audio_for_display
 from utils.logging_setup import get_logger
 
 try:
@@ -106,6 +107,9 @@ class _ThumbnailLoader(QRunnable):
 
     def _load(self) -> QImage:
         path = self._filepath
+
+        if is_audio_for_display(path):
+            return QImage()
 
         # --- QImageReader (fast path) ---
         reader = QImageReader(path)
@@ -224,6 +228,11 @@ class MasonryTile(QFrame):
         if self._cancelled:
             return
         if not isinstance(qimage, QImage) or qimage.isNull():
+            if is_audio_for_display(filepath):
+                w = self._tile_width - 6
+                self._img_label.setText(MASONRY_AUDIO_TILE_LABEL)
+                self._img_label.setPixmap(QPixmap())
+                self._img_label.setFixedSize(w, max(30, w // 2))
             return
         pixmap = QPixmap.fromImage(qimage)
         w = self._tile_width - 6

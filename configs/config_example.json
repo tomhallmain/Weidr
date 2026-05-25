@@ -68,8 +68,13 @@
     ".mp4", ".mkv", ".avi", ".wmv", ".mov", ".flv",
     ".webm", ".m4v", ".ogv", ".mpeg", ".mpg"
   ],
+  "audio_types": [
+    ".mp3", ".flac", ".ogg", ".opus", ".wav", ".m4a", ".m4b",
+    ".aac", ".wma", ".weba", ".aiff", ".aif", ".au", ".ape", ".wv"
+  ],
   "media_volume_use_eq": true,
   "enable_videos": true,
+  "enable_audio": true,
   "enable_gifs": true,
   "enable_pdfs": true,
   "enable_svgs": true,

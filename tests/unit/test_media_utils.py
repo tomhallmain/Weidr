@@ -15,6 +15,7 @@ from utils.media_utils import get_media_type_for_path
         ("enable_pdfs", ".pdf", MediaType.PDF, MediaType.UNCONFIGURED),
         ("enable_svgs", ".svg", MediaType.SVG, MediaType.UNCONFIGURED),
         ("enable_html", ".html", MediaType.HTML, MediaType.UNCONFIGURED),
+        ("enable_audio", ".mp3", MediaType.AUDIO, MediaType.UNCONFIGURED),
     ],
 )
 def test_get_media_type_respects_enable_flags(

@@ -1,4 +1,4 @@
-"""Config defaults and classification for expanded image/video extensions (phase 1, no audio)."""
+"""Config defaults and classification for expanded image/video extensions (phase 1)."""
 
 import json
 import os

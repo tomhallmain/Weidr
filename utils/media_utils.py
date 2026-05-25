@@ -9,6 +9,7 @@ from __future__ import annotations
 import functools
 import os
 
+from utils.audio_media import is_audio_for_display, is_audio_path_by_extension
 from utils.config import config
 from utils.constants import MediaType
 
@@ -36,6 +37,8 @@ def is_video_path_by_extension(path: str) -> bool:
     ``enable_videos``).
     """
     if not path:
+        return False
+    if is_audio_path_by_extension(path):
         return False
     path_lower = path.lower()
     return any(path_lower.endswith(ext) for ext in get_video_extensions())
@@ -88,6 +91,8 @@ def is_video_container_signature(path: str) -> bool:
 
 def is_video_for_display(path: str) -> bool:
     """Extension match or container signature (media frame / VLC routing)."""
+    if is_audio_path_by_extension(path):
+        return False
     return is_video_path_by_extension(path) or is_video_container_signature(path)
 
 
@@ -105,6 +110,11 @@ def get_media_type_for_path(path: str) -> MediaType:
         return MediaType.UNCONFIGURED
 
     lower = path.lower()
+
+    if is_audio_path_by_extension(path):
+        if getattr(config, "enable_audio", False):
+            return MediaType.AUDIO
+        return MediaType.UNCONFIGURED
 
     if is_video_path_by_extension(path):
         if config.enable_videos:
@@ -142,6 +152,8 @@ def is_video_file(path: str) -> bool:
     if not path or not os.path.isfile(path):
         return False
     if not config.enable_videos:
+        return False
+    if is_audio_path_by_extension(path):
         return False
     ext = os.path.splitext(path)[1].lower()
     return ext in set(get_video_extensions())

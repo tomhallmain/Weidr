@@ -100,6 +100,10 @@ class TestCompareMediaType:
     def test_image_is_not_gif(self):
         assert CompareMediaType.IMAGE.is_gif() is False
 
+    def test_audio_is_audio(self):
+        assert CompareMediaType.AUDIO.is_audio() is True
+        assert CompareMediaType.VIDEO.is_audio() is False
+
     def test_unconfigured_is_unconfigured(self):
         assert CompareMediaType.UNCONFIGURED.is_unconfigured() is True
 
@@ -123,6 +127,9 @@ class TestCompareMediaType:
 
     def test_supports_raster_image_details_false_for_unconfigured(self):
         assert CompareMediaType.UNCONFIGURED.supports_raster_image_details() is False
+
+    def test_supports_raster_image_details_false_for_audio(self):
+        assert CompareMediaType.AUDIO.supports_raster_image_details() is False
 
     def test_get_translation_non_empty_for_all(self):
         for media_type in CompareMediaType:

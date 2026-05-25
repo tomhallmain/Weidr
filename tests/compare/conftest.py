@@ -1,6 +1,7 @@
 import os
 
 from tests.fixtures.compare_image_fixtures import compare_colors_dir  # noqa: F401
+from tests.fixtures.embedding_matrix_fixtures import embedding_matrix_catalog  # noqa: F401
 
 if "WEIDR_CACHE_DIR" not in os.environ:
     import atexit, shutil, tempfile

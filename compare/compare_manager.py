@@ -82,6 +82,7 @@ class CompareManager:
         self._compare_faces: bool = False
         self._overwrite: bool = False
         self._store_checkpoints: bool = config.store_checkpoints
+        self._use_matrix_comparison: bool = True
         
         # Results from last run
         self._last_results: Optional[Dict[CompareMode, Dict[str, float]]] = None
@@ -91,8 +92,8 @@ class CompareManager:
         self._is_composite_mode: bool = False
 
         # Restore the most recent compare configuration from persistent history.
-        # apply_snapshot only touches _mode_configs / _combination_logic / _data_filter,
-        # so it is safe to call before set_app_actions wires in the real app_actions.
+        # apply_snapshot restores instances, logic, filter, and run_settings; safe
+        # before set_app_actions wires in the real app_actions.
         try:
             from compare.compare_history import CompareHistory
             recent = CompareHistory.load_recent()
@@ -343,6 +344,7 @@ class CompareManager:
         args.compare_faces = self.get_compare_faces()
         args.overwrite = self.get_overwrite()
         args.store_checkpoints = self.get_store_checkpoints()
+        args.use_matrix_comparison = self.get_use_matrix_comparison()
         
         # Log applied settings
         self._log_settings(args)
@@ -383,6 +385,7 @@ class CompareManager:
         logger.info(f" include videos: {args.include_videos}")
         logger.info(f" overwrite media data: {args.overwrite}")
         logger.info(f" store checkpoints: {args.store_checkpoints}")
+        logger.info(f" use matrix comparison: {args.use_matrix_comparison}")
         
         # Filter settings
         if self._data_filter and self._data_filter.is_active():
@@ -418,6 +421,25 @@ class CompareManager:
     def get_store_checkpoints(self) -> bool:
         """Get store checkpoints option."""
         return self._store_checkpoints
+
+    def set_use_matrix_comparison(self, use_matrix: bool) -> None:
+        """Use chunked matrix compare for embedding group runs (vs roll-index iterative)."""
+        self._use_matrix_comparison = use_matrix
+        logger.info(f"Use matrix comparison set to: {use_matrix}")
+
+    def get_use_matrix_comparison(self) -> bool:
+        """Whether embedding group compare uses the matrix path."""
+        return self._use_matrix_comparison
+
+    def _sync_settings_from_last_args(self) -> None:
+        """Align manager booleans with the last compare's args (for settings autoload)."""
+        if not self.has_compare():
+            return
+        last = self.get_args()
+        self.set_compare_faces(last.compare_faces)
+        self.set_overwrite(last.overwrite)
+        self.set_store_checkpoints(last.store_checkpoints)
+        self.set_use_matrix_comparison(last.use_matrix_comparison)
     
     def toggle_search_only_return_closest(self):
         """Toggle search only return closest option (for backward compatibility)."""
@@ -748,10 +770,12 @@ class CompareManager:
                 raise ValueError("No enabled instance for primary mode")
             wrapper = self._ensure_wrapper(primary_iid, self._primary_mode)
             wrapper.run(args)
+            self._sync_settings_from_last_args()
             return
         
         # Composite mode operation
         self._run_composite(args)
+        self._sync_settings_from_last_args()
 
     @staticmethod
     def _normalize_score(mode: CompareMode, score: float) -> float:
@@ -1108,6 +1132,25 @@ class CompareManager:
 
     # ========== History / Snapshot ==========
 
+    def _current_run_settings(self) -> "CompareRunSettings":
+        from compare.compare_history import CompareRunSettings
+        return CompareRunSettings(
+            compare_faces=self.get_compare_faces(),
+            overwrite=self.get_overwrite(),
+            store_checkpoints=self.get_store_checkpoints(),
+            use_matrix_comparison=self.get_use_matrix_comparison(),
+            threshold=self.get_threshold(),
+            counter_limit=self.get_counter_limit(),
+        )
+
+    def _apply_run_settings(self, settings: "CompareRunSettings") -> None:
+        self.set_compare_faces(settings.compare_faces)
+        self.set_overwrite(settings.overwrite)
+        self.set_store_checkpoints(settings.store_checkpoints)
+        self.set_use_matrix_comparison(settings.use_matrix_comparison)
+        self.set_threshold(settings.threshold)
+        self.set_counter_limit(settings.counter_limit)
+
     def snapshot(self, directory: str) -> "CompareHistory":
         """Capture current configuration as a CompareHistory entry."""
         from compare.compare_history import CompareHistory
@@ -1131,6 +1174,7 @@ class CompareManager:
             instances=instances,
             combination_logic=self._combination_logic.value,
             filter_dict=filter_to_dict(self._data_filter),
+            run_settings=self._current_run_settings(),
         )
 
     def apply_snapshot(self, h: "CompareHistory") -> None:
@@ -1172,14 +1216,19 @@ class CompareManager:
             self.set_combination_logic(CombinationLogic(h.combination_logic))
         except ValueError:
             logger.warning(f"Unknown combination logic in snapshot: {h.combination_logic!r}")
-        # Restore filter
+        # Restore filter and global run settings
         self.set_data_filter(filter_from_dict(h.filter_dict))
+        self._apply_run_settings(h.run_settings)
 
     def reset_to_default(self) -> None:
         """Clear all instances and restore a single CLIP_EMBEDDING with no filter."""
+        from compare.compare_history import CompareRunSettings
         for iid in list(self._mode_configs.keys()):
             self.remove_mode_instance(iid)
         self.set_primary_mode(CompareMode.CLIP_EMBEDDING)
         self.set_combination_logic(CombinationLogic.AND)
         self.set_data_filter(None)
+        self._apply_run_settings(CompareRunSettings(
+            store_checkpoints=config.store_checkpoints,
+        ))
 

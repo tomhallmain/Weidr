@@ -250,22 +250,28 @@ class CompareSettingsWindow(SmartDialog):
         limit_row.addStretch()
         right.addLayout(limit_row)
 
-        # Option checkboxes
+        # Option checkboxes (from last compare args when a run exists, else manager/history)
         self._compare_faces_cb = QCheckBox(_("Compare faces"))
-        self._compare_faces_cb.setChecked(
-            getattr(current_args, "compare_faces", False)
-        )
         right.addWidget(self._compare_faces_cb)
 
         self._overwrite_cb = QCheckBox(_("Overwrite cache"))
-        self._overwrite_cb.setChecked(getattr(current_args, "overwrite", False))
         right.addWidget(self._overwrite_cb)
 
         self._store_checkpoints_cb = QCheckBox(_("Store checkpoints"))
-        self._store_checkpoints_cb.setChecked(
-            getattr(current_args, "store_checkpoints", config.store_checkpoints)
-        )
         right.addWidget(self._store_checkpoints_cb)
+
+        self._matrix_compare_cb = QCheckBox(_("Use matrix group compare"))
+        self._matrix_compare_cb.setToolTip(
+            _(
+                "Embedding group compare only. Uses the chunked matrix path when "
+                "checked; uses the legacy roll-index path when unchecked. "
+                "Color matching is not affected."
+            )
+        )
+        self._update_matrix_compare_cb_enabled(primary_mode)
+        right.addWidget(self._matrix_compare_cb)
+
+        self._refresh_global_settings_controls(current_args)
 
         self._search_closest_cb = QCheckBox(_("Search only return closest"))
         self._search_closest_cb.setChecked(config.search_only_return_closest)
@@ -393,6 +399,8 @@ class CompareSettingsWindow(SmartDialog):
         if self._add_instance_btn is not None:
             self._add_instance_btn.setEnabled(total < MAX_INSTANCES)
 
+        self._update_matrix_compare_cb_enabled(self._compare_manager.compare_mode)
+
     def _on_remove_instance(self, instance_id: str) -> None:
         self._compare_manager.remove_mode_instance(instance_id)
         self._refresh_instance_list()
@@ -400,6 +408,53 @@ class CompareSettingsWindow(SmartDialog):
     # ------------------------------------------------------------------
     # Threshold combo helpers
     # ------------------------------------------------------------------
+    def _refresh_global_settings_controls(self, current_args=None) -> None:
+        """Sync checkboxes and global threshold/limit from manager or last compare args."""
+        mgr = self._compare_manager
+
+        def _bool_from_run(attr: str, getter_name: str, default: bool) -> bool:
+            if mgr.has_compare() and current_args is not None:
+                return bool(getattr(current_args, attr, default))
+            return getattr(mgr, getter_name)()
+
+        self._compare_faces_cb.setChecked(
+            _bool_from_run("compare_faces", "get_compare_faces", False)
+        )
+        self._overwrite_cb.setChecked(
+            _bool_from_run("overwrite", "get_overwrite", False)
+        )
+        self._store_checkpoints_cb.setChecked(
+            _bool_from_run("store_checkpoints", "get_store_checkpoints", config.store_checkpoints)
+        )
+        self._matrix_compare_cb.setChecked(
+            _bool_from_run("use_matrix_comparison", "get_use_matrix_comparison", True)
+        )
+
+        counter_limit = (
+            current_args.counter_limit
+            if mgr.has_compare() and current_args is not None
+            and hasattr(current_args, "counter_limit")
+            else mgr.get_counter_limit()
+        )
+        self._counter_limit_edit.setText(
+            "" if counter_limit is None else str(counter_limit)
+        )
+
+        primary_mode = mgr.compare_mode
+        threshold = (
+            current_args.threshold
+            if mgr.has_compare() and current_args is not None
+            and hasattr(current_args, "threshold")
+            else mgr.get_threshold()
+        )
+        self._populate_threshold_combo(primary_mode, current_args=None)
+        if threshold is not None:
+            self._threshold_combo.setCurrentText(
+                str(int(threshold))
+                if primary_mode == CompareMode.COLOR_MATCHING
+                else str(threshold)
+            )
+
     def _populate_threshold_combo(
         self,
         mode: Optional[CompareMode],
@@ -429,6 +484,13 @@ class CompareSettingsWindow(SmartDialog):
     # ------------------------------------------------------------------
     # Combination logic
     # ------------------------------------------------------------------
+    def _update_matrix_compare_cb_enabled(self, mode: Optional[CompareMode]) -> None:
+        if self._matrix_compare_cb is None:
+            return
+        self._matrix_compare_cb.setEnabled(
+            mode is None or mode.is_embedding()
+        )
+
     def _on_logic_changed(self, logic_str: str) -> None:
         try:
             logic = CombinationLogic(logic_str)
@@ -498,6 +560,9 @@ class CompareSettingsWindow(SmartDialog):
         self._compare_manager.set_compare_faces(self._compare_faces_cb.isChecked())
         self._compare_manager.set_overwrite(self._overwrite_cb.isChecked())
         self._compare_manager.set_store_checkpoints(self._store_checkpoints_cb.isChecked())
+        self._compare_manager.set_use_matrix_comparison(
+            self._matrix_compare_cb.isChecked()
+        )
         config.search_only_return_closest = self._search_closest_cb.isChecked()
 
         # Data filter
@@ -558,6 +623,7 @@ class CompareSettingsWindow(SmartDialog):
             self._compare_manager.get_combination_logic().value
         )
         self._refresh_instance_list()
+        self._refresh_global_settings_controls()
 
     def _on_remove_history(self, entry: CompareHistory) -> None:
         CompareHistory.remove(entry)
@@ -585,6 +651,7 @@ class CompareSettingsWindow(SmartDialog):
             self._compare_manager.get_combination_logic().value
         )
         self._refresh_instance_list()
+        self._refresh_global_settings_controls()
 
     # ------------------------------------------------------------------
     # Lifecycle

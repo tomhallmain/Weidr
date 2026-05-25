@@ -208,15 +208,7 @@ class BaseCompareEmbedding(BaseCompare):
             print("Identifying groups of similar image files", end="", flush=True)
 
         if self.args.use_matrix_comparison:
-            similarity_matrix, _i, _j = self._compute_matrix_similarities()
-            for i, j in zip(_i, _j):
-                if i == j:  # exclude diagonal (self-comparisons)
-                    continue
-                base_index = i
-                diff_index = j
-                diff_score = similarity_matrix[base_index, diff_index]
-                if diff_score < self.embedding_similarity_threshold:
-                    continue
+            for base_index, diff_index, diff_score in self._compute_matrix_similarities():
                 self._process_similarity_results(base_index, diff_index, diff_score)
         else:
             n_files_found_even = Utils.round_up(self.compare_data.n_files_found, 5)
@@ -263,13 +255,18 @@ class BaseCompareEmbedding(BaseCompare):
 
     def _compute_matrix_similarities(self):
         '''
-        Compute all pairwise similarities in one step using matrix multiplication.
-        Returns a tuple of (similarity_matrix, indices_i, indices_j) where indices
-        are the upper triangle indices of the matrix.
+        Upper-triangle embedding pairs at or above the similarity threshold.
+
+        Uses chunked matrix multiply (see ``BaseCompare.chunked_similarity_vectorized``)
+        so large libraries do not allocate a full N×N similarity matrix in RAM.
+
+        Returns:
+            List of ``(base_index, diff_index, similarity_score)`` with ``base_index < diff_index``.
         '''
-        similarity_matrix = BaseCompare.chunked_similarity_vectorized(self._file_embeddings, threshold=self.embedding_similarity_threshold)
-        _i, _j = np.triu_indices_from(similarity_matrix, k=1)
-        return similarity_matrix, _i, _j
+        return BaseCompare.chunked_similarity_vectorized(
+            self._file_embeddings,
+            threshold=self.embedding_similarity_threshold,
+        )
 
     def _compute_iterative_similarities(self, i):
         '''

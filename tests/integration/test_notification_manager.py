@@ -3,6 +3,9 @@ Integration tests for NotificationManager.
 
 Tests notification grouping, display title formatting, and window-ID
 scoping without requiring a Qt runtime or real app_actions.
+
+Covers notification bundling, title formatting, expiry, and window scoping
+without a Qt runtime or the global ``notification_manager`` singleton.
 """
 
 import time
@@ -109,3 +112,56 @@ class TestNotificationBundling:
         n = manager._notifications[0]
         assert n.auto_count == 1
         assert n.manual_count == 1
+
+
+class TestBundlingScenarios:
+    """End-to-end bundling and title behaviour with realistic message strings."""
+
+    def test_single_move_notification_in_title(self, manager):
+        manager.set_current_title("Weidr - C:/test/images", window_id=0)
+        manager.add_notification(
+            "Moved file: test1.jpg to /new/location",
+            action_type=ActionType.MOVE_FILE,
+            is_manual=True,
+            duration=10.0,
+        )
+        title = manager.get_display_title(0)
+        assert title.startswith("Weidr")
+        assert "test1.jpg" in title
+
+    def test_rapid_same_type_bundles_under_default_group_window(self, manager):
+        for i in range(3):
+            manager.add_notification(
+                f"Moved file: test{i + 2}.jpg to /new/location",
+                action_type=ActionType.MOVE_FILE,
+                is_manual=True,
+                duration=10.0,
+            )
+            time.sleep(0.05)
+        bundled = [n for n in manager._notifications if n.action_type == ActionType.MOVE_FILE]
+        assert len(bundled) == 1
+        assert bundled[0].count == 3
+
+    def test_remove_file_auto_uses_auto_prefix(self, manager):
+        manager.set_current_title("Weidr", window_id=0)
+        manager.add_notification(
+            "Removed file: test6.jpg",
+            action_type=ActionType.REMOVE_FILE,
+            is_manual=False,
+            duration=10.0,
+        )
+        assert manager._notifications[0].auto_count == 1
+        assert "[Auto]" in manager._notifications[0].get_display_message()
+
+    def test_custom_duration_active_then_cleared_from_title(self, manager):
+        manager.set_current_title("Weidr", window_id=0)
+        manager.add_notification(
+            "This notification will stay for 2 seconds",
+            duration=2.0,
+            action_type=ActionType.SYSTEM,
+        )
+        assert manager.has_active_notifications(0)
+        assert "2 seconds" in manager.get_display_title(0)
+        time.sleep(2.1)
+        assert not manager.has_active_notifications(0)
+        assert manager.get_display_title(0) == "Weidr"

@@ -287,7 +287,6 @@ class SearchController:
         args.include_videos = config.enable_videos
         args.include_gifs = config.enable_gifs
         args.include_pdfs = config.enable_pdfs
-        args.use_matrix_comparison = False
         args.listener = ProgressListener(update_func=self.display_progress)
         args.app_actions = self._app.app_actions
         self._cm.run(args)

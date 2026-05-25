@@ -135,8 +135,8 @@ class TestCompareArgsInit:
     def test_find_duplicates_default_false(self):
         assert CompareArgs().find_duplicates is False
 
-    def test_use_matrix_comparison_default_false(self):
-        assert CompareArgs().use_matrix_comparison is False
+    def test_use_matrix_comparison_default_true(self):
+        assert CompareArgs().use_matrix_comparison is True
 
     def test_negative_search_media_path_default_none(self):
         assert CompareArgs().negative_search_media_path is None

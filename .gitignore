@@ -29,6 +29,7 @@ file_paths.json
 temp*
 !temp_media_window.py
 todo_list.txt
+tests/output/*
 
 # -----------------------------------------------------------------------------
 # Editor / IDE

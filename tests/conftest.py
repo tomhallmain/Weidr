@@ -17,8 +17,6 @@ import tempfile
 # Manual / prospective scripts that live in tests/ but are NOT pytest suites.
 # Exclude them from collection so `pytest tests/` never accidentally runs them.
 #
-# test_notifications.py      — uses notification_manager as an undefined fixture;
-#                              has 10+ second time.sleep() calls; run via __main__
 # test_gegl_operations.py    — requires GIMP 3 + a CLI image path argument
 # test_gimp_gegl_direct.py   — requires GIMP 3; invokes it via raw subprocess
 # test_compare_embedding_matrix.py — calls input() (blocks on stdin); reads from
@@ -26,7 +24,6 @@ import tempfile
 # ---------------------------------------------------------------------------
 _here = os.path.dirname(os.path.abspath(__file__))
 collect_ignore = [
-    os.path.join(_here, "test_notifications.py"),
     os.path.join(_here, "test_gegl_operations.py"),
     os.path.join(_here, "test_gimp_gegl_direct.py"),
     os.path.join(_here, "test_compare_embedding_matrix.py"),

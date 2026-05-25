@@ -1,23 +1,24 @@
 """
 Recent compare-run history.
 
-Each CompareHistory entry is a snapshot of a CompareManager configuration
-tied to the directory that was analysed. Entries are persisted via
-app_info_cache metadata so they survive between sessions.
+Each CompareHistory entry snapshots CompareManager state for a directory:
 
-Usage (from CompareManager):
-    from compare.compare_history import CompareHistory
-    CompareHistory.record(self.snapshot(args.base_dir))
+- ``instances``: serialized :class:`compare.compare_manager.CompareConfig` rows
+  (per-mode instance: mode, weight, threshold override, search text, …).
+- ``run_settings``: global options applied to :class:`compare.compare_args.CompareArgs`
+  on each run (faces, overwrite, checkpoints, matrix path, threshold, file limit).
+- ``combination_logic`` / ``filter_dict``: composite logic and pre-filter tree.
 
-Usage (from UI to restore):
-    for h in CompareHistory.load_recent():
-        ...  # display h.label()
-    manager.apply_snapshot(h)
+CompareArgs itself is not stored in history; it is built at run time (base_dir,
+search media, listener, app_actions, …) and receives ``run_settings`` via
+``CompareManager.apply_settings_to_args()``.
+
+Persisted via app_info_cache metadata across sessions.
 """
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional
 
@@ -31,13 +32,50 @@ _CACHE_KEY = "recent_compare_history"
 
 
 @dataclass
+class CompareRunSettings:
+    """Global compare options (CompareManager → CompareArgs), not per-instance."""
+
+    compare_faces: bool = False
+    overwrite: bool = False
+    store_checkpoints: bool = False
+    use_matrix_comparison: bool = True
+    threshold: Optional[float] = None
+    counter_limit: Optional[int] = None
+
+    def to_json(self) -> dict:
+        return {
+            "compare_faces": self.compare_faces,
+            "overwrite": self.overwrite,
+            "store_checkpoints": self.store_checkpoints,
+            "use_matrix_comparison": self.use_matrix_comparison,
+            "threshold": self.threshold,
+            "counter_limit": self.counter_limit,
+        }
+
+    @classmethod
+    def from_json(cls, data: Optional[dict]) -> "CompareRunSettings":
+        if not data:
+            return cls()
+        return cls(
+            compare_faces=bool(data.get("compare_faces", False)),
+            overwrite=bool(data.get("overwrite", False)),
+            store_checkpoints=bool(data.get("store_checkpoints", False)),
+            use_matrix_comparison=bool(data.get("use_matrix_comparison", True)),
+            threshold=data.get("threshold"),
+            counter_limit=data.get("counter_limit"),
+        )
+
+
+@dataclass
 class CompareHistory:
     """Snapshot of a CompareManager configuration tied to an analysis directory."""
+
     directory: str
-    timestamp: str       # ISO-8601
-    instances: List[dict]       # list of CompareConfig-equivalent plain dicts
-    combination_logic: str      # CombinationLogic.value e.g. "AND"
-    filter_dict: Optional[dict] # serialized filter tree, or None
+    timestamp: str  # ISO-8601
+    instances: List[dict]  # CompareConfig-equivalent plain dicts
+    combination_logic: str  # CombinationLogic.value e.g. "AND"
+    filter_dict: Optional[dict]  # serialized filter tree, or None
+    run_settings: CompareRunSettings = field(default_factory=CompareRunSettings)
 
     # ------------------------------------------------------------------
     # Serialization
@@ -49,17 +87,25 @@ class CompareHistory:
             "instances": self.instances,
             "combination_logic": self.combination_logic,
             "filter_dict": self.filter_dict,
+            "run_settings": self.run_settings.to_json(),
         }
 
     @classmethod
-    def from_json(cls, d: dict) -> Optional[CompareHistory]:
+    def from_json(cls, d: dict) -> Optional["CompareHistory"]:
         try:
+            run_settings = CompareRunSettings.from_json(d.get("run_settings"))
+            # Legacy: lone top-level use_matrix_comparison before run_settings existed
+            if "run_settings" not in d and "use_matrix_comparison" in d:
+                run_settings = CompareRunSettings(
+                    use_matrix_comparison=bool(d["use_matrix_comparison"]),
+                )
             return cls(
                 directory=d["directory"],
                 timestamp=d["timestamp"],
                 instances=d.get("instances", []),
                 combination_logic=d.get("combination_logic", "AND"),
                 filter_dict=d.get("filter_dict"),
+                run_settings=run_settings,
             )
         except (KeyError, TypeError, AttributeError):
             return None
@@ -85,13 +131,14 @@ class CompareHistory:
             "instances": self.instances,
             "combination_logic": self.combination_logic,
             "filter_dict": self.filter_dict,
+            "run_settings": self.run_settings.to_json(),
         }, sort_keys=True)
 
     # ------------------------------------------------------------------
     # Class-level persistence
     # ------------------------------------------------------------------
     @classmethod
-    def load_recent(cls) -> List[CompareHistory]:
+    def load_recent(cls) -> List["CompareHistory"]:
         """Load the persisted history list from app_info_cache."""
         raw = app_info_cache.get_meta(_CACHE_KEY, []) or []
         result = []
@@ -102,12 +149,12 @@ class CompareHistory:
         return result
 
     @classmethod
-    def store_recent(cls, history: List[CompareHistory]) -> None:
+    def store_recent(cls, history: List["CompareHistory"]) -> None:
         """Persist the history list to app_info_cache."""
         app_info_cache.set_meta(_CACHE_KEY, [h.to_json() for h in history])
 
     @classmethod
-    def record(cls, new_entry: CompareHistory) -> None:
+    def record(cls, new_entry: "CompareHistory") -> None:
         """Insert new_entry at the head, deduplicate by identity key, cap at MAX_HISTORY."""
         existing = cls.load_recent()
         new_key = new_entry._identity_key()
@@ -118,7 +165,7 @@ class CompareHistory:
         cls.store_recent(existing)
 
     @classmethod
-    def remove(cls, entry: CompareHistory) -> None:
+    def remove(cls, entry: "CompareHistory") -> None:
         """Remove a specific entry from the persisted history."""
         key = entry._identity_key()
         existing = [h for h in cls.load_recent() if h._identity_key() != key]

@@ -391,7 +391,9 @@ class MediaFrame(QFrame):
         if not path:
             return False
         path_lower = path.lower()
-        return path_lower.endswith((".gif", ".webp", ".jpg", ".jpeg", ".jpe", ".jfif"))
+        return path_lower.endswith(
+            (".gif", ".webp", ".apng", ".jpg", ".jpeg", ".jpe", ".jfif")
+        )
 
     def _large_image_dim_threshold(self) -> int:
         return max(1, int(getattr(config, "large_image_dim_threshold_px", 5000)))

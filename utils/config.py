@@ -95,8 +95,16 @@ class Config:
         self.xvlm_model_size = "4m"
         self.laion_enable_half_precision = False
         self.always_open_new_windows = False
-        self.image_types = [".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".bmp", ".heic", ".avif"]
-        self.video_types = [".mp4", ".mkv", ".avi", ".wmv", ".mov", ".flv"]
+        self.image_types = [
+            ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".bmp",
+            ".heic", ".heif", ".avif", ".ico",
+            ".jfif", ".jpe", ".pjpeg", ".pjp",
+            ".apng",
+        ]
+        self.video_types = [
+            ".mp4", ".mkv", ".avi", ".wmv", ".mov", ".flv",
+            ".webm", ".m4v", ".ogv", ".mpeg", ".mpg",
+        ]
         self.image_classifier_models = []
         self.enable_videos = True
         self.enable_gifs = True
@@ -565,6 +573,10 @@ class Config:
         if "image_browse_recursive" in self.dict and "browse_recursive" not in self.dict:
             self.dict["browse_recursive"] = self.dict["image_browse_recursive"]
             logger.info("Migrated 'image_browse_recursive' → 'browse_recursive'")
+        vt = self.dict.get("video_types")
+        if isinstance(vt, list) and ".m4a" in vt:
+            self.dict["video_types"] = [e for e in vt if e != ".m4a"]
+            logger.info("Removed '.m4a' from video_types (not a video extension)")
 
     def set_values(self, type, *names):
         for name in names:

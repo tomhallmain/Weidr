@@ -764,6 +764,9 @@ class CompareManager:
     def _run_composite(self, args: CompareArgs):
         """
         Run composite comparison across multiple mode instances and combine results.
+
+        Instances run sequentially on the worker thread (not in parallel) because
+        progress/UI signals are main-thread-bound.
         """
         if not self._mode_configs:
             raise ValueError("No compare modes configured for composite search")

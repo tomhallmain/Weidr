@@ -51,7 +51,7 @@ The UI can be used as a media file browser. The following features are available
 
 For image files, zoom and drag functionality is available in both browsing mode as well as when viewing grouped media after a comparison has been run.
 
-Note that depending on your configuration videos, GIFs, PDFs, SVGs and HTMLs may not be included, you may need to open the filetype configuration window with Ctrl+J and turn them on.
+Note that depending on your configuration, videos, GIFs, PDFs, SVGs, and HTML may be disabled; use the file-type configuration window (`Ctrl+J`) or edit `image_types` / `video_types` in config. Default extensions and optional dependencies (HEIC, AVIF, VLC, etc.) are listed in [USAGE.md](USAGE.md#supported-file-types-defaults).
 
 ---
 

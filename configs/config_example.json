@@ -59,10 +59,14 @@
   "laion_enable_half_precision": false,
   "tag_suggestions_file": "tag_suggestions.json",
   "image_types": [
-    ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".bmp", ".heic", ".avif", ".ico"
+    ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".bmp",
+    ".heic", ".heif", ".avif", ".ico",
+    ".jfif", ".jpe", ".pjpeg", ".pjp",
+    ".apng"
   ],
   "video_types": [
-    ".mp4", ".mkv", ".webm", ".avi", ".mov", ".wmv", ".flv", ".mpeg", ".m4a"
+    ".mp4", ".mkv", ".avi", ".wmv", ".mov", ".flv",
+    ".webm", ".m4v", ".ogv", ".mpeg", ".mpg"
   ],
   "media_volume_use_eq": true,
   "enable_videos": true,

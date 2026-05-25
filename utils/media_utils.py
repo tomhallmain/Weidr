@@ -13,7 +13,10 @@ from utils.config import config
 from utils.constants import MediaType
 
 # Used when ``config.video_types`` is missing or empty (matches media_frame fallback).
-DEFAULT_VIDEO_EXTENSIONS = (".mp4", ".mkv", ".avi", ".webm", ".mov", ".m4v", ".ogv")
+DEFAULT_VIDEO_EXTENSIONS = (
+    ".mp4", ".mkv", ".avi", ".wmv", ".mov", ".flv",
+    ".webm", ".m4v", ".ogv", ".mpeg", ".mpg",
+)
 
 
 def get_video_extensions() -> tuple[str, ...]:

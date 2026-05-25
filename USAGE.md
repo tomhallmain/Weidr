@@ -55,7 +55,32 @@ Run from the project root with `pytest` (requires `pytest` and `pytest-qt` from 
 
 `clip_model` defines the CLIP model to use for generating CLIP embeddings.
 
-`image_types` defines the allowed file extensions for gathering image files, while `video_types` defines the allowed file extensions for gathering video files - there are only valid if the `enable_videos` setting is enabled.
+`image_types` and `video_types` define which extensions appear in directory browse lists (merged into `file_types` at startup). Additional categories are toggled separately:
+
+| Config flag | Effect |
+|-------------|--------|
+| `enable_videos` | Include `video_types` in browse |
+| `enable_gifs` | Include `.gif` |
+| `enable_pdfs` | Include `.pdf` |
+| `enable_svgs` | Include `.svg` |
+| `enable_html` | Include `.html` and `.htm` |
+
+You can change extension lists in `config.json` or the **type configuration** window (`Ctrl+J`). Defaults match `configs/config_example.json`.
+
+### Supported file types (defaults)
+
+**Still images** (`image_types`): `.jpg`, `.jpeg`, `.png`, `.tif`, `.tiff`, `.webp`, `.bmp`, `.heic`, `.heif`, `.avif`, `.ico`, `.jfif`, `.jpe`, `.pjpeg`, `.pjp`, `.apng`
+
+- **HEIC / HEIF / AVIF** need optional Pillow plugins (`pillow-heif`, `pillow-avif`) on some systems; Qt may decode others natively.
+- **Animated WebP and APNG** play like GIF when Qt reports animation; otherwise they show as a static frame.
+
+**Video** (`video_types`, requires `enable_videos`): `.mp4`, `.mkv`, `.avi`, `.wmv`, `.mov`, `.flv`, `.webm`, `.m4v`, `.ogv`, `.mpeg`, `.mpg` — playback uses **VLC** when installed.
+
+**Other browse types** (flags above): GIF, PDF (first page for compare/cache), SVG, HTML (HTML uses headless render + first-page raster for cache; can be slow on first open).
+
+**Not in defaults:** audio files (`.mp3`, `.flac`, …) are planned but not implemented yet. RAW, PSD, JXL, and many legacy extensions are not in the default lists; add an extension to `image_types` if you want them in browse (decode may still need extra libraries).
+
+**Go to file** can open paths outside `file_types`; browse and compare gathering respect the configured lists.
 
 `media_volume_use_eq` controls how per-instance video volume is applied. When `true` (default), an audio equalizer preamp is used to give each player its own independent volume level. When `false`, the legacy `audio_set_volume` call is used instead, which is global across all players but has no equalizer drawbacks (preamp floor, slight transition delay).
 

@@ -1107,7 +1107,12 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             app.processEvents()
 
     def _copy_cached_media_to_clipboard(self, media_path: str) -> tuple[bool, str]:
-        """Copy the FrameCache raster for *media_path* to the system clipboard."""
+        """Copy the FrameCache raster for *media_path* to the system clipboard.
+
+        Uses ``get_cached_path`` when warm, otherwise ``get_image_path`` (may block on
+        first HTML render). For PDF/HTML this is the first cached page only — the viewer
+        does not track in-app page index yet.
+        """
         from PySide6.QtGui import QGuiApplication, QImageReader
 
         from image.frame_cache import FrameCache

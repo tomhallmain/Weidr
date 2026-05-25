@@ -69,16 +69,19 @@ You can change extension lists in `config.json` or the **type configuration** wi
 
 ### Supported file types (defaults)
 
-**Still images** (`image_types`): `.jpg`, `.jpeg`, `.png`, `.tif`, `.tiff`, `.webp`, `.bmp`, `.heic`, `.heif`, `.avif`, `.ico`, `.jfif`, `.jpe`, `.pjpeg`, `.pjp`, `.apng`
+**Still images** (`image_types`): `.jpg`, `.jpeg`, `.png`, `.tif`, `.tiff`, `.webp`, `.bmp`, `.heic`, `.heif`, `.avif`, `.ico`, `.jfif`, `.jpe`, `.pjpeg`, `.pjp`, `.apng`, `.jxl`
 
-- **HEIC / HEIF / AVIF** need optional Pillow plugins (`pillow-heif`, `pillow-avif`) on some systems; Qt may decode others natively.
-- **Animated WebP and APNG** play like GIF when Qt reports animation; otherwise they show as a static frame.
+- **HEIC / HEIF / AVIF** need optional Pillow plugins (`pillow-heif`, `pillow-avif-plugin`) on some systems; Qt may decode others natively.
+- **JPEG XL (`.jxl`)** is in the default browse list but has **no Qt reader**; install `pip install pillow-jxl-plugin` so Pillow can decode (libjxl is bundled with that wheel on most platforms). Without it, `.jxl` files appear in browse but may fail to display.
+- **Animated WebP and APNG** play like GIF when Qt reports animation (`QMovie`); otherwise they show as a static frame. `.webp` and `.apng` are in `image_types`; animated playback does not require extra packages beyond Qt.
 
 **Video** (`video_types`, requires `enable_videos`): `.mp4`, `.mkv`, `.avi`, `.wmv`, `.mov`, `.flv`, `.webm`, `.m4v`, `.ogv`, `.mpeg`, `.mpg` — playback uses **VLC** when installed.
 
+**Audio** (`audio_types`, requires `enable_audio`): `.mp3`, `.flac`, `.ogg`, `.opus`, `.wav`, `.m4a`, `.m4b`, `.aac`, `.wma`, and related extensions — playback uses **VLC**; not included in embedding compare or classifier prevalidation.
+
 **Other browse types** (flags above): GIF, PDF (first page for compare/cache), SVG, HTML (HTML uses headless render + first-page raster for cache; can be slow on first open).
 
-**Not in defaults:** audio files (`.mp3`, `.flac`, …) are planned but not implemented yet. RAW, PSD, JXL, and many legacy extensions are not in the default lists; add an extension to `image_types` if you want them in browse (decode may still need extra libraries).
+**Not in defaults:** RAW, PSD, and many legacy extensions; add an extension to `image_types` if you want them in browse (decode may still need extra libraries).
 
 **Go to file** can open paths outside `file_types`; browse and compare gathering respect the configured lists.
 

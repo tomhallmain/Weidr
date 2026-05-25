@@ -11,8 +11,9 @@ opencv-python>=4.8.1.78
 av>=12.0.0
 pyppeteer
 Pillow>=9.5.0
-pillow-avif-plugin
-pillow-heif
+pillow-avif-plugin # AVIF display via Pillow
+pillow-heif        # HEIF/HEIC display via Pillow
+pillow-jxl-plugin  # JPEG XL (.jxl) display via Pillow (no Qt native reader)
 psutil
 pypdfium2
 python-vlc

@@ -20,6 +20,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _CONFIG_EXAMPLE = _REPO_ROOT / "configs" / "config_example.json"
 
 TIER_A_IMAGE_EXTENSIONS = (".jfif", ".jpe", ".pjpeg", ".pjp", ".ico", ".heif", ".apng")
+TIER_C_IMAGE_EXTENSIONS = (".jxl",)
 
 
 def _load_config_example() -> dict:
@@ -30,6 +31,17 @@ def test_config_example_lists_tier_a_image_extensions():
     data = _load_config_example()
     for ext in TIER_A_IMAGE_EXTENSIONS:
         assert ext in data["image_types"]
+
+
+def test_config_example_lists_tier_c_jxl():
+    data = _load_config_example()
+    for ext in TIER_C_IMAGE_EXTENSIONS:
+        assert ext in data["image_types"]
+
+
+def test_default_image_types_include_jxl_and_apng():
+    for ext in (".jxl", ".apng"):
+        assert ext in config.image_types
 
 
 def test_config_example_video_types_exclude_m4a_and_match_fallback():

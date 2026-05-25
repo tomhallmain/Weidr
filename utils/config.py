@@ -99,7 +99,7 @@ class Config:
             ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".bmp",
             ".heic", ".heif", ".avif", ".ico",
             ".jfif", ".jpe", ".pjpeg", ".pjp",
-            ".apng",
+            ".apng", ".jxl",
         ]
         self.video_types = [
             ".mp4", ".mkv", ".avi", ".wmv", ".mov", ".flv",

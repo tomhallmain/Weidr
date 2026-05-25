@@ -3,11 +3,42 @@ Qt media widget fixtures.
 """
 
 import pytest
+from PySide6.QtWidgets import QApplication
+
+
+def _teardown_media_frame(frame) -> None:
+    """Stop timers, tear down VLC, and destroy top-level overlay windows."""
+    try:
+        frame._mouse_poll_timer.stop()
+    except Exception:
+        pass
+    try:
+        frame._playback_timer.stop()
+    except Exception:
+        pass
+    try:
+        overlay = frame._controls_overlay
+        overlay.hide()
+        overlay.close()
+    except Exception:
+        pass
+    try:
+        frame.dispose_vlc()
+    except Exception:
+        pass
+    try:
+        frame.close()
+        frame.deleteLater()
+    except Exception:
+        pass
+    app = QApplication.instance()
+    if app is not None:
+        app.processEvents()
 
 
 @pytest.fixture
 def media_frame(qtbot):
-    """A visible MediaFrame, cleaned up via dispose_vlc after each test."""
+    """A visible MediaFrame, fully torn down after each test (avoids Qt/VLC hang)."""
     from ui.app_window.media_frame import MediaFrame
     frame = MediaFrame()
     qtbot.addWidget(frame)
@@ -19,7 +50,4 @@ def media_frame(qtbot):
     # geometry, so stop the timer for all media frame tests.
     frame._mouse_poll_timer.stop()
     yield frame
-    try:
-        frame.dispose_vlc()
-    except Exception:
-        pass
+    _teardown_media_frame(frame)

@@ -18,13 +18,15 @@ logger = get_logger("pillow_plugins")
 _register_lock = threading.Lock()
 _registered = False
 
+has_imported_pillow_jxl = False
+
 
 def ensure_pillow_plugins_registered() -> None:
     """
     Register optional Pillow format plugins once per process.
     Safe to call repeatedly.
     """
-    global _registered
+    global _registered, has_imported_pillow_jxl
     if _registered:
         return
     with _register_lock:
@@ -45,6 +47,13 @@ def ensure_pillow_plugins_registered() -> None:
                 register()
         except Exception as e:
             logger.debug("Optional Pillow HEIF plugin not active: %s", e)
+
+        # JPEG XL plugin (pillow-jxl-plugin); static .jxl only — no Qt native reader
+        try:
+            importlib.import_module("pillow_jxl")
+            has_imported_pillow_jxl = True
+        except Exception as e:
+            logger.debug("Optional Pillow JXL plugin not active: %s", e)
 
         _registered = True
 

@@ -71,6 +71,11 @@ except ImportError:
 
 _MATROSKA_EXTENSIONS = {".webm", ".mkv", ".mka", ".mks"}
 
+# Extensions that may use QMovie when Qt reports animation (see _show_animated_media).
+ANIMATED_IMAGE_SUFFIXES = (
+    ".gif", ".webp", ".apng", ".jpg", ".jpeg", ".jpe", ".jfif",
+)
+
 # Minimum wall-clock seconds that must elapse before a VLC State.Ended is
 # treated as a real end for slideshow advancement.  Prevents buffer-deadlock
 # videos (which report Ended in milliseconds with zero playback time) from
@@ -395,10 +400,7 @@ class MediaFrame(QFrame):
         """Return True for formats that may carry animation frames."""
         if not path:
             return False
-        path_lower = path.lower()
-        return path_lower.endswith(
-            (".gif", ".webp", ".apng", ".jpg", ".jpeg", ".jpe", ".jfif")
-        )
+        return path.lower().endswith(ANIMATED_IMAGE_SUFFIXES)
 
     def _large_image_dim_threshold(self) -> int:
         return max(1, int(getattr(config, "large_image_dim_threshold_px", 5000)))

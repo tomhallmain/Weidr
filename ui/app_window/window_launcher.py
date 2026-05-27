@@ -154,7 +154,11 @@ class WindowLauncher:
         """Open the compare settings window."""
         try:
             from ui.compare.compare_settings_window_qt import CompareSettingsWindow
-            CompareSettingsWindow.open(parent=self._app, compare_manager=self._app.compare_manager)
+            CompareSettingsWindow.open(
+                parent=self._app,
+                compare_manager=self._app.compare_manager,
+                set_inclusion_pattern=self._app.sidebar_panel.inclusion_pattern.setText,
+            )
         except Exception as e:
             self._handle_error(e, "Compare Settings Window Error")
 

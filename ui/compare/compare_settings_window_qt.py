@@ -53,8 +53,17 @@ class CompareSettingsWindow(SmartDialog):
     # Factory
     # ------------------------------------------------------------------
     @classmethod
-    def open(cls, parent: QWidget, compare_manager: CompareManager) -> None:
-        """Show or focus the settings window for *compare_manager*."""
+    def open(
+        cls,
+        parent: QWidget,
+        compare_manager: CompareManager,
+        set_inclusion_pattern=None,
+    ) -> None:
+        """Show or focus the settings window for *compare_manager*.
+
+        *set_inclusion_pattern* is an optional ``Callable[[str], None]`` invoked
+        when a history entry is loaded, so the sidebar filter is restored in sync.
+        """
         if compare_manager in cls._open_windows:
             win = cls._open_windows[compare_manager]
             try:
@@ -64,12 +73,17 @@ class CompareSettingsWindow(SmartDialog):
                     return
             except Exception:
                 pass
-        cls(parent, compare_manager)
+        cls(parent, compare_manager, set_inclusion_pattern=set_inclusion_pattern)
 
     # ------------------------------------------------------------------
     # Construction
     # ------------------------------------------------------------------
-    def __init__(self, parent: QWidget, compare_manager: CompareManager) -> None:
+    def __init__(
+        self,
+        parent: QWidget,
+        compare_manager: CompareManager,
+        set_inclusion_pattern=None,
+    ) -> None:
         if compare_manager in CompareSettingsWindow._open_windows:
             existing = CompareSettingsWindow._open_windows[compare_manager]
             try:
@@ -89,6 +103,7 @@ class CompareSettingsWindow(SmartDialog):
         CompareSettingsWindow._open_windows[compare_manager] = self
 
         self._compare_manager = compare_manager
+        self._set_inclusion_pattern = set_inclusion_pattern
         self._weight_vars: Dict[str, QLineEdit] = {}   # instance_id -> weight edit
         self._threshold_combo: Optional[QComboBox] = None
         self._add_instance_btn: Optional[QPushButton] = None
@@ -624,6 +639,8 @@ class CompareSettingsWindow(SmartDialog):
         )
         self._refresh_instance_list()
         self._refresh_global_settings_controls()
+        if self._set_inclusion_pattern is not None:
+            self._set_inclusion_pattern(entry.inclusion_pattern or "")
 
     def _on_remove_history(self, entry: CompareHistory) -> None:
         CompareHistory.remove(entry)

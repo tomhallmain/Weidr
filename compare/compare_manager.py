@@ -741,7 +741,7 @@ class CompareManager:
         # Record this run in the persistent recent-history list.
         try:
             from compare.compare_history import CompareHistory
-            CompareHistory.record(self.snapshot(args.base_dir))
+            CompareHistory.record(self.snapshot(args))
         except Exception as _e:
             logger.debug(f"Failed to record compare history: {_e}")
 
@@ -1151,7 +1151,7 @@ class CompareManager:
         self.set_threshold(settings.threshold)
         self.set_counter_limit(settings.counter_limit)
 
-    def snapshot(self, directory: str) -> "CompareHistory":
+    def snapshot(self, args: "CompareArgs") -> "CompareHistory":
         """Capture current configuration as a CompareHistory entry."""
         from compare.compare_history import CompareHistory
         from compare.compare_filters import filter_to_dict
@@ -1169,12 +1169,13 @@ class CompareManager:
             for cfg in self._mode_configs.values()
         ]
         return CompareHistory(
-            directory=directory,
+            directory=args.base_dir,
             timestamp=datetime.now().isoformat(),
             instances=instances,
             combination_logic=self._combination_logic.value,
             filter_dict=filter_to_dict(self._data_filter),
             run_settings=self._current_run_settings(),
+            inclusion_pattern=args.inclusion_pattern or None,
         )
 
     def apply_snapshot(self, h: "CompareHistory") -> None:

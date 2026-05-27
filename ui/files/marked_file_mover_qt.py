@@ -23,7 +23,7 @@ from typing import Optional
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QHBoxLayout, QLabel, QProgressDialog, QPushButton,
+    QApplication, QHBoxLayout, QLabel, QProgressDialog, QPushButton,
     QScrollArea, QVBoxLayout, QWidget,
 )
 
@@ -86,10 +86,15 @@ class MarkedFileMover(SmartDialog):
         progress.setWindowTitle(_("File Operation"))
         progress.setWindowModality(Qt.WindowModal)
         progress.setMinimumDuration(0)
+        progress.setMinimumWidth(250)
         progress.setValue(0)
 
+        # One update per percent (~100 steps total).
+        _step = max(1, total // 100)
+
         def _callback(done: int, _total: int) -> None:
-            progress.setValue(done)
+            if done < _step or done % _step == 0 or done == _total:
+                progress.setValue(done)
             if progress.wasCanceled():
                 MarkedFiles.is_cancelled_action = True
 
@@ -600,6 +605,7 @@ class MarkedFileMover(SmartDialog):
             progress.setLabelText(_("Deleting {0} files...").format(total))
             progress.setCancelButton(None)
 
+        _step = max(1, total // 100)
         for i, filepath in enumerate(MarkedFiles.file_marks):
             try:
                 if config.enable_svgs and filepath.lower().endswith(".svg"):
@@ -612,8 +618,9 @@ class MarkedFileMover(SmartDialog):
                 logger.error(f"Failed to delete {filepath}: {e}")
                 if os.path.exists(filepath):
                     failed_to_delete.append(filepath)
-            if progress is not None:
-                progress.setValue(i + 1)
+            done = i + 1
+            if progress is not None and (done % _step == 0 or done == total):
+                progress.setValue(done)
 
         MarkedFiles.file_marks.clear()
         if failed_to_delete:

@@ -19,9 +19,7 @@ from lib.multi_display_qt import SmartDialog
 from ui.app_style import AppStyle
 from ui.auth.password_core import PasswordManager
 from ui.auth.password_session_manager import PasswordSessionManager
-from utils.translations import I18N
-
-_ = I18N._
+from utils.translations import _
 
 
 def _is_caps_lock_on() -> bool:

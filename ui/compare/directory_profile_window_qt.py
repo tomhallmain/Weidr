@@ -27,10 +27,8 @@ from files.directory_profile import DirectoryProfile
 from lib.fast_directory_picker_qt import get_existing_directory
 from lib.multi_display_qt import SmartDialog
 from ui.app_style import AppStyle
-from utils.translations import I18N
+from utils.translations import _
 from utils.logging_setup import get_logger
-
-_ = I18N._
 logger = get_logger("directory_profile_window_qt")
 
 

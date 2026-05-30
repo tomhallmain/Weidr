@@ -645,7 +645,7 @@ def plan_global_renames(
     max_per_file = 50_000
     for p in sorted(batch, key=lambda x: (str(x.parent).lower(), x.name.lower())):
         ext = p.suffix
-        for _ in range(max_per_file):
+        for _unused in range(max_per_file):
             candidate = random_basename(ext)
             if candidate in occupied or candidate in assigned:
                 continue
@@ -866,7 +866,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     pre = argparse.ArgumentParser(add_help=False)
     pre.add_argument("directory", type=Path, nargs="?")
-    pre_args, _ = pre.parse_known_args(argv_list)
+    pre_args, _unused = pre.parse_known_args(argv_list)
 
     config_defaults: dict = {}
     config_path: Path | None = None

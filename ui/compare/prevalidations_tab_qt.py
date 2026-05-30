@@ -97,10 +97,8 @@ from ui.compare.classifier_management_window_qt import ClassifierActionModifyWin
 from ui.app_style import AppStyle
 from utils.config import config
 from utils.logging_setup import get_logger
-from utils.translations import I18N
+from utils.translations import _
 from utils.utils import Utils
-
-_ = I18N._
 logger = get_logger("prevalidations_tab_qt")
 
 

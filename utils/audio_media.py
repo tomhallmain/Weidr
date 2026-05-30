@@ -54,6 +54,5 @@ def is_audio_file(path: str) -> bool:
 
 def audio_placeholder_title(path: str) -> str:
     """Short label for media frame when VLC is unavailable."""
-    from utils.translations import I18N
-    _ = I18N._
+    from utils.translations import _
     return _("Audio: ") + os.path.basename(path)

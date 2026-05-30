@@ -56,3 +56,5 @@ def marks_transfer_running_warn(action: str) -> str:
     Then for each locale once the PO files are set up as desired, run below in the deepest locale directory to produce the MO file from the PO file:
         ```python C:\\Python310\\Tools\\i18n\\msgfmt.py -o base.mo base```
     '''
+
+_ = I18N._

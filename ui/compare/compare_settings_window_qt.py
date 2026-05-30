@@ -30,10 +30,8 @@ from ui.compare.add_instance_dialog_qt import AddInstanceDialog, MAX_INSTANCES
 from ui.compare.filter_builder_panel_qt import FilterBuilderPanel
 from utils.config import config
 from utils.constants import CompareMode
-from utils.translations import I18N
+from utils.translations import _
 from utils.logging_setup import get_logger
-
-_ = I18N._
 logger = get_logger("compare_settings_window_qt")
 
 

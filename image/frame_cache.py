@@ -193,7 +193,7 @@ def _is_likely_decoder_blank(frame: np.ndarray) -> bool:
         return True
     gray = frame if frame.ndim == 2 else cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     mean_m = cv2.mean(gray)[0]
-    _, stddev = cv2.meanStdDev(gray)
+    _unused, stddev = cv2.meanStdDev(gray)
     std_m = float(stddev[0, 0])
     peak = float(np.max(gray))
     return peak < 6.0 and mean_m < 2.5 and std_m < 3.0
@@ -286,7 +286,7 @@ def _first_substantive_frame(
     max_frames: int = 360,
 ) -> Tuple[bool, Optional[np.ndarray]]:
     """Read forward until the first non-blank frame or EOF (when ``config.debug2``)."""
-    for _ in range(max(1, max_frames)):
+    for _unused in range(max(1, max_frames)):
         ret, raw = cap.read()
         if not ret or raw is None:
             break
@@ -858,7 +858,7 @@ class FrameCache:
         Materializes :meth:`stream_frame_samples` (full decode). Falls back to
         ``get_image_path`` when sampling is not applicable or fails.
         """
-        _, path_iter = cls.stream_frame_samples(media_path, sample_ratio)
+        _unused, path_iter = cls.stream_frame_samples(media_path, sample_ratio)
         sampled_paths = list(path_iter)
         media_path_lower = media_path.lower()
         is_video = config.enable_videos and is_video_path_by_extension(media_path)
@@ -1086,7 +1086,7 @@ class FrameCache:
                 if frame is not None and not _is_likely_decoder_blank(frame):
                     chosen = frame
                 else:
-                    for _ in range(lookahead_cap):
+                    for _unused in range(lookahead_cap):
                         try:
                             av2 = next(decoder)
                         except StopIteration:
@@ -1288,7 +1288,7 @@ class FrameCache:
             if frame is not None and not _is_likely_decoder_blank(frame):
                 chosen = frame
             else:
-                for _ in range(lookahead_cap):
+                for _unused in range(lookahead_cap):
                     r2, raw2 = cap.read()
                     extra += 1
                     if not r2 or raw2 is None:

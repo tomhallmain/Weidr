@@ -290,9 +290,9 @@ class H5ImageClassifier(BaseImageClassifier):
             
         # Handle different data formats
         if len(input_shape) == 4:  # Batch dimension included
-            _, height, width, _ = input_shape
+            _unused1, height, width, _unused2 = input_shape
         else:
-            height, width, _ = input_shape
+            height, width, _unused2 = input_shape
         return (width, height)  # PIL uses (width, height) for resize
 
     def _verify_model_compatibility(self):

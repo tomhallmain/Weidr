@@ -24,12 +24,9 @@ from utils.media_utils import is_classifier_dynamic_media_path
 from utils.constants import ActionType, ClassifierActionType
 from utils.logging_setup import get_logger
 from utils.running_tasks_registry import start_thread
-from utils.translations import I18N
+from utils.translations import _
 from utils.utils import Utils
 
-
-
-_ = I18N._
 
 logger = get_logger("classifier_action")
 
@@ -483,7 +480,7 @@ class ClassifierAction:
         return False, None
 
     def matches_image_path(self, image_path, lookahead_eval_cache=None) -> bool:
-        is_match, _ = self._evaluate_image_path_match(
+        is_match, _unused = self._evaluate_image_path_match(
             image_path, lookahead_eval_cache=lookahead_eval_cache
         )
         return is_match

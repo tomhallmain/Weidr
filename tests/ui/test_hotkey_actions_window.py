@@ -16,10 +16,10 @@ from PySide6.QtWidgets import QApplication, QLabel, QPushButton
 
 from files.file_action import FileAction
 from ui.files.hotkey_actions_window_qt import HotkeyActionsWindow
-from utils.translations import I18N
+from utils.translations import _
 from utils.utils import Utils
 
-_tr = I18N._
+_tr = _
 
 
 def _focus_hotkey_window(hw: HotkeyActionsWindow) -> None:

@@ -49,9 +49,7 @@ from utils.media_utils import (
     scale_dims,
 )
 from utils.utils import Utils
-from utils.translations import I18N
-
-_ = I18N._
+from utils.translations import _
 logger = get_logger("media_frame_qt")
 
 # Optional: Pillow for formats Qt may not support (HEIC, AVIF, etc.)
@@ -1075,7 +1073,7 @@ class MediaFrame(QFrame):
                 ret = self.vlc_media_player.video_take_snapshot(0, output_path, 0, 0)
                 if ret != 0:
                     return False, _("VLC snapshot operation failed.")
-                for _ in range(20):
+                for _i in range(20):
                     if os.path.isfile(output_path) and os.path.getsize(output_path) > 0:
                         return True, ""
                     time.sleep(0.05)

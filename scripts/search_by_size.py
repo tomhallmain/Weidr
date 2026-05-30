@@ -107,7 +107,7 @@ def get_image_dimensions(image_path: Path) -> Tuple[int, int]:
                 num_entries = int.from_bytes(f.read(2), 'little' if not big_endian else 'big')
                 width = height = None
                 
-                for _ in range(num_entries):
+                for _unused in range(num_entries):
                     tag = int.from_bytes(f.read(2), 'little' if not big_endian else 'big')
                     f.read(6)  # Skip type and count
                     value = int.from_bytes(f.read(4), 'little' if not big_endian else 'big')

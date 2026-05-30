@@ -15,9 +15,7 @@ from ui.auth.password_core import PasswordManager, get_security_config
 from ui.auth.password_session_manager import PasswordSessionManager
 from ui.auth.password_dialog import PasswordLineEdit
 from utils.constants import ProtectedActions
-from utils.translations import I18N
-
-_ = I18N._
+from utils.translations import _
 
 
 class StartupPasswordDialog(QDialog):

@@ -37,11 +37,10 @@ import traceback
 from utils.config import config
 from utils.logging_setup import get_logger
 from utils.running_tasks_registry import start_thread
-from utils.translations import I18N
+from utils.translations import _
 from utils.utils import Utils
 
 logger = get_logger("gimp_wrapper")
-_ = I18N._
 
 
 class FileState(Enum):

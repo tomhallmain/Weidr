@@ -9,10 +9,8 @@ from utils.app_info_cache import app_info_cache
 from utils.config import config
 from utils.constants import ActionType
 from utils.logging_setup import get_logger
-from utils.translations import I18N, compare_running_warn, marks_transfer_running_warn
+from utils.translations import _, compare_running_warn, marks_transfer_running_warn
 from utils.utils import Utils
-
-_ = I18N._
 logger = get_logger("marked_files")
 
 

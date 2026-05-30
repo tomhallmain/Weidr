@@ -15,13 +15,11 @@ from PySide6.QtCore import QTimer
 from utils.app_info_cache import app_info_cache
 from utils.config import config
 from utils.logging_setup import get_logger
-from utils.translations import I18N
+from utils.translations import _
 
 if TYPE_CHECKING:
     from files.file_browser import FileBrowser
     from ui.app_window.app_window import AppWindow
-
-_ = I18N._
 logger = get_logger("cache_controller")
 
 

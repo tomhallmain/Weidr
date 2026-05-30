@@ -30,9 +30,7 @@ from lib.multi_display_qt import SmartDialog
 from utils.config import config
 from utils.constants import HfHubSortDirection, HfHubSortOption, HfHubVisualMediaTask
 from utils.logging_setup import get_logger
-from utils.translations import I18N
-
-_ = I18N._
+from utils.translations import _
 logger = get_logger("hf_model_manager_window_qt")
 
 
@@ -865,7 +863,7 @@ class HfModelManagerWindow(SmartDialog):
         basename = os.path.basename(normalized)
         if not basename:
             return None
-        for root, _, files in os.walk(snapshot_dir):
+        for root, _unused, files in os.walk(snapshot_dir):
             if basename in files:
                 return os.path.join(root, basename)
         return None

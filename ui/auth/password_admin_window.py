@@ -24,9 +24,7 @@ from ui.app_style import AppStyle
 from ui.auth.password_core import PasswordManager, get_security_config
 from ui.auth.password_utils import require_password
 from utils.constants import ProtectedActions
-from utils.translations import I18N
-
-_ = I18N._
+from utils.translations import _
 
 
 class PasswordChangeDialog(QDialog):

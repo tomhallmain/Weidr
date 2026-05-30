@@ -313,7 +313,7 @@ class MasonryBrowser(QWidget):
         self._col_widgets: list[QWidget] = []
         self._col_layouts: list[QVBoxLayout] = []
         self._col_heights: list[int] = []
-        for _ in range(columns):
+        for _i in range(columns):
             col = QWidget()
             col.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
             col_layout = QVBoxLayout(col)

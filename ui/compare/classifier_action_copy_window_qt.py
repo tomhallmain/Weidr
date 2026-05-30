@@ -28,9 +28,7 @@ from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle
 from utils.constants import ClassifierActionClass
 from utils.config import config
-from utils.translations import I18N
-
-_ = I18N._
+from utils.translations import _
 
 
 class ClassifierActionCopyWindow(SmartDialog):

@@ -24,10 +24,9 @@ from typing import Any
 
 from utils.logging_setup import get_logger
 from utils.media_utils import is_video_file
-from utils.translations import I18N
+from utils.translations import _
 
 logger = get_logger("video_ops")
-_ = I18N._
 
 
 class VideoCutSide(Enum):

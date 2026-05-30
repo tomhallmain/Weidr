@@ -40,10 +40,8 @@ from lib.multi_display_qt import SmartDialog
 from ui.app_style import AppStyle
 from utils.config import config
 from utils.constants import ClassifierActionType
-from utils.translations import I18N
+from utils.translations import _
 from utils.logging_setup import get_logger
-
-_ = I18N._
 logger = get_logger("classifier_management_window_qt")
 
 

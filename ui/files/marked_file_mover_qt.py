@@ -38,10 +38,8 @@ from utils.app_actions import AppActions
 from utils.config import config
 from utils.constants import Mode, ProtectedActions
 from utils.logging_setup import get_logger
-from utils.translations import I18N, compare_running_warn, marks_transfer_running_warn
+from utils.translations import _, compare_running_warn, marks_transfer_running_warn
 from utils.utils import Utils
-
-_ = I18N._
 logger = get_logger("marked_file_mover_qt")
 
 
@@ -600,7 +598,7 @@ class MarkedFileMover(SmartDialog):
         total = len(MarkedFiles.file_marks)
         # build_marks_progress uses move_func=None → "Processing N files..." label.
         # Override label and strip the cancel button: deletion is not reversible mid-run.
-        progress, _ = MarkedFileMover.build_marks_progress(self, total, move_func=None)
+        progress, _unused = MarkedFileMover.build_marks_progress(self, total, move_func=None)
         if progress is not None:
             progress.setLabelText(_("Deleting {0} files...").format(total))
             progress.setCancelButton(None)
@@ -754,7 +752,7 @@ class MarkedFileMover(SmartDialog):
         )
         self._filtered_target_dirs = [
             dirpath
-            for dirpath, _ in sorted(similarities.items(), key=lambda x: -x[1])
+            for dirpath, _unused in sorted(similarities.items(), key=lambda x: -x[1])
         ]
         self._is_sorted_by_embedding = True
         self._rebuild_directory_rows()

@@ -18,10 +18,8 @@ from ui.auth.password_utils import require_password
 from utils.app_actions import AppActions
 from utils.constants import ProtectedActions
 from utils.logging_setup import get_logger
-from utils.translations import I18N
+from utils.translations import _
 from utils.utils import Utils
-
-_ = I18N._
 logger = get_logger("file_action_sets_window_qt")
 
 

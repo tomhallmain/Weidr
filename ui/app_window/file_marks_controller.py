@@ -23,7 +23,7 @@ from ui.auth.password_utils import require_password
 from utils.config import config
 from utils.constants import Mode, ProtectedActions
 from utils.logging_setup import get_logger
-from utils.translations import I18N, marks_transfer_running_warn
+from utils.translations import _, marks_transfer_running_warn
 from utils.utils import ModifierKey, Utils
 
 if TYPE_CHECKING:
@@ -31,8 +31,6 @@ if TYPE_CHECKING:
     from files.file_browser import FileBrowser
     from ui.app_window.app_window import AppWindow
     from ui.app_window.media_navigator import MediaNavigator
-
-_ = I18N._
 logger = get_logger("file_marks_controller")
 
 

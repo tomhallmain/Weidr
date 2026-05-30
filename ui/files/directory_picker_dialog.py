@@ -31,9 +31,7 @@ from PySide6.QtWidgets import (
 from lib.fast_directory_picker_qt import get_existing_directory
 from lib.multi_display_qt import SmartDialog
 from ui.app_style import AppStyle
-from utils.translations import I18N
-
-_ = I18N._
+from utils.translations import _
 
 
 class AlphabetAvailabilityDialog(SmartDialog):

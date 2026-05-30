@@ -6,9 +6,7 @@ from image.image_data_extractor import image_data_extractor
 from utils.config import config
 from utils.constants import ImageGenerationType
 from utils.logging_setup import get_logger
-from utils.translations import I18N
-
-_ = I18N._
+from utils.translations import _
 logger = get_logger("sd_runner_client")
 
 class SDRunnerClient:

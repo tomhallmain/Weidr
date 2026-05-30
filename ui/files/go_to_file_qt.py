@@ -37,10 +37,8 @@ from utils.app_actions import AppActions
 from utils.app_info_cache import app_info_cache
 from utils.config import config
 from utils.constants import SortBy
-from utils.translations import I18N
+from utils.translations import _
 from utils.utils import Utils
-
-_ = I18N._
 
 
 # ------------------------------------------------------------------

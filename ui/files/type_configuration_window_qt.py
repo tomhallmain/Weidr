@@ -24,15 +24,13 @@ from ui.app_style import AppStyle
 from utils.app_info_cache import app_info_cache
 from utils.config import config
 from utils.constants import CompareMediaType
-from utils.translations import I18N
+from utils.translations import _
 
 from image.frame_cache import (
     has_imported_pypdfium2,
     has_imported_cairosvg,
     has_imported_pyppeteer,
 )
-
-_ = I18N._
 
 
 class TypeConfigurationWindow(SmartDialog):

@@ -31,10 +31,8 @@ from utils.app_info_cache import app_info_cache
 from utils.config import config
 from utils.constants import FileActionKind
 from utils.logging_setup import get_logger
-from utils.translations import I18N
+from utils.translations import _
 from utils.utils import Utils
-
-_ = I18N._
 
 logger = get_logger("file_actions_window_qt")
 
@@ -302,7 +300,7 @@ class FileActionsWindow(SmartWindow):
                 grid, _("... and {0} more").format(len(remaining_stats)), row, 0, Qt.AlignLeft
             )
             for col_offset, (_header, key) in enumerate(col_defs):
-                rem_val = sum(c[key] for _, c in remaining_stats)
+                rem_val = sum(c[key] for _unused, c in remaining_stats)
                 self._add_stat_cell(grid, str(rem_val), row, 1 + col_offset, Qt.AlignRight)
 
         return frame

@@ -26,7 +26,7 @@ from ui.auth.password_utils import require_password
 from utils.config import config
 from utils.constants import CompareMode, ImageGenerationType, Mode, ProtectedActions, SortBy
 from utils.logging_setup import get_logger
-from utils.translations import I18N
+from utils.translations import _
 from utils.utils import Utils
 
 if TYPE_CHECKING:
@@ -34,8 +34,6 @@ if TYPE_CHECKING:
     from files.file_browser import FileBrowser
     from ui.app_window.app_window import AppWindow
     from ui.app_window.sidebar_panel import SidebarPanel
-
-_ = I18N._
 logger = get_logger("search_controller")
 
 

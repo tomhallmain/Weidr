@@ -19,9 +19,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
-from utils.translations import I18N
-
-_ = I18N._
+from utils.translations import _
 
 # Colour palette for the high-severity dialog
 _BG = "#ff4444"

@@ -810,7 +810,7 @@ class CompareManager:
         def _is_search_instance(cfg: CompareConfig) -> bool:
             return not args.not_searching() or bool(cfg.search_text or cfg.search_text_negative)
 
-        run_mode_flags = {_is_search_instance(cfg) for _, cfg in enabled_configs}
+        run_mode_flags = {_is_search_instance(cfg) for _unused, cfg in enabled_configs}
         if len(run_mode_flags) > 1:
             raise ValueError(
                 "All composite instances must run in the same mode. "
@@ -898,7 +898,7 @@ class CompareManager:
 
         # If every enabled instance was skipped because none support text search,
         # raise a user-visible error instead of silently returning empty results.
-        if not args.not_searching() and skipped_instance_ids == {iid for iid, _ in enabled_configs}:
+        if not args.not_searching() and skipped_instance_ids == {iid for iid, _unused in enabled_configs}:
             raise ValueError(
                 "Text search is not supported by any mode in this composite bundle. "
                 "Add an embedding mode (e.g. CLIP, SigLIP) to use text search, "
@@ -1063,7 +1063,7 @@ class CompareManager:
 
             new_idx = 0
             filtered_groups: Dict[int, Dict[str, float]] = {}
-            for _, group_files in sorted(original_groups.items()):
+            for _unused, group_files in sorted(original_groups.items()):
                 kept = {fp: s for fp, s in group_files.items() if fp in combined_file_set}
                 if len(kept) > 1:  # discard groups left with only one member
                     filtered_groups[new_idx] = kept

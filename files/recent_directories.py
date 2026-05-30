@@ -2,13 +2,11 @@ import os
 from typing import Optional
 
 from utils.app_info_cache import app_info_cache
-from utils.translations import I18N
+from utils.translations import _
 from utils.utils import Utils
 from utils.logging_setup import get_logger
 
 logger = get_logger("recent_directories")
-
-_ = I18N._
 
 
 class RecentDirectories:

@@ -11,10 +11,8 @@ from files.sortable_file import SortableFile
 from utils.config import config
 from utils.constants import Sort, SortBy, Direction
 from utils.logging_setup import get_logger
-from utils.translations import I18N
+from utils.translations import _
 from utils.utils import Utils
-
-_ = I18N._
 logger = get_logger("file_browser")
 
 
@@ -485,7 +483,7 @@ class FileBrowser:
 
     def _find_closest_by_type(self, search_text: str, sorted_files: List[SortableFile], original_files: List[str]) -> Optional[str]:
         """Find closest file by file type/extension."""
-        _, search_ext = os.path.splitext(search_text)
+        _unused, search_ext = os.path.splitext(search_text)
         search_text_lower = search_ext.lower()
         
         # Try to find files with matching extension
@@ -873,12 +871,12 @@ class FileBrowser:
                         files.append(f)
         elif self.use_file_paths_json:
             filepaths = self.load_file_paths_json()
-            _ = "**/" if self.recursive else ""
+            _pat = "**/" if self.recursive else ""
             for ext in allowed_extensions:
                 if self.use_file_paths_json:
                     files.extend([f for f in filepaths if f.lower().endswith(ext)])
                 else:
-                    files.extend(glob.glob(os.path.join(self.directory, _ + "*" + ext), recursive=self.recursive))
+                    files.extend(glob.glob(os.path.join(self.directory, _pat + "*" + ext), recursive=self.recursive))
         else:
             with Utils.file_operation_lock:
                 to_scan = [self.directory]

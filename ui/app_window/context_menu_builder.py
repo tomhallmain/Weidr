@@ -18,12 +18,10 @@ from ui.files.marked_file_mover_qt import MarkedFiles
 from utils.config import config
 from utils.media_utils import is_video_file
 from utils.logging_setup import get_logger
-from utils.translations import I18N
+from utils.translations import _
 
 if TYPE_CHECKING:
     from ui.app_window.app_window import AppWindow
-
-_ = I18N._
 logger = get_logger("context_menu_builder")
 
 

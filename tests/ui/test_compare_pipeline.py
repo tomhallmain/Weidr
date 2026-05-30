@@ -23,9 +23,9 @@ from PySide6.QtWidgets import QPushButton
 from tests.ui.app_window_fixtures import _teardown_app_window
 from ui.app_window.app_window import AppWindow
 from utils.constants import CompareMode
-from utils.translations import I18N
+from utils.translations import _
 
-_tr = I18N._
+_tr = _
 
 
 # ---------------------------------------------------------------------------

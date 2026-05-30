@@ -4,9 +4,9 @@ import pytest
 from PySide6.QtWidgets import QLabel, QPushButton
 
 from ui.compare.compare_settings_window_qt import CompareSettingsWindow
-from utils.translations import I18N
+from utils.translations import _
 
-_tr = I18N._
+_tr = _
 
 
 def _close_compare_settings_windows() -> None:

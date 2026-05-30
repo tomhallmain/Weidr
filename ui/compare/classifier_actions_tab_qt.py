@@ -30,9 +30,7 @@ from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle
 from utils.config import config
 from utils.logging_setup import get_logger
-from utils.translations import I18N
-
-_ = I18N._
+from utils.translations import _
 logger = get_logger("classifier_actions_tab_qt")
 
 

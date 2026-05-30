@@ -23,9 +23,7 @@ from compare.compare_filters import (
     ModelFilter, SizeFilter,
 )
 from ui.app_style import AppStyle
-from utils.translations import I18N
-
-_ = I18N._
+from utils.translations import _
 
 
 class _FilterRow(QWidget):

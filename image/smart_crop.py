@@ -416,7 +416,7 @@ class Cropper:
 
     @staticmethod
     def is_line_color(im: PilImage, y: int, color: Tuple[int, int, int]) -> bool:
-        width, _ = im.size
+        width, _unused = im.size
         print_counts = 0
         if config.debug:
             logger.debug("Comparison for line: " + str(y))
@@ -433,7 +433,7 @@ class Cropper:
 
     @staticmethod
     def is_column_color(im: PilImage, x: int, color: Tuple[int, int, int]) -> bool:
-        _, height = im.size
+        _unused, height = im.size
         print_counts = 0
         if config.debug:
             logger.debug("Comparison for column: " + str(x))

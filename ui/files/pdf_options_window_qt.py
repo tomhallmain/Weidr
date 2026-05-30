@@ -19,9 +19,7 @@ from PySide6.QtWidgets import (
 from lib.multi_display_qt import SmartDialog
 from ui.app_style import AppStyle
 from utils.app_actions import AppActions
-from utils.translations import I18N
-
-_ = I18N._
+from utils.translations import _
 
 
 class PDFOptionsWindow(SmartDialog):

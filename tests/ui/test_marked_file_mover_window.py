@@ -7,9 +7,9 @@ from PySide6.QtWidgets import QApplication, QPushButton, QScrollArea
 
 from files.marked_files import MarkedFiles
 from ui.files.marked_file_mover_qt import MarkedFileMover
-from utils.translations import I18N
+from utils.translations import _
 
-_tr = I18N._
+_tr = _
 
 
 def _close_mark_mover() -> None:

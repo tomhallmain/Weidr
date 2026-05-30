@@ -25,7 +25,7 @@ from ui.app_window.slideshow_dynamic_policy import (
 from utils.config import config
 from utils.constants import Direction, Mode, ViewMode
 from utils.logging_setup import get_logger
-from utils.translations import I18N
+from utils.translations import _
 from utils.utils import Utils
 
 if TYPE_CHECKING:
@@ -33,8 +33,6 @@ if TYPE_CHECKING:
     from files.file_browser import FileBrowser, SortBy
     from ui.app_window.app_window import AppWindow
     from ui.app_window.media_frame import MediaFrame
-
-_ = I18N._
 logger = get_logger("media_navigator")
 
 

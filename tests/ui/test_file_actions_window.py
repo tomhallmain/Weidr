@@ -8,10 +8,10 @@ from PySide6.QtWidgets import QApplication, QLabel
 from files.file_action import FileAction
 from ui.files.file_actions_window_qt import FileActionsWindow
 from utils.constants import FileActionKind
-from utils.translations import I18N
+from utils.translations import _
 from utils.utils import Utils
 
-_tr = I18N._
+_tr = _
 
 
 def _label_texts(widget) -> list[str]:

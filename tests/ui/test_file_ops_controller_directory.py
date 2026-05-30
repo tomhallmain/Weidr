@@ -8,9 +8,9 @@ from PIL import Image
 from files.marked_files import MarkedFiles
 from files.recent_directories import RecentDirectories
 from utils.config import config
-from utils.translations import I18N
+from utils.translations import _
 
-_tr = I18N._
+_tr = _
 
 
 @pytest.fixture

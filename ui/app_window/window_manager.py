@@ -19,12 +19,10 @@ from typing import TYPE_CHECKING, Optional
 from utils.config import config
 from utils.constants import Direction, Mode
 from utils.logging_setup import get_logger
-from utils.translations import I18N
+from utils.translations import _
 
 if TYPE_CHECKING:
     from ui.app_window.app_window import AppWindow
-
-_ = I18N._
 logger = get_logger("window_manager")
 
 

@@ -10,10 +10,8 @@ from PIL import Image
 
 from utils.config import config
 from utils.logging_setup import get_logger
-from utils.translations import I18N
+from utils.translations import _
 from utils.utils import Utils
-
-_ = I18N._
 logger = get_logger("image_data_extractor")
 
 has_imported_sd_prompt_reader = False
@@ -194,7 +192,7 @@ class ImageDataExtractor:
             new_image_path = self.new_image_with_info(image, new_info, image_path=image_path, image_copy_path=None, target_dir=None)
 
     def copy_prompt_to_file(self, image_path, prompt_file_path):
-        prompt, _ = self.extract_prompt(image_path)
+        prompt, _unused = self.extract_prompt(image_path)
         with open(prompt_file_path, "w") as store:
             json.dump(prompt, store, indent=2)
 
@@ -372,7 +370,7 @@ class ImageDataExtractor:
         pprint.pprint(prompt)
 
     def dump_prompt(self, image_path):
-        prompt, _ = self.extract_prompt(image_path)
+        prompt, _unused = self.extract_prompt(image_path)
         with open("extracted_prompt.json", "w") as store:
             json.dump(prompt, store, indent=2)
 

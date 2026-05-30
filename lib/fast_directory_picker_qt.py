@@ -32,9 +32,7 @@ from PySide6.QtWidgets import (
 
 from lib.multi_display_qt import SmartDialog
 from utils.logging_setup import get_logger
-from utils.translations import I18N
-
-_ = I18N._
+from utils.translations import _
 logger = get_logger("fast_directory_picker_qt")
 
 # Session-only context memory for better default starting location.

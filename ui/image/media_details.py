@@ -50,10 +50,8 @@ from utils.config import config
 from utils.constants import ImageGenerationType
 from utils.media_utils import get_media_type_for_path
 from utils.logging_setup import get_logger
-from utils.translations import I18N
+from utils.translations import _
 from utils.utils import Utils, ModifierKey
-
-_ = I18N._
 logger = get_logger("media_details")
 
 

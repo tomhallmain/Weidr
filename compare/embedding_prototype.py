@@ -12,9 +12,7 @@ from utils.app_info_cache import app_info_cache
 from utils.config import config
 from utils.constants import CompareMode
 from utils.logging_setup import get_logger
-from utils.translations import I18N
-
-_ = I18N._
+from utils.translations import _
 
 logger = get_logger("embedding_prototype")
 
@@ -417,7 +415,7 @@ class EmbeddingPrototype:
         
         # Evict oldest caches until memory is below threshold
         evicted_count = 0
-        for abs_dir, _, _ in cache_info:
+        for abs_dir, _unused, _unused2 in cache_info:
             if current_memory <= MAX_DIRECTORY_CACHE_MEMORY_BYTES:
                 break
             

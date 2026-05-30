@@ -9,9 +9,9 @@ from ui.files.type_configuration_window_qt import TypeConfigurationWindow
 from utils.app_info_cache import app_info_cache
 from utils.config import config
 from utils.constants import CompareMediaType
-from utils.translations import I18N
+from utils.translations import _
 
-_tr = I18N._
+_tr = _
 
 _TOGGLEABLE_TYPES = tuple(
     mt for mt in CompareMediaType if mt not in (CompareMediaType.IMAGE, CompareMediaType.UNCONFIGURED)

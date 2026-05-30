@@ -27,7 +27,7 @@ from utils.config import config
 from utils.constants import ActionType, Mode, ProtectedActions, Sort, SortBy
 from utils.logging_setup import get_logger
 from utils.running_tasks_registry import start_thread
-from utils.translations import I18N, compare_running_warn
+from utils.translations import _, compare_running_warn
 from utils.utils import Utils
 
 if TYPE_CHECKING:
@@ -35,8 +35,6 @@ if TYPE_CHECKING:
     from files.file_browser import FileBrowser
     from ui.app_window.app_window import AppWindow
     from ui.app_window.media_navigator import MediaNavigator
-
-_ = I18N._
 logger = get_logger("file_ops_controller")
 
 _RANDOMIZE_FILENAMES_LOG_BASENAME = "randomize_filenames.log"

@@ -17,9 +17,7 @@ from PySide6.QtWidgets import QWidget
 
 from files.target_directories import TargetDirectories
 from ui.files.directory_picker_dialog import DirectoryPickerDialog
-from utils.translations import I18N
-
-_ = I18N._
+from utils.translations import _
 
 
 class TargetDirectoryWindow(DirectoryPickerDialog):

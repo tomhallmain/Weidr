@@ -8,9 +8,7 @@ import pypdfium2 as pdfium
 
 from image.frame_cache import FrameCache
 from utils.logging_setup import get_logger
-from utils.translations import I18N
-
-_ = I18N._
+from utils.translations import _
 logger = get_logger("pdf_creator")
 
 

@@ -17,9 +17,7 @@ from PySide6.QtWidgets import QApplication
 
 from image.frame_cache import FrameCache
 from utils.constants import MediaType
-from utils.translations import I18N
-
-_tr = I18N._
+from utils.translations import _
 
 
 # ---------------------------------------------------------------------------

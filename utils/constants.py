@@ -1,7 +1,6 @@
 from enum import Enum
 
-from utils.translations import I18N
-_ = I18N._
+from utils.translations import _
 
 
 class AppInfo:

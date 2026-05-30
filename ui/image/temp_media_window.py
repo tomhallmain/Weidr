@@ -19,10 +19,8 @@ from lib.multi_display_qt import SmartWindow
 from ui.app_window.media_frame import MediaFrame
 from files.marked_files import MarkedFiles
 from utils.config import config
-from utils.translations import I18N
+from utils.translations import _
 from utils.utils import Utils
-
-_ = I18N._
 
 
 class TempMediaWindow(SmartWindow):
@@ -155,7 +153,7 @@ class TempMediaWindow(SmartWindow):
             return
         if not self._ensure_media_marked_for_quick_action():
             return
-        _, exceptions_present = MarkedFiles.run_previous_action(
+        _unused, exceptions_present = MarkedFiles.run_previous_action(
             self._app_actions
         )
         if not exceptions_present:
@@ -166,7 +164,7 @@ class TempMediaWindow(SmartWindow):
             return
         if not self._ensure_media_marked_for_quick_action():
             return
-        _, exceptions_present = MarkedFiles.run_penultimate_action(
+        _unused, exceptions_present = MarkedFiles.run_penultimate_action(
             self._app_actions
         )
         if not exceptions_present:
@@ -177,7 +175,7 @@ class TempMediaWindow(SmartWindow):
             return
         if not self._ensure_media_marked_for_quick_action():
             return
-        _, exceptions_present = MarkedFiles.run_permanent_action(
+        _unused, exceptions_present = MarkedFiles.run_permanent_action(
             self._app_actions
         )
         if not exceptions_present:

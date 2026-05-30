@@ -16,12 +16,10 @@ from typing import TYPE_CHECKING, Any, Optional
 from ui.auth.password_utils import require_password, check_session_expired
 from utils.constants import ClassifierActionType, Mode, ProtectedActions
 from utils.logging_setup import get_logger, set_logger_level
-from utils.translations import I18N, compare_running_warn
+from utils.translations import _, compare_running_warn
 
 if TYPE_CHECKING:
     from ui.app_window.app_window import AppWindow
-
-_ = I18N._
 logger = get_logger("window_launcher")
 
 

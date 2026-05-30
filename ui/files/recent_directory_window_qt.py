@@ -19,11 +19,10 @@ from files.recent_directories import RecentDirectories
 from lib.fast_directory_picker_qt import get_existing_directory
 from ui.files.directory_picker_dialog import DirectoryPickerDialog
 from utils.app_actions import AppActions
-from utils.translations import I18N
+from utils.translations import _
 from utils.logging_setup import get_logger
 
 logger = get_logger("recent_directory_window_qt")
-_ = I18N._
 
 
 class RecentDirectoryWindow(DirectoryPickerDialog):

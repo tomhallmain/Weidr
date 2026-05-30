@@ -7,9 +7,7 @@ from PySide6.QtWidgets import QApplication, QLabel
 
 from ui.files.favorites_window_qt import FavoritesWindow
 from utils.app_info_cache import app_info_cache
-from utils.translations import I18N
-
-_tr = I18N._
+from utils.translations import _
 
 
 def _label_texts(widget) -> list[str]:

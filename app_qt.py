@@ -16,7 +16,7 @@ from PySide6.QtGui import QIcon
 from ui.app_style import AppStyle
 from utils.config import config
 from utils.logging_setup import get_logger
-from utils.translations import _
+from utils.translations import I18N, _
 from utils.utils import Utils
 logger = get_logger("app_qt")
 

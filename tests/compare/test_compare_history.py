@@ -1,5 +1,6 @@
 """CompareHistory / CompareRunSettings persistence."""
 
+from compare.compare_args import CompareArgs
 from compare.compare_history import CompareHistory, CompareRunSettings
 from compare.compare_manager import CompareManager, CombinationLogic
 from utils.constants import CompareMode
@@ -40,7 +41,7 @@ def test_manager_snapshot_restores_run_settings():
     mgr.set_threshold(0.91)
     mgr.set_counter_limit(1234)
 
-    snap = mgr.snapshot("/data/photos")
+    snap = mgr.snapshot(CompareArgs(base_dir="/data/photos"))
     assert snap.run_settings.compare_faces is True
     assert snap.run_settings.use_matrix_comparison is False
     assert snap.run_settings.threshold == 0.91

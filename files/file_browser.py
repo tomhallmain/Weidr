@@ -1,3 +1,4 @@
+import fnmatch
 import glob
 import json
 import os
@@ -888,7 +889,7 @@ class FileBrowser:
                             seen.add(f)
                             candidate_files.append(f)
                 if exclusions:
-                    candidate_files = [f for f in candidate_files if not any(term in f for term in exclusions)]
+                    candidate_files = [f for f in candidate_files if not any(fnmatch.fnmatch(os.path.basename(f), term) for term in exclusions)]
             for f in candidate_files:
                 for ext in allowed_extensions:
                     if f.lower().endswith(ext):
@@ -906,7 +907,7 @@ class FileBrowser:
             else:
                 pattern = "**/*" if self.recursive else "*"
                 candidate_files = glob.glob(os.path.join(self.directory, pattern), recursive=self.recursive)
-                candidate_files = [f for f in candidate_files if not any(term in f for term in exclusions)]
+                candidate_files = [f for f in candidate_files if not any(fnmatch.fnmatch(os.path.basename(f), term) for term in exclusions)]
                 for f in candidate_files:
                     for ext in allowed_extensions:
                         if f.lower().endswith(ext):

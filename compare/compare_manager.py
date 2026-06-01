@@ -381,7 +381,7 @@ class CompareManager:
         
         logger.info(f" max file process limit: {args.counter_limit}")
         logger.info(f" recursive: {args.recursive}")
-        logger.info(f" file glob pattern: {args.inclusion_pattern}")
+        logger.info(f" file glob pattern: {args.file_filter}")
         logger.info(f" include videos: {args.include_videos}")
         logger.info(f" overwrite media data: {args.overwrite}")
         logger.info(f" store checkpoints: {args.store_checkpoints}")
@@ -1175,7 +1175,7 @@ class CompareManager:
             combination_logic=self._combination_logic.value,
             filter_dict=filter_to_dict(self._data_filter),
             run_settings=self._current_run_settings(),
-            inclusion_pattern=args.inclusion_pattern or None,
+            file_filter=args.file_filter or None,
         )
 
     def apply_snapshot(self, h: "CompareHistory") -> None:

@@ -203,7 +203,7 @@ class CompareColors(BaseCompare):
         logger.info(
             f" max files processable for base dir: {self.max_files_processed}")
         logger.info(f" recursive: {self.args.recursive}")
-        logger.info(f" file glob pattern: {self.args.inclusion_pattern}")
+        logger.info(f" file glob pattern: {self.args.file_filter}")
         logger.info(f" include gifs: {self.args.include_videos}")
         logger.info(f" n colors: {self.n_colors}")
         logger.info(f" colors below threshold: {self.colors_below_threshold}")
@@ -243,7 +243,7 @@ class CompareColors(BaseCompare):
             if self.is_cancelled():
                 self.raise_cancellation_exception()
             
-            if Utils.is_invalid_file(f, counter, self.is_run_search, self.args.inclusion_pattern):
+            if Utils.is_invalid_file(f, counter, self.is_run_search, self.args.file_filter):
                 continue
 
             if counter > self.args.counter_limit:
@@ -593,7 +593,7 @@ if __name__ == "__main__":
     include_gifs = False
     use_thumb = True
     counter_limit = 10000
-    inclusion_pattern = None
+    file_filter = None
     color_diff_threshold = None
 
     try:
@@ -621,7 +621,7 @@ if __name__ == "__main__":
             elif o == "--gifs":
                 include_gifs = True
             elif o == "--include":
-                inclusion_pattern = a
+                file_filter = a
             elif o == "--faces":
                 compare_faces = a == "True" or a == "true" or a == "t"
             elif o in ("-o", "--overwrite"):
@@ -655,7 +655,7 @@ if __name__ == "__main__":
                       use_thumb=use_thumb,
                       compare_faces=compare_faces,
                       color_diff_threshold=color_diff_threshold,
-                      inclusion_pattern=inclusion_pattern,
+                      file_filter=file_filter,
                       overwrite=overwrite, verbose=verbose,
                       include_gifs=include_gifs)
     compare.get_files()

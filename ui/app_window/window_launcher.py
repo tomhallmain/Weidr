@@ -155,7 +155,7 @@ class WindowLauncher:
             CompareSettingsWindow.open(
                 parent=self._app,
                 compare_manager=self._app.compare_manager,
-                set_inclusion_pattern=self._app.sidebar_panel.inclusion_pattern.setText,
+                set_file_filter=self._app.sidebar_panel.file_filter_entry.setText,
             )
         except Exception as e:
             self._handle_error(e, "Compare Settings Window Error")

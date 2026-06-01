@@ -4,7 +4,7 @@ SearchController -- search and comparison execution logic.
 Extracted from: set_search_for_media, set_search_for_text, set_search,
 run_compare, _debounced_run_compare, _run_with_progress, _run_compare,
 _validate_run, display_progress, get_search_media_path, get_compare_threshold,
-get_inclusion_pattern, set_current_media_run_search, _set_media_run_search,
+get_file_filter, set_current_media_run_search, _set_media_run_search,
 add_current_media_to_negative_search, negative_media_search,
 next_text_embedding_preset, run_image_generation,
 trigger_image_generation, run_image_generation_on_directory,
@@ -281,7 +281,7 @@ class SearchController:
         self._cm.apply_settings_to_args(args)
 
         # Settings still on the controller / sidebar
-        args.inclusion_pattern = self.get_inclusion_pattern()
+        args.file_filter = self.get_file_filter()
         args.include_videos = config.enable_videos
         args.include_gifs = config.enable_gifs
         args.include_pdfs = config.enable_pdfs
@@ -363,9 +363,9 @@ class SearchController:
             return config.color_diff_threshold
         return config.embedding_similarity_threshold
 
-    def get_inclusion_pattern(self) -> Optional[str]:
-        """Read the inclusion pattern from the sidebar entry."""
-        text = self._sidebar.inclusion_pattern.text().strip()
+    def get_file_filter(self) -> Optional[str]:
+        """Read the file filter from the sidebar entry."""
+        text = self._sidebar.file_filter_entry.text().strip()
         return text if text else None
 
     @require_password(ProtectedActions.RUN_SEARCH)

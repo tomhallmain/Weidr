@@ -124,9 +124,9 @@ class SidebarPanel(QWidget):
 
         # Inclusion pattern (file glob filter)
         self._add_label(_("Filter files by glob pattern"))
-        self.inclusion_pattern = AwareEntry(self)
-        self.inclusion_pattern.returnPressed.connect(self._on_set_file_filter)
-        self._scroll.add_widget(self.inclusion_pattern)
+        self.file_filter_entry = AwareEntry(self)
+        self.file_filter_entry.returnPressed.connect(self._on_set_file_filter)
+        self._scroll.add_widget(self.file_filter_entry)
 
         # Sort by + sort direction (same row)
         self._add_label(_("Browsing mode - Sort by"))
@@ -518,7 +518,7 @@ class SidebarPanel(QWidget):
         if self._app.slideshow_config.end_slideshows():
             self._app.media_navigator.stop_slideshow_timers()
             self._app.notification_ctrl.toast(_("Ended slideshows"))
-        pattern = self.inclusion_pattern.text().strip()
+        pattern = self.file_filter_entry.text().strip()
         self._app.file_browser.set_filter(pattern if pattern else None)
         self._app.refresh(file_check=False)
 

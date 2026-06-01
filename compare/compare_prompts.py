@@ -126,7 +126,7 @@ class ComparePrompts(BaseCompareEmbedding):
         logger.info(f" max file process limit: {self.args.counter_limit}")
         logger.info(f" max files processable for base dir: {self.max_files_processed}")
         logger.info(f" recursive: {self.args.recursive}")
-        logger.info(f" file glob pattern: {self.args.inclusion_pattern}")
+        logger.info(f" file glob pattern: {self.args.file_filter}")
         logger.info(f" include gifs: {self.args.include_gifs}")
         logger.info(f" file prompts filepath: {self.compare_data._file_data_filepath}")
         logger.info(f" overwrite image data: {self.args.overwrite}")
@@ -151,7 +151,7 @@ class ComparePrompts(BaseCompareEmbedding):
             if self.is_cancelled():
                 self.raise_cancellation_exception()
             
-            if Utils.is_invalid_file(f, counter, self.is_run_search, self.args.inclusion_pattern):
+            if Utils.is_invalid_file(f, counter, self.is_run_search, self.args.file_filter):
                 continue
 
             if counter > self.args.counter_limit:

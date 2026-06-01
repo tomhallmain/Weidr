@@ -100,9 +100,9 @@ class TestIsNewDataRequestRequired:
         other.counter_limit = base.counter_limit + 1
         assert base._is_new_data_request_required(other) is True
 
-    def test_changed_inclusion_pattern_requires_new_data(self):
+    def test_changed_file_filter_requires_new_data(self):
         base, other = self._pair()
-        other.inclusion_pattern = "cats"
+        other.file_filter = "cats"
         assert base._is_new_data_request_required(other) is True
 
     def test_changed_recursive_requires_new_data(self):

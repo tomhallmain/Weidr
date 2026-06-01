@@ -76,7 +76,7 @@ class CompareHistory:
     combination_logic: str  # CombinationLogic.value e.g. "AND"
     filter_dict: Optional[dict]  # serialized filter tree, or None
     run_settings: CompareRunSettings = field(default_factory=CompareRunSettings)
-    inclusion_pattern: Optional[str] = None  # sidebar file-filter glob/regex
+    file_filter: Optional[str] = None  # sidebar file-filter pattern string
 
     # ------------------------------------------------------------------
     # Serialization
@@ -89,7 +89,7 @@ class CompareHistory:
             "combination_logic": self.combination_logic,
             "filter_dict": self.filter_dict,
             "run_settings": self.run_settings.to_json(),
-            "inclusion_pattern": self.inclusion_pattern,
+            "file_filter": self.file_filter,
         }
 
     @classmethod
@@ -108,7 +108,7 @@ class CompareHistory:
                 combination_logic=d.get("combination_logic", "AND"),
                 filter_dict=d.get("filter_dict"),
                 run_settings=run_settings,
-                inclusion_pattern=d.get("inclusion_pattern") or None,
+                file_filter=d.get("file_filter") or d.get("inclusion_pattern") or None,
             )
         except (KeyError, TypeError, AttributeError):
             return None
@@ -127,8 +127,8 @@ class CompareHistory:
             base = f"{dir_display}  [{modes}] ({logic})"
         else:
             base = f"{dir_display}  [{modes}]"
-        if self.inclusion_pattern:
-            base += f"  | {self.inclusion_pattern}"
+        if self.file_filter:
+            base += f"  | {self.file_filter}"
         return base
 
     def _identity_key(self) -> str:
@@ -139,7 +139,7 @@ class CompareHistory:
             "combination_logic": self.combination_logic,
             "filter_dict": self.filter_dict,
             "run_settings": self.run_settings.to_json(),
-            "inclusion_pattern": self.inclusion_pattern,
+            "file_filter": self.file_filter,
         }, sort_keys=True)
 
     # ------------------------------------------------------------------

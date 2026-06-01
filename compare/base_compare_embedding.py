@@ -49,7 +49,7 @@ class BaseCompareEmbedding(BaseCompare):
         logger.info(f" max file process limit: {self.args.counter_limit}")
         logger.info(f" max files processable for base dir: {self.max_files_processed}")
         logger.info(f" recursive: {self.args.recursive}")
-        logger.info(f" file glob pattern: {self.args.inclusion_pattern}")
+        logger.info(f" file glob pattern: {self.args.file_filter}")
         logger.info(f" include videos: {self.args.include_videos}")
         logger.info(f" file embeddings filepath: {self.compare_data._file_data_filepath}")
         logger.info(f" overwrite image data: {self.args.overwrite}")
@@ -78,7 +78,7 @@ class BaseCompareEmbedding(BaseCompare):
             if self.is_cancelled():
                 self.raise_cancellation_exception()
             
-            if Utils.is_invalid_file(f, counter, self.is_run_search, self.args.inclusion_pattern):
+            if Utils.is_invalid_file(f, counter, self.is_run_search, self.args.file_filter):
                 continue
 
             if counter > self.args.counter_limit:
@@ -749,7 +749,7 @@ def main(compare_class):
     compare_faces = True
     include_gifs = False
     counter_limit = 10000
-    inclusion_pattern = None
+    file_filter = None
     embedding_similarity_threshold = None
 
     try:
@@ -777,7 +777,7 @@ def main(compare_class):
             elif o == "--gifs":
                 include_gifs = True
             elif o == "--include":
-                inclusion_pattern = a
+                file_filter = a
             elif o == "--faces":
                 compare_faces = a == "True" or a == "true" or a == "t"
             elif o in ("-o", "--overwrite"):
@@ -807,7 +807,7 @@ def main(compare_class):
                                counter_limit=counter_limit,
                                embedding_similarity_threshold=embedding_similarity_threshold,
                                compare_faces=compare_faces,
-                               inclusion_pattern=inclusion_pattern,
+                               file_filter=file_filter,
                                overwrite=overwrite,
                                verbose=verbose,
                                include_gifs=include_gifs)

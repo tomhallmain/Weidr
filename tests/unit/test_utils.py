@@ -181,10 +181,10 @@ class TestIsInvalidFile:
     def test_run_search_counter_zero_is_valid(self):
         assert Utils.is_invalid_file("/some/file.jpg", 0, True, None) is False
 
-    def test_inclusion_pattern_matches(self):
+    def test_file_filter_matches(self):
         assert Utils.is_invalid_file("/some/cats/file.jpg", 1, False, "cats") is False
 
-    def test_inclusion_pattern_no_match(self):
+    def test_file_filter_no_match(self):
         assert Utils.is_invalid_file("/some/dogs/file.jpg", 1, False, "cats") is True
 
 

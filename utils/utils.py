@@ -392,13 +392,13 @@ class Utils:
             return number - (number % to) + to
 
     @staticmethod
-    def is_invalid_file(file_path, counter, run_search, inclusion_pattern):
+    def is_invalid_file(file_path, counter, run_search, file_filter):
         if file_path is None:
             return True
         elif run_search and counter == 0:
             return False
-        elif inclusion_pattern is not None:
-            return inclusion_pattern not in file_path
+        elif file_filter is not None:
+            return file_filter not in file_path
         else:
             return False
 

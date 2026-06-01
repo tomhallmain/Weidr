@@ -83,10 +83,10 @@ class TestIsNewDataRequestRequired:
         b.counter_limit = a.counter_limit + 100
         assert a._is_new_data_request_required(b) is True
 
-    def test_different_inclusion_pattern_returns_true(self):
+    def test_different_file_filter_returns_true(self):
         a = self._base()
         b = self._base()
-        b.inclusion_pattern = "*.png"
+        b.file_filter = "*.png"
         assert a._is_new_data_request_required(b) is True
 
     def test_different_recursive_returns_true(self):

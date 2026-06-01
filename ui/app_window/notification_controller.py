@@ -309,7 +309,7 @@ class NotificationController:
             label_text = _("{0} media files found").format(file_count)
 
         # Check inclusion pattern
-        inclusion_text = self._app.sidebar_panel.inclusion_pattern.text().strip()
+        inclusion_text = self._app.sidebar_panel.file_filter_entry.text().strip()
         if inclusion_text != "":
             label_text += "\n" + _("(filtered)")
 

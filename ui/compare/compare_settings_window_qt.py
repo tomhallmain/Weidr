@@ -55,11 +55,11 @@ class CompareSettingsWindow(SmartDialog):
         cls,
         parent: QWidget,
         compare_manager: CompareManager,
-        set_inclusion_pattern=None,
+        set_file_filter=None,
     ) -> None:
         """Show or focus the settings window for *compare_manager*.
 
-        *set_inclusion_pattern* is an optional ``Callable[[str], None]`` invoked
+        *set_file_filter* is an optional ``Callable[[str], None]`` invoked
         when a history entry is loaded, so the sidebar filter is restored in sync.
         """
         if compare_manager in cls._open_windows:
@@ -71,7 +71,7 @@ class CompareSettingsWindow(SmartDialog):
                     return
             except Exception:
                 pass
-        cls(parent, compare_manager, set_inclusion_pattern=set_inclusion_pattern)
+        cls(parent, compare_manager, set_file_filter=set_file_filter)
 
     # ------------------------------------------------------------------
     # Construction
@@ -80,7 +80,7 @@ class CompareSettingsWindow(SmartDialog):
         self,
         parent: QWidget,
         compare_manager: CompareManager,
-        set_inclusion_pattern=None,
+        set_file_filter=None,
     ) -> None:
         if compare_manager in CompareSettingsWindow._open_windows:
             existing = CompareSettingsWindow._open_windows[compare_manager]
@@ -101,7 +101,7 @@ class CompareSettingsWindow(SmartDialog):
         CompareSettingsWindow._open_windows[compare_manager] = self
 
         self._compare_manager = compare_manager
-        self._set_inclusion_pattern = set_inclusion_pattern
+        self._set_file_filter = set_file_filter
         self._weight_vars: Dict[str, QLineEdit] = {}   # instance_id -> weight edit
         self._threshold_combo: Optional[QComboBox] = None
         self._add_instance_btn: Optional[QPushButton] = None
@@ -637,8 +637,8 @@ class CompareSettingsWindow(SmartDialog):
         )
         self._refresh_instance_list()
         self._refresh_global_settings_controls()
-        if self._set_inclusion_pattern is not None:
-            self._set_inclusion_pattern(entry.inclusion_pattern or "")
+        if self._set_file_filter is not None:
+            self._set_file_filter(entry.file_filter or "")
 
     def _on_remove_history(self, entry: CompareHistory) -> None:
         CompareHistory.remove(entry)

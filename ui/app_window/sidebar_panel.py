@@ -122,9 +122,10 @@ class SidebarPanel(QWidget):
         # Browsing section
         self._add_label(_("Browsing options"))
 
-        # Inclusion pattern (file glob filter)
-        self._add_label(_("Filter files by glob pattern"))
+        # File filter: ';'-separated glob terms, prefix '!' to exclude
+        self._add_label(_("Filter files (';' separated, '!' to exclude)"))
         self.file_filter_entry = AwareEntry(self)
+        self.file_filter_entry.setPlaceholderText(_("e.g. 2024;!_edit"))
         self.file_filter_entry.returnPressed.connect(self._on_set_file_filter)
         self._scroll.add_widget(self.file_filter_entry)
 

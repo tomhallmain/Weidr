@@ -73,6 +73,18 @@ class FileBrowser:
             logger.debug(f"File browser set filter: {filter}")
         self.filter = filter
 
+    @staticmethod
+    def _parse_filter(raw: str) -> tuple:
+        """Split raw filter string into (inclusions, exclusions) term lists.
+
+        Terms are separated by ';'. A term prefixed with '!' is an exclusion;
+        the rest are inclusions. Strips whitespace from each term.
+        """
+        terms = [t.strip() for t in raw.split(";") if t.strip()]
+        inclusions = [t for t in terms if not t.startswith("!")]
+        exclusions = [t[1:].strip() for t in terms if t.startswith("!") and t[1:].strip()]
+        return inclusions, exclusions
+
     def set_recursive(self, recursive: bool) -> None:
         if config.debug:
             logger.debug(f"File browser set recursive: {recursive}")
@@ -855,20 +867,50 @@ class FileBrowser:
             self.filepaths.clear()
             files = self.filepaths
 
-        if self.filter is not None and self.filter != "":
+        inclusions, exclusions = FileBrowser._parse_filter(self.filter or "")
+
+        if inclusions:
             if self.use_file_paths_json:
                 filepaths = self.load_file_paths_json()
-                filtered_files = [f for f in filepaths if re.search(self.filter, f)]
+                candidate_files = [f for f in filepaths if any(re.search(term, f) for term in inclusions)]
+                if exclusions:
+                    candidate_files = [f for f in candidate_files if not any(re.search(term, f) for term in exclusions)]
             else:
-                pattern = "**/" + self.filter if self.recursive else self.filter
-                if "*" not in pattern or (pattern.startswith("**") and not pattern.endswith("*")):
-                    pattern += "*"
-                recursive = self.recursive or self.filter.startswith("**/")
-                filtered_files = glob.glob(os.path.join(self.directory, pattern), recursive=recursive)
-            for f in filtered_files:
+                seen: set = set()
+                candidate_files = []
+                for term in inclusions:
+                    pattern = "**/" + term if self.recursive else term
+                    if "*" not in pattern or (pattern.startswith("**") and not pattern.endswith("*")):
+                        pattern += "*"
+                    recursive = self.recursive or term.startswith("**/")
+                    for f in glob.glob(os.path.join(self.directory, pattern), recursive=recursive):
+                        if f not in seen:
+                            seen.add(f)
+                            candidate_files.append(f)
+                if exclusions:
+                    candidate_files = [f for f in candidate_files if not any(term in f for term in exclusions)]
+            for f in candidate_files:
                 for ext in allowed_extensions:
                     if f.lower().endswith(ext):
                         files.append(f)
+        elif exclusions:
+            # No inclusions — gather full file set then subtract exclusions.
+            if self.use_file_paths_json:
+                filepaths = self.load_file_paths_json()
+                for f in filepaths:
+                    if any(re.search(term, f) for term in exclusions):
+                        continue
+                    for ext in allowed_extensions:
+                        if f.lower().endswith(ext):
+                            files.append(f)
+            else:
+                pattern = "**/*" if self.recursive else "*"
+                candidate_files = glob.glob(os.path.join(self.directory, pattern), recursive=self.recursive)
+                candidate_files = [f for f in candidate_files if not any(term in f for term in exclusions)]
+                for f in candidate_files:
+                    for ext in allowed_extensions:
+                        if f.lower().endswith(ext):
+                            files.append(f)
         elif self.use_file_paths_json:
             filepaths = self.load_file_paths_json()
             _pat = "**/" if self.recursive else ""

@@ -57,6 +57,61 @@ def test_manager_snapshot_restores_run_settings():
     assert mgr2.get_counter_limit() == 1234
 
 
+def test_file_filter_serialises_under_new_key():
+    h = CompareHistory(
+        directory="/tmp",
+        timestamp="2026-01-01T00:00:00",
+        instances=[],
+        combination_logic="AND",
+        filter_dict=None,
+        file_filter="cats",
+    )
+    d = h.to_json()
+    assert d["file_filter"] == "cats"
+    assert "inclusion_pattern" not in d
+
+
+def test_file_filter_round_trips_via_from_json():
+    h = CompareHistory(
+        directory="/tmp",
+        timestamp="2026-01-01T00:00:00",
+        instances=[],
+        combination_logic="AND",
+        filter_dict=None,
+        file_filter="cats;!_edit",
+    )
+    h2 = CompareHistory.from_json(h.to_json())
+    assert h2.file_filter == "cats;!_edit"
+
+
+def test_legacy_inclusion_pattern_key_loads_correctly():
+    d = {
+        "directory": "/tmp",
+        "timestamp": "2026-01-01T00:00:00",
+        "instances": [],
+        "combination_logic": "AND",
+        "filter_dict": None,
+        "inclusion_pattern": "cats",
+    }
+    h = CompareHistory.from_json(d)
+    assert h is not None
+    assert h.file_filter == "cats"
+
+
+def test_file_filter_key_takes_precedence_over_legacy_key():
+    d = {
+        "directory": "/tmp",
+        "timestamp": "2026-01-01T00:00:00",
+        "instances": [],
+        "combination_logic": "AND",
+        "filter_dict": None,
+        "file_filter": "new_value",
+        "inclusion_pattern": "old_value",
+    }
+    h = CompareHistory.from_json(d)
+    assert h.file_filter == "new_value"
+
+
 def test_history_json_identity_includes_run_settings():
     h1 = CompareHistory(
         directory="/a",

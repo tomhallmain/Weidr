@@ -398,7 +398,14 @@ class Utils:
         elif run_search and counter == 0:
             return False
         elif file_filter is not None:
-            return file_filter not in file_path
+            terms = [t.strip() for t in file_filter.split(";") if t.strip()]
+            inclusions = [t for t in terms if not t.startswith("!")]
+            exclusions = [t[1:] for t in terms if t.startswith("!") and len(t) > 1]
+            if exclusions and any(term in file_path for term in exclusions):
+                return True
+            if inclusions and not any(term in file_path for term in inclusions):
+                return True
+            return False
         else:
             return False
 

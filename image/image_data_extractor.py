@@ -211,7 +211,12 @@ class ImageDataExtractor:
                 if ImageDataExtractor.CLASS_TYPE in v and ImageDataExtractor.INPUTS in v:
                     # logger.debug(v[ImageDataExtractor.CLASS_TYPE])
                     if v[ImageDataExtractor.CLASS_TYPE] == "CLIPTextEncode":
-                        prompt_dicts[k] = v[ImageDataExtractor.INPUTS]["text"]
+                        text = v[ImageDataExtractor.INPUTS].get("text", "")
+                        if isinstance(text, list) and len(text) == 2:
+                            # text is a node reference [node_id, output_idx] — follow it
+                            ref_node = prompt.get(str(text[0]), {})
+                            text = ref_node.get(ImageDataExtractor.INPUTS, {}).get("value", "")
+                        prompt_dicts[k] = text
                     elif v[ImageDataExtractor.CLASS_TYPE] == "ImpactWildcardProcessor":
                         positive = v[ImageDataExtractor.INPUTS]["populated_text"]
                     elif (ImageDataExtractor.POSITIVE in v[ImageDataExtractor.INPUTS] and 

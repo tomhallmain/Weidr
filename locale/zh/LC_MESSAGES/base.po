@@ -179,8 +179,8 @@ msgid "No matches found. Search again to find potential matches."
 msgstr "未找到匹配项。请再次搜索，以找到可能的匹配项。"
 
 #: compare/compare_wrapper.py:220
-msgid "Skipped %s media."
-msgstr "跳过了 %s 媒体文件。"
+msgid "Skipped {0} media."
+msgstr "跳过了 {0} 媒体文件。"
 
 #: compare/compare_wrapper.py:226
 msgid "No Unrelated Media"
@@ -231,8 +231,8 @@ msgid "None of the files match the search filters with current settings."
 msgstr "在当前设置下，没有任何文件符合搜索筛选条件。"
 
 #: compare/compare_wrapper.py:421
-msgid "%s possibly related media found."
-msgstr "找到 %s 条可能相关的媒体文件。"
+msgid "{0} possibly related media found."
+msgstr "找到 {0} 条可能相关的媒体文件。"
 
 #: compare/compare_wrapper.py:429
 msgid "Running media comparisons..."
@@ -572,12 +572,12 @@ msgid "WARNING: All file hashes match."
 msgstr "警告：所有文件哈希值均匹配。"
 
 #: files/marked_files.py:513
-msgid "WARNING: %s of %s file hashes match."
+msgid "WARNING: {0} of {1} file hashes match."
 msgstr "警告：{1} 个文件哈希值中有 {0} 个匹配。"
 
 #: files/marked_files.py:515
-msgid "INFO: %s files have identical content but different EXIF data."
-msgstr "INFO: %s 个文件内容相同但 EXIF 数据不同。"
+msgid "INFO: {0} files have identical content but different EXIF data."
+msgstr "INFO: {0} 个文件内容相同但 EXIF 数据不同。"
 
 #: files/marked_files.py:517
 msgid "WARNING: All files are either identical or have matching content."
@@ -4587,7 +4587,7 @@ msgid "Set image comparison directory"
 msgstr "设定图像比较目录"
 
 #: ui/files/recent_directory_window_qt.py:184
-msgid "Invalid directory: %s"
+msgid "Invalid directory: {0}"
 msgstr "无效目录： {0}"
 
 #: ui/files/target_directory_window_qt.py:74

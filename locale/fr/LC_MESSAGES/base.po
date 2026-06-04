@@ -187,8 +187,8 @@ msgstr ""
 " trouver des correspondances potentielles."
 
 #: compare/compare_wrapper.py:220
-msgid "Skipped %s media."
-msgstr "Passé %s média."
+msgid "Skipped {0} media."
+msgstr "Passé {0} média."
 
 #: compare/compare_wrapper.py:226
 msgid "No Unrelated Media"
@@ -247,8 +247,8 @@ msgstr ""
 "paramètres actuels."
 
 #: compare/compare_wrapper.py:421
-msgid "%s possibly related media found."
-msgstr "%s médias potentiellement liés ont été trouvés."
+msgid "{0} possibly related media found."
+msgstr "{0} médias potentiellement liés ont été trouvés."
 
 #: compare/compare_wrapper.py:429
 msgid "Running media comparisons..."
@@ -599,13 +599,13 @@ msgid "WARNING: All file hashes match."
 msgstr "AVERTISSEMENT : Tous les hachages de fichiers correspondent."
 
 #: files/marked_files.py:513
-msgid "WARNING: %s of %s file hashes match."
+msgid "WARNING: {0} of {1} file hashes match."
 msgstr "AVERTISSEMENT : {0} des {1} hachages de fichiers correspondent."
 
 #: files/marked_files.py:515
-msgid "INFO: %s files have identical content but different EXIF data."
+msgid "INFO: {0} files have identical content but different EXIF data."
 msgstr ""
-"INFO : %s fichiers ont un contenu identique mais des données EXIF "
+"INFO : {0} fichiers ont un contenu identique mais des données EXIF "
 "différentes."
 
 #: files/marked_files.py:517
@@ -4801,7 +4801,7 @@ msgid "Set image comparison directory"
 msgstr "Définir le répertoire de comparaison des images"
 
 #: ui/files/recent_directory_window_qt.py:184
-msgid "Invalid directory: %s"
+msgid "Invalid directory: {0}"
 msgstr "Répertoire non valide : {0}"
 
 #: ui/files/target_directory_window_qt.py:74

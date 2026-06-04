@@ -238,7 +238,7 @@ class CompareWrapper:
                     (self.compare_mode != CompareMode.COLOR_MATCHING and not CompareEmbeddingClip.is_related(previous_media, next_media)):
                 found_unrelated_media = True
                 self._app_actions.create_media(next_media)
-                self._app_actions.toast(_("Skipped %s media.").format(skip_count))
+                self._app_actions.toast(_("Skipped {0} media.").format(skip_count))
                 return
             skip_count += 1
             previous_media = str(next_media)
@@ -442,7 +442,7 @@ class CompareWrapper:
         self.match_index = 0
         self.has_media_matches = True
         self._app_actions._set_label_state(Utils._wrap_text_to_fit_length(
-            _("%s possibly related media found.").format(str(len(self.files_matched))), 30))
+            _("{0} possibly related media found.").format(len(self.files_matched)), 30))
 
         self._app_actions._add_buttons_for_mode()
         self._app_actions.create_media(self.files_matched[self.match_index])

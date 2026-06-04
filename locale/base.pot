@@ -178,7 +178,7 @@ msgid "No matches found. Search again to find potential matches."
 msgstr ""
 
 #: compare/compare_wrapper.py:220
-msgid "Skipped %s media."
+msgid "Skipped {0} media."
 msgstr ""
 
 #: compare/compare_wrapper.py:226
@@ -228,7 +228,7 @@ msgid "None of the files match the search filters with current settings."
 msgstr ""
 
 #: compare/compare_wrapper.py:421
-msgid "%s possibly related media found."
+msgid "{0} possibly related media found."
 msgstr ""
 
 #: compare/compare_wrapper.py:429
@@ -539,11 +539,11 @@ msgid "WARNING: All file hashes match."
 msgstr ""
 
 #: files/marked_files.py:513
-msgid "WARNING: %s of %s file hashes match."
+msgid "WARNING: {0} of {1} file hashes match."
 msgstr ""
 
 #: files/marked_files.py:515
-msgid "INFO: %s files have identical content but different EXIF data."
+msgid "INFO: {0} files have identical content but different EXIF data."
 msgstr ""
 
 #: files/marked_files.py:517
@@ -4254,7 +4254,7 @@ msgid "Set image comparison directory"
 msgstr ""
 
 #: ui/files/recent_directory_window_qt.py:184
-msgid "Invalid directory: %s"
+msgid "Invalid directory: {0}"
 msgstr ""
 
 #: ui/files/target_directory_window_qt.py:74

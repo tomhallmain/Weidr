@@ -657,6 +657,20 @@ class CompareManager:
         if self._primary_wrapper() is not None:
             return self._primary_wrapper().get_file_group_for_filepath(filepath, app_mode)
         return None
+
+    def seek_to_file(self, filepath: str) -> None:
+        """Seek the match cursor to filepath in the existing files_matched list.
+
+        Used by SEARCH mode tile activation: files_matched is already sorted
+        correctly by run_search(), so we must not rebuild it via set_current_group.
+        """
+        wrapper = self._primary_wrapper()
+        if wrapper is None:
+            return
+        try:
+            wrapper.match_index = wrapper.files_matched.index(filepath)
+        except ValueError:
+            pass
     
     def page_down(self, half_length=False) -> Optional[str]:
         """Page down (delegated to primary wrapper)."""

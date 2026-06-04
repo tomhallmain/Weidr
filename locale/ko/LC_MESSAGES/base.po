@@ -179,8 +179,8 @@ msgid "No matches found. Search again to find potential matches."
 msgstr "일치하는 항목이 없습니다. 다시 검색하여 일치하는 항목을 찾아보세요."
 
 #: compare/compare_wrapper.py:220
-msgid "Skipped %s media."
-msgstr "%s 미디어를 건너뛰었습니다."
+msgid "Skipped {0} media."
+msgstr "{0} 미디어를 건너뛰었습니다."
 
 #: compare/compare_wrapper.py:226
 msgid "No Unrelated Media"
@@ -233,8 +233,8 @@ msgid "None of the files match the search filters with current settings."
 msgstr "현재 설정으로 검색 필터와 일치하는 파일이 없습니다."
 
 #: compare/compare_wrapper.py:421
-msgid "%s possibly related media found."
-msgstr "%s와 관련이 있을 수 있는 미디어가 발견되었습니다."
+msgid "{0} possibly related media found."
+msgstr "{0}와 관련이 있을 수 있는 미디어가 발견되었습니다."
 
 #: compare/compare_wrapper.py:429
 msgid "Running media comparisons..."
@@ -574,12 +574,12 @@ msgid "WARNING: All file hashes match."
 msgstr "경고: 모든 파일 해시가 일치합니다."
 
 #: files/marked_files.py:513
-msgid "WARNING: %s of %s file hashes match."
+msgid "WARNING: {0} of {1} file hashes match."
 msgstr "경고: {1}개의 파일 해시 중 {0}개가 일치합니다."
 
 #: files/marked_files.py:515
-msgid "INFO: %s files have identical content but different EXIF data."
-msgstr "INFO: 동일한 내용을 가진 %s 개의 파일이 EXIF 정보는 다릅니다."
+msgid "INFO: {0} files have identical content but different EXIF data."
+msgstr "INFO: 동일한 내용을 가진 {0} 개의 파일이 EXIF 정보는 다릅니다."
 
 #: files/marked_files.py:517
 msgid "WARNING: All files are either identical or have matching content."
@@ -4603,7 +4603,7 @@ msgid "Set image comparison directory"
 msgstr "설정 이미지 비교 디렉토리"
 
 #: ui/files/recent_directory_window_qt.py:184
-msgid "Invalid directory: %s"
+msgid "Invalid directory: {0}"
 msgstr "잘못된 디렉터리입니다: {0}"
 
 #: ui/files/target_directory_window_qt.py:74

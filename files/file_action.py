@@ -151,18 +151,20 @@ class FileAction():
         FileAction.update_history(new_action)
 
     @staticmethod
-    def get_action_statistics(today_only=False, kind: 'FileActionKind | None' = None):
+    def get_action_statistics(today_only=False, kind: 'FileActionKind | None' = None, auto: 'bool | None' = False):
         """
         Calculate statistics from the action history.
         Args:
             today_only: If True, only include actions performed today
             kind: If set, restrict to actions of that FileActionKind
+            auto: None = all initiators, False = user only, True = auto only
         Returns a dictionary mapping target directories to their move/copy/delete counts.
         """
         stats = {}
         for action in FileAction.action_history:
-            # Skip if filtering for today and action is not from today
-            if action.auto or (today_only and not action.is_today()):
+            if today_only and not action.is_today():
+                continue
+            if auto is not None and action.auto != auto:
                 continue
             if kind is not None and action.action_kind() != kind:
                 continue

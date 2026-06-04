@@ -1277,7 +1277,14 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         if self.mode == Mode.BROWSE:
             self.file_browser.go_to_file(filepath)
             self.media_navigator.create_media(filepath)
+        elif self.mode == Mode.SEARCH:
+            # SEARCH mode has a single flat group; files_matched is already sorted
+            # correctly by run_search(). Seeking via set_current_group would rebuild
+            # files_matched in the wrong order (ascending vs. score-descending).
+            self.compare_manager.seek_to_file(filepath)
+            self.media_navigator.create_media(filepath)
         else:
+            # GROUP / DUPLICATES: locate the right group then navigate into it.
             group_info = self.compare_manager.get_file_group_for_filepath(filepath, self.mode)
             if group_info is not None:
                 group_idx, file_idx = group_info

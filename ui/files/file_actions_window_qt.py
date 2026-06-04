@@ -220,7 +220,7 @@ class FileActionsWindow(SmartWindow):
     # Statistics section
     # ------------------------------------------------------------------
     def _build_statistics(self) -> QFrame | None:
-        stats = FileAction.get_action_statistics(today_only=self._show_today_only, kind=self._action_type_filter)
+        stats = FileAction.get_action_statistics(today_only=self._show_today_only, kind=self._action_type_filter, auto=self._initiator_filter)
         if not stats:
             return None
 

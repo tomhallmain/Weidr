@@ -579,12 +579,12 @@ msgid "WARNING: All file hashes match."
 msgstr "WARNING: All file hashes match."
 
 #: files/marked_files.py:513
-msgid "WARNING: %s of %s file hashes match."
+msgid "WARNING: {0} of {1} file hashes match."
 msgstr "WARNING: {0} of {1} file hashes match."
 
 #: files/marked_files.py:515
-msgid "INFO: %s files have identical content but different EXIF data."
-msgstr "INFO: %s files have identical content but different EXIF data."
+msgid "INFO: {0} files have identical content but different EXIF data."
+msgstr "INFO: {0} files have identical content but different EXIF data."
 
 #: files/marked_files.py:517
 msgid "WARNING: All files are either identical or have matching content."
@@ -4324,7 +4324,7 @@ msgid "Set Image Comparison Directory"
 msgstr "Set Image Comparison Directory"
 
 #: ui/files/recent_directory_window_qt.py:184
-msgid "Invalid directory: %s"
+msgid "Invalid directory: {0}"
 msgstr "Invalid directory: {0}"
 
 #: ui/files/target_directory_window_qt.py:74
@@ -5110,8 +5110,8 @@ msgid "pseudo-static dynamic media"
 msgstr "pseudo-static dynamic media"
 
 #: compare/compare_wrapper.py:220
-msgid "Skipped %s media."
-msgstr "Skipped %s media."
+msgid "Skipped {0} media."
+msgstr "Skipped {0} media."
 
 #: compare/compare_wrapper.py:226
 msgid "No Unrelated Media"
@@ -5146,8 +5146,8 @@ msgid "Searching media..."
 msgstr "Searching media..."
 
 #: compare/compare_wrapper.py:421
-msgid "%s possibly related media found."
-msgstr "%s possibly related media found."
+msgid "{0} possibly related media found."
+msgstr "{0} possibly related media found."
 
 #: compare/compare_wrapper.py:429
 msgid "Running media comparisons..."

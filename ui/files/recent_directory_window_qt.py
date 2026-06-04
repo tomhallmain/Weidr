@@ -180,7 +180,7 @@ class RecentDirectoryWindow(DirectoryPickerDialog):
         # Remove stale entry
         if directory in RecentDirectories.directories:
             RecentDirectories.directories.remove(directory)
-        self._app_actions.toast(_("Invalid directory: %s") % directory)
+        self._app_actions.toast(_("Invalid directory: {0}").format(directory))
 
         _dir = get_existing_directory(
             self,

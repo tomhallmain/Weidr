@@ -618,9 +618,9 @@ class MarkedFiles():
             if matching_files == len(MarkedFiles.file_marks):
                 warning += "\n" + _("WARNING: All file hashes match.")
             elif matching_files > 0:
-                warning += "\n" + _("WARNING: %s of %s file hashes match.").format(matching_files, len(MarkedFiles.file_marks))
+                warning += "\n" + _("WARNING: {0} of {1} file hashes match.").format(matching_files, len(MarkedFiles.file_marks))
             if content_matching_files > 0:
-                warning += "\n" + _("INFO: %s files have identical content but different EXIF data.").format(content_matching_files)
+                warning += "\n" + _("INFO: {0} files have identical content but different EXIF data.").format(content_matching_files)
             if (matching_files + content_matching_files) == len(MarkedFiles.file_marks):
                 warning += "\n" + _("WARNING: All files are either identical or have matching content.")
             if names_are_short:

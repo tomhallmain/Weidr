@@ -187,8 +187,8 @@ msgstr ""
 "совпадения."
 
 #: compare/compare_wrapper.py:220
-msgid "Skipped %s media."
-msgstr "Пропущено %s медиа."
+msgid "Skipped {0} media."
+msgstr "Пропущено {0} медиа."
 
 #: compare/compare_wrapper.py:226
 msgid "No Unrelated Media"
@@ -245,8 +245,8 @@ msgstr ""
 "Ни один из файлов не соответствует фильтрам поиска с текущими настройками."
 
 #: compare/compare_wrapper.py:421
-msgid "%s possibly related media found."
-msgstr "%s потенциально связанных медиа найдено."
+msgid "{0} possibly related media found."
+msgstr "{0} потенциально связанных медиа найдено."
 
 #: compare/compare_wrapper.py:429
 msgid "Running media comparisons..."
@@ -593,12 +593,12 @@ msgid "WARNING: All file hashes match."
 msgstr "ВНИМАНИЕ: Все хэши файлов совпадают."
 
 #: files/marked_files.py:513
-msgid "WARNING: %s of %s file hashes match."
+msgid "WARNING: {0} of {1} file hashes match."
 msgstr "ВНИМАНИЕ: совпали {0} из {1} хэшей файлов."
 
 #: files/marked_files.py:515
-msgid "INFO: %s files have identical content but different EXIF data."
-msgstr "ИНФО: %s файлов имеют одинаковое содержимое, но разные данные EXIF."
+msgid "INFO: {0} files have identical content but different EXIF data."
+msgstr "ИНФО: {0} файлов имеют одинаковое содержимое, но разные данные EXIF."
 
 #: files/marked_files.py:517
 msgid "WARNING: All files are either identical or have matching content."
@@ -4724,7 +4724,7 @@ msgid "Set image comparison directory"
 msgstr "Настройка каталога сравнения изображений"
 
 #: ui/files/recent_directory_window_qt.py:184
-msgid "Invalid directory: %s"
+msgid "Invalid directory: {0}"
 msgstr "Недопустимый каталог: {0}"
 
 #: ui/files/target_directory_window_qt.py:74

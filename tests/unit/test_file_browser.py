@@ -145,25 +145,25 @@ class TestFileBrowserFilter:
 
     def test_exclusion_only_top_level(self, filter_tree):
         fb = FileBrowser(filter_tree, recursive=False)
-        fb.set_filter("!zzz")
+        fb.set_filter("!*zzz*")
         fb.refresh()
         assert self._names(fb) == {"aaa.png"}
 
     def test_exclusion_only_recursive(self, filter_tree):
         fb = FileBrowser(filter_tree, recursive=True)
-        fb.set_filter("!cats")
+        fb.set_filter("!*cats*")
         fb.refresh()
         assert self._names(fb) == {"aaa.png", "zzz.png", "vacation_file.png"}
 
     def test_inclusion_with_exclusion(self, filter_tree):
         fb = FileBrowser(filter_tree, recursive=True)
-        fb.set_filter("cats;!_edit")
+        fb.set_filter("cats;!*_edit*")
         fb.refresh()
         assert self._names(fb) == {"cats_file.png"}
 
     def test_multi_inclusion_with_exclusion(self, filter_tree):
         fb = FileBrowser(filter_tree, recursive=True)
-        fb.set_filter("cats;vacation;!_edit")
+        fb.set_filter("cats;vacation;!*_edit*")
         fb.refresh()
         assert self._names(fb) == {"cats_file.png", "vacation_file.png"}
 

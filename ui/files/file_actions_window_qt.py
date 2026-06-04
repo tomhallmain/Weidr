@@ -85,6 +85,7 @@ class FileActionsWindow(SmartWindow):
         self._show_today_only: bool = False
         self._visible_count: int = self.INITIAL_PAGE_SIZE
         self._action_type_filter: FileActionKind | None = None  # None means "all"
+        self._initiator_filter: bool | None = None  # None = any, False = user, True = auto
 
         root = QVBoxLayout(self)
         root.setContentsMargins(10, 10, 10, 10)
@@ -109,6 +110,16 @@ class FileActionsWindow(SmartWindow):
             self._type_combo.addItem(label, kind)
         self._type_combo.currentIndexChanged.connect(self._on_type_filter_changed)
         header.addWidget(self._type_combo)
+
+        self._initiator_combo = QComboBox()
+        for label, value in [
+            (_("Any"), None),
+            (_("User"), False),
+            (_("Auto"), True),
+        ]:
+            self._initiator_combo.addItem(label, value)
+        self._initiator_combo.currentIndexChanged.connect(self._on_initiator_filter_changed)
+        header.addWidget(self._initiator_combo)
 
         search_btn = QPushButton(_("Search Media"))
         # clicked emits bool(checked); ignore so it is never passed as media_path.
@@ -573,11 +584,25 @@ class FileActionsWindow(SmartWindow):
         return [a for a in actions if a.action_kind() == kind]
 
     # ==================================================================
+    # Initiator filter
+    # ==================================================================
+    def _on_initiator_filter_changed(self, _index: int) -> None:
+        self._initiator_filter = self._initiator_combo.currentData()
+        self._update_filter_label()
+        self._refresh_filtered_history()
+
+    def _filter_by_initiator(self, actions: list[FileAction]) -> list[FileAction]:
+        if self._initiator_filter is None:
+            return actions
+        return [a for a in actions if a.auto == self._initiator_filter]
+
+    # ==================================================================
     # Unified filter pipeline
     # ==================================================================
     def _refresh_filtered_history(self) -> None:
         actions = FileAction.action_history[:]
         actions = self._filter_by_action_type(actions)
+        actions = self._filter_by_initiator(actions)
         if self._show_today_only:
             actions = [a for a in actions if a.is_today()]
         ft = self._filter_text.strip().lower()
@@ -632,6 +657,8 @@ class FileActionsWindow(SmartWindow):
                 FileActionKind.DELETE: _("deletes only"),
             }
             parts.append(kind_labels[self._action_type_filter])
+        if self._initiator_filter is not None:
+            parts.append(_("auto only") if self._initiator_filter else _("user only"))
         if parts:
             self._filter_label.setText(_("Filter: {}").format(" — ".join(parts)))
             self._filter_label.setVisible(True)
@@ -650,6 +677,8 @@ class FileActionsWindow(SmartWindow):
         self._filtered_history.clear()
         self._action_type_filter = None
         self._type_combo.setCurrentIndex(0)
+        self._initiator_filter = None
+        self._initiator_combo.setCurrentIndex(0)
         self._filter_text = ""
         self._update_filter_label()
         self._visible_count = self.INITIAL_PAGE_SIZE

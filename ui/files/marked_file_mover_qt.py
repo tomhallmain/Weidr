@@ -540,6 +540,8 @@ class MarkedFileMover(SmartDialog):
         )
         if progress is not None:
             progress.setValue(total)
+            from ui.sound_player import play_sound
+            QTimer.singleShot(0, lambda: play_sound("success"))
         self.close_windows()
 
     def _confirm_large_file_operation(self, target_dir: str, move_func) -> bool:

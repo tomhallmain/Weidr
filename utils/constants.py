@@ -312,6 +312,7 @@ class ImageGenerationType(Enum):
     IP_ADAPTER = "ip_adapter"
     RENOISER = "renoiser"
     IMG2IMG = "img2img"
+    IMAGE_EDIT = "image_edit"
     LAST_SETTINGS = "last_settings"
     CANCEL = "cancel"
     REVERT_TO_SIMPLE_GEN = "revert_to_simple_gen"
@@ -332,6 +333,8 @@ class ImageGenerationType(Enum):
             return _("Renoiser")
         elif self == ImageGenerationType.IMG2IMG:
             return _("Image to Image")
+        elif self == ImageGenerationType.IMAGE_EDIT:
+            return _("Image Edit")
         elif self == ImageGenerationType.LAST_SETTINGS:
             return _("Last Settings")
         elif self == ImageGenerationType.CANCEL:

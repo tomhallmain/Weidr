@@ -1,14 +1,5 @@
 """
 SearchController -- search and comparison execution logic.
-
-Extracted from: set_search_for_media, set_search_for_text, set_search,
-run_compare, _debounced_run_compare, _run_with_progress, _run_compare,
-_validate_run, display_progress, get_search_media_path, get_compare_threshold,
-get_file_filter, set_current_media_run_search, _set_media_run_search,
-add_current_media_to_negative_search, negative_media_search,
-next_text_embedding_preset, run_image_generation,
-trigger_image_generation, run_image_generation_on_directory,
-find_related_media_in_open_window.
 """
 
 from __future__ import annotations

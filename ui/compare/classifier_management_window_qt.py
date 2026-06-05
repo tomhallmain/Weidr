@@ -560,6 +560,7 @@ class ClassifierManagementWindow(SmartDialog):
 
         # Lazy imports to avoid circulars
         from ui.compare.classifier_actions_tab_qt import ClassifierActionsTab
+        from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
         from ui.compare.prevalidations_tab_qt import PrevalidationsTab
 
         self._classifier_actions_tab = ClassifierActionsTab(
@@ -568,11 +569,17 @@ class ClassifierManagementWindow(SmartDialog):
         self._prevalidations_tab = PrevalidationsTab(
             self._tabs, app_actions
         )
+        self._classifier_pipelines_tab = ClassifierPipelinesTab(
+            self._tabs, app_actions
+        )
 
         self._tabs.addTab(
             self._classifier_actions_tab, _("Classifier Actions")
         )
         self._tabs.addTab(self._prevalidations_tab, _("Prevalidations"))
+        self._tabs.addTab(
+            self._classifier_pipelines_tab, _("Pipelines")
+        )
 
         if not config.enable_prevalidations:
             self._tabs.setTabEnabled(1, False)

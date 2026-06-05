@@ -502,6 +502,23 @@ class ClassifierPipeline:
     # Flow preview (plain text, no Qt dependency)
     # ------------------------------------------------------------------
 
+    def flow_summary(self) -> str:
+        """Single-line summary suitable for a table cell."""
+        if not self.nodes:
+            return _("(empty)")
+        parts = [n.condition_summary() for n in self.nodes]
+        terminal = None
+        for n in self.nodes:
+            for outcome in (n.on_match, n.on_no_match):
+                if outcome.outcome_type == OutcomeType.EXECUTE:
+                    terminal = outcome.summary()
+                    break
+            if terminal:
+                break
+        if terminal:
+            parts.append(terminal)
+        return " → ".join(parts)
+
     def flow_preview(self) -> str:
         if not self.nodes:
             return "(no nodes)"
@@ -635,6 +652,20 @@ class ClassifierPipelines:
             if p.name == name:
                 return p
         return None
+
+    @staticmethod
+    def get_all_pipelines() -> list[ClassifierPipeline]:
+        return ClassifierPipelines.pipelines
+
+    @staticmethod
+    def add_pipeline(pipeline: ClassifierPipeline) -> None:
+        ClassifierPipelines.pipelines.append(pipeline)
+
+    @staticmethod
+    def remove_pipeline(name: str) -> None:
+        ClassifierPipelines.pipelines = [
+            p for p in ClassifierPipelines.pipelines if p.name != name
+        ]
 
     @staticmethod
     def get_active_pipelines_for_profile(

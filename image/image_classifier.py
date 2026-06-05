@@ -975,6 +975,10 @@ class ImageClassifierWrapper:
         self.predictions_cache[image_path] = dict(classed_predictions)
         return classed_predictions
 
+    def predict_image_ranked(self, image_path) -> list[tuple[str, float]]:
+        """Return (category, score) pairs sorted by score descending (rank 1 = highest)."""
+        return sorted(self.predict_image(image_path).items(), key=lambda kv: kv[1], reverse=True)
+
     def classify_image(self, image_path):
         if not self.can_run:
             raise Exception(f"Invalid state: Image classifier details failed to initialize, unable to classify image")

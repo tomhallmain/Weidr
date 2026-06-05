@@ -205,8 +205,7 @@ def _eval_classifier_rank(
         )
         return False, None
 
-    predictions: dict = classifier.predict_image(image_path)
-    ranked = sorted(predictions.items(), key=lambda kv: kv[1], reverse=True)
+    ranked = classifier.predict_image_ranked(image_path)
 
     for rank_idx, (category, score) in enumerate(ranked, start=1):
         if rank_idx > condition.max_rank:

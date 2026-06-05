@@ -108,6 +108,9 @@ class TestClassifierRankCondition:
             def predict_image(self, path):
                 return predictions
 
+            def predict_image_ranked(self, path):
+                return sorted(predictions.items(), key=lambda kv: kv[1], reverse=True)
+
         class FakeManager:
             def get_classifier(self, name):
                 return FakeClassifier()

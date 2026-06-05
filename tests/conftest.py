@@ -133,6 +133,13 @@ def reset_app_globals():
         except Exception:
             pass
 
+        # ClassifierPipelines
+        try:
+            from compare.classifier_pipeline import ClassifierPipelines
+            ClassifierPipelines.pipelines = []
+        except Exception:
+            pass
+
         # FrameCache — clear in-memory dicts only; leave temp dir intact
         try:
             from image.frame_cache import FrameCache

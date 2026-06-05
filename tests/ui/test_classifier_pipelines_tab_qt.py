@@ -161,6 +161,7 @@ class TestRefresh:
         tab = _make_tab(qtbot)
         assert _row_count(tab) == 0
         ClassifierPipelines.add_pipeline(_make_pipeline("new_one"))
+        ClassifierPipelines.store()
         tab.refresh()
         assert _row_count(tab) == 1
 

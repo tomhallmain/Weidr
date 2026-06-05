@@ -858,12 +858,14 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         splitter.setSizes([260, 840])
         root.addWidget(splitter, 1)
 
-        # Pre-select first node after both panes exist so _on_node_selected
-        # can safely reference _node_editor_widget.
-        if self._pipeline.nodes:
-            self._node_list.setCurrentRow(0)
-
         root.addWidget(self._build_flow_preview_group())
+
+        # _rebuild_node_list already selected row 0, but _on_node_selected
+        # returned early because _node_editor_widget didn't exist yet.
+        # All widgets (_node_editor_widget, _flow_preview) are now built —
+        # call directly to initialize _current_node_idx and load the editor.
+        if self._pipeline.nodes:
+            self._on_node_selected(0)
 
         btn_row = QHBoxLayout()
         save_btn = QPushButton(_("Save"))

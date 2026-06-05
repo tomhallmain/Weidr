@@ -549,9 +549,9 @@ class TestOutcomeEditorWidget:
         w = _OutcomeEditorWidget("On match:")
         qtbot.addWidget(w)
         w.load(NodeOutcome(OutcomeType.CONTINUE), [])
-        assert not w._goto_combo.isVisible()
+        assert w._goto_combo.isHidden()
         w.load(NodeOutcome(OutcomeType.GOTO, target_node="n"), ["n"])
-        assert w._goto_combo.isVisible()
+        assert not w._goto_combo.isHidden()
 
 
 # ---------------------------------------------------------------------------
@@ -595,12 +595,12 @@ class TestEditorDialogConstruction:
     def test_profile_picker_hidden_for_general(self, qtbot, isolated_singletons):
         dlg = _open_dialog(qtbot)
         dlg._type_combo.setCurrentIndex(0)
-        assert not dlg._profile_combo.isVisible()
+        assert dlg._profile_combo.isHidden()
 
     def test_profile_picker_visible_for_prevalidation(self, qtbot, isolated_singletons):
         dlg = _open_dialog(qtbot)
         dlg._type_combo.setCurrentIndex(1)
-        assert dlg._profile_combo.isVisible()
+        assert not dlg._profile_combo.isHidden()
 
     def test_node_list_populated_on_open(self, qtbot, isolated_singletons):
         pipeline = _make_pipeline()
@@ -749,6 +749,14 @@ class TestEditorFlush:
 # ---------------------------------------------------------------------------
 
 class TestEditorSave:
+    @pytest.fixture(autouse=True)
+    def _patch_alert(self, monkeypatch):
+        """Prevent qt_alert → QMessageBox.exec() from blocking the test runner."""
+        monkeypatch.setattr(
+            "ui.compare.classifier_pipeline_editor_qt.qt_alert",
+            lambda *a, **kw: None,
+        )
+
     def test_save_new_pipeline_adds_to_manager(self, qtbot, isolated_singletons):
         dlg = _open_dialog(qtbot)
         dlg._name_edit.setText("brand_new")

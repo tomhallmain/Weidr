@@ -15,7 +15,7 @@ Run with:
 from __future__ import annotations
 
 import pytest
-from PySide6.QtWidgets import QCheckBox, QWidget
+from PySide6.QtWidgets import QCheckBox
 
 from compare.classifier_pipeline import (
     ClassifierPipeline,
@@ -65,9 +65,7 @@ def _make_pipeline(name: str, is_active: bool = True) -> ClassifierPipeline:
 
 
 def _make_tab(qtbot, actions=None) -> ClassifierPipelinesTab:
-    parent = QWidget()
-    qtbot.addWidget(parent)
-    tab = ClassifierPipelinesTab(parent, actions or _FakeActions())
+    tab = ClassifierPipelinesTab(None, actions or _FakeActions())
     qtbot.addWidget(tab)
     return tab
 
@@ -388,9 +386,7 @@ class TestRunOnCurrent:
 
         p = _make_pipeline("callable_none")
         ClassifierPipelines.add_pipeline(p)
-        parent = QWidget()
-        qtbot.addWidget(parent)
-        tab = ClassifierPipelinesTab(parent, _Actions())
+        tab = ClassifierPipelinesTab(None, _Actions())
         qtbot.addWidget(tab)
         tab._run_on_current(p)
         assert len(alerted) == 1
@@ -417,9 +413,7 @@ class TestRunOnCurrent:
 
         p = _make_pipeline("run_with_path")
         ClassifierPipelines.add_pipeline(p)
-        parent = QWidget()
-        qtbot.addWidget(parent)
-        tab = ClassifierPipelinesTab(parent, _Actions())
+        tab = ClassifierPipelinesTab(None, _Actions())
         qtbot.addWidget(tab)
         tab._run_on_current(p)
         assert len(calls) == 1
@@ -444,9 +438,7 @@ class TestRunOnCurrent:
 
         p = _make_pipeline("result_test")
         ClassifierPipelines.add_pipeline(p)
-        parent = QWidget()
-        qtbot.addWidget(parent)
-        tab = ClassifierPipelinesTab(parent, _Actions())
+        tab = ClassifierPipelinesTab(None, _Actions())
         qtbot.addWidget(tab)
         tab._run_on_current(p)
         assert len(alerts) == 1

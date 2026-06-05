@@ -20,7 +20,7 @@ Run with:
 from __future__ import annotations
 
 import pytest
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QApplication
 
 from compare.classifier_pipeline import (
     ClassifierPipeline,
@@ -78,9 +78,7 @@ def _make_pipeline(name: str = "test_pipe") -> ClassifierPipeline:
 
 
 def _open_dialog(qtbot, pipeline=None) -> ClassifierPipelineEditorDialog:
-    parent = QWidget()
-    qtbot.addWidget(parent)
-    dlg = ClassifierPipelineEditorDialog(parent, _FakeAppActions(), lambda: None, pipeline)
+    dlg = ClassifierPipelineEditorDialog(None, _FakeAppActions(), lambda: None, pipeline)
     qtbot.addWidget(dlg)
     return dlg
 

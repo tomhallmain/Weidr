@@ -829,6 +829,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._refresh_callback = refresh_callback
         self._current_node_idx: Optional[int] = None
         self._suppress_refresh = False
+        self._node_editor_widget: Optional[QWidget] = None
 
         super().__init__(
             parent=parent,
@@ -856,6 +857,11 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         splitter.addWidget(self._build_node_editor_pane())
         splitter.setSizes([260, 840])
         root.addWidget(splitter, 1)
+
+        # Pre-select first node after both panes exist so _on_node_selected
+        # can safely reference _node_editor_widget.
+        if self._pipeline.nodes:
+            self._node_list.setCurrentRow(0)
 
         root.addWidget(self._build_flow_preview_group())
 
@@ -951,9 +957,6 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         lay.addLayout(btn_row)
 
         self._rebuild_node_list()
-        # Pre-select first node
-        if self._pipeline.nodes:
-            self._node_list.setCurrentRow(0)
         return pane
 
     def _build_node_editor_pane(self) -> QScrollArea:
@@ -1080,6 +1083,8 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         return f"{node.name}  [{ctype}]  ✓{match_summary} / ✗{no_match_summary}"
 
     def _on_node_selected(self, row: int) -> None:
+        if self._node_editor_widget is None:
+            return
         self._flush_node_to_model()
         if row < 0 or row >= len(self._pipeline.nodes):
             self._current_node_idx = None

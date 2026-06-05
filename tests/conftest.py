@@ -140,6 +140,13 @@ def reset_app_globals():
         except Exception:
             pass
 
+        # ClassifierPipelinesTab — class-level editor window reference
+        try:
+            from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+            ClassifierPipelinesTab._editor_window = None
+        except Exception:
+            pass
+
         # FrameCache — clear in-memory dicts only; leave temp dir intact
         try:
             from image.frame_cache import FrameCache

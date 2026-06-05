@@ -518,7 +518,7 @@ class TestSummaries:
             EmbeddingCondition(["x"], ["y"], 0.3),
             ClassifierRankCondition("m", ["c"], 2, 3, 0.1),
             PrototypeCondition("/a", "/b", 0.25),
-            PromptCondition(True),
+            PromptCondition(use_blacklist=True),
             LookaheadCondition("lk"),
             NodeResultCondition("prev", False),
             CompositeCondition("OR", [EmbeddingCondition(), PromptCondition()]),

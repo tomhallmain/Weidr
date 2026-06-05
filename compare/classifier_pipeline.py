@@ -110,17 +110,22 @@ class PromptCondition:
     """Prompt / blacklist text-detection check."""
     condition_type = "prompt"
 
-    def __init__(self, use_blacklist: bool = False):
+    def __init__(self, prompts: list[str] = None, use_blacklist: bool = False):
+        self.prompts: list[str] = prompts or []
         self.use_blacklist: bool = use_blacklist
 
     def to_dict(self) -> dict:
         return {
             "condition_type": self.condition_type,
+            "prompts": self.prompts,
             "use_blacklist": self.use_blacklist,
         }
 
     def summary(self) -> str:
-        return "Blacklist" if self.use_blacklist else "Prompts"
+        if self.use_blacklist:
+            return "Blacklist"
+        terms = ", ".join(self.prompts) if self.prompts else "(none)"
+        return f"Prompts([{terms}])"
 
 
 class LookaheadCondition:
@@ -220,7 +225,10 @@ def _condition_from_dict(d: dict):
             negative_lambda=d.get("negative_lambda", 0.5),
         )
     if ct == "prompt":
-        return PromptCondition(use_blacklist=d.get("use_blacklist", False))
+        return PromptCondition(
+            prompts=d.get("prompts", []),
+            use_blacklist=d.get("use_blacklist", False),
+        )
     if ct == "lookahead":
         return LookaheadCondition(lookahead_name=d.get("lookahead_name", ""))
     if ct == "node_result":

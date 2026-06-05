@@ -84,6 +84,12 @@ def isolated_singletons(tmp_path, monkeypatch):
     except Exception:
         pass
 
+    try:
+        import compare.classifier_pipeline as _cp
+        monkeypatch.setattr(_cp, "app_info_cache", new_cache)
+    except Exception:
+        pass
+
     # Silence startup log spam; patch before instantiation so __init__ skips the print.
     monkeypatch.setattr(cfg.Config, "print_config_settings", lambda self: None)
     monkeypatch.setattr(cfg, "config", cfg.Config())

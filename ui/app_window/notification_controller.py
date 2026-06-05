@@ -3,6 +3,17 @@ NotificationController -- toast display, title notifications, alerts, and label 
 
 Extracted from: toast, title_notify, alert, handle_error, _set_label_state.
 Uses signals internally so it is safe to call from any thread.
+
+Title-bar notification scheduling uses two QTimers (main-thread owned):
+  _expiry_timer   — single-shot, fires when the next notification expires and
+                    restores/updates the window title on the main thread.
+  _cleanup_timer  — 60-second repeating, calls notification_manager.cleanup_all_expired()
+                    to reclaim memory from old Notification objects.
+
+This replaces the old threading.Timer approach, which caused a race where the
+timer callback's queued Signal.emit() (background thread) could arrive in the
+event queue *after* a direct main-thread emit, silently reverting newly-set
+notification titles. See docs/notification_manager_timing_bug.md for full details.
 """
 
 from __future__ import annotations
@@ -11,7 +22,7 @@ import traceback
 from typing import TYPE_CHECKING, Optional
 
 from PySide6.QtCore import QObject, QTimer, Signal, Qt
-from PySide6.QtWidgets import QApplication, QLabel, QMessageBox, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
 
 from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle
@@ -44,9 +55,8 @@ def _safe_close_widget(widget: QWidget | None) -> None:
 
 
 class _NotificationSignals(QObject):
-    """Signals for cross-thread toast / title-notify delivery."""
+    """Signals for cross-thread toast delivery."""
     toast_requested = Signal(str, int, str)       # message, seconds, bg_color
-    title_notify_requested = Signal(str, str, int)  # message, base_message, seconds
 
 
 class NotificationController:
@@ -55,13 +65,28 @@ class NotificationController:
     and the sidebar state / label updates.
     """
 
+    # Interval for periodic cleanup of expired Notification objects (ms).
+    _CLEANUP_INTERVAL_MS = 60_000
+
     def __init__(self, app_window: AppWindow):
         self._app = app_window
         self._signals = _NotificationSignals()
         self._signals.toast_requested.connect(self._do_toast)
-        self._signals.title_notify_requested.connect(self._do_title_notify)
         self._status_title_override_active = False
         self._loading_spinner = None  # set by SidebarPanel after construction
+
+        # Single-shot QTimer: fires when the soonest active notification for this
+        # window expires. Always runs on the main thread — no Signal queuing race.
+        self._expiry_timer = QTimer(self._signals)
+        self._expiry_timer.setSingleShot(True)
+        self._expiry_timer.timeout.connect(self._on_notification_expiry)
+
+        # Repeating QTimer: 60-second housekeeping pass to evict old Notification
+        # objects from the global list (replaces the threading.Timer cleanup loop).
+        self._cleanup_timer = QTimer(self._signals)
+        self._cleanup_timer.setInterval(self._CLEANUP_INTERVAL_MS)
+        self._cleanup_timer.timeout.connect(self._on_cleanup_timer)
+        self._cleanup_timer.start()
 
     # ------------------------------------------------------------------
     # Toast
@@ -164,15 +189,20 @@ class NotificationController:
         action_type: ActionType = ActionType.SYSTEM,
         is_manual: bool = True,
     ) -> None:
-        """
-        Temporarily modify the window title to show a notification message.
-        Thread-safe via signals.
+        """Temporarily modify the window title to show a notification message.
+
+        Always called on the main thread (wrapped with ts() in app_actions), so
+        the immediate setWindowTitle() call is direct — no signal queuing needed.
+        The expiry timer is also a QTimer (main-thread), so restoration is also
+        direct, eliminating the threading.Timer race described in the module docstring.
         """
         if not config.show_toasts:
             return
         if time_in_seconds == 0:
             time_in_seconds = config.title_notify_persist_seconds
 
+        # Snapshot the bare title before adding the notification so that
+        # get_display_title() can restore to it when the notification expires.
         notification_manager.set_current_title(
             self._app.get_title_from_base_dir(), window_id=self._app.window_id
         )
@@ -181,15 +211,61 @@ class NotificationController:
             window_id=self._app.window_id,
         )
 
-    def _do_title_notify(self, message: str, base_message: str, time_in_seconds: int) -> None:
-        """Main-thread implementation of title notification."""
-        self._app.setWindowTitle(message)
-        QTimer.singleShot(
-            time_in_seconds * 1000,
-            lambda: self._app.setWindowTitle(
-                base_message or self._app.get_title_from_base_dir()
-            ),
+        # In fullscreen mode the title bar is not visible, so show a toast
+        # instead of updating the (invisible) title.  message is available
+        # here directly, so no need to look it back up from the data layer.
+        if self._app.app_actions.is_fullscreen():
+            self.toast(message, time_in_seconds)
+            return
+
+        # Update the title immediately on the main thread, then arm the expiry
+        # timer so the title is restored when the notification duration lapses.
+        self._apply_current_title()
+        self._reschedule_expiry()
+
+    def _apply_current_title(self) -> None:
+        """Set the window title to the current notification-aware display title.
+
+        Always called on the main thread.  Fullscreen callers should use
+        toast() directly instead (handled in title_notify before reaching here).
+        """
+        self._app.setWindowTitle(
+            notification_manager.get_display_title(self._app.window_id)
         )
+
+    def _reschedule_expiry(self) -> None:
+        """(Re)arm _expiry_timer to fire when the soonest notification expires.
+
+        If no active notifications remain, the timer is stopped so it doesn't
+        fire spuriously. Always called on the main thread.
+        """
+        delay = notification_manager.get_next_expiry_delay(self._app.window_id)
+        if delay is None:
+            self._expiry_timer.stop()
+            return
+        # setInterval + start() restarts if already running, so this is
+        # safe to call repeatedly without explicit stop/start sequencing.
+        self._expiry_timer.setInterval(int(delay * 1000))
+        self._expiry_timer.start()
+
+    def _on_notification_expiry(self) -> None:
+        """QTimer slot: called on the main thread when the soonest notification expires.
+
+        Cleans up the expired entry, refreshes the title (which may still have
+        other active notifications to show), and re-arms the timer for the next
+        expiry if one exists.
+        """
+        notification_manager.cleanup_expired(self._app.window_id)
+        self._apply_current_title()
+        self._reschedule_expiry()
+
+    def _on_cleanup_timer(self) -> None:
+        """QTimer slot: 60-second housekeeping pass across all windows.
+
+        Removes Notification objects that have expired from every window, not just
+        the current one, preventing unbounded list growth over long sessions.
+        """
+        notification_manager.cleanup_all_expired()
 
     def set_status_title(self, message: Optional[str]) -> None:
         """

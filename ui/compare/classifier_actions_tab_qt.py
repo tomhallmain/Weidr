@@ -211,6 +211,43 @@ class ClassifierActionsTab(QWidget):
 
             self._scroll_layout.addLayout(row)
 
+        # -- Action pipelines section ------------------------------------
+        from compare.classifier_pipeline import ClassifierPipelines
+        action_pipelines = ClassifierPipelines.get_action_pipelines()
+        if action_pipelines:
+            sep = QLabel(_("Pipelines"))
+            sep.setStyleSheet(
+                f"color: {AppStyle.FG_COLOR}; font-weight: bold; margin-top: 8px;"
+            )
+            self._scroll_layout.addWidget(sep)
+
+            for pipeline in action_pipelines:
+                row = QHBoxLayout()
+
+                run_btn = QPushButton(_("Run"))
+                run_btn.clicked.connect(
+                    lambda _=False, p=pipeline: self._run_single_pipeline(p)
+                )
+                row.addWidget(run_btn)
+
+                active_cb = QCheckBox()
+                active_cb.setChecked(pipeline.is_active)
+                active_cb.stateChanged.connect(
+                    lambda state, p=pipeline: setattr(p, "is_active", bool(state))
+                )
+                row.addWidget(active_cb)
+
+                name_lbl = QLabel(pipeline.name)
+                name_lbl.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
+                name_lbl.setWordWrap(True)
+                row.addWidget(name_lbl, 1)
+
+                type_lbl = QLabel(_("Pipeline"))
+                type_lbl.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
+                row.addWidget(type_lbl)
+
+                self._scroll_layout.addLayout(row)
+
         self._scroll_layout.addStretch()
 
     # ------------------------------------------------------------------
@@ -272,6 +309,8 @@ class ClassifierActionsTab(QWidget):
         self.refresh()
 
     def refresh(self) -> None:
+        from compare.classifier_pipeline import ClassifierPipelines
+        ClassifierPipelines.load()
         self._refresh_profile_combo()
         self._filtered = ClassifierActionsManager.classifier_actions[:]
         self._rebuild_rows()
@@ -334,6 +373,44 @@ class ClassifierActionsTab(QWidget):
             add_mark_cb,
             profile.name,
         )
+
+    def _run_single_pipeline(self, pipeline) -> None:
+        profile = self._get_selected_profile()
+        if profile is None:
+            return
+        msg = _("Run pipeline '{0}' on profile '{1}'?").format(pipeline.name, profile.name)
+        if not qt_alert(self, _("Run Pipeline"), msg, kind="askokcancel"):
+            return
+
+        hide_cb = getattr(self._app_actions, "hide_current_media", None)
+        notify_cb = getattr(self._app_actions, "title_notify", None)
+        add_mark_cb = None
+        try:
+            from files.marked_files import MarkedFiles
+            add_mark_cb = MarkedFiles.add_mark_if_not_present
+        except ImportError:
+            pass
+
+        directories = list(profile.directories)
+
+        def _worker():
+            from compare.base_compare import gather_files
+            from compare.classifier_pipeline_runner import run_pipeline
+            for directory in directories:
+                for image_path in gather_files(directory):
+                    try:
+                        run_pipeline(
+                            pipeline, image_path,
+                            hide_callback=hide_cb,
+                            notify_callback=notify_cb,
+                            add_mark_callback=add_mark_cb,
+                            base_directory=directory,
+                        )
+                    except Exception:
+                        logger.exception("Pipeline run error on %s", image_path)
+
+        from utils.running_tasks_registry import start_thread
+        start_thread(_worker, use_asyncio=False)
 
     def _run_all(self) -> None:
         profile = self._get_selected_profile()

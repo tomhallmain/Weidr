@@ -281,6 +281,7 @@ class TestPrevalidationPipeline:
 
 class TestClassifierPipelinesStorage:
     def test_load_empty(self):
+        ClassifierPipelines.store()  # write [] to cache so key exists — distinguishes from first-run
         ClassifierPipelines.load()
         assert ClassifierPipelines.pipelines == []
 
@@ -314,6 +315,7 @@ class TestClassifierPipelinesStorage:
             PrevalidationPipeline(name="wrong_profile", profile_name="prof_b", is_active=True),
             ClassifierPipeline(name="plain", is_active=True),  # not a PrevalidationPipeline
         ]
+        ClassifierPipelines._rebuild_type_cache()
         results = ClassifierPipelines.get_active_pipelines_for_profile("prof_a")
         assert len(results) == 1
         assert results[0].name == "active_match"

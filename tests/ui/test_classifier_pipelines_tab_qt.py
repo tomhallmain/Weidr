@@ -171,6 +171,7 @@ class TestRefresh:
         tab = _make_tab(qtbot)
         assert _row_count(tab) == 1
         ClassifierPipelines.remove_pipeline("removable")
+        ClassifierPipelines.store()  # persist removal so load() sees explicit []
         tab.refresh()
         assert _row_count(tab) == 0
 

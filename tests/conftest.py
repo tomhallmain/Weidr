@@ -137,6 +137,8 @@ def reset_app_globals():
         try:
             from compare.classifier_pipeline import ClassifierPipelines
             ClassifierPipelines.pipelines = []
+            ClassifierPipelines._prevalidation_pipelines = []
+            ClassifierPipelines._action_pipelines = []
         except Exception:
             pass
 

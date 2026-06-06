@@ -624,10 +624,29 @@ _CACHE_KEY = "classifier_pipelines"
 
 class ClassifierPipelines:
     pipelines: list[ClassifierPipeline] = []
+    _prevalidation_pipelines: list["PrevalidationPipeline"] = []
+    _action_pipelines: list[ClassifierPipeline] = []
+
+    @staticmethod
+    def _rebuild_type_cache() -> None:
+        pv: list["PrevalidationPipeline"] = []
+        ac: list[ClassifierPipeline] = []
+        for p in ClassifierPipelines.pipelines:
+            if isinstance(p, PrevalidationPipeline):
+                pv.append(p)
+            else:
+                ac.append(p)
+        ClassifierPipelines._prevalidation_pipelines = pv
+        ClassifierPipelines._action_pipelines = ac
 
     @staticmethod
     def load() -> None:
-        raw = app_info_cache.get_meta(_CACHE_KEY, default_val=[])
+        # Use None sentinel to distinguish "key never written" from "explicitly empty list".
+        raw = app_info_cache.get_meta(_CACHE_KEY, default_val=None)
+        if raw is None:
+            ClassifierPipelines.pipelines = [ClassifierPipelines._build_demo_pipeline()]
+            ClassifierPipelines._rebuild_type_cache()
+            return
         result: list[ClassifierPipeline] = []
         for d in raw:
             try:
@@ -638,6 +657,36 @@ class ClassifierPipelines:
             except Exception:
                 logger.exception("Failed to load pipeline from cache entry")
         ClassifierPipelines.pipelines = result
+        ClassifierPipelines._rebuild_type_cache()
+
+    @staticmethod
+    def _build_demo_pipeline() -> "ClassifierPipeline":
+        node_portrait = PipelineNode(
+            name="Is a person?",
+            condition=EmbeddingCondition(
+                positives=["person", "human face", "portrait"],
+                negatives=["landscape", "animal", "object"],
+                threshold=0.25,
+            ),
+            on_match=NodeOutcome(OutcomeType.GOTO, target_node="Check if explicit"),
+            on_no_match=NodeOutcome(OutcomeType.ACCEPT),
+        )
+        node_explicit = PipelineNode(
+            name="Check if explicit",
+            condition=EmbeddingCondition(
+                positives=["explicit content", "nudity", "nsfw"],
+                negatives=["clothed", "safe for work"],
+                threshold=0.28,
+            ),
+            on_match=NodeOutcome(OutcomeType.EXECUTE, action_type=ClassifierActionType.HIDE),
+            on_no_match=NodeOutcome(OutcomeType.ACCEPT),
+        )
+        return ClassifierPipeline(
+            name="Example: Explicit Content Filter",
+            description="Demo pipeline (inactive). Two-node example: checks if a person appears, then hides if explicit.",
+            nodes=[node_portrait, node_explicit],
+            is_active=False,
+        )
 
     @staticmethod
     def store() -> None:
@@ -658,26 +707,31 @@ class ClassifierPipelines:
         return ClassifierPipelines.pipelines
 
     @staticmethod
+    def get_prevalidation_pipelines() -> list["PrevalidationPipeline"]:
+        return ClassifierPipelines._prevalidation_pipelines
+
+    @staticmethod
+    def get_action_pipelines() -> list[ClassifierPipeline]:
+        return ClassifierPipelines._action_pipelines
+
+    @staticmethod
     def add_pipeline(pipeline: ClassifierPipeline) -> None:
         ClassifierPipelines.pipelines.append(pipeline)
+        ClassifierPipelines._rebuild_type_cache()
 
     @staticmethod
     def remove_pipeline(name: str) -> None:
         ClassifierPipelines.pipelines = [
             p for p in ClassifierPipelines.pipelines if p.name != name
         ]
+        ClassifierPipelines._rebuild_type_cache()
 
     @staticmethod
     def get_active_pipelines_for_profile(
         profile_name: Optional[str],
-    ) -> list[ClassifierPipeline]:
+    ) -> list["PrevalidationPipeline"]:
         """Return active PrevalidationPipelines whose profile matches."""
-        result = []
-        for p in ClassifierPipelines.pipelines:
-            if not p.is_active:
-                continue
-            if not isinstance(p, PrevalidationPipeline):
-                continue
-            if p.profile_name == profile_name:
-                result.append(p)
-        return result
+        return [
+            p for p in ClassifierPipelines._prevalidation_pipelines
+            if p.is_active and p.profile_name == profile_name
+        ]

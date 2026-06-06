@@ -260,6 +260,19 @@ class ClassifierActionsManager:
                     prevalidation.name,
                     e,
                 )
+        # Load ClassifierPipelines and resolve profile instances so they are
+        # ready for the pipeline execution loop in prevalidate_media().
+        try:
+            from compare.classifier_pipeline import ClassifierPipelines
+            ClassifierPipelines.load()
+            for _pipeline in ClassifierPipelines.get_prevalidation_pipelines():
+                try:
+                    _pipeline.update_profile_instance()
+                except Exception:
+                    pass
+        except Exception:
+            logger.exception("Failed to load ClassifierPipelines during post-init")
+
         ClassifierActionsManager._prevalidations_initialized = True
 
     @staticmethod
@@ -367,6 +380,30 @@ class ClassifierActionsManager:
                 if prevalidation_action is not None:
                     matched_prevalidation = prevalidation
                     break
+
+        if prevalidation_action is None:
+            try:
+                from compare.classifier_pipeline import ClassifierPipelines
+                from compare.classifier_pipeline_runner import run_pipeline
+                for pipeline in ClassifierPipelines.get_prevalidation_pipelines():
+                    if not pipeline.is_active:
+                        continue
+                    if pipeline.profile is not None and base_dir not in pipeline.profile.directories:
+                        continue
+                    pipeline_action = run_pipeline(
+                        pipeline,
+                        media_path,
+                        hide_callback=hide_callback,
+                        notify_callback=notify_callback,
+                        add_mark_callback=add_mark_callback,
+                        blur_callback=blur_callback,
+                        base_directory=base_dir,
+                    )
+                    if pipeline_action is not None:
+                        prevalidation_action = pipeline_action
+                        break
+            except Exception:
+                logger.exception("Error running classifier pipelines for %s", media_path)
 
         if ClassifierActionsManager._should_persist_prevalidation_cache(
             prevalidation_action, matched_prevalidation, media_path

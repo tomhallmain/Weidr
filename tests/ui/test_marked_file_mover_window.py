@@ -3,7 +3,7 @@
 import os
 
 import pytest
-from PySide6.QtWidgets import QApplication, QPushButton, QScrollArea
+from PySide6.QtWidgets import QPushButton, QScrollArea
 
 from files.marked_files import MarkedFiles
 from ui.files.marked_file_mover_qt import MarkedFileMover
@@ -18,13 +18,9 @@ def _close_mark_mover() -> None:
         try:
             win.close_windows()
             win.close()
-            win.deleteLater()
         except RuntimeError:
             pass
     MarkedFileMover._current_window = None
-    app = QApplication.instance()
-    if app is not None:
-        app.processEvents()
 
 
 @pytest.fixture

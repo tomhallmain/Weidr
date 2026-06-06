@@ -71,8 +71,14 @@ def _make_tab(qtbot, actions=None) -> ClassifierPipelinesTab:
 
 
 def _row_count(tab: ClassifierPipelinesTab) -> int:
-    """Pipeline rows only (excludes the header layout and the trailing stretch)."""
-    return tab._scroll_layout.count() - 2
+    """Pipeline rows only (excludes header row; works with the single QGridLayout)."""
+    grid_item = tab._scroll_layout.itemAt(0)
+    if grid_item is None:
+        return 0
+    grid = grid_item.layout()
+    if grid is None:
+        return 0
+    return max(0, grid.rowCount() - 1)
 
 
 # ---------------------------------------------------------------------------
@@ -87,6 +93,7 @@ class TestTabConstruction:
     def test_tab_constructs_with_pipelines(self, qtbot, isolated_singletons):
         ClassifierPipelines.add_pipeline(_make_pipeline("a"))
         ClassifierPipelines.add_pipeline(_make_pipeline("b"))
+        ClassifierPipelines.store()
         tab = _make_tab(qtbot)
         assert _row_count(tab) == 2
 
@@ -104,22 +111,19 @@ class TestRowRendering:
     def test_row_count_matches_pipeline_count(self, qtbot, isolated_singletons):
         for i in range(3):
             ClassifierPipelines.add_pipeline(_make_pipeline(f"pipe_{i}"))
+        ClassifierPipelines.store()
         tab = _make_tab(qtbot)
         assert _row_count(tab) == 3
 
     def test_active_checkbox_reflects_pipeline_state(self, qtbot, isolated_singletons):
         ClassifierPipelines.add_pipeline(_make_pipeline("active_one", is_active=True))
         ClassifierPipelines.add_pipeline(_make_pipeline("inactive_one", is_active=False))
+        ClassifierPipelines.store()
         tab = _make_tab(qtbot)
-        # First pipeline row is layout index 1 (index 0 is header)
-        first_row_layout = tab._scroll_layout.itemAt(1).layout()
-        first_checkbox = None
-        for i in range(first_row_layout.count()):
-            w = first_row_layout.itemAt(i).widget()
-            if isinstance(w, QCheckBox):
-                first_checkbox = w
-                break
-        assert first_checkbox is not None
+        grid = tab._scroll_layout.itemAt(0).layout()
+        # Grid row 0 is header; row 1 is the first pipeline
+        first_checkbox = grid.itemAtPosition(1, ClassifierPipelinesTab._COL_ACTIVE).widget()
+        assert isinstance(first_checkbox, QCheckBox)
         assert first_checkbox.isChecked() is True
 
     def test_prevalidation_type_label_shown(self, qtbot, isolated_singletons):
@@ -128,28 +132,23 @@ class TestRowRendering:
         pv = PrevalidationPipeline(profile_name="portraits")
         pv.name = "pv_pipe"
         ClassifierPipelines.add_pipeline(pv)
+        ClassifierPipelines.store()
         tab = _make_tab(qtbot)
-        # Collect all label texts in the first pipeline row
-        row_layout = tab._scroll_layout.itemAt(1).layout()
-        labels = []
-        for i in range(row_layout.count()):
-            w = row_layout.itemAt(i).widget()
-            if isinstance(w, QLabel):
-                labels.append(w.text())
-        assert _("Prevalidation") in labels
+        grid = tab._scroll_layout.itemAt(0).layout()
+        type_lbl = grid.itemAtPosition(1, ClassifierPipelinesTab._COL_TYPE).widget()
+        assert isinstance(type_lbl, QLabel)
+        assert type_lbl.text() == _("Prevalidation")
 
     def test_general_type_label_shown(self, qtbot, isolated_singletons):
         from PySide6.QtWidgets import QLabel
         from utils.translations import _
         ClassifierPipelines.add_pipeline(_make_pipeline("gen_pipe"))
+        ClassifierPipelines.store()
         tab = _make_tab(qtbot)
-        row_layout = tab._scroll_layout.itemAt(1).layout()
-        labels = [
-            row_layout.itemAt(i).widget().text()
-            for i in range(row_layout.count())
-            if isinstance(row_layout.itemAt(i).widget(), QLabel)
-        ]
-        assert _("General") in labels
+        grid = tab._scroll_layout.itemAt(0).layout()
+        type_lbl = grid.itemAtPosition(1, ClassifierPipelinesTab._COL_TYPE).widget()
+        assert isinstance(type_lbl, QLabel)
+        assert type_lbl.text() == _("General")
 
 
 # ---------------------------------------------------------------------------
@@ -158,6 +157,7 @@ class TestRowRendering:
 
 class TestRefresh:
     def test_refresh_adds_new_row(self, qtbot, isolated_singletons):
+        ClassifierPipelines.store()  # persist [] so load() skips demo pipeline
         tab = _make_tab(qtbot)
         assert _row_count(tab) == 0
         ClassifierPipelines.add_pipeline(_make_pipeline("new_one"))
@@ -168,6 +168,7 @@ class TestRefresh:
     def test_refresh_removes_deleted_row(self, qtbot, isolated_singletons):
         p = _make_pipeline("removable")
         ClassifierPipelines.add_pipeline(p)
+        ClassifierPipelines.store()
         tab = _make_tab(qtbot)
         assert _row_count(tab) == 1
         ClassifierPipelines.remove_pipeline("removable")
@@ -179,10 +180,10 @@ class TestRefresh:
         p = _make_pipeline("cached")
         ClassifierPipelines.add_pipeline(p)
         ClassifierPipelines.store()
-        # Clear in-memory list, then refresh should reload from cache
+        tab = _make_tab(qtbot)  # load() restores from cache: 1 pipeline
+        assert _row_count(tab) == 1
+        # Clear in-memory; refresh() should reload from cache
         ClassifierPipelines.pipelines = []
-        tab = _make_tab(qtbot)
-        assert _row_count(tab) == 0
         tab.refresh()
         assert _row_count(tab) == 1
 
@@ -202,6 +203,7 @@ class TestToggleActive:
     def test_toggle_active_stores_to_cache(self, qtbot, isolated_singletons):
         p = _make_pipeline("store_test", is_active=True)
         ClassifierPipelines.add_pipeline(p)
+        ClassifierPipelines.store()
         tab = _make_tab(qtbot)
         tab._toggle_active(p, False)
         # Reload from cache and verify
@@ -233,6 +235,7 @@ class TestDuplicate:
     def test_duplicate_name_contains_copy(self, qtbot, isolated_singletons):
         p = _make_pipeline("source")
         ClassifierPipelines.add_pipeline(p)
+        ClassifierPipelines.store()
         tab = _make_tab(qtbot)
         tab._duplicate(p)
         names = [pip.name for pip in ClassifierPipelines.get_all_pipelines()]
@@ -253,6 +256,7 @@ class TestDuplicate:
     def test_duplicate_rebuilds_rows(self, qtbot, isolated_singletons):
         p = _make_pipeline("rebuild_test")
         ClassifierPipelines.add_pipeline(p)
+        ClassifierPipelines.store()
         tab = _make_tab(qtbot)
         assert _row_count(tab) == 1
         tab._duplicate(p)
@@ -283,6 +287,7 @@ class TestDelete:
     def test_delete_rebuilds_rows(self, qtbot, isolated_singletons):
         p = _make_pipeline("rebuild_del")
         ClassifierPipelines.add_pipeline(p)
+        ClassifierPipelines.store()
         tab = _make_tab(qtbot)
         assert _row_count(tab) == 1
         tab._delete(p)
@@ -303,6 +308,7 @@ class TestDelete:
         c = _make_pipeline("keep_c")
         for pip in (a, b, c):
             ClassifierPipelines.add_pipeline(pip)
+        ClassifierPipelines.store()
         tab = _make_tab(qtbot)
         tab._delete(b)
         remaining = [p.name for p in ClassifierPipelines.get_all_pipelines()]
@@ -319,6 +325,7 @@ class TestMoveDown:
         b = _make_pipeline("beta")
         ClassifierPipelines.add_pipeline(a)
         ClassifierPipelines.add_pipeline(b)
+        ClassifierPipelines.store()
         tab = _make_tab(qtbot)
         tab._move_down(0, a)
         names = [p.name for p in ClassifierPipelines.get_all_pipelines()]
@@ -329,6 +336,7 @@ class TestMoveDown:
         b = _make_pipeline("last")
         ClassifierPipelines.add_pipeline(a)
         ClassifierPipelines.add_pipeline(b)
+        ClassifierPipelines.store()
         tab = _make_tab(qtbot)
         tab._move_down(1, b)
         names = [p.name for p in ClassifierPipelines.get_all_pipelines()]
@@ -339,6 +347,7 @@ class TestMoveDown:
         b = _make_pipeline("m2")
         ClassifierPipelines.add_pipeline(a)
         ClassifierPipelines.add_pipeline(b)
+        ClassifierPipelines.store()
         tab = _make_tab(qtbot)
         tab._move_down(0, a)
         assert _row_count(tab) == 2
@@ -348,6 +357,7 @@ class TestMoveDown:
         b = _make_pipeline("mv_b")
         ClassifierPipelines.add_pipeline(a)
         ClassifierPipelines.add_pipeline(b)
+        ClassifierPipelines.store()
         tab = _make_tab(qtbot)
         tab._move_down(0, a)
         ClassifierPipelines.pipelines = []

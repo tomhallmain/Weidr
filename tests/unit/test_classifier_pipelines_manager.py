@@ -96,10 +96,10 @@ class TestFlowSummary:
         # EmbeddingCondition -> "Embedding" in summary
         assert "Embedding" in summary
 
-    def test_summary_single_line(self, isolated_singletons):
+    def test_summary_is_multiline_for_nodes(self, isolated_singletons):
         p = _make_pipeline("s")
         summary = p.flow_summary()
-        assert "\n" not in summary
+        assert "\n" in summary
 
     def test_summary_shows_execute_action(self, isolated_singletons):
         from utils.constants import ClassifierActionType

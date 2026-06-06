@@ -205,7 +205,11 @@ class TestToggleActive:
         ClassifierPipelines.add_pipeline(p)
         ClassifierPipelines.store()
         tab = _make_tab(qtbot)
-        tab._toggle_active(p, False)
+        # _make_tab calls load(), replacing p with a freshly-deserialized object;
+        # fetch the live reference so _toggle_active modifies the right instance.
+        live_p = ClassifierPipelines.get_pipeline_by_name("store_test")
+        assert live_p is not None
+        tab._toggle_active(live_p, False)
         # Reload from cache and verify
         ClassifierPipelines.load()
         reloaded = ClassifierPipelines.get_pipeline_by_name("store_test")

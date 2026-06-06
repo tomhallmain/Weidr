@@ -159,6 +159,8 @@ class ClassifierPipelinesTab(QWidget):
 
             flow_lbl = QLabel(pipeline.flow_summary())
             flow_lbl.setStyleSheet(f"color: {_FG};")
+            flow_lbl.setWordWrap(True)
+            flow_lbl.setAlignment(Qt.AlignTop | Qt.AlignLeft)
             grid.addWidget(flow_lbl, r, self._COL_FLOW)
 
             run_btn = QPushButton(_("Run"))

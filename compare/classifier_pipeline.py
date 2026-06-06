@@ -503,21 +503,27 @@ class ClassifierPipeline:
     # ------------------------------------------------------------------
 
     def flow_summary(self) -> str:
-        """Single-line summary suitable for a table cell."""
+        """Multi-line summary: one node per two lines, suitable for a scrollable list cell."""
         if not self.nodes:
             return _("(empty)")
-        parts = [n.condition_summary() for n in self.nodes]
-        terminal = None
-        for n in self.nodes:
-            for outcome in (n.on_match, n.on_no_match):
-                if outcome.outcome_type == OutcomeType.EXECUTE:
-                    terminal = outcome.summary()
-                    break
-            if terminal:
-                break
-        if terminal:
-            parts.append(terminal)
-        return " → ".join(parts)
+        _ABBREV = {
+            "embedding": "Embedding",
+            "classifier_rank": "ClsRank",
+            "prototype": "Prototype",
+            "prompt": "Prompt",
+            "lookahead": "Lookahead",
+            "node_result": "NodeResult",
+            "composite": "Composite",
+        }
+        lines = []
+        for node in self.nodes:
+            cond_type = getattr(node.condition, "condition_type", "")
+            cond_label = _ABBREV.get(cond_type, cond_type)
+            lines.append(f"{node.name} [{cond_label}]")
+            lines.append(f"  ✓ {node.on_match.summary()}  ✗ {node.on_no_match.summary()}")
+        if self.default_action:
+            lines.append(f"(end) → {self.default_action.value}")
+        return "\n".join(lines)
 
     def flow_preview(self) -> str:
         if not self.nodes:

@@ -82,6 +82,7 @@ class ClassifierPipelinesTab(QWidget):
         self._scroll.setWidget(self._scroll_content)
         root.addWidget(self._scroll, 1)
 
+        ClassifierPipelines.load()
         self._rebuild_rows()
 
     # ------------------------------------------------------------------

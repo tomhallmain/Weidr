@@ -212,7 +212,23 @@ class ClassifierActionsManager:
         return total, n_items, n_dirs
 
     @staticmethod
-    def invalidate_for_directories(directories: set[str]) -> None:
+    def invalidate_session_cache_only() -> None:
+        """Clear the in-memory prevalidated_cache and signature memo without
+        touching the on-disk buckets.
+
+        Use for is_active toggles on global-scoped prevalidations: the bucket
+        entries self-invalidate via signature mismatch on next access, so
+        explicit bucket eviction is unnecessary and would discard still-valid
+        entries in the accident (toggle-off then immediately toggle-on) case.
+        """
+        logger.info("Prevalidation cache: session-cache + memo cleared (buckets preserved)")
+        ClassifierActionsManager.prevalidated_cache.clear()
+        set_signature_memo(None)
+
+    @staticmethod
+    def invalidate_for_directories(
+        directories: set[str], *, evict_buckets: bool = True
+    ) -> None:
         """
         Targeted eviction: drop caches only for files whose immediate parent
         directory is in *directories*.
@@ -224,13 +240,20 @@ class ClassifierActionsManager:
         Use this when a profile-scoped prevalidation changes and only the
         affected directories need re-evaluation.  Fall back to
         clear_prevalidation_result_cache() for global-scope changes.
+
+        Pass ``evict_buckets=False`` when only the signature changes (e.g. an
+        is_active toggle): stale bucket entries self-invalidate via signature
+        mismatch on next access, so explicit eviction is unnecessary and would
+        discard still-valid entries for the no-op (accident) case.
         """
         logger.info(
-            "Prevalidation cache: targeted eviction for %d dir(s): %s",
+            "Prevalidation cache: targeted eviction for %d dir(s)%s: %s",
             len(directories),
+            "" if evict_buckets else " (session cache only)",
             sorted(directories),
         )
-        evacuate_buckets_for_directories(directories)
+        if evict_buckets:
+            evacuate_buckets_for_directories(directories)
         norm_dirs = {os.path.normcase(os.path.normpath(d)) for d in directories}
         for path in list(ClassifierActionsManager.prevalidated_cache.keys()):
             if os.path.normcase(os.path.normpath(os.path.dirname(path))) in norm_dirs:

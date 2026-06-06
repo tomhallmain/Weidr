@@ -638,7 +638,7 @@ class PrevalidationsTab(QWidget):
             active_cb = QCheckBox()
             active_cb.setChecked(pv.is_active)
             active_cb.stateChanged.connect(
-                lambda state, p=pv: setattr(p, "is_active", bool(state))
+                lambda state, p=pv: self._toggle_active(p, bool(state))
             )
             row.addWidget(active_cb)
 
@@ -815,6 +815,20 @@ class PrevalidationsTab(QWidget):
             ClassifierActionsManager.clear_prevalidation_result_cache()
 
         self._rebuild_supporting_state()
+
+    def _toggle_active(self, prevalidation, value: bool) -> None:
+        prevalidation.is_active = value
+        dirs = self._pv_dirs(prevalidation)
+        label = f"prevalidation '{prevalidation.name}' {'activated' if value else 'deactivated'}"
+        if dirs is None:
+            # Global scope: clear all in-memory entries and memo, but leave
+            # buckets intact — stale entries self-invalidate via signature mismatch.
+            logger.info("Prevalidation cache: session-cache eviction — %s (global)", label)
+            ClassifierActionsManager.invalidate_session_cache_only()
+        else:
+            ClassifierActionsManager.invalidate_for_directories(
+                dirs, evict_buckets=False
+            )
 
     def _delete(self, prevalidation) -> None:
         # Read dirs before removal; the object's profile attrs are still valid

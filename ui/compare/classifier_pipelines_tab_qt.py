@@ -14,7 +14,7 @@ from typing import Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QCheckBox, QHBoxLayout, QLabel, QPushButton,
+    QCheckBox, QGridLayout, QHBoxLayout, QLabel, QPushButton,
     QScrollArea, QVBoxLayout, QWidget,
 )
 
@@ -89,99 +89,104 @@ class ClassifierPipelinesTab(QWidget):
     # Row construction
     # ------------------------------------------------------------------
 
+    # Column indices for the pipeline grid
+    _COL_ACTIVE  = 0
+    _COL_NAME    = 1
+    _COL_TYPE    = 2
+    _COL_NODES   = 3
+    _COL_PROFILE = 4
+    _COL_FLOW    = 5
+    _COL_RUN     = 6
+    _COL_EDIT    = 7
+    _COL_DUP     = 8
+    _COL_DEL     = 9
+    _COL_DOWN    = 10
+
     def _rebuild_rows(self) -> None:
         _clear_layout(self._scroll_layout)
 
+        grid = QGridLayout()
+        grid.setSpacing(4)
+        grid.setColumnStretch(self._COL_NAME, 2)
+        grid.setColumnStretch(self._COL_FLOW, 3)
+
+        _FG = AppStyle.FG_COLOR
+
         # Header row
-        hdr = QHBoxLayout()
-        for text, stretch in [
-            (_("Active"), 0),
-            (_("Name"), 1),
-            (_("Type"), 0),
-            (_("Nodes"), 0),
-            (_("Profile"), 0),
-            (_("Flow"), 2),
-            ("", 0), ("", 0), ("", 0), ("", 0), ("", 0),
+        for col, text in [
+            (self._COL_ACTIVE,  _("Active")),
+            (self._COL_NAME,    _("Name")),
+            (self._COL_TYPE,    _("Type")),
+            (self._COL_NODES,   _("Nodes")),
+            (self._COL_PROFILE, _("Profile")),
+            (self._COL_FLOW,    _("Flow")),
         ]:
             lbl = QLabel(text)
-            lbl.setStyleSheet(f"color: {AppStyle.FG_COLOR}; font-weight: bold;")
-            hdr.addWidget(lbl, stretch)
-        self._scroll_layout.addLayout(hdr)
+            lbl.setStyleSheet(f"color: {_FG}; font-weight: bold;")
+            grid.addWidget(lbl, 0, col)
 
-        pipelines = ClassifierPipelines.get_all_pipelines()
+        for idx, pipeline in enumerate(ClassifierPipelines.get_all_pipelines()):
+            r = idx + 1
 
-        for idx, pipeline in enumerate(pipelines):
-            row = QHBoxLayout()
-
-            # Active checkbox
             active_cb = QCheckBox()
             active_cb.setChecked(pipeline.is_active)
             active_cb.stateChanged.connect(
                 lambda state, p=pipeline: self._toggle_active(p, bool(state))
             )
-            row.addWidget(active_cb)
+            grid.addWidget(active_cb, r, self._COL_ACTIVE)
 
-            # Name
             name_lbl = QLabel(pipeline.name)
-            name_lbl.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
-            row.addWidget(name_lbl, 1)
+            name_lbl.setStyleSheet(f"color: {_FG};")
+            grid.addWidget(name_lbl, r, self._COL_NAME)
 
-            # Type
             type_text = (
-                _("Prevalidation")
-                if isinstance(pipeline, PrevalidationPipeline)
+                _("Prevalidation") if isinstance(pipeline, PrevalidationPipeline)
                 else _("General")
             )
             type_lbl = QLabel(type_text)
-            type_lbl.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
-            row.addWidget(type_lbl)
+            type_lbl.setStyleSheet(f"color: {_FG};")
+            grid.addWidget(type_lbl, r, self._COL_TYPE)
 
-            # Node count
             nodes_lbl = QLabel(str(len(pipeline.nodes)))
-            nodes_lbl.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
+            nodes_lbl.setStyleSheet(f"color: {_FG};")
             nodes_lbl.setAlignment(Qt.AlignCenter)
-            row.addWidget(nodes_lbl)
+            grid.addWidget(nodes_lbl, r, self._COL_NODES)
 
-            # Profile (blank for general pipelines)
-            profile_text = (
-                getattr(pipeline, "profile_name", None) or ""
-            )
+            profile_text = getattr(pipeline, "profile_name", None) or "—"
             profile_lbl = QLabel(profile_text)
-            profile_lbl.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
-            row.addWidget(profile_lbl)
+            profile_lbl.setStyleSheet(f"color: {_FG};")
+            grid.addWidget(profile_lbl, r, self._COL_PROFILE)
 
-            # Flow summary
             flow_lbl = QLabel(pipeline.flow_summary())
-            flow_lbl.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
-            flow_lbl.setWordWrap(False)
-            row.addWidget(flow_lbl, 2)
+            flow_lbl.setStyleSheet(f"color: {_FG};")
+            grid.addWidget(flow_lbl, r, self._COL_FLOW)
 
-            # Buttons
             run_btn = QPushButton(_("Run"))
             run_btn.setToolTip(_("Run on current image"))
             run_btn.clicked.connect(lambda _=False, p=pipeline: self._run_on_current(p))
-            row.addWidget(run_btn)
+            grid.addWidget(run_btn, r, self._COL_RUN)
 
             edit_btn = QPushButton(_("Edit"))
             edit_btn.clicked.connect(lambda _=False, p=pipeline: self._open_editor(p))
-            row.addWidget(edit_btn)
+            grid.addWidget(edit_btn, r, self._COL_EDIT)
 
             dup_btn = QPushButton(_("Duplicate"))
             dup_btn.clicked.connect(lambda _=False, p=pipeline: self._duplicate(p))
-            row.addWidget(dup_btn)
+            grid.addWidget(dup_btn, r, self._COL_DUP)
 
             del_btn = QPushButton(_("Delete"))
             del_btn.clicked.connect(lambda _=False, p=pipeline: self._delete(p))
-            row.addWidget(del_btn)
+            grid.addWidget(del_btn, r, self._COL_DEL)
 
-            down_btn = QPushButton(_("Move down"))
+            down_btn = QPushButton(_("↓"))
+            down_btn.setFixedWidth(28)
+            down_btn.setToolTip(_("Move down"))
             down_btn.clicked.connect(
                 lambda _=False, i=idx, p=pipeline: self._move_down(i, p)
             )
-            row.addWidget(down_btn)
+            grid.addWidget(down_btn, r, self._COL_DOWN)
 
-            self._scroll_layout.addLayout(row)
-
+        self._scroll_layout.addLayout(grid)
         self._scroll_layout.addStretch()
 
     # ------------------------------------------------------------------

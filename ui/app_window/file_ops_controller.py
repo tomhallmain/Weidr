@@ -1,11 +1,6 @@
 """
 FileOpsController -- delete, hide, copy, and file-manipulation operations.
 
-Extracted from: delete_media, _handle_delete, delete_current_base_dir,
-hide_current_media, clear_hidden_media, replace_current_media_with_search_media,
-_handle_remove_files_from_groups, open_media_location, open_image_in_gimp,
-copy_media_path, copy_media_basename, run_refacdir, randomize filenames, check_files (periodic).
-
 Also owns the periodic file-check timer, which monitors the file system
 for changes and refreshes the file list when needed.
 """

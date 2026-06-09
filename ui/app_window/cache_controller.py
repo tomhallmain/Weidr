@@ -1,9 +1,4 @@
-"""
-CacheController -- persistence: loading and storing the app info cache.
-
-Extracted from: load_info_cache, store_info_cache, apply_cached_display_position,
-do_periodic_store_cache.
-"""
+"""CacheController -- persistence: loading and storing the app info cache."""
 
 from __future__ import annotations
 

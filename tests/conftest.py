@@ -166,6 +166,21 @@ def reset_app_globals():
         except Exception:
             pass
 
+        # FileBrowser — confirmed-directories list persists across tests otherwise
+        try:
+            from files.file_browser import FileBrowser
+            FileBrowser.have_confirmed_directories.clear()
+        except Exception:
+            pass
+
+        # MediaDetails — downstream cache keyed by path; stale entries from one
+        # test would silently skip the refresh in the next
+        try:
+            from ui.image.media_details import MediaDetails
+            MediaDetails.downstream_related_images_cache.clear()
+        except Exception:
+            pass
+
     _reset()
     yield
     _reset()

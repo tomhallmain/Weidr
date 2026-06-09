@@ -1,8 +1,6 @@
 """
 Lightweight media viewer window (TempMediaWindow) used to display
 temporary/generated files (rotated, cropped, enhanced, related, etc.).
-
-Extracted from ui/image/media_details.py for clarity.
 """
 
 from __future__ import annotations

@@ -1,11 +1,6 @@
 """
 WindowManager -- singleton tracking all open AppWindow instances.
 
-Extracted from the static/class-level methods and variables of the original
-App class (add_secondary_window, get_open_windows, get_window,
-find_window_with_compare, refresh_all_compares, cycle_windows,
-open_secondary_compare_window, get_other_window_or_self_dir, etc.).
-
 All methods are classmethods or staticmethods so that any controller
 can call WindowManager.get_window() without needing an instance.
 """

@@ -1,10 +1,6 @@
 """
 SidebarPanel -- owns the sidebar QWidget and its layout.
 
-Extracted from the sidebar-building portion of App.__init__ (~200 lines)
-and the helper methods: add_button, add_label, apply_to_grid, new_entry,
-destroy_grid_element.
-
 Contains the QScrollArea wrapping a QVBoxLayout with all sidebar widgets
 (labels, entries, buttons, checkboxes, dropdowns). Exposes references to
 key widgets so that controllers can read/write them.

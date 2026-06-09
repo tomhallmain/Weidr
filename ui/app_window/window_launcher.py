@@ -2,10 +2,6 @@
 WindowLauncher -- opens secondary windows and dialogs.
 
 A thin class where each method creates the appropriate dialog/window.
-Extracted from: all open_*_window methods, get_media_details,
-get_help_and_config.
-
-All window imports now point to the PySide6 (_qt) versions.
 """
 
 from __future__ import annotations

@@ -2,10 +2,6 @@
 MediaNavigator -- media browsing logic controller.
 
 Owns the "what to show" without "how to show it" (that's MediaFrame).
-Extracted from: show_prev_media, show_next_media, last_chosen_direction_func,
-create_media, clear_media, go_to_file, go_to_file_by_index,
-go_to_previous_media, home, page_up, page_down, show_searched_media,
-toggle_media_view, get_active_media_filepath, toggle_slideshow.
 """
 
 from __future__ import annotations

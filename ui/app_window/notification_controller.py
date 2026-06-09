@@ -1,7 +1,6 @@
 """
 NotificationController -- toast display, title notifications, alerts, and label state.
 
-Extracted from: toast, title_notify, alert, handle_error, _set_label_state.
 Uses signals internally so it is safe to call from any thread.
 
 Title-bar notification scheduling uses two QTimers (main-thread owned):

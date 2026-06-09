@@ -1,7 +1,6 @@
 """
 KeyBindingManager -- owns all QShortcut creation.
 
-Extracted from the ~70-line key-binding block in App.__init__.
 Each shortcut is guarded by a focus check so that single-key shortcuts
 are suppressed while the user is typing in an AwareEntry.
 
@@ -22,6 +21,28 @@ Tkinter key syntax → Qt key syntax mapping:
 Mouse bindings (Button-2, Button-3, MouseWheel) are NOT handled via
 QShortcut — they are handled in the media frame's event filters or
 the AppWindow's wheelEvent / contextMenuEvent overrides.
+
+Keybinding map  (■ = bound  · = free | cols: Shift | Ctrl | Ctrl+Shift)
+
+    A  ■ ■ ·   N  ■ ■ ■
+    B  ■ ■ ·   O  ■ · ·
+    C  ■ ■ ■   P  ■ ■ ·
+    D  ■ ■ ■   Q  ■ ■ ·
+    E  ■ ■ ■   R  ■ ■ ·
+    F  ■ ■ ·   S  ■ ■ ■
+    G  ■ ■ ■   T  ■ ■ ■
+    H  ■ ■ ·   U  ■ · ·
+    I  ■ ■ ·   V  ■ ■ ·
+    J  ■ ■ ·   W  ■ ■ ·
+    K  ■ ■ ■   X  · ■ ·
+    L  ■ · ·   Y  ■ ■ ■
+    M  ■ ■ ■   Z  ■ ■ ·
+
+    Special: 0-9 ■ (bare + Shift), Left/Right ■ (bare + Shift),
+             Home/End/PgUp/PgDown ■ (bare), Backspace ■ (Shift),
+             Delete ■ (Shift + Ctrl+Shift), Escape ■ (bare + Shift),
+             Return ■ (Ctrl + Ctrl+Shift + Ctrl+Alt),
+             Tab ■ (Ctrl + Ctrl+Shift), F1/F11 ■
 """
 
 from __future__ import annotations
@@ -139,6 +160,8 @@ class KeyBindingManager:
             else None,
         )
         self._bind("Shift+Y", app.file_marks_ctrl.set_marks_from_downstream_related_images)
+        self._bind("Ctrl+Y", app.file_marks_ctrl.mark_sources_with_downstream_in_dir, guarded=False)
+        self._bind("Ctrl+Shift+Y", app.file_marks_ctrl.mark_downstream_files_in_dir, guarded=False)
         self._bind("Shift+H", app.window_launcher.get_help_and_config)
         self._bind("Shift+E", app.window_launcher.copy_prompt)
         self._bind(

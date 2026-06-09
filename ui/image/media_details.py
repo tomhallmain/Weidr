@@ -98,6 +98,11 @@ def truncate_details_label_text(
     return out
 
 
+# Matches a variant suffix: underscore + 1-8 alpha chars at end of stem.
+# e.g. "photo_edit" or "photo_abc" → prefix "photo".  Used to correlate
+# dir-Y variants with dir-X sources whose metadata was wiped.
+_VARIANT_SUFFIX_RE = re.compile(r'^(.+)_[A-Za-z]{1,8}$')
+
 # ── MediaDetails ──────────────────────────────────────────────────────
 
 
@@ -1415,6 +1420,89 @@ class MediaDetails(SmartWindow):
             return None
         app_actions.toast(toast_text)
         return downstream
+
+    @staticmethod
+    def get_sources_with_downstream_in_dir(
+        source_paths: list[str],
+        other_base_dir: str,
+    ) -> list[str]:
+        """Return the subset of source_paths that have at least one downstream image in other_base_dir."""
+        browser = FileBrowser(directory=other_base_dir)
+        browser._gather_files()
+
+        # Build reverse lookups from dir Y in one pass — O(|Y|) instead of O(|X|*|Y|).
+        # exact_sources:   raw related-path string (path-level match)
+        # basename_sources: basename string (loose match, only for len > 10)
+        # stem_prefixes:   stem prefix after stripping a generator suffix
+        #                  (_[A-Za-z]{1,8}) — catches derivatives whose metadata
+        #                  was wiped but whose name still encodes the source stem.
+        exact_sources: set[str] = set()
+        basename_sources: set[str] = set()
+        stem_prefixes: set[tuple[str, str]] = set()  # (prefix, ext)
+        for candidate in browser.filepaths:
+            stem, ext = os.path.splitext(os.path.basename(candidate))
+            m = _VARIANT_SUFFIX_RE.match(stem)
+            if m:
+                stem_prefixes.add((m.group(1), ext.lower()))
+            related, _exact = MediaDetails.get_related_image_path(
+                candidate, check_extra_directories=None
+            )
+            if related is None:
+                continue
+            exact_sources.add(related)
+            b = os.path.basename(related)
+            if len(b) > 10:
+                basename_sources.add(b)
+
+        results = []
+        for p in source_paths:
+            if p in exact_sources or os.path.basename(p) in basename_sources:
+                results.append(p)
+                continue
+            stem, ext = os.path.splitext(os.path.basename(p))
+            if (stem, ext.lower()) in stem_prefixes:
+                results.append(p)
+        return results
+
+    @staticmethod
+    def get_downstream_files_for_sources(
+        source_paths: list[str],
+        other_base_dir: str,
+    ) -> list[str]:
+        """Return files in other_base_dir that are downstream of any path in source_paths."""
+        # Build lookup sets from dir X in one pass — O(|X|).
+        source_path_set: set[str] = set(source_paths)
+        source_basename_set: set[str] = set()
+        source_stems: set[tuple[str, str]] = set()  # (stem, ext) for variant-suffix match
+        for p in source_paths:
+            b = os.path.basename(p)
+            if len(b) > 10:
+                source_basename_set.add(b)
+            stem, ext = os.path.splitext(b)
+            source_stems.add((stem, ext.lower()))
+
+        # Scan dir Y once — O(|Y|).
+        browser = FileBrowser(directory=other_base_dir)
+        browser._gather_files()
+
+        results = []
+        for candidate in browser.filepaths:
+            related, _exact = MediaDetails.get_related_image_path(
+                candidate, check_extra_directories=None
+            )
+            if related is not None:
+                if related in source_path_set:
+                    results.append(candidate)
+                    continue
+                b = os.path.basename(related)
+                if len(b) > 10 and b in source_basename_set:
+                    results.append(candidate)
+                    continue
+            stem, ext = os.path.splitext(os.path.basename(candidate))
+            m = _VARIANT_SUFFIX_RE.match(stem)
+            if m and (m.group(1), ext.lower()) in source_stems:
+                results.append(candidate)
+        return results
 
     @staticmethod
     def next_downstream_related_image(

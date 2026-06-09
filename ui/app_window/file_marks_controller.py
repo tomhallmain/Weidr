@@ -1,12 +1,4 @@
-"""
-FileMarksController -- mark-related operations.
-
-Extracted from: add_or_remove_mark, _add_all_marks_from_last_or_current_group,
-go_to_mark, copy_marks_list, _check_marks, open_move_marks_window,
-run_previous_marks_action, run_penultimate_marks_action,
-run_permanent_marks_action, run_hotkey_marks_action, revert_last_marks_change,
-set_marks_from_downstream_related_images.
-"""
+"""FileMarksController -- mark-related operations."""
 
 from __future__ import annotations
 
@@ -404,5 +396,88 @@ class FileMarksController:
             self._app.notification_ctrl.toast(
                 _("{0} file marks set").format(len(downstream_related_images))
             )
+            window.file_marks_ctrl.go_to_mark()
+            window.media_frame.setFocus()
+
+    @require_password(ProtectedActions.VIEW_MEDIA_DETAILS)
+    def mark_sources_with_downstream_in_dir(
+        self,
+        event=None,
+        base_dir: Optional[str] = None,
+    ) -> None:
+        """Mark all files in the current dir that have a downstream image in base_dir."""
+        from ui.image.media_details import MediaDetails
+
+        if base_dir is None:
+            self._app.window_launcher.open_recent_directory_window(
+                extra_callback_args=(self.mark_sources_with_downstream_in_dir, [])
+            )
+            return
+
+        source_paths = self._fb.filepaths
+        if not source_paths:
+            self._app.notification_ctrl.toast(_("No files in current directory."))
+            return
+
+        sources = MediaDetails.get_sources_with_downstream_in_dir(source_paths, base_dir)
+
+        if not sources:
+            self._app.notification_ctrl.toast(
+                _("No source files with downstream images found in\n{0}").format(base_dir)
+            )
+            return
+
+        if not MarkedFiles.guard_mark_mutation(
+            self._app.app_actions, _("Mark sources with downstream images")
+        ):
+            return
+
+        MarkedFiles.file_marks = sources
+        self._app.notification_ctrl.toast(
+            _("{0} source file(s) marked").format(len(sources))
+        )
+        self.go_to_mark()
+        self._app.media_frame.setFocus()
+
+    @require_password(ProtectedActions.VIEW_MEDIA_DETAILS)
+    def mark_downstream_files_in_dir(
+        self,
+        event=None,
+        base_dir: Optional[str] = None,
+    ) -> None:
+        """Mark all files in base_dir that are downstream of any file in the current dir."""
+        from ui.image.media_details import MediaDetails
+        from ui.app_window.window_manager import WindowManager
+
+        if base_dir is None:
+            self._app.window_launcher.open_recent_directory_window(
+                extra_callback_args=(self.mark_downstream_files_in_dir, [])
+            )
+            return
+
+        source_paths = self._fb.filepaths
+        if not source_paths:
+            self._app.notification_ctrl.toast(_("No files in current directory."))
+            return
+
+        downstream = MediaDetails.get_downstream_files_for_sources(source_paths, base_dir)
+
+        if not downstream:
+            self._app.notification_ctrl.toast(
+                _("No downstream files found in\n{0}").format(base_dir)
+            )
+            return
+
+        if not MarkedFiles.guard_mark_mutation(
+            self._app.app_actions, _("Mark downstream files")
+        ):
+            return
+
+        MarkedFiles.file_marks = downstream
+        self._app.notification_ctrl.toast(
+            _("{0} downstream file(s) marked").format(len(downstream))
+        )
+        window = WindowManager.get_window(base_dir=base_dir)
+        if window is not None:
             window.file_marks_ctrl.go_to_mark()
             window.media_frame.setFocus()

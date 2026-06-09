@@ -49,9 +49,9 @@ class SortableFile:
             self.set_related_image_path()
             return self.get_related_image_or_self()
         elif len(self.related_image_path) > 0:
-            return self.related_image_path
+            return os.path.basename(self.related_image_path)
         else:
-            return self.full_file_path
+            return self.basename
 
     def __eq__(self, other):
         if not isinstance(other, SortableFile):

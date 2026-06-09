@@ -852,7 +852,7 @@ class FileBrowser:
                 sortable_files.sort(key=lambda sf: sf.full_file_path.lower(), reverse=reverse)
                 sortable_files.sort(key=lambda sf: sf.get_image_width(), reverse=reverse)
             elif self.sort_by == SortBy.RELATED_IMAGE:
-                sortable_files.sort(key=lambda sf: sf.get_related_image_or_self(), reverse=reverse)
+                sortable_files.sort(key=lambda sf: (sf.get_related_image_or_self(), sf.ctime), reverse=reverse)
 
         # Return either SortableFile objects or filepaths
         if return_sortable_files:

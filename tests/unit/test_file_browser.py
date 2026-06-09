@@ -238,3 +238,91 @@ class TestFileBrowserSort:
         desc = fb.get_files_sorted_for_operation(SortBy.NAME, Sort.DESC)
         names = [os.path.basename(p) for p in desc]
         assert names == ["zzz.png", "mid.png", "aaa.png"]
+
+
+class TestFileBrowserSortRelatedImage:
+    """RELATED_IMAGE sort: basename keys and ctime tiebreaker."""
+
+    @pytest.fixture(autouse=True)
+    def _patch_file_types(self, monkeypatch):
+        monkeypatch.setattr(config, "file_types", [".png"])
+
+    def _patch_related(self, monkeypatch, related_map):
+        from image.image_data_extractor import image_data_extractor as extractor
+        monkeypatch.setattr(
+            extractor,
+            "get_related_image_path",
+            lambda path, node_id="LoadImage": related_map.get(path),
+        )
+
+    def test_no_related_image_sorts_by_basename_not_full_path(self, tmp_path, monkeypatch):
+        # Place files so that full-path order contradicts basename order.
+        z_dir = tmp_path / "z_dir"
+        a_dir = tmp_path / "a_dir"
+        z_dir.mkdir()
+        a_dir.mkdir()
+        aaa = z_dir / "aaa.png"  # basename "aaa" but lives under z_dir
+        zzz = a_dir / "zzz.png"  # basename "zzz" but lives under a_dir
+        _make_png(str(aaa))
+        _make_png(str(zzz))
+        self._patch_related(monkeypatch, {})
+
+        fb = FileBrowser(str(tmp_path), recursive=True)
+        fb.set_sort_by(SortBy.RELATED_IMAGE)
+        names = [os.path.basename(p) for p in fb.get_files()]
+        # Basename order: aaa < zzz.  Full-path order would be reversed (a_dir < z_dir).
+        assert names == ["aaa.png", "zzz.png"]
+
+    def test_media_and_related_image_are_adjacent(self, tmp_path, monkeypatch):
+        cover = tmp_path / "cover.png"
+        media = tmp_path / "media.png"
+        other = tmp_path / "aaa_other.png"
+        for p in (cover, media, other):
+            _make_png(str(p))
+        self._patch_related(monkeypatch, {str(media): str(cover)})
+
+        fb = FileBrowser(str(tmp_path), recursive=False)
+        fb.set_sort_by(SortBy.RELATED_IMAGE)
+        names = [os.path.basename(p) for p in fb.get_files()]
+        # "aaa_other" sorts first; cover and media share key "cover.png" and must be adjacent.
+        assert names[0] == "aaa_other.png"
+        assert set(names[1:]) == {"cover.png", "media.png"}
+
+    def test_ctime_tiebreaker_ascending(self, tmp_path, monkeypatch):
+        cover = tmp_path / "cover.png"
+        media = tmp_path / "media.png"
+        # Create media first so it has the earlier ctime on Windows (where os.utime
+        # cannot alter ctime — only the actual creation time matters there).
+        _make_png(str(media))
+        time.sleep(0.01)
+        _make_png(str(cover))
+        base = time.time() - 1000
+        # Touch in the same order so that on Linux (where os.utime updates ctime)
+        # the relative ordering matches: media ctime < cover ctime.
+        _touch(str(media), base)
+        _touch(str(cover), base + 100)
+        self._patch_related(monkeypatch, {str(media): str(cover)})
+
+        fb = FileBrowser(str(tmp_path), recursive=False)
+        fb.set_sort_by(SortBy.RELATED_IMAGE)
+        names = [os.path.basename(p) for p in fb.get_files()]
+        # Both share key "cover.png"; ascending ctime puts media (earlier) first.
+        assert names == ["media.png", "cover.png"]
+
+    def test_ctime_tiebreaker_descending(self, tmp_path, monkeypatch):
+        cover = tmp_path / "cover.png"
+        media = tmp_path / "media.png"
+        _make_png(str(media))
+        time.sleep(0.01)
+        _make_png(str(cover))
+        base = time.time() - 1000
+        _touch(str(media), base)
+        _touch(str(cover), base + 100)
+        self._patch_related(monkeypatch, {str(media): str(cover)})
+
+        fb = FileBrowser(str(tmp_path), recursive=False)
+        fb.sort = Sort.DESC
+        fb.set_sort_by(SortBy.RELATED_IMAGE)
+        names = [os.path.basename(p) for p in fb.get_files()]
+        # Descending: cover (later ctime) sorts first.
+        assert names == ["cover.png", "media.png"]

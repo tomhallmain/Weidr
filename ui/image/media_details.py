@@ -568,11 +568,14 @@ class MediaDetails(SmartWindow):
     # -- Info helpers ----------------------------------------------
 
     def _get_image_info(self) -> tuple[str, str]:
-        image = Image.open(self._image_path)
-        image_mode = str(image.mode)
-        image_dims = f"{image.size[0]}x{image.size[1]}"
-        image.close()
-        return image_mode, image_dims
+        try:
+            with Image.open(self._image_path) as image:
+                image_mode = str(image.mode)
+                image_dims = f"{image.size[0]}x{image.size[1]}"
+            return image_mode, image_dims
+        except Exception as e:
+            logger.warning("Could not read image info for %s: %s", self._image_path, e)
+            return _("Unknown"), ""
 
     def _get_file_info(self) -> tuple[str, str]:
         if self.media_type.is_video() or self.media_type.is_unconfigured():

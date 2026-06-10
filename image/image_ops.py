@@ -655,21 +655,45 @@ class ImageOps:
             logger.warning("randomly_modify_image could not open %s: %s", image_path, e)
             raise
         try:
-            has_modified_image = False
-            while not has_modified_image:
-                if random.random() < config.image_edit_configuration.random_rotation_chance:
+            cfg = config.image_edit_configuration
+            # Each entry: (weight, stable_sort_index, name)
+            candidates = [
+                (cfg.random_rotation_chance, 0, "rotate"),
+                (cfg.random_flip_chance,     1, "flip"),
+                (cfg.random_shear_chance,    2, "shear"),
+                (cfg.random_draw_chance,     3, "draw"),
+                (cfg.random_crop_chance,     4, "crop"),
+            ]
+            available = [(w, idx, name) for w, idx, name in candidates if w > 0]
+            if not available:
+                raise ValueError("No modifications enabled in image_edit_configuration.")
+
+            k = random.randint(1, min(4, len(available)))
+
+            # Weighted sampling without replacement
+            selected = []
+            pool = list(available)
+            for _ in range(k):
+                weights = [w for w, _, _ in pool]
+                (chosen,) = random.choices(pool, weights=weights, k=1)
+                selected.append(chosen)
+                pool.remove(chosen)
+
+            # Apply in original declaration order (operations are order-sensitive)
+            selected.sort(key=lambda x: x[1])
+
+            for _, _, name in selected:
+                if name == "rotate":
                     cv2_image = ImageOps.pil_to_cv2(im)
                     angle_diff = int(random.random() * 55)
                     angle = angle_diff if random.random() > 0.5 else 360 - angle_diff
                     cv2_image = ImageOps._rotate_image_partial(cv2_image, angle=angle)
                     im.close()
                     im = ImageOps.cv2_to_pil(cv2_image)
-                    has_modified_image = True
-                if random.random() < config.image_edit_configuration.random_flip_chance:
+                elif name == "flip":
                     im, original_im = ImageOps._flip_image(im)
                     original_im.close()
-                    has_modified_image = True
-                if random.random() < config.image_edit_configuration.random_shear_chance:
+                elif name == "shear":
                     cv2_image = ImageOps.pil_to_cv2(im)
                     angle = random.randint(0, 25)
                     x_shear = int(random.random() * 2 - 1)
@@ -680,25 +704,16 @@ class ImageOps:
                     temp_im = ImageOps._random_crop_and_upscale(im)
                     im.close()
                     im = temp_im
-                    has_modified_image = True
-                if random.random() < config.image_edit_configuration.random_draw_chance:
+                elif name == "draw":
                     ImageOps._random_draw(im)
-                    has_modified_image = True
-                if random.random() < config.image_edit_configuration.random_crop_chance:
+                elif name == "crop":
                     temp_im = ImageOps._random_crop_and_upscale(im)
                     im.close()
                     im = temp_im
-                    has_modified_image = True
-            im_final = im
-            if not has_modified_image:
-                logger.warning("No modifications made to image!")
+
             new_filepath = ImageOps.new_filepath(image_path, append_part="_edit")
-            im_final.save(new_filepath)
+            im.save(new_filepath)
             im.close()
-            try:
-                im_final.close()
-            except Exception:
-                pass
             return new_filepath
         except Exception as e:
             logger.warning("randomly_modify_image failed for %s: %s", image_path, e)

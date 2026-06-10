@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any, Callable, Optional
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QThread, Signal, Slot
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -368,6 +368,34 @@ class _SearchResultTreeItem(QTreeWidgetItem):
             return 0
 
 
+class _ClassifierTestWorker(QThread):
+    """Run a single classifier on one image in a background thread."""
+
+    finished = Signal(str, str, object)  # model_name, image_path, result_dict
+    failed = Signal(str, str, str)       # model_name, image_path, error_message
+
+    def __init__(self, model_name: str, image_path: str):
+        super().__init__()
+        self._model_name = model_name
+        self._image_path = image_path
+
+    def run(self):
+        try:
+            classifier = image_classifier_manager.get_classifier(self._model_name)
+            if classifier is None or not classifier.can_run:
+                self.failed.emit(self._model_name, self._image_path,
+                                 "Model failed to initialize (can_run=False).")
+                return
+            # Evict cache entry so we always get a live result.
+            classifier.predictions_cache.pop(self._image_path, None)
+            ranked = classifier.predict_image_ranked(self._image_path)
+            classification = classifier.classify_image(self._image_path)
+            self.finished.emit(self._model_name, self._image_path,
+                               {"classification": classification, "ranked": ranked})
+        except Exception as exc:
+            self.failed.emit(self._model_name, self._image_path, str(exc))
+
+
 class HfModelManagerWindow(SmartDialog):
     """Manage image classifier models from HF Hub and local config."""
 
@@ -394,6 +422,7 @@ class HfModelManagerWindow(SmartDialog):
         self._app_actions = app_actions
         self._hf_api: Optional[HfHubApiBackend] = None
         self._repo_files_cache: dict[str, list[str]] = {}
+        self._test_worker: Optional[_ClassifierTestWorker] = None
 
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 8)
@@ -577,6 +606,10 @@ class HfModelManagerWindow(SmartDialog):
         edit_btn = QPushButton(_("Edit Selected"))
         edit_btn.clicked.connect(self._edit_selected_installed_model)
         btn_row.addWidget(edit_btn)
+
+        self._test_btn = QPushButton(_("Test on Current Image"))
+        self._test_btn.clicked.connect(self._test_selected_model_on_current_image)
+        btn_row.addWidget(self._test_btn)
 
         load_files_btn = QPushButton(_("Load Repo Files"))
         load_files_btn.clicked.connect(self._load_repo_files_for_installed_selection)
@@ -993,6 +1026,63 @@ class HfModelManagerWindow(SmartDialog):
         except Exception as e:
             logger.error(f"Failed saving installed model details: {e}")
             self._app_actions.alert(_("Config Update Error"), str(e), kind="error", master=self)
+
+    def _test_selected_model_on_current_image(self) -> None:
+        model = self._selected_installed_model_details()
+        if model is None:
+            self._app_actions.warn(_("Please select an installed model first."))
+            return
+        model_name = str(model.get("model_name", "")).strip()
+        if not model_name:
+            self._app_actions.warn(_("Selected model has no name."))
+            return
+        image_path = self._app_actions.get_active_media_filepath()
+        if not image_path or not os.path.isfile(image_path):
+            self._app_actions.warn(_("No active image is available for testing."))
+            return
+        self._test_btn.setEnabled(False)
+        self._test_btn.setText(_("Running…"))
+        worker = _ClassifierTestWorker(model_name, image_path)
+        worker.finished.connect(self._on_classifier_test_finished)
+        worker.failed.connect(self._on_classifier_test_failed)
+        self._test_worker = worker
+        worker.start()
+
+    @Slot(str, str, object)
+    def _on_classifier_test_finished(self, model_name: str, image_path: str, result: dict) -> None:
+        self._test_btn.setEnabled(True)
+        self._test_btn.setText(_("Test on Current Image"))
+        self._test_worker = None
+        classification = result.get("classification", "?")
+        ranked: list = result.get("ranked", [])
+        lines = [
+            _("Model: {0}").format(model_name),
+            _("Image: {0}").format(image_path),
+            "",
+            _("Classification: {0}").format(classification),
+            "",
+            _("Scores (ranked):"),
+        ]
+        for cat, score in ranked:
+            lines.append(f"  {cat}: {score:.6f}  ({score * 100:.2f}%)")
+        _TextPreviewDialog(
+            parent=self,
+            title=_("Classifier Test — {0}").format(model_name),
+            text="\n".join(lines),
+        ).show()
+
+    @Slot(str, str, str)
+    def _on_classifier_test_failed(self, model_name: str, image_path: str, error: str) -> None:
+        self._test_btn.setEnabled(True)
+        self._test_btn.setText(_("Test on Current Image"))
+        self._test_worker = None
+        logger.error("Classifier test failed for %r on %r: %s", model_name, image_path, error)
+        self._app_actions.alert(
+            _("Classifier Test Failed"),
+            f"{model_name}\n{image_path}\n\n{error}",
+            kind="error",
+            master=self,
+        )
 
     def _infer_hf_repo_id_from_model(self, model: dict[str, Any]) -> Optional[str]:
         explicit = str(model.get("hf_repo_id", "") or "").strip()

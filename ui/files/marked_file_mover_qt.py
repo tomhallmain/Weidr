@@ -1103,7 +1103,14 @@ class MarkedFileMover(SmartDialog):
 
         # Printable text -> filter
         text = event.text()
-        if text and text.isprintable():
+        if not text:
+            # Some platform/Qt configurations return empty text for Shift+punctuation
+            # (e.g. Shift+Minus → underscore on Windows).  Qt key codes for printable
+            # ASCII match their ord() values, so chr(key) recovers the character.
+            candidate = chr(key) if 32 <= key <= 126 else ""
+            if candidate.isprintable():
+                text = candidate
+        if text and text.isprintable() and text not in ("/", "\\"):
             self._filter_text += text
             self._apply_filter()
             return

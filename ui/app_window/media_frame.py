@@ -573,6 +573,7 @@ class MediaFrame(QFrame):
         self._reset_gif_state()
         self._gif_label.clear()
         self._gif_label.hide()
+        self._controls_overlay.dismiss()
         app = QApplication.instance()
         if app is not None:
             # Flush deferred-delete events so file handles are dropped immediately.

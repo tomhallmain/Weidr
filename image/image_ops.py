@@ -1437,6 +1437,9 @@ class ImageOps:
         Returns:
             bool: True if images have identical pixel content, False otherwise
         """
+        ext = os.path.splitext(filepath1)[1].lower()
+        if ext not in Image.registered_extensions():
+            return False
         try:
             # Open images and convert to RGB to normalize format
             img1 = Image.open(filepath1).convert('RGB')

@@ -572,20 +572,18 @@ class FileBrowser:
 
     def _find_closest_by_related_image(self, search_text: str, sorted_files: List[SortableFile], original_files: List[str]) -> Optional[str]:
         """Find closest file by related image."""
-        # Get the related image path for the search text file
+        basename_lookup = {sf.basename: sf for sf in sorted_files}
         try:
             sortable_file = SortableFile(search_text)
-            target_related_path = sortable_file.get_related_image_or_self()
+            target_related_path = sortable_file.get_origin_image_or_self(basename_lookup)
             target_key = self._alphanumeric_key(target_related_path)
         except Exception:
             return self._handle_find_closest_failure_message("related image", "error getting related image")
-        
-        # Find the closest file by comparing related image paths (or self) using alphanumeric comparison
+
         for i, sortable_file in enumerate(sorted_files):
             try:
-                file_related_path = sortable_file.get_related_image_or_self()
+                file_related_path = sortable_file.get_origin_image_or_self(basename_lookup)
                 file_key = self._alphanumeric_key(file_related_path)
-                
                 if file_key >= target_key:
                     closest_file = sortable_file.full_file_path
                     self.file_cursor = original_files.index(closest_file)
@@ -593,8 +591,8 @@ class FileBrowser:
                         logger.debug(f"Closest file by related image: position {self.file_cursor}")
                     return closest_file
             except Exception:
-                continue # Skip files that can't be compared
-        
+                continue
+
         return self._handle_find_closest_failure_message("related image", "no match")
 
     def _find_closest_by_random(self, search_text: str, sorted_files: List[SortableFile], original_files: List[str]) -> str:
@@ -852,7 +850,8 @@ class FileBrowser:
                 sortable_files.sort(key=lambda sf: sf.full_file_path.lower(), reverse=reverse)
                 sortable_files.sort(key=lambda sf: sf.get_image_width(), reverse=reverse)
             elif self.sort_by == SortBy.RELATED_IMAGE:
-                sortable_files.sort(key=lambda sf: (sf.get_related_image_or_self(), sf.ctime), reverse=reverse)
+                basename_lookup = {sf.basename: sf for sf in sortable_files}
+                sortable_files.sort(key=lambda sf: (sf.get_origin_image_or_self(basename_lookup), sf.ctime), reverse=reverse)
 
         # Return either SortableFile objects or filepaths
         if return_sortable_files:

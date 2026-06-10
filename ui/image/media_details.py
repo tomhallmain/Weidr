@@ -16,7 +16,6 @@ Non-UI imports (reuse policy):
 
 from __future__ import annotations
 
-import glob
 import json
 import math
 import os
@@ -34,7 +33,12 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
 )
 
-from files.file_browser import FileBrowser
+from files.related_image import (
+    _VARIANT_SUFFIX_RE_STRICT as _VARIANT_SUFFIX_RE,
+    DEFAULT_NODE_ID as _DEFAULT_NODE_ID,
+    get_related_image_path as _get_related_image_path,
+    get_related_image_text as _get_related_image_text,
+)
 from image.frame_cache import FrameCache
 from image.image_data_extractor import image_data_extractor
 from image.image_ops import ImageOps
@@ -98,11 +102,6 @@ def truncate_details_label_text(
     return out
 
 
-# Matches a variant suffix: underscore + 1-8 alpha chars at end of stem.
-# e.g. "photo_edit" or "photo_abc" → prefix "photo".  Used to correlate
-# dir-Y variants with dir-X sources whose metadata was wiped.
-_VARIANT_SUFFIX_RE = re.compile(r'^(.+)_[A-Za-z]{1,8}$')
-
 # ── MediaDetails ──────────────────────────────────────────────────────
 
 
@@ -111,10 +110,6 @@ class MediaDetails(SmartWindow):
 
     # -- Class-level state -----------------------------------------
     temp_media_canvas: Optional[TempMediaWindow] = None
-    related_image_saved_node_id: str = "LoadImage"
-    downstream_related_image_index: int = 0
-    downstream_related_images_cache: dict = {}
-    downstream_related_image_browser: FileBrowser = FileBrowser()
     image_generation_mode = ImageGenerationType.CONTROL_NET
     # Stores the last generation adapter path (file or directory).
     previous_image_generation_adapter_path: Optional[str] = None
@@ -1178,18 +1173,7 @@ class MediaDetails(SmartWindow):
             return _("(Not available)")
         if self.media_type.is_video():
             return _("(Related image lookup is not available for video)")
-        node_id = MediaDetails.related_image_saved_node_id
-        related_image_path, exact_match = (
-            MediaDetails.get_related_image_path(
-                self._image_path, node_id, check_extra_directories=False
-            )
-        )
-        if related_image_path is not None:
-            return (
-                related_image_path if exact_match
-                else related_image_path + _(" (Exact Match Not Found)")
-            )
-        return _("(No related image found)")
+        return _get_related_image_text(self._image_path, _DEFAULT_NODE_ID)
 
     def open_related_image(self, event=None) -> None:
         if self.media_type.is_unconfigured():
@@ -1209,50 +1193,8 @@ class MediaDetails(SmartWindow):
         check_extra_directories: bool | None = True,
     ) -> tuple[str | None, bool]:
         if node_id is None or node_id == "":
-            node_id = MediaDetails.related_image_saved_node_id
-        related_image_path = image_data_extractor.get_related_image_path(
-            image_path, node_id
-        )
-        if related_image_path is None or related_image_path == "":
-            return None, False
-        elif check_extra_directories is None:
-            return related_image_path, False
-        elif not os.path.isfile(related_image_path):
-            if not check_extra_directories:
-                return related_image_path, False
-            logger.info(
-                f"{image_path} - Related image "
-                f"{related_image_path} not found"
-            )
-            related_image_path_found = False
-            if len(config.directories_to_search_for_related_images) > 0:
-                basename = os.path.basename(related_image_path)
-                for directory in (
-                    config.directories_to_search_for_related_images
-                ):
-                    dir_filepaths = glob.glob(
-                        os.path.join(directory, "**/*"), recursive=True
-                    )
-                    for file_path in dir_filepaths:
-                        if file_path == image_path:
-                            continue
-                        if file_path.endswith(basename):
-                            file_basename = os.path.basename(file_path)
-                            if basename == file_basename:
-                                related_image_path = file_path
-                                related_image_path_found = True
-                                break
-                    if related_image_path_found:
-                        break
-            if (
-                not related_image_path_found
-                or not os.path.isfile(related_image_path)
-            ):
-                return related_image_path, False
-            logger.info(
-                f"{image_path} - Possibly related image {related_image_path} found"
-            )
-        return related_image_path, True
+            node_id = _DEFAULT_NODE_ID
+        return _get_related_image_path(image_path, node_id, check_extra_directories)
 
     @staticmethod
     def show_related_image(
@@ -1348,177 +1290,6 @@ class MediaDetails(SmartWindow):
         except Exception:
             pass
         return 800, 600
-
-    # ── Downstream related images ─────────────────────────────────
-
-    @staticmethod
-    def refresh_downstream_related_image_cache(
-        key: str, image_path: str, other_base_dir: str
-    ) -> None:
-        downstream_related_images: list[str] = []
-        image_basename = os.path.basename(image_path)
-        if (
-            MediaDetails.downstream_related_image_browser.directory
-            != other_base_dir
-        ):
-            MediaDetails.downstream_related_image_browser = FileBrowser(
-                directory=other_base_dir
-            )
-        MediaDetails.downstream_related_image_browser._gather_files()
-        for path in (
-            MediaDetails.downstream_related_image_browser.filepaths
-        ):
-            if path == image_path:
-                continue
-            related, _exact = MediaDetails.get_related_image_path(
-                path, check_extra_directories=None
-            )
-            if related is not None:
-                if related == image_path:
-                    downstream_related_images.append(path)
-                else:
-                    file_basename = os.path.basename(related)
-                    if (
-                        len(file_basename) > 10
-                        and image_basename == file_basename
-                    ):
-                        # NOTE: relation criteria is intentionally loose
-                        downstream_related_images.append(path)
-        MediaDetails.downstream_related_images_cache[key] = (
-            downstream_related_images
-        )
-
-    @staticmethod
-    def get_downstream_related_images(
-        image_path: str,
-        other_base_dir: str,
-        app_actions,
-        force_refresh: bool = False,
-    ):
-        key = image_path + "/" + other_base_dir
-        if (force_refresh or key not in MediaDetails.downstream_related_images_cache):
-            MediaDetails.refresh_downstream_related_image_cache(
-                key, image_path, other_base_dir
-            )
-            downstream = MediaDetails.downstream_related_images_cache[key]
-            toast_text = _("{0} downstream image(s) found.").format(len(downstream))
-        else:
-            downstream = MediaDetails.downstream_related_images_cache[key]
-            toast_text = _("{0} (cached) downstream image(s) found.").format(len(downstream))
-            if MediaDetails.downstream_related_image_index >= len(downstream):
-                MediaDetails.refresh_downstream_related_image_cache(
-                    key, image_path, other_base_dir
-                )
-                downstream = MediaDetails.downstream_related_images_cache[key]
-                toast_text = _("{0} downstream image(s) found.").format(len(downstream))
-
-        if len(downstream) == 0:
-            app_actions.toast(
-                _("No downstream related images found in")
-                + f"\n{other_base_dir}"
-            )
-            return None
-        app_actions.toast(toast_text)
-        return downstream
-
-    @staticmethod
-    def get_sources_with_downstream_in_dir(
-        source_paths: list[str],
-        other_base_dir: str,
-    ) -> list[str]:
-        """Return the subset of source_paths that have at least one downstream image in other_base_dir."""
-        browser = FileBrowser(directory=other_base_dir)
-        browser._gather_files()
-
-        # Build reverse lookups from dir Y in one pass — O(|Y|) instead of O(|X|*|Y|).
-        # exact_sources:   raw related-path string (path-level match)
-        # basename_sources: basename string (loose match, only for len > 10)
-        # stem_prefixes:   stem prefix after stripping a generator suffix
-        #                  (_[A-Za-z]{1,8}) — catches derivatives whose metadata
-        #                  was wiped but whose name still encodes the source stem.
-        exact_sources: set[str] = set()
-        basename_sources: set[str] = set()
-        stem_prefixes: set[tuple[str, str]] = set()  # (prefix, ext)
-        for candidate in browser.filepaths:
-            stem, ext = os.path.splitext(os.path.basename(candidate))
-            m = _VARIANT_SUFFIX_RE.match(stem)
-            if m:
-                stem_prefixes.add((m.group(1), ext.lower()))
-            related, _exact = MediaDetails.get_related_image_path(
-                candidate, check_extra_directories=None
-            )
-            if related is None:
-                continue
-            exact_sources.add(related)
-            b = os.path.basename(related)
-            if len(b) > 10:
-                basename_sources.add(b)
-
-        results = []
-        for p in source_paths:
-            if p in exact_sources or os.path.basename(p) in basename_sources:
-                results.append(p)
-                continue
-            stem, ext = os.path.splitext(os.path.basename(p))
-            if (stem, ext.lower()) in stem_prefixes:
-                results.append(p)
-        return results
-
-    @staticmethod
-    def get_downstream_files_for_sources(
-        source_paths: list[str],
-        other_base_dir: str,
-    ) -> list[str]:
-        """Return files in other_base_dir that are downstream of any path in source_paths."""
-        # Build lookup sets from dir X in one pass — O(|X|).
-        source_path_set: set[str] = set(source_paths)
-        source_basename_set: set[str] = set()
-        source_stems: set[tuple[str, str]] = set()  # (stem, ext) for variant-suffix match
-        for p in source_paths:
-            b = os.path.basename(p)
-            if len(b) > 10:
-                source_basename_set.add(b)
-            stem, ext = os.path.splitext(b)
-            source_stems.add((stem, ext.lower()))
-
-        # Scan dir Y once — O(|Y|).
-        browser = FileBrowser(directory=other_base_dir)
-        browser._gather_files()
-
-        results = []
-        for candidate in browser.filepaths:
-            related, _exact = MediaDetails.get_related_image_path(
-                candidate, check_extra_directories=None
-            )
-            if related is not None:
-                if related in source_path_set:
-                    results.append(candidate)
-                    continue
-                b = os.path.basename(related)
-                if len(b) > 10 and b in source_basename_set:
-                    results.append(candidate)
-                    continue
-            stem, ext = os.path.splitext(os.path.basename(candidate))
-            m = _VARIANT_SUFFIX_RE.match(stem)
-            if m and (m.group(1), ext.lower()) in source_stems:
-                results.append(candidate)
-        return results
-
-    @staticmethod
-    def next_downstream_related_image(
-        image_path: str, other_base_dir: str, app_actions
-    ) -> str | None:
-        """Find the next image that has been created from the given image."""
-        downstream = MediaDetails.get_downstream_related_images(
-            image_path, other_base_dir, app_actions
-        )
-        if downstream is None:
-            return None
-        if MediaDetails.downstream_related_image_index >= len(downstream):
-            MediaDetails.downstream_related_image_index = 0
-        path = downstream[MediaDetails.downstream_related_image_index]
-        MediaDetails.downstream_related_image_index += 1
-        return path
 
     # ── Image generation ─────────────────────────────────────────
 

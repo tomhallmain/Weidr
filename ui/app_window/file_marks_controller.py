@@ -9,6 +9,11 @@ from typing import TYPE_CHECKING, Optional
 from PySide6.QtWidgets import QApplication
 
 from files.file_action import FileAction
+from files.related_image import (
+    get_downstream_related_images,
+    get_downstream_files_for_sources,
+    get_sources_with_downstream_in_dir,
+)
 from files.marked_files import MarkedFiles
 from ui.files.marked_file_mover_qt import MarkedFileMover
 from ui.auth.password_utils import require_password
@@ -384,7 +389,7 @@ class FileMarksController:
         if self._app.check_many_files(window, action="find related media"):
             return
 
-        downstream_related_images = MediaDetails.get_downstream_related_images(
+        downstream_related_images = get_downstream_related_images(
             media_to_use, base_dir, self._app.app_actions, force_refresh=True
         )
         if downstream_related_images is not None:
@@ -419,7 +424,7 @@ class FileMarksController:
             self._app.notification_ctrl.toast(_("No files in current directory."))
             return
 
-        sources = MediaDetails.get_sources_with_downstream_in_dir(source_paths, base_dir)
+        sources = get_sources_with_downstream_in_dir(source_paths, base_dir)
 
         if not sources:
             self._app.notification_ctrl.toast(
@@ -460,7 +465,7 @@ class FileMarksController:
             self._app.notification_ctrl.toast(_("No files in current directory."))
             return
 
-        downstream = MediaDetails.get_downstream_files_for_sources(source_paths, base_dir)
+        downstream = get_downstream_files_for_sources(source_paths, base_dir)
 
         if not downstream:
             self._app.notification_ctrl.toast(

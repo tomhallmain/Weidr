@@ -12,6 +12,7 @@ from PySide6.QtCore import QThread, Signal, QObject
 from PySide6.QtWidgets import QFileDialog
 
 from compare.compare_args import CompareArgs
+from files.related_image import next_downstream_related_image
 from lib.debounce_qt import QtDebouncer
 from ui.auth.password_utils import require_password
 from utils.config import config
@@ -586,7 +587,7 @@ class SearchController:
         if self._app.check_many_files(window, action="find related media"):
             return
 
-        next_related_image = MediaDetails.next_downstream_related_image(
+        next_related_image = next_downstream_related_image(
             media_to_use, base_dir, self._app.app_actions
         )
         if next_related_image is not None:

@@ -1,4 +1,4 @@
-"""Unit tests for MediaDetails downstream-image matching helpers.
+"""Unit tests for related-image matching helpers.
 
 Covers:
   - get_related_image_path (check_extra_directories=None path)
@@ -16,7 +16,11 @@ import os
 import pytest
 from PIL import Image, PngImagePlugin
 
-from ui.image.media_details import MediaDetails
+from files.related_image import (
+    get_related_image_path,
+    get_sources_with_downstream_in_dir,
+    get_downstream_files_for_sources,
+)
 from utils.config import config
 
 
@@ -58,7 +62,7 @@ class TestGetRelatedImagePath:
         _make_png(source)
         _make_png(derived, related_image=source)
 
-        related, _exact = MediaDetails.get_related_image_path(
+        related, _exact = get_related_image_path(
             derived, check_extra_directories=None
         )
         assert related == source
@@ -67,7 +71,7 @@ class TestGetRelatedImagePath:
         plain = str(tmp_path / "plain.png")
         _make_png(plain)
 
-        related, _exact = MediaDetails.get_related_image_path(
+        related, _exact = get_related_image_path(
             plain, check_extra_directories=None
         )
         assert related is None
@@ -84,7 +88,7 @@ class TestGetRelatedImagePath:
         original_isfile = os.path.isfile
         monkeypatch.setattr(os.path, "isfile", lambda p: (probed.append(p), original_isfile(p))[1])
 
-        MediaDetails.get_related_image_path(derived, check_extra_directories=None)
+        get_related_image_path(derived, check_extra_directories=None)
 
         # os.path.isfile must never have been called with the related path
         assert source not in probed
@@ -107,7 +111,7 @@ class TestGetSourcesWithDownstreamInDir:
         _make_png(unrelated)
         _make_png(derived, related_image=source)
 
-        result = MediaDetails.get_sources_with_downstream_in_dir(
+        result = get_sources_with_downstream_in_dir(
             [source, unrelated], str(dir_y)
         )
         assert result == [source]
@@ -122,7 +126,7 @@ class TestGetSourcesWithDownstreamInDir:
         _make_png(source)
         _make_png(other)
 
-        result = MediaDetails.get_sources_with_downstream_in_dir([source], str(dir_y))
+        result = get_sources_with_downstream_in_dir([source], str(dir_y))
         assert result == []
 
     def test_loose_basename_match(self, tmp_path):
@@ -137,7 +141,7 @@ class TestGetSourcesWithDownstreamInDir:
         _make_png(source)
         _make_png(derived, related_image=elsewhere)
 
-        result = MediaDetails.get_sources_with_downstream_in_dir([source], str(dir_y))
+        result = get_sources_with_downstream_in_dir([source], str(dir_y))
         assert result == [source]
 
     def test_basename_too_short_skips_loose_match(self, tmp_path):
@@ -152,7 +156,7 @@ class TestGetSourcesWithDownstreamInDir:
         _make_png(source)
         _make_png(derived, related_image=elsewhere)
 
-        result = MediaDetails.get_sources_with_downstream_in_dir([source], str(dir_y))
+        result = get_sources_with_downstream_in_dir([source], str(dir_y))
         assert result == []
 
     def test_variant_suffix_match(self, tmp_path):
@@ -166,7 +170,7 @@ class TestGetSourcesWithDownstreamInDir:
         _make_png(source)
         _make_png(derived)  # no metadata — variant suffix is the only link
 
-        result = MediaDetails.get_sources_with_downstream_in_dir([source], str(dir_y))
+        result = get_sources_with_downstream_in_dir([source], str(dir_y))
         assert result == [source]
 
     def test_variant_suffix_extension_mismatch_not_matched(self, tmp_path, monkeypatch):
@@ -181,7 +185,7 @@ class TestGetSourcesWithDownstreamInDir:
         _make_png(source)
         _make_jpg(derived)
 
-        result = MediaDetails.get_sources_with_downstream_in_dir([source], str(dir_y))
+        result = get_sources_with_downstream_in_dir([source], str(dir_y))
         assert result == []
 
     def test_multiple_sources_partial_match(self, tmp_path):
@@ -196,7 +200,7 @@ class TestGetSourcesWithDownstreamInDir:
         _make_png(source_b)
         _make_png(derived, related_image=source_a)
 
-        result = MediaDetails.get_sources_with_downstream_in_dir(
+        result = get_sources_with_downstream_in_dir(
             [source_a, source_b], str(dir_y)
         )
         assert result == [source_a]
@@ -206,7 +210,7 @@ class TestGetSourcesWithDownstreamInDir:
         dir_y.mkdir()
         _make_png(str(dir_y / "derived.png"))
 
-        result = MediaDetails.get_sources_with_downstream_in_dir([], str(dir_y))
+        result = get_sources_with_downstream_in_dir([], str(dir_y))
         assert result == []
 
     def test_empty_dir_y_returns_empty(self, tmp_path):
@@ -217,7 +221,7 @@ class TestGetSourcesWithDownstreamInDir:
         source = str(dir_x / "source.png")
         _make_png(source)
 
-        result = MediaDetails.get_sources_with_downstream_in_dir([source], str(dir_y))
+        result = get_sources_with_downstream_in_dir([source], str(dir_y))
         assert result == []
 
 
@@ -238,7 +242,7 @@ class TestGetDownstreamFilesForSources:
         _make_png(derived, related_image=source)
         _make_png(unrelated)
 
-        result = MediaDetails.get_downstream_files_for_sources([source], str(dir_y))
+        result = get_downstream_files_for_sources([source], str(dir_y))
         assert result == [derived]
 
     def test_no_match_returns_empty(self, tmp_path):
@@ -251,7 +255,7 @@ class TestGetDownstreamFilesForSources:
         _make_png(source)
         _make_png(other)
 
-        result = MediaDetails.get_downstream_files_for_sources([source], str(dir_y))
+        result = get_downstream_files_for_sources([source], str(dir_y))
         assert result == []
 
     def test_loose_basename_match(self, tmp_path):
@@ -265,7 +269,7 @@ class TestGetDownstreamFilesForSources:
         _make_png(source)
         _make_png(derived, related_image=elsewhere)
 
-        result = MediaDetails.get_downstream_files_for_sources([source], str(dir_y))
+        result = get_downstream_files_for_sources([source], str(dir_y))
         assert result == [derived]
 
     def test_variant_suffix_match(self, tmp_path):
@@ -278,7 +282,7 @@ class TestGetDownstreamFilesForSources:
         _make_png(source)
         _make_png(derived)
 
-        result = MediaDetails.get_downstream_files_for_sources([source], str(dir_y))
+        result = get_downstream_files_for_sources([source], str(dir_y))
         assert result == [derived]
 
     def test_variant_suffix_extension_mismatch_not_matched(self, tmp_path, monkeypatch):
@@ -292,7 +296,7 @@ class TestGetDownstreamFilesForSources:
         _make_png(source)
         _make_jpg(derived)
 
-        result = MediaDetails.get_downstream_files_for_sources([source], str(dir_y))
+        result = get_downstream_files_for_sources([source], str(dir_y))
         assert result == []
 
     def test_multiple_derived_files_for_one_source(self, tmp_path):
@@ -309,7 +313,7 @@ class TestGetDownstreamFilesForSources:
         _make_png(derived_b, related_image=source)
         _make_png(unrelated)
 
-        result = MediaDetails.get_downstream_files_for_sources([source], str(dir_y))
+        result = get_downstream_files_for_sources([source], str(dir_y))
         assert set(result) == {derived_a, derived_b}
 
     def test_multiple_sources_each_matched(self, tmp_path):
@@ -326,7 +330,7 @@ class TestGetDownstreamFilesForSources:
         _make_png(derived_a, related_image=source_a)
         _make_png(derived_b, related_image=source_b)
 
-        result = MediaDetails.get_downstream_files_for_sources(
+        result = get_downstream_files_for_sources(
             [source_a, source_b], str(dir_y)
         )
         assert set(result) == {derived_a, derived_b}
@@ -336,7 +340,7 @@ class TestGetDownstreamFilesForSources:
         dir_y.mkdir()
         _make_png(str(dir_y / "derived.png"))
 
-        result = MediaDetails.get_downstream_files_for_sources([], str(dir_y))
+        result = get_downstream_files_for_sources([], str(dir_y))
         assert result == []
 
     def test_empty_dir_y_returns_empty(self, tmp_path):
@@ -347,5 +351,5 @@ class TestGetDownstreamFilesForSources:
         source = str(dir_x / "source.png")
         _make_png(source)
 
-        result = MediaDetails.get_downstream_files_for_sources([source], str(dir_y))
+        result = get_downstream_files_for_sources([source], str(dir_y))
         assert result == []

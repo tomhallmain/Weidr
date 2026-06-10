@@ -173,11 +173,13 @@ def reset_app_globals():
         except Exception:
             pass
 
-        # MediaDetails — downstream cache keyed by path; stale entries from one
+        # Downstream related-image cache keyed by path; stale entries from one
         # test would silently skip the refresh in the next
         try:
-            from ui.image.media_details import MediaDetails
-            MediaDetails.downstream_related_images_cache.clear()
+            import files.related_image as _ri
+            _ri._downstream_cache.clear()
+            _ri._downstream_index = 0
+            _ri._downstream_browser = None
         except Exception:
             pass
 

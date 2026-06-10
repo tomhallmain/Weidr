@@ -3,6 +3,7 @@ import os
 
 from PIL import Image
 
+from files.related_image import get_origin_basename
 from image.frame_cache import FrameCache
 from image.image_data_extractor import image_data_extractor
 
@@ -41,8 +42,6 @@ class SortableFile:
         self.related_image_path = image_data_extractor.get_related_image_path(self.full_file_path)
         if self.related_image_path is None:
             self.related_image_path = ""
-        # TODO use the related image path cache in MediaDetails to see if THIS related image path has a related image of its own.
-        # IF it does, then set the related image path key to the higher level related image path + some identifier.
 
     def get_related_image_or_self(self):
         if self.related_image_path is None:
@@ -52,6 +51,9 @@ class SortableFile:
             return os.path.basename(self.related_image_path)
         else:
             return self.basename
+
+    def get_origin_image_or_self(self, basename_lookup, visited=None):
+        return get_origin_basename(self, basename_lookup, visited)
 
     def __eq__(self, other):
         if not isinstance(other, SortableFile):

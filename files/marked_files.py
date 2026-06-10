@@ -416,6 +416,9 @@ class MarkedFiles():
             app_actions.title_notify(message, base_message=target_dir_name, action_type=action_type)
             MarkedFiles.delete_lock = False
         exceptions_present = len(exceptions) > 0
+        _hash_match_cache, _batch_delete_approved = MarkedFiles._prepare_batch_delete(
+            exceptions, invalid_files, is_moving, target_dir, app_actions
+        )
         if exceptions_present:
             action_part3 = "move" if is_moving else "copy"
             logger.error(f"Failed to {action_part3} some files:")
@@ -428,14 +431,18 @@ class MarkedFiles():
                 logger.error(error_msg)
                 if marked_file not in invalid_files:
                     if error_msg.startswith("File already exists"):
-                        if Utils.calculate_hash(marked_file) == Utils.calculate_hash(target_filepath):
+                        hashes_match = _hash_match_cache.get(
+                            marked_file,
+                            Utils.calculate_hash(marked_file) == Utils.calculate_hash(target_filepath),
+                        )
+                        if hashes_match:
                             matching_files = True
                             logger.info(f"File hashes match: {marked_file} <> {target_filepath}")
                             if is_moving and marked_file != target_filepath:
-                                # Check if we should delete the source file (or warn instead if mistake detected)
-                                if MarkedFiles._check_delete_source_file(marked_file, target_dir, target_filepath, app_actions):
-                                    # The other effect of this operation would have been to remove the
-                                    # file from source, so try to do that
+                                if _batch_delete_approved is not None:
+                                    if _batch_delete_approved:
+                                        MarkedFiles._auto_delete_source_file(marked_file, current_media, app_actions)
+                                elif MarkedFiles._check_delete_source_file(marked_file, target_dir, target_filepath, app_actions):
                                     MarkedFiles._auto_delete_source_file(marked_file, current_media, app_actions)
                         elif ImageOps.compare_image_content_without_exif(marked_file, target_filepath):
                             # Hash comparison failed, but check if image content is identical
@@ -665,6 +672,48 @@ class MarkedFiles():
                 app_actions.toast(_("Marks cleared."))
             elif removed_count > 0:
                 app_actions.toast(_("Removed {0} marks").format(removed_count))
+
+    @staticmethod
+    def _prepare_batch_delete(
+        exceptions: dict,
+        invalid_files: list,
+        is_moving: bool,
+        target_dir: str,
+        app_actions,
+    ) -> Tuple[dict, Optional[bool]]:
+        """
+        Pre-compute hash comparisons for all "File already exists" move exceptions and,
+        when multiple source files need deletion, ask once for a batch confirmation.
+
+        Returns:
+            hash_match_cache      — {marked_file: hashes_match}; avoids recomputing in the
+                                    caller's exception-processing loop.
+            batch_delete_approved — True/False when a batch dialog was shown; None when
+                                    ≤1 match (caller falls back to per-file confirmation).
+        """
+        hash_match_cache: dict[str, bool] = {}
+        if not is_moving or not exceptions:
+            return hash_match_cache, None
+        for mf, (err, tgt) in exceptions.items():
+            if err.startswith("File already exists") and mf not in invalid_files and mf != tgt:
+                hash_match_cache[mf] = Utils.calculate_hash(mf) == Utils.calculate_hash(tgt)
+        delete_candidates = [mf for mf, matched in hash_match_cache.items() if matched]
+        if len(delete_candidates) <= 1 or MarkedFiles.gimp_opened_in_last_action:
+            return hash_match_cache, None
+        n = len(delete_candidates)
+        batch_approved = bool(
+            app_actions.alert(
+                _("Delete Sources for Existing Files"),
+                _(
+                    "{0} files already exist in the target directory with identical content.\n\n"
+                    "{1}\n\n"
+                    "Delete the source files for all {0}?"
+                ).format(n, target_dir),
+                kind="askokcancel",
+                severity="high" if n > 5 else "normal",
+            )
+        )
+        return hash_match_cache, batch_approved
 
     @staticmethod
     def _check_delete_source_file(marked_file: str, target_dir: str, target_filepath: str, app_actions) -> bool:

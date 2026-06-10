@@ -245,7 +245,10 @@ class SearchController:
 
     def _on_worker_finished(self) -> None:
         self._sidebar.stop_progress_bar()
+        worker = self._worker
         self._worker = None
+        if worker is not None:
+            worker.deleteLater()
 
     def _on_worker_error(self, error_text: str) -> None:
         self._app.notification_ctrl.alert(_("Error running compare"), error_text, kind="error")
@@ -260,8 +263,10 @@ class SearchController:
             )
 
     def _on_img_gen_finished(self) -> None:
-        """Release the image-generation worker so it can be garbage-collected."""
+        worker = self._img_gen_worker
         self._img_gen_worker = None
+        if worker is not None:
+            worker.deleteLater()
 
     def _run_compare(self, args: CompareArgs = CompareArgs()) -> None:
         """Execute the comparison logic."""

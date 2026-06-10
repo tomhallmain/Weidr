@@ -5,6 +5,9 @@ from typing import Tuple, Optional
 from PIL import Image
 
 from compare.base_compare import BaseCompare, gather_files
+from utils.pillow_plugins import ensure_pillow_plugins_registered
+
+ensure_pillow_plugins_registered()
 from compare.compare_args import CompareArgs
 from compare.compare_data import CompareData
 from compare.compare_result import CompareResult

@@ -1052,7 +1052,10 @@ class HfModelManagerWindow(SmartDialog):
     def _on_classifier_test_finished(self, model_name: str, image_path: str, result: dict) -> None:
         self._test_btn.setEnabled(True)
         self._test_btn.setText(_("Test on Current Image"))
+        worker = self._test_worker
         self._test_worker = None
+        if worker is not None:
+            worker.deleteLater()
         classification = result.get("classification", "?")
         ranked: list = result.get("ranked", [])
         lines = [
@@ -1075,7 +1078,10 @@ class HfModelManagerWindow(SmartDialog):
     def _on_classifier_test_failed(self, model_name: str, image_path: str, error: str) -> None:
         self._test_btn.setEnabled(True)
         self._test_btn.setText(_("Test on Current Image"))
+        worker = self._test_worker
         self._test_worker = None
+        if worker is not None:
+            worker.deleteLater()
         logger.error("Classifier test failed for %r on %r: %s", model_name, image_path, error)
         self._app_actions.alert(
             _("Classifier Test Failed"),

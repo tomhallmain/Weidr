@@ -6,6 +6,9 @@ from transformers import AutoModel, AutoProcessor, FlavaProcessor, FlavaModel, A
 from image.frame_cache import FrameCache
 from utils.config import config
 from utils.logging_setup import get_logger
+from utils.pillow_plugins import ensure_pillow_plugins_registered
+
+ensure_pillow_plugins_registered()
 
 logger = get_logger("model")
 

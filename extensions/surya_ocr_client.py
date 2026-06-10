@@ -120,14 +120,13 @@ def run_ocr(image_path: str) -> SuryaOCRResult:
     _ensure_predictors()
 
     logger.info(f"Running OCR on: {image_path}")
-    image = Image.open(image_path)
-
-    predictions = _rec_predictor(
-        [image],
-        task_names=[TaskNames.ocr_with_boxes],
-        det_predictor=_det_predictor,
-        math_mode=False,
-    )
+    with Image.open(image_path) as image:
+        predictions = _rec_predictor(
+            [image],
+            task_names=[TaskNames.ocr_with_boxes],
+            det_predictor=_det_predictor,
+            math_mode=False,
+        )
 
     # ------------------------------------------------------------------
     # Extract text + position data

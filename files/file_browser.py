@@ -227,8 +227,12 @@ class FileBrowser:
 
     def load_file_paths_json(self) -> List[str]:
         logger.info(f"Loading external file paths from JSON: {config.file_paths_json_path}")
-        with open(config.file_paths_json_path, "r") as f:
-            return json.load(f)
+        try:
+            with open(config.file_paths_json_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error("Failed to load file paths JSON from %s: %s", config.file_paths_json_path, e)
+            raise
 
     def update_json_for_removed_files(self, removed_file_paths: List[str] = []) -> None:
         if len(removed_file_paths) == 0:

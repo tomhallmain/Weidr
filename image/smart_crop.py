@@ -122,9 +122,12 @@ class Cropper:
         if os.path.exists(new_filepath):
             logger.info("Skipping crop already run: " + new_filepath)
             return
-        im = Image.open(image_path)
-        cropped_image, is_cropped = Cropper.remove_borders(im)
-        im.close()
+        try:
+            with Image.open(image_path) as im:
+                cropped_image, is_cropped = Cropper.remove_borders(im)
+        except Exception as e:
+            logger.warning("smart_crop_simple could not open %s: %s", image_path, e)
+            raise
         if is_cropped:
             cropped_image.save(new_filepath)
             cropped_image.close()
@@ -145,9 +148,12 @@ class Cropper:
         if os.path.exists(new_filepath):
             logger.info("Skipping crop already run: " + new_filepath)
             return saved_files
-        im = Image.open(image_path)
-        cropped_images, is_cropped = Cropper.remove_borders_by_division_detection(im)
-        im.close()
+        try:
+            with Image.open(image_path) as im:
+                cropped_images, is_cropped = Cropper.remove_borders_by_division_detection(im)
+        except Exception as e:
+            logger.warning("smart_crop_multi_detect could not open %s: %s", image_path, e)
+            raise
         if is_cropped:
             index_filepaths = len(cropped_images) > 1
             for i in range(len(cropped_images)):

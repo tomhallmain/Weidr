@@ -378,28 +378,32 @@ class ImageOps:
         new_file = os.path.join(dirname, new_filename)
         if os.path.exists(new_file):
             raise Exception("File already exists: " + new_filename) # TODO maybe remove this
-        image = PIL.Image.open(image_path)
-        brightness_enhancer = ImageEnhance.Brightness(image)
-        brightened = brightness_enhancer.enhance(1.3)
-        image.close()
-        image = brightened
-        contrast_enhancer = ImageEnhance.Contrast(image)
-        contrasted = contrast_enhancer.enhance(1.1)
-        brightened.close()
-        image = contrasted
-        image.save(new_file)
-        image.close()
-        return new_file
+        try:
+            with PIL.Image.open(image_path) as image:
+                brightness_enhancer = ImageEnhance.Brightness(image)
+                brightened = brightness_enhancer.enhance(1.3)
+            contrast_enhancer = ImageEnhance.Contrast(brightened)
+            contrasted = contrast_enhancer.enhance(1.1)
+            brightened.close()
+            contrasted.save(new_file)
+            contrasted.close()
+            return new_file
+        except Exception as e:
+            logger.warning("enhance_image failed for %s: %s", image_path, e)
+            raise
 
     @staticmethod
     def flip_image(image_path, top_bottom=False):
-        original_img = PIL.Image.open(image_path)
-        mod_img, original_img = ImageOps._flip_image(original_img, top_bottom=top_bottom)
-        new_filepath = ImageOps.new_filepath(image_path, append_part="_flip")
-        mod_img.save(new_filepath)
-        original_img.close()
-        mod_img.close()
-        return new_filepath
+        try:
+            with PIL.Image.open(image_path) as original_img:
+                mod_img, _ = ImageOps._flip_image(original_img, top_bottom=top_bottom)
+            new_filepath = ImageOps.new_filepath(image_path, append_part="_flip")
+            mod_img.save(new_filepath)
+            mod_img.close()
+            return new_filepath
+        except Exception as e:
+            logger.warning("flip_image failed for %s: %s", image_path, e)
+            raise
 
     @staticmethod
     def convert_to_jpg(image_path, output_path=None, quality=85):
@@ -574,12 +578,15 @@ class ImageOps:
 
     @staticmethod
     def random_crop_and_upscale(image_path, allowable_proportions=0.4, shortest_side=1200):
-        im = PIL.Image.open(image_path)
-        cropped = ImageOps._random_crop_and_upscale(im, allowable_proportions, shortest_side)
-        im.close()
-        new_filepath = ImageOps.new_filepath(image_path, append_part="_crop")
-        cropped.save(new_filepath)
-        return new_filepath
+        try:
+            with PIL.Image.open(image_path) as im:
+                cropped = ImageOps._random_crop_and_upscale(im, allowable_proportions, shortest_side)
+            new_filepath = ImageOps.new_filepath(image_path, append_part="_crop")
+            cropped.save(new_filepath)
+            return new_filepath
+        except Exception as e:
+            logger.warning("random_crop_and_upscale failed for %s: %s", image_path, e)
+            raise
 
     @staticmethod
     def random_rotate_and_crop():
@@ -642,61 +649,76 @@ class ImageOps:
 
     @staticmethod
     def randomly_modify_image(image_path):
-        im = PIL.Image.open(image_path)
-        has_modified_image = False
-        while not has_modified_image:
-            if random.random() < config.image_edit_configuration.random_rotation_chance:
-                cv2_image = ImageOps.pil_to_cv2(im)
-                angle_diff = int(random.random() * 55)
-                angle = angle_diff if random.random() > 0.5 else 360 - angle_diff
-                cv2_image = ImageOps._rotate_image_partial(cv2_image, angle=angle)
-                im.close()
-                im = ImageOps.cv2_to_pil(cv2_image)
-                has_modified_image = True
-            if random.random() < config.image_edit_configuration.random_flip_chance:
-                im, original_im = ImageOps._flip_image(im)
-                original_im.close()
-                has_modified_image = True
-            if random.random() < config.image_edit_configuration.random_shear_chance:
-                cv2_image = ImageOps.pil_to_cv2(im)
-                angle = random.randint(0, 25)
-                x_shear = int(random.random() * 2 - 1)
-                y_shear = int(random.random() * 2 - 1)
-                cv2_image = ImageOps.rotate_and_shear_image(cv2_image, angle=angle, x_shear=x_shear, y_shear=y_shear)
-                im.close()
-                im = ImageOps.cv2_to_pil(cv2_image)
-                temp_im = ImageOps._random_crop_and_upscale(im)
-                im.close()
-                im = temp_im
-                has_modified_image = True
-            if random.random() < config.image_edit_configuration.random_draw_chance:
-                ImageOps._random_draw(im)
-                has_modified_image = True
-            if random.random() < config.image_edit_configuration.random_crop_chance:
-                temp_im = ImageOps._random_crop_and_upscale(im)
-                im.close()
-                im = temp_im
-                has_modified_image = True
-        im_final = im
-        if not has_modified_image:
-            logger.warning("No modifications made to image!")
-        new_filepath = ImageOps.new_filepath(image_path, append_part="_edit")
-        im_final.save(new_filepath)
-        im.close()
         try:
-            im_final.close()
-        except Exception:
-            pass
-        
-        return new_filepath
+            im = PIL.Image.open(image_path)
+        except Exception as e:
+            logger.warning("randomly_modify_image could not open %s: %s", image_path, e)
+            raise
+        try:
+            has_modified_image = False
+            while not has_modified_image:
+                if random.random() < config.image_edit_configuration.random_rotation_chance:
+                    cv2_image = ImageOps.pil_to_cv2(im)
+                    angle_diff = int(random.random() * 55)
+                    angle = angle_diff if random.random() > 0.5 else 360 - angle_diff
+                    cv2_image = ImageOps._rotate_image_partial(cv2_image, angle=angle)
+                    im.close()
+                    im = ImageOps.cv2_to_pil(cv2_image)
+                    has_modified_image = True
+                if random.random() < config.image_edit_configuration.random_flip_chance:
+                    im, original_im = ImageOps._flip_image(im)
+                    original_im.close()
+                    has_modified_image = True
+                if random.random() < config.image_edit_configuration.random_shear_chance:
+                    cv2_image = ImageOps.pil_to_cv2(im)
+                    angle = random.randint(0, 25)
+                    x_shear = int(random.random() * 2 - 1)
+                    y_shear = int(random.random() * 2 - 1)
+                    cv2_image = ImageOps.rotate_and_shear_image(cv2_image, angle=angle, x_shear=x_shear, y_shear=y_shear)
+                    im.close()
+                    im = ImageOps.cv2_to_pil(cv2_image)
+                    temp_im = ImageOps._random_crop_and_upscale(im)
+                    im.close()
+                    im = temp_im
+                    has_modified_image = True
+                if random.random() < config.image_edit_configuration.random_draw_chance:
+                    ImageOps._random_draw(im)
+                    has_modified_image = True
+                if random.random() < config.image_edit_configuration.random_crop_chance:
+                    temp_im = ImageOps._random_crop_and_upscale(im)
+                    im.close()
+                    im = temp_im
+                    has_modified_image = True
+            im_final = im
+            if not has_modified_image:
+                logger.warning("No modifications made to image!")
+            new_filepath = ImageOps.new_filepath(image_path, append_part="_edit")
+            im_final.save(new_filepath)
+            im.close()
+            try:
+                im_final.close()
+            except Exception:
+                pass
+            return new_filepath
+        except Exception as e:
+            logger.warning("randomly_modify_image failed for %s: %s", image_path, e)
+            try:
+                im.close()
+            except Exception:
+                pass
+            raise
 
     @staticmethod
     def random_draw(image_path):
-        image = PIL.Image.open(image_path)
-        ImageOps._random_draw(image)
-        new_filepath = ImageOps.new_filepath(image_path, append_part="_drawn")
-        image.save(new_filepath)
-        image.close()
+        try:
+            with PIL.Image.open(image_path) as image:
+                ImageOps._random_draw(image)
+                new_filepath = ImageOps.new_filepath(image_path, append_part="_drawn")
+                image.save(new_filepath)
+            return new_filepath
+        except Exception as e:
+            logger.warning("random_draw failed for %s: %s", image_path, e)
+            raise
 
     @staticmethod
     def _random_draw(image):

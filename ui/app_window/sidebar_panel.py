@@ -287,15 +287,6 @@ class SidebarPanel(QWidget):
             self.find_duplicates_btn,
             _("Find duplicate or near-duplicate media in the directory."),
         )
-        self.image_details_btn = self._make_button(
-            _("Media details"),
-            lambda: self._app.window_launcher.open_media_details(),
-        )
-        create_tooltip(
-            self.image_details_btn,
-            _("Show detailed metadata and information about the current media file."),
-        )
-
         # Search current media
         self.search_current_media_btn = self._make_button(
             _("Search current media"),
@@ -310,6 +301,22 @@ class SidebarPanel(QWidget):
 
         self._add_label(_("File actions"))
         # File action buttons
+        self.image_details_btn = self._make_button(
+            _("Media details"),
+            lambda: self._app.window_launcher.open_media_details(),
+        )
+        create_tooltip(
+            self.image_details_btn,
+            _("Show detailed metadata and information about the current media file."),
+        )
+        self.file_actions_btn = self._make_button(
+            _("File actions"),
+            lambda: self._app.window_launcher.open_file_actions_window(),
+        )
+        create_tooltip(
+            self.file_actions_btn,
+            _("View history of and reverse file actions (copy, move, delete) run on marked files."),
+        )
         self.file_action_sets_btn = self._make_button(
             _("File action sets"),
             lambda: self._app.window_launcher.open_file_action_sets_window(),

@@ -53,8 +53,10 @@ logger = get_logger("masonry_browser")
 PAGE_SIZE = 200
 # Maximum dimension (px) for thumbnail decoding.
 THUMB_MAX_DIM = 220
-# Default number of columns.
+# Default (minimum) number of columns.
 DEFAULT_COLUMNS = 4
+# Extra columns are added when tiles would exceed this width (px).
+TILE_MAX_WIDTH = 300
 # Spacing between tiles (px).
 TILE_MARGIN = 6
 # Max concurrent thumbnail decode threads. Kept small to avoid saturating the
@@ -404,9 +406,41 @@ class MasonryBrowser(QWidget):
     # Private helpers
     # ------------------------------------------------------------------
 
+    def _compute_columns(self, viewport_width: int) -> int:
+        """Column count that keeps tiles at or below TILE_MAX_WIDTH on wide viewports."""
+        if viewport_width < 10:
+            return DEFAULT_COLUMNS
+        usable = max(1, viewport_width - TILE_MARGIN * 2)
+        return max(DEFAULT_COLUMNS, (usable + TILE_MAX_WIDTH - 1) // TILE_MAX_WIDTH)
+
+    def _reset_columns(self, new_count: int) -> None:
+        """Rebuild the column strip for a new column count."""
+        canvas_layout = self._canvas.layout()
+        for col in self._col_widgets:
+            col.setParent(None)
+            col.deleteLater()
+        self._col_widgets.clear()
+        self._col_layouts.clear()
+        for _i in range(new_count):
+            col = QWidget()
+            col.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+            col_layout = QVBoxLayout(col)
+            col_layout.setContentsMargins(0, 0, 0, 0)
+            col_layout.setSpacing(TILE_MARGIN)
+            col_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+            self._col_widgets.append(col)
+            self._col_layouts.append(col_layout)
+            canvas_layout.addWidget(col)
+        self._columns = new_count
+
     def _rebuild_tiles(self) -> None:
         """Clear existing tiles and build the grid for the current page."""
         self._clear()
+
+        new_columns = self._compute_columns(self._scroll_area.viewport().width())
+        if new_columns != self._columns:
+            self._reset_columns(new_columns)
+
         self._col_heights = [0] * self._columns
 
         start = self._page * PAGE_SIZE

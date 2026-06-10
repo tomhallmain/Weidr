@@ -1242,6 +1242,7 @@ class MediaDetails(SmartWindow):
                 is not None
             ):
                 return
+        was_open = MediaDetails.temp_media_canvas is not None
         if MediaDetails.temp_media_canvas is None:
             MediaDetails.set_temp_media_canvas(
                 master, media_path, app_actions
@@ -1250,10 +1251,34 @@ class MediaDetails(SmartWindow):
             MediaDetails.temp_media_canvas.create_media(media_path)
         except Exception:
             # Re-create the canvas window if the old one was destroyed
+            was_open = False
             MediaDetails.set_temp_media_canvas(
                 master, media_path, app_actions
             )
             MediaDetails.temp_media_canvas.create_media(media_path)
+        MediaDetails._check_temp_canvas_load(media_path, was_open, app_actions)
+
+    @staticmethod
+    def _check_temp_canvas_load(
+        media_path: str, was_open: bool, app_actions
+    ) -> None:
+        """Close a freshly-opened canvas and alert the user if media failed to load."""
+        from ui.app_window.media_frame import VideoUI
+        canvas = MediaDetails.temp_media_canvas
+        if canvas is None:
+            return
+        frame = canvas._media_frame
+        # VLC video loading is async — media_displayed stays False until the
+        # first frame renders, so skip the check for active VLC sessions.
+        if frame.media_displayed or isinstance(frame._video_ui, VideoUI):
+            return
+        if not was_open:
+            canvas.close()
+            MediaDetails.temp_media_canvas = None
+        app_actions._alert(
+            _("Unable to open media"),
+            _('Could not load: "{0}"').format(os.path.basename(media_path)),
+        )
 
     @staticmethod
     def set_temp_media_canvas(

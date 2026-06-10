@@ -335,7 +335,7 @@ class MediaNavigator:
         # --- File is a valid path on disk → open in temp canvas ---
         if original_search_text_is_file:
             MediaDetails.open_temp_media_canvas(
-                master=self._app, media_path=original_search_text,
+                master=self._app, media_path=resolved_path,
                 app_actions=self._app.app_actions, skip_get_window_check=True,
             )
             return True

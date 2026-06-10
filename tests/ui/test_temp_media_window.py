@@ -112,3 +112,35 @@ class TestTempMediaWindow:
         assert canvas._media_path is None
         assert not canvas._media_frame.media_displayed
         assert canvas.windowTitle() != media_path
+
+
+class TestGoToFileRelatedImage:
+    def test_go_to_file_uses_full_path_for_temp_canvas(
+        self, window_with_dir, monkeypatch
+    ):
+        """go_to_file must pass the resolved full path to open_temp_media_canvas,
+        not the bare filename, when the file exists on disk but isn't found by
+        any browser.  This is the Qt equivalent of the old Tkinter
+        FileNotFoundError triggered when get_window called go_to_file with
+        os.path.basename(media_path) and the fallback branch forwarded only
+        the basename to the temp canvas."""
+        app_win, media_dir = window_with_dir
+        basename = "img01.png"
+        full_path = os.path.join(media_dir, basename)
+
+        # Simulate the browser not finding the file (e.g. filtered out), so
+        # go_to_file falls through to the on-disk fallback branch.
+        monkeypatch.setattr(
+            app_win.file_browser, "find", lambda *args, **kwargs: None
+        )
+
+        opened_paths = []
+        monkeypatch.setattr(
+            "ui.image.media_details.MediaDetails.open_temp_media_canvas",
+            lambda **kwargs: opened_paths.append(kwargs.get("media_path")),
+        )
+
+        app_win.media_navigator.go_to_file(search_text=basename)
+
+        assert len(opened_paths) == 1, "open_temp_media_canvas was not called"
+        assert os.path.normpath(opened_paths[0]) == os.path.normpath(full_path)

@@ -326,6 +326,7 @@ class KeyBindingManager:
             guarded=False,
         )
         self._bind("Ctrl+Z", app.file_marks_ctrl.revert_last_marks_change, guarded=False)
+        self._bind("Ctrl+Shift+I", app.file_marks_ctrl.create_interpolation_gif, guarded=False)
         self._bind(
             "Ctrl+X",
             lambda: MarkedFileMover.undo_move_marks(None, app.app_actions),

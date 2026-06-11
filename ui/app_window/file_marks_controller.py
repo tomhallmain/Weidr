@@ -337,6 +337,10 @@ class FileMarksController:
             if progress is not None:
                 progress.setValue(total)
 
+    def create_interpolation_gif(self, event=None) -> None:
+        """Create a smooth optical-flow interpolation GIF from exactly 2 marked files."""
+        MarkedFileMover.create_interpolation_gif_from_marks(self._app.app_actions)
+
     def _check_marks(self, min_mark_size: int = 1) -> None:
         """Validate that enough marks exist for the intended operation."""
         if len(MarkedFiles.file_marks) < min_mark_size:

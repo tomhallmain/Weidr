@@ -1466,5 +1466,84 @@ class ImageOps:
             logger.error(f"Error comparing image content: {e}")
             return False
 
+    @staticmethod
+    def create_interpolation_gif(
+        image_path_a: str,
+        image_path_b: str,
+        n_frames: int = 20,
+        fps: int = 12,
+        output_path: str = None,
+    ) -> str:
+        """Create a smooth interpolation GIF between two images using bidirectional optical flow.
+
+        Warps A forward and B backward using Farneback dense optical flow, blending at each
+        intermediate step.  The result is a ping-pong GIF that loops seamlessly.
+        """
+        from image.frame_cache import FrameCache
+
+        def _load(path):
+            # FrameCache handles video/GIF/PDF/SVG → temp JPEG; returns path unchanged for images.
+            readable = FrameCache.get_image_path(path)
+            img = cv2.imread(readable)
+            if img is None:
+                # cv2 can't decode some formats (AVIF, HEIC, JXL, …); fall back to Pillow,
+                # which supports them via the installed plugin extensions.
+                pil_img = Image.open(readable).convert("RGB")
+                img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+            return img
+
+        img_a = _load(image_path_a)
+        img_b = _load(image_path_b)
+
+        h, w = img_a.shape[:2]
+        if img_b.shape[:2] != (h, w):
+            img_b = cv2.resize(img_b, (w, h), interpolation=cv2.INTER_AREA)
+
+        gray_a = cv2.cvtColor(img_a, cv2.COLOR_BGR2GRAY)
+        gray_b = cv2.cvtColor(img_b, cv2.COLOR_BGR2GRAY)
+
+        farneback_params = dict(pyr_scale=0.5, levels=3, winsize=15,
+                                iterations=3, poly_n=5, poly_sigma=1.2, flags=0)
+        flow_ab = cv2.calcOpticalFlowFarneback(gray_a, gray_b, None, **farneback_params)
+        flow_ba = cv2.calcOpticalFlowFarneback(gray_b, gray_a, None, **farneback_params)
+
+        grid_x, grid_y = np.meshgrid(np.arange(w, dtype=np.float32),
+                                      np.arange(h, dtype=np.float32))
+        fa = img_a.astype(np.float32)
+        fb = img_b.astype(np.float32)
+
+        pil_frames = []
+        for t in np.linspace(0.0, 1.0, n_frames):
+            map_x_ab = (grid_x + t * flow_ab[..., 0]).astype(np.float32)
+            map_y_ab = (grid_y + t * flow_ab[..., 1]).astype(np.float32)
+            map_x_ba = (grid_x + (1.0 - t) * flow_ba[..., 0]).astype(np.float32)
+            map_y_ba = (grid_y + (1.0 - t) * flow_ba[..., 1]).astype(np.float32)
+
+            warp_a = cv2.remap(fa, map_x_ab, map_y_ab, cv2.INTER_LINEAR,
+                               borderMode=cv2.BORDER_REPLICATE)
+            warp_b = cv2.remap(fb, map_x_ba, map_y_ba, cv2.INTER_LINEAR,
+                               borderMode=cv2.BORDER_REPLICATE)
+
+            blended = ((1.0 - t) * warp_a + t * warp_b).clip(0, 255).astype(np.uint8)
+            pil_frames.append(Image.fromarray(cv2.cvtColor(blended, cv2.COLOR_BGR2RGB)))
+
+        # Ping-pong: forward then reverse (interior frames only) for seamless loop
+        all_frames = pil_frames + pil_frames[-2:0:-1]
+
+        if output_path is None:
+            stem = os.path.splitext(image_path_a)[0]
+            output_path = stem + "_interpolation.gif"
+
+        duration_ms = max(1, int(1000 / fps))
+        all_frames[0].save(
+            output_path,
+            save_all=True,
+            append_images=all_frames[1:],
+            duration=duration_ms,
+            loop=0,
+            optimize=False,
+        )
+        return output_path
+
 if __name__ == "__main__":
    ImageOps.randomly_modify_image(sys.argv[1])

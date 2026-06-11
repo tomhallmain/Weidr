@@ -320,6 +320,11 @@ class MarkedFileMover(SmartDialog):
         clear_btn.clicked.connect(self._clear_target_dirs)
         bar.addWidget(clear_btn)
 
+        interp_gif_btn = QPushButton(_("Interpolation GIF"))
+        interp_gif_btn.setFocusPolicy(Qt.NoFocus)
+        interp_gif_btn.clicked.connect(lambda _checked=False: self._create_interpolation_gif_from_marks())
+        bar.addWidget(interp_gif_btn)
+
         pdf_btn = QPushButton(_("Create PDF"))
         pdf_btn.setFocusPolicy(Qt.NoFocus)
         # QPushButton.clicked emits a bool(checked) argument; ignore it so the
@@ -769,6 +774,38 @@ class MarkedFileMover(SmartDialog):
                 logger.info(f"Found embeddable directory for text {text}: {dirpath}")
                 return text
         return None
+
+    def _create_interpolation_gif_from_marks(self) -> None:
+        MarkedFileMover.create_interpolation_gif_from_marks(self._app_actions)
+
+    @staticmethod
+    def create_interpolation_gif_from_marks(app_actions: "AppActions") -> None:
+        """Create a smooth optical-flow interpolation GIF from exactly 2 marked files."""
+        marks = MarkedFiles.file_marks
+        if len(marks) != 2:
+            app_actions.warn(
+                _("Exactly 2 marked files are required to create an interpolation GIF "
+                  "({0} currently marked).").format(len(marks))
+            )
+            return
+        from image.image_ops import ImageOps
+        from utils.running_tasks_registry import start_thread
+
+        path_a, path_b = marks[0], marks[1]
+
+        def _run():
+            try:
+                output = ImageOps.create_interpolation_gif(path_a, path_b)
+                app_actions.toast(
+                    _("Interpolation GIF saved: {0}").format(os.path.basename(output))
+                )
+            except Exception as e:
+                logger.error("Interpolation GIF failed: %s", e)
+                app_actions.warn(
+                    _("Failed to create interpolation GIF: {0}").format(str(e))
+                )
+
+        start_thread(_run, use_asyncio=False)
 
     def _create_pdf_from_marks(self, output_path=None) -> None:
         from files.pdf_creator import PDFCreator

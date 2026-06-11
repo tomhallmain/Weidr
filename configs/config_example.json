@@ -57,6 +57,13 @@
   "xvlm_model_loc": null,
   "xvlm_model_size": "4m",
   "laion_enable_half_precision": false,
+  "eva_clip_model": "EVA01-g-14",
+  "eva_clip_half_precision": false,
+  "metaclip_model": "facebook/metaclip-fullcc2.5b-h14-400m",
+  "metaclip_half_precision": false,
+  "vjepa2_model": "facebook/vjepa2-vitl-fpc64-256",
+  "vjepa2_num_frames": 16,
+  "vjepa2_half_precision": false,
   "tag_suggestions_file": "tag_suggestions.json",
   "image_types": [
     ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".bmp",

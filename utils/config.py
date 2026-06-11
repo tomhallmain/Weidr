@@ -94,6 +94,13 @@ class Config:
         self.xvlm_model_loc = None
         self.xvlm_model_size = "4m"
         self.laion_enable_half_precision = False
+        self.eva_clip_model = "EVA01-g-14"
+        self.eva_clip_half_precision = False
+        self.metaclip_model = "facebook/metaclip-fullcc2.5b-h14-400m"
+        self.metaclip_half_precision = False
+        self.vjepa2_model = "facebook/vjepa2-vitl-fpc64-256"
+        self.vjepa2_num_frames = 16
+        self.vjepa2_half_precision = False
         self.always_open_new_windows = False
         self.image_types = [
             ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".bmp",
@@ -192,6 +199,9 @@ class Config:
                             "xvlm_loc",
                             "xvlm_model_loc",
                             "xvlm_model_size",
+                            "eva_clip_model",
+                            "metaclip_model",
+                            "vjepa2_model",
                             "gimp_exe_loc")
             self.set_values(bool,
                             "debug",
@@ -214,6 +224,9 @@ class Config:
                             "marked_file_svg_move_type",
                             "siglip_enable_large_model",
                             "laion_enable_half_precision",
+                            "eva_clip_half_precision",
+                            "metaclip_half_precision",
+                            "vjepa2_half_precision",
                             "use_file_paths_json",
                             "text_embedding_search_presets_exclusive",
                             "store_checkpoints",
@@ -247,6 +260,7 @@ class Config:
                             "dynamic_media_max_sample_pages",
                             "dynamic_media_max_sample_duration_seconds",
                             "dynamic_media_max_sample_size_mb",
+                            "vjepa2_num_frames",
                             "sd_runner_client_port",
                             "refacdir_client_port")
             self.set_values(float,

@@ -39,6 +39,9 @@ class CompareMode(Enum):
     ALIGN_EMBEDDING = _("ALIGN Embedding")
     XVLM_EMBEDDING = _("X-VLM Embedding")
     LAION_EMBEDDING = _("LAION Embedding")
+    EVA_CLIP_EMBEDDING = _("EVA CLIP Embedding")
+    METACLIP_EMBEDDING = _("MetaCLIP Embedding")
+    VJEPA2_EMBEDDING = _("V-JEPA 2 Embedding")
     PROMPTS = _("Prompts")
     PROMPTS_EXACT = _("Prompts (Exact Match)")
     SIZE = _("Size")
@@ -59,6 +62,12 @@ class CompareMode(Enum):
             return _("X-VLM Embedding")
         elif self == CompareMode.LAION_EMBEDDING:
             return _("LAION Embedding")
+        elif self == CompareMode.EVA_CLIP_EMBEDDING:
+            return _("EVA CLIP Embedding")
+        elif self == CompareMode.METACLIP_EMBEDDING:
+            return _("MetaCLIP Embedding")
+        elif self == CompareMode.VJEPA2_EMBEDDING:
+            return _("V-JEPA 2 Embedding")
         elif self == CompareMode.PROMPTS:
             return _("Prompts")
         elif self == CompareMode.PROMPTS_EXACT:

@@ -15,11 +15,12 @@ class CompareEmbeddingXVLM(BaseCompareEmbedding):
     THRESHHOLD_PROBABLE_MATCH = 0.98
     THRESHHOLD_GROUP_CUTOFF = 4500  # TODO fix this for Embedding case
     TEXT_EMBEDDING_CACHE = {}
-    MULTI_EMBEDDING_CACHE = {} # keys are tuples of the filename + any text embedding search combination, values are combined similarity
+    MULTI_EMBEDDING_CACHE = {}
 
     def __init__(self, args=CompareArgs(), gather_files_func=gather_files):
         super().__init__(args, gather_files_func)
-        self._file_embeddings = np.empty((0, 512))
+        # X-VLM projects to embed_dim=256 for both 4m and 16m configs
+        self._file_embeddings = np.empty((0, 256))
         self._file_faces = np.empty((0))
         self.threshold_duplicate = CompareEmbeddingXVLM.THRESHHOLD_POTENTIAL_DUPLICATE
         self.threshold_probable_match = CompareEmbeddingXVLM.THRESHHOLD_PROBABLE_MATCH
@@ -31,6 +32,45 @@ class CompareEmbeddingXVLM(BaseCompareEmbedding):
 
     def is_runnable(self):
         return xvlm_loaded
+
+    @staticmethod
+    def _get_text_embedding_from_cache(text):
+        return BaseCompareEmbedding._get_text_embedding_from_cache(
+            text,
+            CompareEmbeddingXVLM.TEXT_EMBEDDING_CACHE,
+            text_embeddings_xvlm,
+        )
+
+    @staticmethod
+    def single_text_compare(image_path, texts_dict):
+        return BaseCompareEmbedding.single_text_compare(
+            image_path,
+            texts_dict,
+            image_embeddings_xvlm,
+            CompareEmbeddingXVLM.TEXT_EMBEDDING_CACHE,
+            text_embeddings_xvlm,
+        )
+
+    @staticmethod
+    def multi_text_compare(image_path, positives, negatives, threshold=0.3):
+        return BaseCompareEmbedding.multi_text_compare(
+            image_path,
+            positives,
+            negatives,
+            image_embeddings_xvlm,
+            CompareEmbeddingXVLM.TEXT_EMBEDDING_CACHE,
+            text_embeddings_xvlm,
+            CompareEmbeddingXVLM.MULTI_EMBEDDING_CACHE,
+            threshold,
+        )
+
+    @staticmethod
+    def is_related(image1, image2):
+        return BaseCompareEmbedding.is_related(
+            image1,
+            image2,
+            image_embeddings_xvlm,
+        )
 
 
 if __name__ == "__main__":

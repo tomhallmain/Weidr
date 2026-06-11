@@ -1,3 +1,5 @@
+import os
+
 from PIL import Image
 import torch
 import clip
@@ -16,11 +18,20 @@ logger = get_logger("model")
 # or if the model files are not downloaded
 xvlm_loaded = False
 
+# EVA CLIP requires the open_clip package (pip install open-clip-torch)
+eva_clip_loaded = False
+try:
+    import open_clip
+    eva_clip_loaded = True
+    logger.info("open_clip available — EVA CLIP mode enabled")
+except ImportError:
+    logger.info("open_clip not installed — EVA CLIP mode unavailable (pip install open-clip-torch)")
+
 if config.xvlm_loc is not None:
     logger.info(f"Loading XVLM modules from {config.xvlm_loc}")
     try:
         import sys
-        from transformers import BertTokenizer, BertModel
+        from transformers import BertTokenizer
         from torchvision import transforms
         sys.path.insert(0, config.xvlm_loc)
         from models.xvlm import XVLMBase
@@ -55,6 +66,30 @@ _xvlm_img_transform = None
 # Lazy initialization variables for LAION
 _laion_model = None
 _laion_processor = None
+
+# Lazy initialization variables for MetaCLIP
+_metaclip_model = None
+_metaclip_processor = None
+
+# Lazy initialization variables for V-JEPA 2
+_vjepa2_model = None
+_vjepa2_processor = None
+
+# Lazy initialization variables for EVA CLIP
+_eva_clip_model = None
+_eva_clip_preprocess = None
+_eva_clip_tokenizer = None
+
+# open_clip pretrained weights IDs keyed by model name
+EVA_CLIP_PRETRAINED = {
+    'EVA01-g-14':       'laion400m_s11b_b41k',
+    'EVA01-g-14-plus':  'merged2b_s11b_b114k',
+    'EVA02-B-16':       'merged2b_s8b_b131k',
+    'EVA02-L-14':       'merged2b_s4b_b131k',
+    'EVA02-L-14-336':   'merged2b_s6b_b61k',
+    'EVA02-E-14':       'laion2b_s4b_b115k',
+    'EVA02-E-14-plus':  'laion2b_s9b_b144k',
+}
 
 # Model and processor access functions
 
@@ -135,13 +170,12 @@ XVLM_CONFIGS = {
 def _get_xvlm_model():
     global _xvlm_model
     if _xvlm_model is None:
-        # Initialize model with config
         if config.xvlm_model_size not in XVLM_CONFIGS:
             raise ValueError(f"Invalid XVLM model size - update config.json: {config.xvlm_model_size}")
-        config = XVLM_CONFIGS[config.xvlm_model_size]
-        _xvlm_model = XVLMBase(config)
-        
-        # Load pretrained weights
+        if config.xvlm_model_loc is None:
+            raise ValueError("xvlm_model_loc is not set in config.json — provide the path to the downloaded checkpoint")
+        xvlm_cfg = XVLM_CONFIGS[config.xvlm_model_size]
+        _xvlm_model = XVLMBase(xvlm_cfg)
         checkpoint = torch.load(config.xvlm_model_loc, map_location='cpu')
         _xvlm_model.load_state_dict(checkpoint['model'], strict=False)
         _xvlm_model.eval()
@@ -164,6 +198,68 @@ def _get_xvlm_img_transform():
                                (0.26862954, 0.26130258, 0.27577711))
         ])
     return _xvlm_img_transform
+
+def _get_metaclip_model():
+    global _metaclip_model
+    if _metaclip_model is None:
+        if config.metaclip_half_precision:
+            _metaclip_model = AutoModel.from_pretrained(config.metaclip_model, torch_dtype=torch.float16).to(device)
+        else:
+            _metaclip_model = AutoModel.from_pretrained(config.metaclip_model).to(device)
+        _metaclip_model.eval()
+    return _metaclip_model
+
+def _get_metaclip_processor():
+    global _metaclip_processor
+    if _metaclip_processor is None:
+        _metaclip_processor = AutoProcessor.from_pretrained(config.metaclip_model)
+    return _metaclip_processor
+
+def _get_vjepa2_model():
+    global _vjepa2_model
+    if _vjepa2_model is None:
+        from transformers import AutoModel
+        dtype = torch.float16 if config.vjepa2_half_precision else torch.float32
+        _vjepa2_model = AutoModel.from_pretrained(config.vjepa2_model, torch_dtype=dtype).to(device)
+        _vjepa2_model.eval()
+    return _vjepa2_model
+
+def _get_vjepa2_processor():
+    global _vjepa2_processor
+    if _vjepa2_processor is None:
+        from transformers import AutoVideoProcessor
+        _vjepa2_processor = AutoVideoProcessor.from_pretrained(config.vjepa2_model)
+    return _vjepa2_processor
+
+def _get_eva_clip_model():
+    global _eva_clip_model, _eva_clip_preprocess
+    if _eva_clip_model is None:
+        model_name = config.eva_clip_model
+        pretrained = EVA_CLIP_PRETRAINED.get(model_name)
+        if pretrained is None:
+            raise ValueError(
+                f"Unknown EVA CLIP model '{model_name}'. "
+                f"Valid options: {list(EVA_CLIP_PRETRAINED.keys())}"
+            )
+        dtype = torch.float16 if config.eva_clip_half_precision else torch.float32
+        _eva_clip_model, _, _eva_clip_preprocess = open_clip.create_model_and_transforms(
+            model_name, pretrained=pretrained, device=device, precision='fp16' if config.eva_clip_half_precision else 'fp32'
+        )
+        _eva_clip_model = _eva_clip_model.to(dtype=dtype)
+        _eva_clip_model.eval()
+    return _eva_clip_model
+
+def _get_eva_clip_preprocess():
+    global _eva_clip_preprocess
+    if _eva_clip_preprocess is None:
+        _get_eva_clip_model()  # preprocess is populated as a side-effect
+    return _eva_clip_preprocess
+
+def _get_eva_clip_tokenizer():
+    global _eva_clip_tokenizer
+    if _eva_clip_tokenizer is None:
+        _eva_clip_tokenizer = open_clip.get_tokenizer(config.eva_clip_model)
+    return _eva_clip_tokenizer
 
 def _get_laion_model():
     global _laion_model
@@ -389,10 +485,138 @@ def image_embeddings_laion(image_path):
 def text_embeddings_laion(text):
     # Process text with LAION processor
     inputs = _get_laion_processor()(text=[text], padding="max_length", return_tensors="pt").to(device)
-    
+
     with torch.no_grad():
         # Get text features using LAION model
         outputs = _get_laion_model().get_text_features(**inputs)
         # Normalize the embeddings
         outputs = outputs / outputs.norm(dim=-1, keepdim=True)
         return outputs.tolist()[0]
+
+
+# EVA CLIP embeddings
+
+def image_embeddings_eva_clip(image_path):
+    try:
+        with Image.open(image_path) as img:
+            image = _get_eva_clip_preprocess()(img.convert("RGB")).unsqueeze(0).to(device)
+    except Exception:
+        image_path = FrameCache.get_image_path(image_path)
+        with Image.open(image_path) as img:
+            image = _get_eva_clip_preprocess()(img.convert("RGB")).unsqueeze(0).to(device)
+    if config.eva_clip_half_precision:
+        image = image.half()
+    with torch.no_grad():
+        embedding = _get_eva_clip_model().encode_image(image)
+        embedding = embedding / embedding.norm(dim=-1, keepdim=True)
+        return embedding.float().tolist()[0]
+
+
+def text_embeddings_eva_clip(text):
+    tokens = _get_eva_clip_tokenizer()([text]).to(device)
+    with torch.no_grad():
+        embedding = _get_eva_clip_model().encode_text(tokens)
+        embedding = embedding / embedding.norm(dim=-1, keepdim=True)
+        return embedding.float().tolist()[0]
+
+
+# MetaCLIP embeddings
+
+def image_embeddings_metaclip(image_path):
+    try:
+        with Image.open(image_path) as img:
+            inputs = _get_metaclip_processor()(images=img.convert("RGB"), return_tensors="pt").to(device)
+    except Exception:
+        image_path = FrameCache.get_image_path(image_path)
+        with Image.open(image_path) as img:
+            inputs = _get_metaclip_processor()(images=img.convert("RGB"), return_tensors="pt").to(device)
+    if config.metaclip_half_precision:
+        inputs = {k: v.half() if v.is_floating_point() else v for k, v in inputs.items()}
+    with torch.no_grad():
+        outputs = _get_metaclip_model().get_image_features(**inputs)
+        outputs = outputs / outputs.norm(dim=-1, keepdim=True)
+        return outputs.float().tolist()[0]
+
+
+def text_embeddings_metaclip(text):
+    inputs = _get_metaclip_processor()(text=[text], return_tensors="pt", padding=True, truncation=True).to(device)
+    with torch.no_grad():
+        outputs = _get_metaclip_model().get_text_features(**inputs)
+        outputs = outputs / outputs.norm(dim=-1, keepdim=True)
+        return outputs.float().tolist()[0]
+
+
+# V-JEPA 2 embeddings
+
+def _sample_vjepa2_frames(media_path: str, num_frames: int) -> "np.ndarray":
+    """Return a (num_frames, H, W, 3) uint8 RGB array for any media path.
+
+    For still images the single frame is repeated.  For videos, num_frames
+    frames are sampled at evenly-spaced positions using PyAV seeking.  Falls
+    back to the FrameCache thumbnail (repeated) if decoding fails.
+    """
+    import av
+    import numpy as np
+    from image.frame_cache import _pyav_video_stats
+
+    ext = os.path.splitext(media_path)[1].lower()
+    is_image = ext in Image.registered_extensions()
+
+    if is_image:
+        with Image.open(media_path) as img:
+            arr = np.array(img.convert("RGB"))
+        return np.stack([arr] * num_frames)
+
+    try:
+        frames = []
+        total, _fps, _dur = _pyav_video_stats(media_path)
+        with av.open(media_path, metadata_errors="ignore") as container:
+            stream = container.streams.video[0]
+            if total > 0 and stream.duration and stream.time_base:
+                for i in range(num_frames):
+                    target_pts = int(stream.duration * i / num_frames)
+                    container.seek(target_pts, stream=stream)
+                    for frame in container.decode(stream):
+                        frames.append(frame.to_ndarray(format="rgb24"))
+                        break
+            else:
+                # Unknown duration: decode up to a budget then subsample
+                raw = []
+                for frame in container.decode(stream):
+                    raw.append(frame.to_ndarray(format="rgb24"))
+                    if len(raw) >= 300:
+                        break
+                if raw:
+                    indices = np.linspace(0, len(raw) - 1, num_frames, dtype=int)
+                    frames = [raw[i] for i in indices]
+        if not frames:
+            raise ValueError("no frames decoded")
+    except Exception:
+        frame_path = FrameCache.get_image_path(media_path)
+        with Image.open(frame_path) as img:
+            arr = np.array(img.convert("RGB"))
+        return np.stack([arr] * num_frames)
+
+    while len(frames) < num_frames:
+        frames.append(frames[-1])
+    return np.stack(frames[:num_frames])  # (T, H, W, 3)
+
+
+def image_embeddings_vjepa2(media_path):
+    """Embed any media (image, video, GIF) using the V-JEPA 2 encoder.
+
+    Produces a single normalised vector by mean-pooling the encoder's
+    spatial-temporal patch tokens.  No text embedding counterpart exists;
+    this mode is used for media-to-media similarity only.
+    """
+    import numpy as np
+    frames = _sample_vjepa2_frames(media_path, config.vjepa2_num_frames)
+    inputs = _get_vjepa2_processor()(frames, return_tensors="pt").to(device)
+    if config.vjepa2_half_precision:
+        inputs = {k: v.half() if v.is_floating_point() else v for k, v in inputs.items()}
+    with torch.no_grad():
+        outputs = _get_vjepa2_model()(**inputs, skip_predictor=True)
+        # last_hidden_state: (B, seq_len, hidden_size) — mean-pool to single vector
+        embedding = outputs.last_hidden_state.mean(dim=1)
+        embedding = embedding / embedding.norm(dim=-1, keepdim=True)
+        return embedding.float().tolist()[0]

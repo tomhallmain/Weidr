@@ -11,6 +11,9 @@ from compare.compare_embeddings_flava import CompareEmbeddingFlava
 from compare.compare_embeddings_siglip import CompareEmbeddingSiglip
 from compare.compare_embeddings_xvlm import CompareEmbeddingXVLM
 from compare.compare_embeddings_laion import CompareEmbeddingLaion
+from compare.compare_embeddings_eva_clip import CompareEmbeddingEvaClip
+from compare.compare_embeddings_metaclip import CompareEmbeddingMetaClip
+from compare.compare_embeddings_vjepa2 import CompareEmbeddingVJepa2
 from compare.compare_prompts import ComparePrompts
 from compare.compare_prompts_exact import ComparePromptsExact
 from compare.compare_size import CompareSize
@@ -407,6 +410,12 @@ class CompareWrapper:
             self._compare = CompareEmbeddingXVLM(args)
         elif self.compare_mode == CompareMode.LAION_EMBEDDING:
             self._compare = CompareEmbeddingLaion(args)
+        elif self.compare_mode == CompareMode.EVA_CLIP_EMBEDDING:
+            self._compare = CompareEmbeddingEvaClip(args)
+        elif self.compare_mode == CompareMode.METACLIP_EMBEDDING:
+            self._compare = CompareEmbeddingMetaClip(args)
+        elif self.compare_mode == CompareMode.VJEPA2_EMBEDDING:
+            self._compare = CompareEmbeddingVJepa2(args)
         elif self.compare_mode == CompareMode.PROMPTS:
             self._compare = ComparePrompts(args)
         elif self.compare_mode == CompareMode.PROMPTS_EXACT:

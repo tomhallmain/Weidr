@@ -77,6 +77,9 @@ Group large media sets by visual similarity using both embedding and color-compa
 - FLAVA: 768D embeddings, good for complex reasoning
 - X-VLM: 256D embeddings, efficient for region-text tasks - requires local copy of [X-VLM](https://github.com/zengyan-97/X-VLM)
 - LAION: 1024D embeddings, high-quality visual-language understanding - based on CLIP ViT-H/14 architecture
+- EVA CLIP: 1024D embeddings, large-scale CLIP variant from BAAI - requires `open-clip-torch`
+- MetaCLIP: 1024D embeddings, Meta's improved CLIP training data curation on ViT-H/14
+- V-JEPA 2: 1024D embeddings, video-primary world model encoder - supports images, video, and GIF; media-to-media similarity only (no text search)
 
 Each model offers different tradeoffs between accuracy, speed, and resource usage. The default CLIP model provides a good balance for most use cases.
 </details>

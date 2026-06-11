@@ -28,8 +28,13 @@ def detect_edges_sobel(im: PilImage) -> PilImage:
     sobelx = ndimage.sobel(gray_array, axis=0)
     sobely = ndimage.sobel(gray_array, axis=1)
     
-    # Combine edges
+    # Combine edges and normalise to [0, 255] before casting.  Raw Sobel
+    # magnitude can reach ~360 (√(255²+255²)), so a direct astype(uint8)
+    # wraps values above 255 and turns the sharpest edges into small numbers.
     magnitude = np.sqrt(sobelx**2 + sobely**2)
+    max_val = magnitude.max()
+    if max_val > 0:
+        magnitude = magnitude / max_val * 255
     magnitude = magnitude.astype(np.uint8)
     
     return Image.fromarray(magnitude)
@@ -78,42 +83,66 @@ def smart_consolidate_diffs(diffs: Dict[int, float], image_size: int, min_gap: i
     """
     consolidated = {}
     sorted_diffs = sorted(diffs.items(), key=lambda x: x[0])
-    
-    for i, (pos, strength) in enumerate(sorted_diffs):
-        if i > 0 and pos - sorted_diffs[i-1][0] < min_gap:
-            # Merge with previous if closer than min_gap
-            prev_pos, prev_strength = sorted_diffs[i-1]
-            if strength > prev_strength:
+    last_pos = None
+    last_strength = None
+
+    for pos, strength in sorted_diffs:
+        if last_pos is not None and pos - last_pos < min_gap:
+            # Within gap of the last *surviving* entry — keep the stronger one.
+            # The old code compared against sorted_diffs[i-1] (always the
+            # previous item in the input list, not the last survivor), so
+            # transitive groups like 10, 15, 20 all within min_gap could each
+            # survive independently.
+            if strength > last_strength:
+                del consolidated[last_pos]
                 consolidated[pos] = strength
-                if prev_pos in consolidated:
-                    del consolidated[prev_pos]
-            else:
-                consolidated[prev_pos] = prev_strength
+                last_pos = pos
+                last_strength = strength
         else:
             consolidated[pos] = strength
-            
+            last_pos = pos
+            last_strength = strength
+
     return consolidated
 
 def validate_division(im: PilImage, division_pos: int, is_horizontal: bool) -> bool:
     """
-    Validate a potential division by checking:
-    - Length of the division line
-    - Consistency of the division across the image
-    - Whether it creates reasonable subimage sizes
-    - Whether it aligns with other detected divisions
+    Validate a potential division by checking edge position and whether the
+    detected line covers a significant fraction of the image.  A real panel
+    boundary runs across most of the image width/height; a stray cluster or
+    contrast hit that only affects a small region should not qualify.
     """
     width, height = im.size
-    min_size = 30  # Minimum subimage size
-    
+    min_size = 30
+
     if is_horizontal:
         if division_pos < min_size or division_pos > height - min_size:
             return False
     else:
         if division_pos < min_size or division_pos > width - min_size:
             return False
-            
-    # Add more validation logic here
-    return True
+
+    # Convert once to an RGB array so the slice arithmetic is uniform
+    # regardless of the source image mode.
+    arr = np.array(im.convert('RGB')).astype(int)
+
+    if is_horizontal:
+        diffs = np.sum(np.abs(arr[division_pos] - arr[division_pos - 1]), axis=1)
+        span = width
+    else:
+        diffs = np.sum(np.abs(arr[:, division_pos] - arr[:, division_pos - 1]), axis=1)
+        span = height
+
+    # Require at least 25% of pixels along the line to show a meaningful
+    # channel-sum difference (>10 out of a max of 765).  50% proved too
+    # strict: dark image content (e.g. black coat against a black border)
+    # can keep coverage below that even for a real division.  The
+    # pixel_threshold does the heavy lifting; coverage just rejects the
+    # stray single-column cluster hits that affect only a tiny fraction of
+    # the image.
+    pixel_threshold = 10
+    coverage_threshold = 0.25
+    return np.sum(diffs > pixel_threshold) / span >= coverage_threshold
 
 class Cropper:
     @staticmethod
@@ -162,6 +191,7 @@ class Cropper:
                     new_filepath = ImageOps.new_filepath(image_path, new_filename, append_part="_" + str(i))
                 cropped_image.save(new_filepath)
                 cropped_image.close()
+                saved_files.append(new_filepath)
             logger.info("Cropped image: " + new_filepath)
         else:
             logger.info("No cropping")
@@ -172,10 +202,20 @@ class Cropper:
         return px[0] >= minimal_color and px[1] >= minimal_color and px[2] >= minimal_color
 
     @staticmethod
-    def is_close_color(px: Tuple[int, int, int], color: Tuple[int, int, int], tolerance=5) -> bool:
+    def is_close_color(px, color, tolerance=5) -> bool:
+        # Normalise to 3-channel tuples: getpixel returns an int for 'L'
+        # (grayscale) images and a 4-tuple for 'RGBA' images.
+        if isinstance(px, int):
+            px = (px, px, px)
+        else:
+            px = px[:3]
+        if isinstance(color, int):
+            color = (color, color, color)
+        else:
+            color = color[:3]
         return abs(px[0] - color[0]) <= tolerance and \
-                abs(px[1] - color[1]) <= tolerance and \
-                abs(px[2] - color[2]) <= tolerance
+               abs(px[1] - color[1]) <= tolerance and \
+               abs(px[2] - color[2]) <= tolerance
 
     @staticmethod
     def remove_borders(im: PilImage) -> Tuple[PilImage, bool]:
@@ -213,8 +253,9 @@ class Cropper:
             logger.info('no borders detected')
             return im, False
 
-        # Crop based on found borders
-        bbox = (left, top, right, bottom)
+        # Crop based on found borders.  PIL crop() takes an exclusive
+        # right/bottom boundary, so add 1 to include the last valid pixel.
+        bbox = (left, top, right + 1, bottom + 1)
         if config.debug:
             logger.debug(f"ORIGINAL IMAGE BOX: 0, 0, {width}, {height}")
             logger.debug(f"CROPPED IMAGE BOX: {left}, {top}, {right}, {bottom}")
@@ -237,62 +278,129 @@ class Cropper:
         '''
         width, height = im.size
         midpoint_x, midpoint_y = int(width / 2), int(height / 2)
-        
+
         logger.info("Starting multi-strategy division detection...")
         logger.info(f"Image dimensions: {width}x{height}")
 
-        # Get edge detection results
-        logger.info("Running Sobel edge detection...")
-        edge_image = detect_edges_sobel(im)
-        edge_array = np.array(edge_image)
-        
-        # Get contrast analysis
-        logger.info("Analyzing contrast regions...")
-        contrast_map = detect_contrast_regions(im)
-        
-        # Get color clustering results
-        logger.info("Performing color clustering analysis...")
-        color_clusters = analyze_color_clusters(im)
-        
-        # Initialize division dictionaries
-        horizontal_diffs = {}
-        vertical_diffs = {}
-        
-        # Process edge detection results for horizontal divisions
-        logger.info("Processing horizontal edge detection results...")
+        # Per-signal thresholds on their own natural scales (#12).
+        _PIXEL_DIFF_THRESHOLD = tolerance   # avg channel-sum diff per pixel, 0–765
+        _SOBEL_THRESHOLD      = tolerance   # mean normalised edge strength, 0–255
+        _ENTROPY_THRESHOLD    = 6.0         # window entropy, 0–8 bits
+        _CLUSTER_THRESHOLD    = 0.3         # fraction of pixels changing cluster, 0–1
+
+        # Weights for combining primary and secondary signals (#11).
+        # Pixel-diff is the most direct and reliable signal; Sobel/entropy/cluster
+        # are noisier secondary confirmations.
+        _PRIMARY_WEIGHT   = 0.6
+        _SECONDARY_WEIGHT = 0.4
+
+        # --- Primary signal: per-column/row average pixel-diff ---
+        # These methods directly measure how much adjacent pixels differ across
+        # every column (vertical divisions) and every row (horizontal divisions).
+        logger.info("Running pixel-diff division detection (primary)...")
+        pixel_v, _ = Cropper.detect_perfectly_vertical_divisions(im, tolerance=_PIXEL_DIFF_THRESHOLD)
+        pixel_h, _ = Cropper.detect_perfectly_horizontal_divisions(im, tolerance=_PIXEL_DIFF_THRESHOLD)
+        # Normalise to 0–1 (max possible avg diff is 255*3 = 765)
+        primary_v = {pos: s / 765.0 for pos, s in pixel_v.items()}
+        primary_h = {pos: s / 765.0 for pos, s in pixel_h.items()}
+        if config.debug:
+            logger.debug(f"Pixel-diff primary — vertical ({len(primary_v)}): "
+                         + ", ".join(f"x={p} score={s:.3f}" for p, s in sorted(primary_v.items())))
+            logger.debug(f"Pixel-diff primary — horizontal ({len(primary_h)}): "
+                         + ", ".join(f"y={p} score={s:.3f}" for p, s in sorted(primary_h.items())))
+
+        # --- Secondary signal: Sobel edge detection ---
+        logger.info("Running Sobel edge detection (secondary)...")
+        edge_array = np.array(detect_edges_sobel(im))
+        secondary_v: dict[int, float] = {}
+        secondary_h: dict[int, float] = {}
         for y in range(1, height):
-            edge_strength = np.mean(edge_array[y, :])
-            if edge_strength > tolerance:
-                horizontal_diffs[y] = edge_strength
-                
-        # Process edge detection results for vertical divisions
-        logger.info("Processing vertical edge detection results...")
+            mean = float(np.mean(edge_array[y, :]))
+            if mean > _SOBEL_THRESHOLD:
+                secondary_h[y] = max(secondary_h.get(y, 0.0), mean / 255.0)
         for x in range(1, width):
-            edge_strength = np.mean(edge_array[:, x])
-            if edge_strength > tolerance:
-                vertical_diffs[x] = edge_strength
-        
-        # Process contrast map for additional divisions
-        logger.info("Processing contrast map for additional divisions...")
+            mean = float(np.mean(edge_array[:, x]))
+            if mean > _SOBEL_THRESHOLD:
+                secondary_v[x] = max(secondary_v.get(x, 0.0), mean / 255.0)
+        if config.debug:
+            logger.debug(f"Sobel secondary — vertical ({len(secondary_v)}): "
+                         + ", ".join(f"x={p} score={s:.3f}" for p, s in sorted(secondary_v.items())))
+            logger.debug(f"Sobel secondary — horizontal ({len(secondary_h)}): "
+                         + ", ".join(f"y={p} score={s:.3f}" for p, s in sorted(secondary_h.items())))
+
+        # --- Secondary signal: entropy contrast map ---
+        # Entropy is 0–8; the old code compared against tolerance=100, which
+        # meant this signal never fired.  Use the scale-appropriate threshold.
+        logger.info("Analyzing contrast regions (secondary)...")
+        contrast_map = detect_contrast_regions(im)
+        entropy_v_hits: dict[int, float] = {}
+        entropy_h_hits: dict[int, float] = {}
         for (x, y), contrast in contrast_map.items():
-            if contrast > tolerance:
-                if x % 10 == 0:  # Vertical division
-                    vertical_diffs[x] = max(vertical_diffs.get(x, 0), contrast)
-                if y % 10 == 0:  # Horizontal division
-                    horizontal_diffs[y] = max(horizontal_diffs.get(y, 0), contrast)
-        
-        # Process color clusters for additional divisions
-        logger.info("Processing color cluster boundaries...")
+            if contrast > _ENTROPY_THRESHOLD:
+                score = contrast / 8.0
+                secondary_v[x] = max(secondary_v.get(x, 0.0), score)
+                secondary_h[y] = max(secondary_h.get(y, 0.0), score)
+                entropy_v_hits[x] = max(entropy_v_hits.get(x, 0.0), score)
+                entropy_h_hits[y] = max(entropy_h_hits.get(y, 0.0), score)
+        if config.debug:
+            logger.debug(f"Entropy secondary — vertical ({len(entropy_v_hits)}): "
+                         + ", ".join(f"x={p} score={s:.3f}" for p, s in sorted(entropy_v_hits.items())))
+            logger.debug(f"Entropy secondary — horizontal ({len(entropy_h_hits)}): "
+                         + ", ".join(f"y={p} score={s:.3f}" for p, s in sorted(entropy_h_hits.items())))
+
+        # --- Secondary signal: colour-cluster boundaries ---
+        # Only flag a column/row when a meaningful fraction of pixels change
+        # cluster across it; np.any() fired on virtually every column.
+        logger.info("Processing color cluster boundaries (secondary)...")
+        color_clusters = analyze_color_clusters(im)
         cluster_changes_x = np.diff(color_clusters, axis=1)
         cluster_changes_y = np.diff(color_clusters, axis=0)
-        
-        for x in range(1, width-1):
-            if np.any(cluster_changes_x[:, x] != 0):
-                vertical_diffs[x] = max(vertical_diffs.get(x, 0), tolerance)
-                
-        for y in range(1, height-1):
-            if np.any(cluster_changes_y[y, :] != 0):
-                horizontal_diffs[y] = max(horizontal_diffs.get(y, 0), tolerance)
+        cluster_v_hits: dict[int, float] = {}
+        cluster_h_hits: dict[int, float] = {}
+        for x in range(1, width - 1):
+            frac = float(np.sum(cluster_changes_x[:, x] != 0)) / height
+            if frac > _CLUSTER_THRESHOLD:
+                secondary_v[x] = max(secondary_v.get(x, 0.0), frac)
+                cluster_v_hits[x] = frac
+        for y in range(1, height - 1):
+            frac = float(np.sum(cluster_changes_y[y, :] != 0)) / width
+            if frac > _CLUSTER_THRESHOLD:
+                secondary_h[y] = max(secondary_h.get(y, 0.0), frac)
+                cluster_h_hits[y] = frac
+        if config.debug:
+            logger.debug(f"Cluster secondary — vertical ({len(cluster_v_hits)}): "
+                         + ", ".join(f"x={p} frac={s:.3f}" for p, s in sorted(cluster_v_hits.items())))
+            logger.debug(f"Cluster secondary — horizontal ({len(cluster_h_hits)}): "
+                         + ", ".join(f"y={p} frac={s:.3f}" for p, s in sorted(cluster_h_hits.items())))
+
+        # --- Combine signals with weights ---
+        # A position seen only by secondary signals scores ≤ 0.4; one confirmed
+        # by the primary pixel-diff method scores ≥ 0.6 and up to 1.0 when both
+        # agree.  This means primary-only detections always outrank secondary-only
+        # ones in the consolidation step that follows.
+        all_v = set(primary_v) | set(secondary_v)
+        all_h = set(primary_h) | set(secondary_h)
+        vertical_diffs = {
+            pos: primary_v.get(pos, 0.0) * _PRIMARY_WEIGHT
+                 + secondary_v.get(pos, 0.0) * _SECONDARY_WEIGHT
+            for pos in all_v
+        }
+        horizontal_diffs = {
+            pos: primary_h.get(pos, 0.0) * _PRIMARY_WEIGHT
+                 + secondary_h.get(pos, 0.0) * _SECONDARY_WEIGHT
+            for pos in all_h
+        }
+        if config.debug:
+            logger.debug(f"Composite scores — vertical ({len(vertical_diffs)}): "
+                         + ", ".join(f"x={p} score={s:.3f} "
+                                     f"(primary={primary_v.get(p, 0.0):.3f} "
+                                     f"secondary={secondary_v.get(p, 0.0):.3f})"
+                                     for p, s in sorted(vertical_diffs.items())))
+            logger.debug(f"Composite scores — horizontal ({len(horizontal_diffs)}): "
+                         + ", ".join(f"y={p} score={s:.3f} "
+                                     f"(primary={primary_h.get(p, 0.0):.3f} "
+                                     f"secondary={secondary_h.get(p, 0.0):.3f})"
+                                     for p, s in sorted(horizontal_diffs.items())))
 
         logger.info(f"Initial detection found {len(horizontal_diffs)} horizontal and {len(vertical_diffs)} vertical potential divisions")
 
@@ -300,25 +408,27 @@ class Cropper:
         logger.info("Consolidating close divisions...")
         horizontal_diffs = smart_consolidate_diffs(horizontal_diffs, height)
         vertical_diffs = smart_consolidate_diffs(vertical_diffs, width)
-        
+
         logger.info(f"After consolidation: {len(horizontal_diffs)} horizontal and {len(vertical_diffs)} vertical divisions")
-        
+        if config.debug:
+            logger.debug(f"After consolidation — vertical: {dict(sorted(vertical_diffs.items()))}")
+            logger.debug(f"After consolidation — horizontal: {dict(sorted(horizontal_diffs.items()))}")
+
         # Validate divisions
         logger.info("Validating detected divisions...")
-        validated_horizontal = {pos: strength for pos, strength in horizontal_diffs.items() 
-                              if validate_division(im, pos, True)}
-        validated_vertical = {pos: strength for pos, strength in vertical_diffs.items() 
-                            if validate_division(im, pos, False)}
+        validated_horizontal = {pos: strength for pos, strength in horizontal_diffs.items()
+                                 if validate_division(im, pos, True)}
+        validated_vertical = {pos: strength for pos, strength in vertical_diffs.items()
+                               if validate_division(im, pos, False)}
 
         logger.info(f"After validation: {len(validated_horizontal)} horizontal and {len(validated_vertical)} vertical valid divisions")
+        if config.debug:
+            logger.debug(f"Validated vertical divisions: {dict(sorted(validated_vertical.items()))}")
+            logger.debug(f"Validated horizontal divisions: {dict(sorted(validated_horizontal.items()))}")
 
         if len(validated_horizontal) == 0 and len(validated_vertical) == 0:
             logger.info('No borders or subimages detected')
             return [im], False
-
-        if config.debug:
-            logger.info(f'Found horizontal diffs: {validated_horizontal}')
-            logger.info(f'Found vertical diffs: {validated_vertical}')
 
         # If the image is divided down the middle, test both the left and right images for entropy.
         logger.info("Checking for middle divisions...")
@@ -387,6 +497,15 @@ class Cropper:
         if config.debug:
             logger.debug(f"SUBIMAGE CROP Xs: {xs}")
             logger.debug(f"SUBIMAGE CROP Ys: {ys}")
+        max_subimages = 200
+        grid_count = (len(xs) - 1) * (len(ys) - 1)
+        if grid_count > max_subimages:
+            logger.warning(
+                f"Aborting split: division detection produced {grid_count} cells "
+                f"({len(xs) - 1}×{len(ys) - 1}), which exceeds the limit of {max_subimages}. "
+                "Returning original image."
+            )
+            return [im]
         for x in range(len(xs) - 1):
             for y in range(len(ys) - 1):
                 subimages.append(im.crop((xs[x], ys[y], xs[x + 1], ys[y + 1])))
@@ -426,7 +545,7 @@ class Cropper:
         print_counts = 0
         if config.debug:
             logger.debug("Comparison for line: " + str(y))
-        for x in range(0, width - 1):
+        for x in range(width):
             px = im.getpixel((x,y))
             if not Cropper.is_close_color(px, color):
                 if config.debug:
@@ -443,7 +562,7 @@ class Cropper:
         print_counts = 0
         if config.debug:
             logger.debug("Comparison for column: " + str(x))
-        for y in range(0, height-1):
+        for y in range(height):
             px = im.getpixel((x,y))
             if not Cropper.is_close_color(px, color):
                 if config.debug:
@@ -541,7 +660,7 @@ class Cropper:
         return m1, m2
 
     @staticmethod
-    def detect_perfectly_vertical_divisions(im: PilImage, tolerance: int = 100, diffs: dict = {}) -> Tuple[dict, dict]:
+    def detect_perfectly_vertical_divisions(im: PilImage, tolerance: int = 100, diffs: dict = None) -> Tuple[dict, dict]:
         '''
         Some images have borders that use gradient colors, making a simple
         test for the presence of a vertical line not matching a color insufficient.
@@ -550,6 +669,8 @@ class Cropper:
         '''
         width, height = im.size
         x = 1
+        if diffs is None:
+            diffs = {}
         if len(diffs) == 0:
             while x < width:
                 diffs_for_x = []
@@ -578,7 +699,7 @@ class Cropper:
         return diffs, diffs_copy
 
     @staticmethod
-    def detect_perfectly_horizontal_divisions(im: PilImage, tolerance: int = 100, diffs: dict = {}) -> Tuple[dict, dict]:
+    def detect_perfectly_horizontal_divisions(im: PilImage, tolerance: int = 100, diffs: dict = None) -> Tuple[dict, dict]:
         '''
         Some images have borders that use gradient colors, making a simple
         test for the presence of a horizontal line matching a color insufficient.
@@ -587,7 +708,8 @@ class Cropper:
         '''
         width, height = im.size
         y = 1
-        diffs = {}
+        if diffs is None:
+            diffs = {}
         if len(diffs) == 0:
             while y < height:
                 diffs_for_y = []

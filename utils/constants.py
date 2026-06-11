@@ -42,6 +42,7 @@ class CompareMode(Enum):
     EVA_CLIP_EMBEDDING = _("EVA CLIP Embedding")
     METACLIP_EMBEDDING = _("MetaCLIP Embedding")
     VJEPA2_EMBEDDING = _("V-JEPA 2 Embedding")
+    FACE_EMBEDDING = _("Face Embedding")
     PROMPTS = _("Prompts")
     PROMPTS_EXACT = _("Prompts (Exact Match)")
     SIZE = _("Size")
@@ -68,6 +69,8 @@ class CompareMode(Enum):
             return _("MetaCLIP Embedding")
         elif self == CompareMode.VJEPA2_EMBEDDING:
             return _("V-JEPA 2 Embedding")
+        elif self == CompareMode.FACE_EMBEDDING:
+            return _("Face Embedding")
         elif self == CompareMode.PROMPTS:
             return _("Prompts")
         elif self == CompareMode.PROMPTS_EXACT:

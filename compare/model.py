@@ -27,6 +27,15 @@ try:
 except ImportError:
     logger.info("open_clip not installed — EVA CLIP mode unavailable (pip install open-clip-torch)")
 
+# InsightFace requires insightface + onnxruntime (or onnxruntime-gpu)
+insightface_loaded = False
+try:
+    import insightface  # noqa: F401
+    insightface_loaded = True
+    logger.info("insightface available — Face Embedding mode enabled")
+except ImportError:
+    logger.info("insightface not installed — Face Embedding mode unavailable (pip install insightface onnxruntime-gpu)")
+
 if config.xvlm_loc is not None:
     logger.info(f"Loading XVLM modules from {config.xvlm_loc}")
     try:
@@ -620,3 +629,48 @@ def image_embeddings_vjepa2(media_path):
         embedding = outputs.last_hidden_state.mean(dim=1)
         embedding = embedding / embedding.norm(dim=-1, keepdim=True)
         return embedding.float().tolist()[0]
+
+
+# ---------------------------------------------------------------------------
+# InsightFace ArcFace — face identity embeddings
+# ---------------------------------------------------------------------------
+
+_insightface_app = None
+
+
+def _get_insightface_app():
+    global _insightface_app
+    if _insightface_app is None:
+        import insightface
+        providers = (
+            ["CUDAExecutionProvider"] if torch.cuda.is_available()
+            else ["CPUExecutionProvider"]
+        )
+        _insightface_app = insightface.app.FaceAnalysis(
+            name=config.insightface_model,
+            providers=providers,
+        )
+        _insightface_app.prepare(ctx_id=0 if torch.cuda.is_available() else -1, det_size=(640, 640))
+    return _insightface_app
+
+
+def image_embeddings_face(media_path: str):
+    """Return a mean-pooled ArcFace embedding for all detected faces, or None if no face is found.
+
+    Detection confidence must meet config.insightface_det_thresh.  The returned
+    vector is L2-normalised and has shape (512,).
+    """
+    import cv2
+    import numpy as np
+    img = cv2.imread(media_path)
+    if img is None:
+        return None
+    faces = _get_insightface_app().get(img)
+    valid = [f.embedding for f in faces if f.det_score >= config.insightface_det_thresh]
+    if not valid:
+        return None
+    mean_emb = np.mean(valid, axis=0)
+    norm = np.linalg.norm(mean_emb)
+    if norm == 0:
+        return None
+    return (mean_emb / norm).tolist()

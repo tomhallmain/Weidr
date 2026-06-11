@@ -7,7 +7,9 @@ keyring
 matplotlib>=3.8.0
 numpy>=1.26.1
 openai-clip
-open-clip-torch
+open-clip-torch          # EVA CLIP embedding mode
+insightface              # Face Embedding mode
+onnxruntime-gpu          # GPU inference for InsightFace (use onnxruntime for CPU-only)
 opencv-python>=4.8.1.78
 av>=12.0.0
 pyppeteer

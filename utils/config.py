@@ -101,6 +101,8 @@ class Config:
         self.vjepa2_model = "facebook/vjepa2-vitl-fpc64-256"
         self.vjepa2_num_frames = 16
         self.vjepa2_half_precision = False
+        self.insightface_model = "buffalo_l"
+        self.insightface_det_thresh = 0.5
         self.always_open_new_windows = False
         self.image_types = [
             ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".bmp",
@@ -202,6 +204,7 @@ class Config:
                             "eva_clip_model",
                             "metaclip_model",
                             "vjepa2_model",
+                            "insightface_model",
                             "gimp_exe_loc")
             self.set_values(bool,
                             "debug",
@@ -266,6 +269,7 @@ class Config:
             self.set_values(float,
                             "embedding_similarity_threshold",
                             "threshold_potential_duplicate_embedding",
+                            "insightface_det_thresh",
                             "large_image_preview_overscan",
                             "large_image_hq_downscale_ratio_threshold",
                             "large_image_promotion_min_free_ram_gb",

@@ -64,6 +64,8 @@
   "vjepa2_model": "facebook/vjepa2-vitl-fpc64-256",
   "vjepa2_num_frames": 16,
   "vjepa2_half_precision": false,
+  "insightface_model": "buffalo_l",
+  "insightface_det_thresh": 0.5,
   "tag_suggestions_file": "tag_suggestions.json",
   "image_types": [
     ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".bmp",

@@ -80,6 +80,7 @@ Group large media sets by visual similarity using both embedding and color-compa
 - EVA CLIP: 1024D embeddings, large-scale CLIP variant from BAAI - requires `open-clip-torch`
 - MetaCLIP: 1024D embeddings, Meta's improved CLIP training data curation on ViT-H/14
 - V-JEPA 2: 1024D embeddings, video-primary world model encoder - supports images, video, and GIF; media-to-media similarity only (no text search)
+- Face Embedding: 512D ArcFace identity embeddings via InsightFace `buffalo_l`; images with no detected face are skipped; media-to-media only (no text search) - requires `insightface` and `onnxruntime-gpu`
 
 Each model offers different tradeoffs between accuracy, speed, and resource usage. The default CLIP model provides a good balance for most use cases.
 </details>

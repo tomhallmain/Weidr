@@ -642,15 +642,14 @@ def _get_insightface_app():
     global _insightface_app
     if _insightface_app is None:
         import insightface
-        providers = (
-            ["CUDAExecutionProvider"] if torch.cuda.is_available()
-            else ["CPUExecutionProvider"]
-        )
+        import onnxruntime
+        cuda_available = "CUDAExecutionProvider" in onnxruntime.get_available_providers()
+        providers = ["CUDAExecutionProvider"] if cuda_available else ["CPUExecutionProvider"]
         _insightface_app = insightface.app.FaceAnalysis(
             name=config.insightface_model,
             providers=providers,
         )
-        _insightface_app.prepare(ctx_id=0 if torch.cuda.is_available() else -1, det_size=(640, 640))
+        _insightface_app.prepare(ctx_id=0 if cuda_available else -1, det_size=(640, 640))
     return _insightface_app
 
 

@@ -1105,14 +1105,17 @@ class Prevalidation(ClassifierAction):
     def __init__(self, name=_("New Prevalidation"), positives=[], negatives=[], threshold=0.23,
                  text_embedding_threshold=None, prototype_threshold=0.23,
                  action=ClassifierActionType.NOTIFY, action_modifier="", run_on_folder=None, is_active=True,
-                 image_classifier_name="", image_classifier_selected_categories=[], 
+                 image_classifier_name="", image_classifier_selected_categories=[],
                  classification_mode=ImageClassifierClassificationMode.SELECTED_CATEGORIES,
                  use_embedding=True, use_image_classifier=False, use_prompts=False, use_blacklist=False,
                  use_pseudostatic_dynamic_media=False,
                  lookahead_names=[], profile_name=None, use_prototype=False, prototype_directory="",
                  negative_prototype_directory="", negative_prototype_lambda=0.5,
                  dynamic_content_sample_ratio=0.1, dynamic_content_positive_ratio=0.1,
-                 _last_used_profile=None, can_run: bool = True, initialization_error: Optional[str] = None):
+                 _last_used_profile=None,
+                 use_filename_contains=False, filename_contains_patterns=None,
+                 filename_contains_case_sensitive=False,
+                 can_run: bool = True, initialization_error: Optional[str] = None):
         # Pass all parameters including prototype settings to parent ClassifierAction
         super().__init__(name, positives, negatives, threshold,
                         text_embedding_threshold, prototype_threshold, action, action_modifier,
@@ -1123,6 +1126,9 @@ class Prevalidation(ClassifierAction):
                         negative_prototype_directory, negative_prototype_lambda,
                         dynamic_content_sample_ratio, dynamic_content_positive_ratio,
                         _last_used_profile, lookahead_names=lookahead_names,
+                        use_filename_contains=use_filename_contains,
+                        filename_contains_patterns=filename_contains_patterns,
+                        filename_contains_case_sensitive=filename_contains_case_sensitive,
                         can_run=can_run, initialization_error=initialization_error)
         self.profile_name = profile_name  # Name of DirectoryProfile to use (None = global)
         self.profile = None  # Cached DirectoryProfile instance (set after loading, or temporary for backward compatibility)

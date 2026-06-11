@@ -100,6 +100,9 @@ class BaseCompareEmbedding(BaseCompare):
                 self.compare_data.file_data_dict[f] = embedding
                 self.compare_data.has_new_file_data = True
 
+            if embedding is None:
+                continue
+
             counter += 1
             self._file_embeddings = np.vstack((self._file_embeddings, [embedding]))
             self.compare_data.files_found.append(f)
@@ -366,6 +369,11 @@ class BaseCompareEmbedding(BaseCompare):
                     logger.error(f"{search_media_path} - {e}")
                 raise AssertionError(
                     "Encountered an error accessing the provided file path in the file system.")
+
+            if embedding is None:
+                raise AssertionError(
+                    "No embedding could be produced for the search file. "
+                    "For face mode this means no face was detected in the image.")
 
             self._file_embeddings = np.insert(self._file_embeddings, 0, [embedding], 0)
             self.compare_data.files_found.insert(0, search_media_path)

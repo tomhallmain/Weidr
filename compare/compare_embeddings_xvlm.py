@@ -21,7 +21,6 @@ class CompareEmbeddingXVLM(BaseCompareEmbedding):
         super().__init__(args, gather_files_func)
         # X-VLM projects to embed_dim=256 for both 4m and 16m configs
         self._file_embeddings = np.empty((0, 256))
-        self._file_faces = np.empty((0))
         self.threshold_duplicate = CompareEmbeddingXVLM.THRESHHOLD_POTENTIAL_DUPLICATE
         self.threshold_probable_match = CompareEmbeddingXVLM.THRESHHOLD_PROBABLE_MATCH
         self.threshold_group_cutoff = CompareEmbeddingXVLM.THRESHHOLD_GROUP_CUTOFF

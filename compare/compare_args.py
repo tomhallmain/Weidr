@@ -12,7 +12,7 @@ class CompareArgs:
     def __init__(self, base_dir=".", listener=None, mode=Mode.GROUP, compare_mode=CompareMode.CLIP_EMBEDDING,
                  recursive=True, searching_image=False, search_media_path=None, search_text=None, search_text_negative=None,
                  find_duplicates=False, counter_limit=config.file_counter_limit, compare_threshold=config.embedding_similarity_threshold,
-                 compare_faces=False, file_filter=None, overwrite=False, store_checkpoints=config.store_checkpoints,
+                 file_filter=None, overwrite=False, store_checkpoints=config.store_checkpoints,
                  use_matrix_comparison=True, app_actions=None):
         self.base_dir = base_dir
         self.listener = listener
@@ -27,7 +27,6 @@ class CompareArgs:
         self.find_duplicates = find_duplicates
         self.counter_limit = counter_limit
         self.threshold = compare_threshold
-        self.compare_faces = compare_faces
         self.file_filter = file_filter
         self.overwrite = overwrite
         self.store_checkpoints = store_checkpoints
@@ -55,8 +54,6 @@ class CompareArgs:
                 or self.counter_limit != other.counter_limit
                 or self.file_filter != other.file_filter
                 or self.recursive != other.recursive
-                or (CompareMode.CLIP_EMBEDDING == self.compare_mode and self.compare_faces != other.compare_faces)
-                # Unfortunately, this boolean requires a separate method in the CompareEmbedding search case
                 or (not self.overwrite and other.overwrite))
 
     def clone(self):

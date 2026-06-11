@@ -54,7 +54,6 @@ class ComparePrompts(BaseCompareEmbedding):
     def __init__(self, args=CompareArgs(), gather_files_func=gather_files):
         super().__init__(args, gather_files_func)
         self._file_embeddings = np.empty((0, 768))  # FLAVA uses 768-dimensional embeddings
-        self._file_faces = np.empty((0))
         self.threshold_duplicate = ComparePrompts.THRESHHOLD_POTENTIAL_DUPLICATE
         self.threshold_probable_match = ComparePrompts.THRESHHOLD_PROBABLE_MATCH
         self.threshold_group_cutoff = ComparePrompts.THRESHHOLD_GROUP_CUTOFF

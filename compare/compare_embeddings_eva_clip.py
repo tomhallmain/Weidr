@@ -22,7 +22,6 @@ class CompareEmbeddingEvaClip(BaseCompareEmbedding):
         # EVA01-g-14 produces 1024-dimensional embeddings; update if using a
         # smaller EVA02 variant (EVA02-B-16 → 512, EVA02-L-14 → 768).
         self._file_embeddings = np.empty((0, 1024))
-        self._file_faces = np.empty((0))
         self.threshold_duplicate = CompareEmbeddingEvaClip.THRESHHOLD_POTENTIAL_DUPLICATE
         self.threshold_probable_match = CompareEmbeddingEvaClip.THRESHHOLD_PROBABLE_MATCH
         self.threshold_group_cutoff = CompareEmbeddingEvaClip.THRESHHOLD_GROUP_CUTOFF

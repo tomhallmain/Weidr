@@ -29,7 +29,6 @@ class BaseCompareEmbedding(BaseCompare):
         self.threshold_group_cutoff = None
         self.text_embedding_cache = {}
         self._file_embeddings = np.empty((0, 512))
-        self._file_faces = np.empty((0))
 
     def get_similarity_threshold(self):
         return self.embedding_similarity_threshold
@@ -44,7 +43,6 @@ class BaseCompareEmbedding(BaseCompare):
         if self.is_run_search:
             logger.info(f" search_media_path: {self.search_media_path}")
         logger.info(f" comparison files base directory: {self.base_dir}")
-        logger.info(f" compare faces: {self.compare_faces}")
         logger.info(f" embedding similarity threshold: {self.embedding_similarity_threshold}")
         logger.info(f" max file process limit: {self.args.counter_limit}")
         logger.info(f" max files processable for base dir: {self.max_files_processed}")
@@ -61,8 +59,7 @@ class BaseCompareEmbedding(BaseCompare):
         For all the found files in the base directory, either load the cached
         image data or extract new data and add it to the cache.
         '''
-        self.compare_data.load_data(overwrite=self.args.overwrite,
-                                    compare_faces=self.compare_faces)
+        self.compare_data.load_data(overwrite=self.args.overwrite)
 
         # Gather image file data from directory
 
@@ -86,13 +83,6 @@ class BaseCompareEmbedding(BaseCompare):
 
             if f in self.compare_data.file_data_dict:
                 embedding = self.compare_data.file_data_dict[f]
-                if self.compare_faces:
-                    if f in self.compare_data.file_faces_dict:
-                        n_faces = self.compare_data.file_faces_dict[f]
-                    else:
-                        image_file_path = self.get_image_path(f)
-                        n_faces = self._get_faces_count(image_file_path)
-                        self.compare_data.file_faces_dict[f] = n_faces
             else:
                 image_file_path = self.get_image_path(f)
                 try:
@@ -108,24 +98,15 @@ class BaseCompareEmbedding(BaseCompare):
                     # i.e. broken PNG file (bad header checksum in b'tEXt')
                     continue
                 self.compare_data.file_data_dict[f] = embedding
-                if self.compare_faces:
-                    if f in self.compare_data.file_faces_dict:
-                        n_faces = self.compare_data.file_faces_dict[f]
-                    else:
-                        n_faces = self._get_faces_count(image_file_path)
-                        self.compare_data.file_faces_dict[f] = n_faces
                 self.compare_data.has_new_file_data = True
 
             counter += 1
             self._file_embeddings = np.vstack((self._file_embeddings, [embedding]))
-            if self.compare_faces:
-                self._file_faces = np.vstack((self._file_faces, [n_faces]))
             self.compare_data.files_found.append(f)
             self._handle_progress(counter, self.max_files_processed_even)
 
         # Save image file data
-        self.compare_data.save_data(self.args.overwrite, verbose=self.verbose,
-                                    compare_faces=self.compare_faces)
+        self.compare_data.save_data(self.args.overwrite, verbose=self.verbose)
 
     def _compute_embedding_diff(self, base_array, compare_array,
                                 return_diff_scores=False, threshold=None):
@@ -154,10 +135,7 @@ class BaseCompareEmbedding(BaseCompare):
             return self.run_comparison(store_checkpoints=store_checkpoints)
 
     def run_search(self):
-        if self.args.compare_faces:
-            return self._run_search_on_path(self.search_media_path)
-        else:
-            return self.search_multimodal()
+        return self.search_multimodal()
 
     def run_comparison(self, store_checkpoints=False):
         '''
@@ -198,9 +176,6 @@ class BaseCompareEmbedding(BaseCompare):
         # Ensure we have correct counts of data compared to files found
         if len(self.compare_data.files_found) != len(self._file_embeddings):
             logger.error(f"Warning: Mismatch between files_found ({len(self.compare_data.files_found)}) and file_embeddings ({len(self._file_embeddings)})")
-
-        if self.compare_faces and len(self.compare_data.files_found) != len(self._file_faces):
-            logger.error(f"Warning: Mismatch between files_found ({len(self.compare_data.files_found)}) and file_faces ({len(self._file_faces)})")
 
         if self.verbose:
             logger.info("Identifying groups of similar image files...")
@@ -278,13 +253,7 @@ class BaseCompareEmbedding(BaseCompare):
         color_similars = self._compute_embedding_diff(
             self._file_embeddings, compare_file_embeddings, True)
 
-        if self.compare_faces:
-            compare_file_faces = np.roll(self._file_faces, i, 0)
-            face_comparisons = self._file_faces - compare_file_faces
-            face_similars = face_comparisons == 0
-            similars = np.nonzero(color_similars[0] * face_similars)
-        else:
-            similars = np.nonzero(color_similars[0])
+        similars = np.nonzero(color_similars[0])
         
         return similars, color_similars[1]
 
@@ -329,8 +298,7 @@ class BaseCompareEmbedding(BaseCompare):
     def find_similars_to_image(self, search_path, search_file_index):
         '''
         Search the numpy array of all known image arrays for similar
-        characteristics to the provide image.
-        NOTE Legacy method to allow for compare_faces boolean to be respected.
+        characteristics to the provided image.
         '''
         files_grouped = {}
         _files_found = list(self.compare_data.files_found)
@@ -343,14 +311,7 @@ class BaseCompareEmbedding(BaseCompare):
         embedding_similars = self._compute_embedding_diff(
             file_embeddings, search_file_embedding, True)
 
-        if self.compare_faces:
-            search_file_faces = self._file_faces[search_file_index]
-            file_faces = np.delete(self._file_faces, search_file_index)
-            face_comparisons = file_faces - search_file_faces
-            face_similars = face_comparisons == 0
-            similars = np.nonzero(embedding_similars[0] * face_similars)
-        else:
-            similars = np.nonzero(embedding_similars[0])
+        similars = np.nonzero(embedding_similars[0])
 
         if config.search_only_return_closest:
             for _index in similars[0]:
@@ -378,7 +339,6 @@ class BaseCompareEmbedding(BaseCompare):
     def _run_search_on_path(self, search_media_path):
         '''
         Prepare and begin a search for a provided image file path.
-        NOTE Legacy method to allow for compare_faces boolean to be respected.
         '''
         if (search_media_path is None or search_media_path == ""
                 or search_media_path == self.base_dir):
@@ -408,9 +368,6 @@ class BaseCompareEmbedding(BaseCompare):
                     "Encountered an error accessing the provided file path in the file system.")
 
             self._file_embeddings = np.insert(self._file_embeddings, 0, [embedding], 0)
-            if self.compare_faces:
-                n_faces = self._get_faces_count(search_media_path)
-                self._file_faces = np.insert(self._file_faces, 0, [n_faces], 0)
             self.compare_data.files_found.insert(0, search_media_path)
 
         files_grouped = self.find_similars_to_image(
@@ -629,8 +586,6 @@ class BaseCompareEmbedding(BaseCompare):
 
         if len(self._file_embeddings) > 0:
             self._file_embeddings = np.delete(self._file_embeddings, remove_indexes, axis=0)
-        if len(self._file_faces) > 0:
-            self._file_faces = np.delete(self._file_faces, remove_indexes, axis=0)
 
         for f in removed_files:
             if f in self.compare_data.files_found:
@@ -649,10 +604,6 @@ class BaseCompareEmbedding(BaseCompare):
                     continue
                 self.file_embeddings_dict[f] = embedding
                 self._file_embeddings = np.vstack((self._file_embeddings, [embedding]))
-                if self.compare_faces:
-                    n_faces = self.get_faces_count(f)
-                    self.compare_data.file_faces_dict = n_faces
-                    self._file_faces = np.vstack((self._file_faces, [n_faces]))
                 if self.verbose:
                     logger.info(f"Readded file to compare: {f}")
 
@@ -733,7 +684,6 @@ def usage():
     print("  Option                 Function                                 Default")
     print("      --dir=dirpath      Set base directory                       .      ")
     print("      --counter=int      Set counter cutoff for processing files  10000  ")
-    print("      --faces=bool       Set use strict face matching             True   ")
     print("  -h, --help             Print help                                      ")
     print("      --include=pattern  File inclusion pattern                          ")
     print("      --search=filepath  Search for similar files to file         None   ")
@@ -746,7 +696,6 @@ def main(compare_class):
     overwrite = False
     search_media_path = None
     verbose = False
-    compare_faces = True
     include_gifs = False
     counter_limit = 10000
     file_filter = None
@@ -754,7 +703,7 @@ def main(compare_class):
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], "bcfist:hov", [
-            "help",  "overwrite", "dir=", "counter=", "faces=", "include=",
+            "help", "overwrite", "dir=", "counter=", "include=",
             "search=", "use_thumb=", "threshold="])
     except getopt.GetoptError as err:
         print(err)
@@ -778,8 +727,6 @@ def main(compare_class):
                 include_gifs = True
             elif o == "--include":
                 file_filter = a
-            elif o == "--faces":
-                compare_faces = a == "True" or a == "true" or a == "t"
             elif o in ("-o", "--overwrite"):
                 overwrite = True
                 confirm = input("Confirm overwriting image data (y/n): ")
@@ -806,7 +753,6 @@ def main(compare_class):
                                search_media_path=search_media_path,
                                counter_limit=counter_limit,
                                embedding_similarity_threshold=embedding_similarity_threshold,
-                               compare_faces=compare_faces,
                                file_filter=file_filter,
                                overwrite=overwrite,
                                verbose=verbose,

@@ -20,7 +20,6 @@ class CompareEmbeddingSiglip(BaseCompareEmbedding):
     def __init__(self, args=CompareArgs(), gather_files_func=gather_files):
         super().__init__(args, gather_files_func)
         self._file_embeddings = np.empty((0, 1024 if config.siglip_enable_large_model else 768))
-        self._file_faces = np.empty((0))
         self.threshold_duplicate = CompareEmbeddingSiglip.THRESHHOLD_POTENTIAL_DUPLICATE
         self.threshold_probable_match = CompareEmbeddingSiglip.THRESHHOLD_PROBABLE_MATCH
         self.threshold_group_cutoff = CompareEmbeddingSiglip.THRESHHOLD_GROUP_CUTOFF

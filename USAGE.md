@@ -11,7 +11,7 @@ python -m compare.compare_embeddings_clip --dir /path/to/media
 python -m compare.compare_colors --dir /path/to/media
 ```
 
-Supported command line options (embedding and color modules): `--dir`, `--counter`, `--faces`, `--include`, `--search`, `-o`/`--overwrite`, `--threshold`, `-v` (verbose), `-h`/`--help`. Embedding modules use `--threshold=float` (similarity, default 0.9); color uses `--threshold=int` (color diff) and `--use_thumb`. Multiple embedding modes exist (e.g. `compare_embeddings_clip`, `compare_embeddings_siglip`, `compare_embeddings_laion`); each shares the same CLI.
+Supported command line options (embedding and color modules): `--dir`, `--counter`, `--include`, `--search`, `-o`/`--overwrite`, `--threshold`, `-v` (verbose), `-h`/`--help`. Embedding modules use `--threshold=float` (similarity, default 0.9); color uses `--threshold=int` (color diff) and `--use_thumb`. Multiple embedding modes exist (e.g. `compare_embeddings_clip`, `compare_embeddings_siglip`, `compare_embeddings_laion`); each shares the same CLI.
 
 <details>
 <summary>View Usage Details</summary>

@@ -22,7 +22,6 @@ class CompareEmbeddingMetaClip(BaseCompareEmbedding):
         # Default model (facebook/metaclip-fullcc2.5b-h14-400m) is ViT-H/14 → 1024-dim.
         # Smaller variants: ViT-L/14 → 768, ViT-B/16 or B/32 → 512.
         self._file_embeddings = np.empty((0, 1024))
-        self._file_faces = np.empty((0))
         self.threshold_duplicate = CompareEmbeddingMetaClip.THRESHHOLD_POTENTIAL_DUPLICATE
         self.threshold_probable_match = CompareEmbeddingMetaClip.THRESHHOLD_PROBABLE_MATCH
         self.threshold_group_cutoff = CompareEmbeddingMetaClip.THRESHHOLD_GROUP_CUTOFF

@@ -24,7 +24,6 @@ class CompareEmbeddingVJepa2(BaseCompareEmbedding):
     def __init__(self, args=CompareArgs(), gather_files_func=gather_files):
         super().__init__(args, gather_files_func)
         self._file_embeddings = np.empty((0, _VJEPA2_DEFAULT_DIM))
-        self._file_faces = np.empty((0))
         self.threshold_duplicate = CompareEmbeddingVJepa2.THRESHHOLD_POTENTIAL_DUPLICATE
         self.threshold_probable_match = CompareEmbeddingVJepa2.THRESHHOLD_PROBABLE_MATCH
         self.threshold_group_cutoff = CompareEmbeddingVJepa2.THRESHHOLD_GROUP_CUTOFF

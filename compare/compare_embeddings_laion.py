@@ -20,7 +20,6 @@ class CompareEmbeddingLaion(BaseCompareEmbedding):
     def __init__(self, args=CompareArgs(), gather_files_func=gather_files):
         super().__init__(args, gather_files_func)
         self._file_embeddings = np.empty((0, 1024))  # LAION ViT-H/14 has 1024-dimensional embeddings
-        self._file_faces = np.empty((0))
         self.threshold_duplicate = CompareEmbeddingLaion.THRESHHOLD_POTENTIAL_DUPLICATE
         self.threshold_probable_match = CompareEmbeddingLaion.THRESHHOLD_PROBABLE_MATCH
         self.threshold_group_cutoff = CompareEmbeddingLaion.THRESHHOLD_GROUP_CUTOFF

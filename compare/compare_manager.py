@@ -79,7 +79,6 @@ class CompareManager:
         # Compare settings (migrated from sidebar)
         self._threshold: Optional[float] = None
         self._counter_limit: Optional[int] = None
-        self._compare_faces: bool = False
         self._overwrite: bool = False
         self._store_checkpoints: bool = config.store_checkpoints
         self._use_matrix_comparison: bool = True
@@ -341,7 +340,6 @@ class CompareManager:
             args.counter_limit = config.file_counter_limit
         
         # Apply boolean settings (these always have values, no fallback needed)
-        args.compare_faces = self.get_compare_faces()
         args.overwrite = self.get_overwrite()
         args.store_checkpoints = self.get_store_checkpoints()
         args.use_matrix_comparison = self.get_use_matrix_comparison()
@@ -371,8 +369,6 @@ class CompareManager:
                     logger.info(f"   {instance_id} ({config.compare_mode.name}): threshold={threshold_str}{weight_str}{search_text_str}{search_neg_str}")
         
         logger.info(f" comparison files base directory: {args.base_dir}")
-        logger.info(f" compare faces: {args.compare_faces}")
-        
         # Threshold display depends on mode
         if self._primary_mode == CompareMode.COLOR_MATCHING:
             logger.info(f" color diff threshold: {args.threshold}")
@@ -394,15 +390,6 @@ class CompareManager:
             logger.info(" data filter: None")
         
         logger.info("|--------------------------------------------------------------------|\n")
-    
-    def set_compare_faces(self, compare_faces: bool):
-        """Set compare faces option."""
-        self._compare_faces = compare_faces
-        logger.info(f"Compare faces set to: {compare_faces}")
-    
-    def get_compare_faces(self) -> bool:
-        """Get compare faces option."""
-        return self._compare_faces
     
     def set_overwrite(self, overwrite: bool):
         """Set overwrite cache option."""
@@ -436,7 +423,6 @@ class CompareManager:
         if not self.has_compare():
             return
         last = self.get_args()
-        self.set_compare_faces(last.compare_faces)
         self.set_overwrite(last.overwrite)
         self.set_store_checkpoints(last.store_checkpoints)
         self.set_use_matrix_comparison(last.use_matrix_comparison)
@@ -1149,7 +1135,6 @@ class CompareManager:
     def _current_run_settings(self) -> "CompareRunSettings":
         from compare.compare_history import CompareRunSettings
         return CompareRunSettings(
-            compare_faces=self.get_compare_faces(),
             overwrite=self.get_overwrite(),
             store_checkpoints=self.get_store_checkpoints(),
             use_matrix_comparison=self.get_use_matrix_comparison(),
@@ -1158,7 +1143,6 @@ class CompareManager:
         )
 
     def _apply_run_settings(self, settings: "CompareRunSettings") -> None:
-        self.set_compare_faces(settings.compare_faces)
         self.set_overwrite(settings.overwrite)
         self.set_store_checkpoints(settings.store_checkpoints)
         self.set_use_matrix_comparison(settings.use_matrix_comparison)

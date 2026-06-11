@@ -362,7 +362,6 @@ class CompareWrapper:
             get_new_data = self._compare.args._is_new_data_request_required(args)
             self._compare.args = args
             self._compare.sync_search_state()
-            self._compare.compare_faces = args.compare_faces
             self._compare.set_similarity_threshold(args.threshold)
             self._compare.print_settings()
 

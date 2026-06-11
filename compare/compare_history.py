@@ -6,7 +6,7 @@ Each CompareHistory entry snapshots CompareManager state for a directory:
 - ``instances``: serialized :class:`compare.compare_manager.CompareConfig` rows
   (per-mode instance: mode, weight, threshold override, search text, …).
 - ``run_settings``: global options applied to :class:`compare.compare_args.CompareArgs`
-  on each run (faces, overwrite, checkpoints, matrix path, threshold, file limit).
+  on each run (overwrite, checkpoints, matrix path, threshold, file limit).
 - ``combination_logic`` / ``filter_dict``: composite logic and pre-filter tree.
 
 CompareArgs itself is not stored in history; it is built at run time (base_dir,
@@ -35,7 +35,6 @@ _CACHE_KEY = "recent_compare_history"
 class CompareRunSettings:
     """Global compare options (CompareManager → CompareArgs), not per-instance."""
 
-    compare_faces: bool = False
     overwrite: bool = False
     store_checkpoints: bool = False
     use_matrix_comparison: bool = True
@@ -44,7 +43,6 @@ class CompareRunSettings:
 
     def to_json(self) -> dict:
         return {
-            "compare_faces": self.compare_faces,
             "overwrite": self.overwrite,
             "store_checkpoints": self.store_checkpoints,
             "use_matrix_comparison": self.use_matrix_comparison,
@@ -57,7 +55,6 @@ class CompareRunSettings:
         if not data:
             return cls()
         return cls(
-            compare_faces=bool(data.get("compare_faces", False)),
             overwrite=bool(data.get("overwrite", False)),
             store_checkpoints=bool(data.get("store_checkpoints", False)),
             use_matrix_comparison=bool(data.get("use_matrix_comparison", True)),

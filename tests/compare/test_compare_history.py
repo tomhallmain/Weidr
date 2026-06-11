@@ -8,7 +8,6 @@ from utils.constants import CompareMode
 
 def test_run_settings_round_trip_json():
     rs = CompareRunSettings(
-        compare_faces=True,
         overwrite=True,
         store_checkpoints=True,
         use_matrix_comparison=False,
@@ -29,12 +28,10 @@ def test_history_from_json_legacy_top_level_matrix_flag():
     })
     assert h is not None
     assert h.run_settings.use_matrix_comparison is False
-    assert h.run_settings.compare_faces is False
 
 
 def test_manager_snapshot_restores_run_settings():
     mgr = CompareManager()
-    mgr.set_compare_faces(True)
     mgr.set_overwrite(True)
     mgr.set_store_checkpoints(True)
     mgr.set_use_matrix_comparison(False)
@@ -42,14 +39,12 @@ def test_manager_snapshot_restores_run_settings():
     mgr.set_counter_limit(1234)
 
     snap = mgr.snapshot(CompareArgs(base_dir="/data/photos"))
-    assert snap.run_settings.compare_faces is True
     assert snap.run_settings.use_matrix_comparison is False
     assert snap.run_settings.threshold == 0.91
     assert snap.run_settings.counter_limit == 1234
 
     mgr2 = CompareManager()
     mgr2.apply_snapshot(snap)
-    assert mgr2.get_compare_faces() is True
     assert mgr2.get_overwrite() is True
     assert mgr2.get_store_checkpoints() is True
     assert mgr2.get_use_matrix_comparison() is False

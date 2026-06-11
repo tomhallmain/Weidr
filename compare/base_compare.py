@@ -1,9 +1,7 @@
 from glob import glob
 import os
-import random
 import sys
 
-import cv2
 import numpy as np
 
 from compare.compare_args import CompareArgs
@@ -63,14 +61,10 @@ class BaseCompare:
         # Keep search-mode state centralized from full args (positive/negative
         # image and text inputs), not just positive search image path.
         self.sync_search_state()
-        self.compare_faces = self.args.compare_faces
         # self.args.match_dims = match_dims
         self.verbose = self.args.verbose
         self.progress_listener = self.args.listener
-        self._faceCascade = None
         self._cancelled = False
-        if self.compare_faces:
-            self._set_face_cascade()
         self.gather_files_func = gather_files_func
         self.compare_result = CompareResult(base_dir=self.args.base_dir, mode=self.args.compare_mode)
 
@@ -301,44 +295,6 @@ class BaseCompare:
 
     def print_settings(self):
         pass
-
-    def _set_face_cascade(self):
-        '''
-        Load the face recognition model if compare_faces option was requested.
-        '''
-        cascPath = ""
-        for minor_version in range(10, 5, -1):
-            cascPath = "/usr/local/lib/python3." + \
-                str(minor_version) + \
-                "/site-packages/cv2/data/haarcascade_frontalface_default.xml"
-            if os.path.exists(cascPath):
-                break
-        if not os.path.exists(cascPath):
-            logger.warning("WARNING: Face cascade model not found (cv2 package,"
-                  + " Python version 3.6 or greater expected)")
-            logger.warning("Run with flag --faces=False to avoid this warning.")
-            self.compare_faces = False
-        else:
-            self._faceCascade = cv2.CascadeClassifier(cascPath)
-
-    def _get_faces_count(self, filepath):
-        '''
-        Try to get the number of faces in the image using the face model.
-        '''
-        n_faces = random.random() * 10000 + 6  # Set to a value unlikely to match
-        try:
-            gray = cv2.imread(filepath, 0)
-            faces = self._faceCascade.detectMultiScale(
-                gray,
-                scaleFactor=1.1,
-                minNeighbors=5,
-                flags=cv2.CASCADE_SCALE_IMAGE
-            )
-            n_faces = len(faces)
-        except Exception as e:
-            if self.verbose:
-                logger.error(e)
-        return n_faces
 
     def run(self):
         pass

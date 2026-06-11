@@ -20,7 +20,6 @@ class CompareEmbeddingAlign(BaseCompareEmbedding):
     def __init__(self, args=CompareArgs(), gather_files_func=gather_files):
         super().__init__(args, gather_files_func)
         self._file_embeddings = np.empty((0, 640))
-        self._file_faces = np.empty((0))
         self.threshold_duplicate = CompareEmbeddingAlign.THRESHHOLD_POTENTIAL_DUPLICATE
         self.threshold_probable_match = CompareEmbeddingAlign.THRESHHOLD_PROBABLE_MATCH
         self.threshold_group_cutoff = CompareEmbeddingAlign.THRESHHOLD_GROUP_CUTOFF

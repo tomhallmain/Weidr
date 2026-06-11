@@ -264,9 +264,6 @@ class CompareSettingsWindow(SmartDialog):
         right.addLayout(limit_row)
 
         # Option checkboxes (from last compare args when a run exists, else manager/history)
-        self._compare_faces_cb = QCheckBox(_("Compare faces"))
-        right.addWidget(self._compare_faces_cb)
-
         self._overwrite_cb = QCheckBox(_("Overwrite cache"))
         right.addWidget(self._overwrite_cb)
 
@@ -430,9 +427,6 @@ class CompareSettingsWindow(SmartDialog):
                 return bool(getattr(current_args, attr, default))
             return getattr(mgr, getter_name)()
 
-        self._compare_faces_cb.setChecked(
-            _bool_from_run("compare_faces", "get_compare_faces", False)
-        )
         self._overwrite_cb.setChecked(
             _bool_from_run("overwrite", "get_overwrite", False)
         )
@@ -570,7 +564,6 @@ class CompareSettingsWindow(SmartDialog):
             logger.warning(f"Invalid counter limit: {self._counter_limit_edit.text()!r}")
 
         # Boolean options
-        self._compare_manager.set_compare_faces(self._compare_faces_cb.isChecked())
         self._compare_manager.set_overwrite(self._overwrite_cb.isChecked())
         self._compare_manager.set_store_checkpoints(self._store_checkpoints_cb.isChecked())
         self._compare_manager.set_use_matrix_comparison(

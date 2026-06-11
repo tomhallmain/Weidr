@@ -28,7 +28,6 @@ def usage():
     print("  Option                 Function                                 Default")
     print("      --dir=dirpath      Set base directory                       .      ")
     print("      --counter=int      Set counter cutoff for processing files  10000  ")
-    print("      --faces=bool       Set use strict face matching             True   ")
     print("  -h, --help             Print help                                      ")
     print("      --include=pattern  File inclusion pattern                          ")
     print("      --search=filepath  Search for similar files to file         None   ")
@@ -165,7 +164,6 @@ class CompareColors(BaseCompare):
         self.CACHE_FILENAME = (CompareColors.CACHE_FILENAME_THUMB if use_thumb
                                else CompareColors.CACHE_FILENAME_TOP)
         super().__init__(args, gather_files_func)
-        self.compare_faces = self.args.compare_faces
         if self.use_thumb:
             self.thumb_dim = 15
             self.n_colors = self.thumb_dim ** 2
@@ -186,7 +184,6 @@ class CompareColors(BaseCompare):
             self.color_getter = get_image_colors
             self.color_diff_alg = is_any_x_true_weighted
         self._file_colors = np.empty((0, self.n_colors, 3))
-        self._file_faces = np.empty((0))
         self.settings_updated = False
         self._probable_duplicates = []
 
@@ -197,7 +194,6 @@ class CompareColors(BaseCompare):
         if self.is_run_search:
             logger.info(f" search_media_path: {self.search_media_path}")
         logger.info(f" comparison files base directory: {self.base_dir}")
-        logger.info(f" compare faces: {self.compare_faces}")
         logger.info(f" use thumb: {self.use_thumb}")
         logger.info(f" max file process limit: {self.args.counter_limit}")
         logger.info(
@@ -227,8 +223,7 @@ class CompareColors(BaseCompare):
         For all the found files in the base directory, either load the cached
         image data or extract new data and add it to the cache.
         '''
-        self.compare_data.load_data(overwrite=self.args.overwrite,
-                                    compare_faces=self.compare_faces)
+        self.compare_data.load_data(overwrite=self.args.overwrite)
 
         # Gather image file data from directory
 
@@ -251,8 +246,6 @@ class CompareColors(BaseCompare):
 
             if f in self.compare_data.file_data_dict:
                 colors = self.compare_data.file_data_dict[f]
-                if self.compare_faces and f in self.compare_data.file_faces_dict:
-                    n_faces = self.compare_data.file_faces_dict[f]
             else:
                 image_file_path = self.get_image_path(f)
                 try:
@@ -277,24 +270,15 @@ class CompareColors(BaseCompare):
                     continue
 
                 self.compare_data.file_data_dict[f] = colors
-                if self.compare_faces:
-                    if f in self.compare_data.file_faces_dict:
-                        n_faces = self.compare_data.file_faces_dict[f]
-                    else:
-                        n_faces = self._get_faces_count(f)
-                        self.compare_data.file_faces_dict[f] = n_faces
                 self.compare_data.has_new_file_data = True
 
             counter += 1
             self._file_colors = np.vstack((self._file_colors, [colors]))
-            if self.compare_faces:
-                self._file_faces = np.vstack((self._file_faces, [n_faces]))
             self.compare_data.files_found.append(f)
             self._handle_progress(counter, self.max_files_processed_even)
 
         # Save image file data
-        self.compare_data.save_data(self.args.overwrite, verbose=self.verbose,
-                                    compare_faces=self.compare_faces)
+        self.compare_data.save_data(self.args.overwrite, verbose=self.verbose)
 
     def _compute_color_diff(self, base_array, compare_array,
                             return_diff_scores=False):
@@ -328,14 +312,7 @@ class CompareColors(BaseCompare):
         color_similars = self._compute_color_diff(
             file_colors, search_file_colors, True)
 
-        if self.compare_faces:
-            search_file_faces = self._file_faces[search_file_index]
-            file_faces = np.delete(self._file_faces, search_file_index)
-            face_comparisons = file_faces - search_file_faces
-            face_similars = face_comparisons == 0
-            similars = np.nonzero(color_similars[0] * face_similars)
-        else:
-            similars = np.nonzero(color_similars[0])
+        similars = np.nonzero(color_similars[0])
 
         if config.search_only_return_closest:
             for _index in similars[0]:
@@ -399,9 +376,7 @@ class CompareColors(BaseCompare):
                     logger.error(e)
                 raise AssertionError(
                     "Encountered an error gathering colors from the file provided.")
-            n_faces = self._get_faces_count(search_media_path)
             self._file_colors = np.insert(self._file_colors, 0, [colors], 0)
-            self._file_faces = np.insert(self._file_faces, 0, [n_faces], 0)
             self.compare_data.files_found.insert(0, search_media_path)
 
         files_grouped = self.find_similars_to_image(
@@ -447,9 +422,6 @@ class CompareColors(BaseCompare):
         if len(self.compare_data.files_found) != len(self._file_colors):
             logger.error(f"Warning: Mismatch between files_found ({len(self.compare_data.files_found)}) and file_colors ({len(self._file_colors)})")
 
-        if self.compare_faces and len(self.compare_data.files_found) != len(self._file_faces):
-            logger.error(f"Warning: Mismatch between files_found ({len(self.compare_data.files_found)}) and file_faces ({len(self._file_faces)})")
-
         for i in range(self.compare_data.n_files_found):
             if i == 0:  # At this roll index the data would compare to itself
                 continue
@@ -465,13 +437,7 @@ class CompareColors(BaseCompare):
             color_similars = self._compute_color_diff(
                 self._file_colors, compare_file_colors, True)
 
-            if self.compare_faces:
-                compare_file_faces = np.roll(self._file_faces, i, 0)
-                face_comparisons = self._file_faces - compare_file_faces
-                face_similars = face_comparisons == 0
-                similars = np.nonzero(color_similars[0] * face_similars)
-            else:
-                similars = np.nonzero(color_similars[0])
+            similars = np.nonzero(color_similars[0])
 
             for base_index in similars[0]:
                 diff_index = ((base_index - i) %
@@ -568,9 +534,6 @@ class CompareColors(BaseCompare):
         if len(self._file_colors) > 0:
             self._file_colors = np.delete(
                 self._file_colors, remove_indexes, axis=0)
-        if len(self._file_faces) > 0:
-            self._file_faces = np.delete(
-                self._file_faces, remove_indexes, axis=0)
 
         for f in removed_files:
             if f in self.compare_data.files_found:
@@ -589,7 +552,6 @@ if __name__ == "__main__":
     search_file_index = None
     search_media_path = None
     verbose = False
-    compare_faces = True
     include_gifs = False
     use_thumb = True
     counter_limit = 10000
@@ -597,8 +559,8 @@ if __name__ == "__main__":
     color_diff_threshold = None
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "bcfist:hov", [
-            "help",  "overwrite", "dir=", "counter=", "faces=", "include=",
+        opts, args = getopt.getopt(sys.argv[1:], "bcist:hov", [
+            "help",  "overwrite", "dir=", "counter=", "include=",
             "search=", "use_thumb=", "threshold="])
     except getopt.GetoptError as err:
         print(err)
@@ -622,8 +584,6 @@ if __name__ == "__main__":
                 include_gifs = True
             elif o == "--include":
                 file_filter = a
-            elif o == "--faces":
-                compare_faces = a == "True" or a == "true" or a == "t"
             elif o in ("-o", "--overwrite"):
                 overwrite = True
                 confirm = input("Confirm overwriting image data (y/n): ")
@@ -653,7 +613,6 @@ if __name__ == "__main__":
                       search_media_path=search_media_path,
                       counter_limit=counter_limit,
                       use_thumb=use_thumb,
-                      compare_faces=compare_faces,
                       color_diff_threshold=color_diff_threshold,
                       file_filter=file_filter,
                       overwrite=overwrite, verbose=verbose,

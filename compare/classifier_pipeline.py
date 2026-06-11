@@ -128,6 +128,27 @@ class PromptCondition:
         return f"Prompts([{terms}])"
 
 
+class FilenameContainsCondition:
+    """Checks whether the media filename contains any of the given substrings."""
+    condition_type = "filename_contains"
+
+    def __init__(self, patterns: list[str] = None, case_sensitive: bool = False):
+        self.patterns: list[str] = list(patterns) if patterns else []
+        self.case_sensitive: bool = case_sensitive
+
+    def to_dict(self) -> dict:
+        return {
+            "condition_type": self.condition_type,
+            "patterns": self.patterns,
+            "case_sensitive": self.case_sensitive,
+        }
+
+    def summary(self) -> str:
+        terms = ", ".join(self.patterns) if self.patterns else "(none)"
+        cs = "cs" if self.case_sensitive else "ci"
+        return f"FilenameContains([{terms}], {cs})"
+
+
 class LookaheadCondition:
     """References a named Lookahead check."""
     condition_type = "lookahead"
@@ -194,6 +215,7 @@ NodeCondition = (
     | ClassifierRankCondition
     | PrototypeCondition
     | PromptCondition
+    | FilenameContainsCondition
     | LookaheadCondition
     | NodeResultCondition
     | CompositeCondition
@@ -228,6 +250,11 @@ def _condition_from_dict(d: dict):
         return PromptCondition(
             prompts=d.get("prompts", []),
             use_blacklist=d.get("use_blacklist", False),
+        )
+    if ct == "filename_contains":
+        return FilenameContainsCondition(
+            patterns=d.get("patterns", []),
+            case_sensitive=d.get("case_sensitive", False),
         )
     if ct == "lookahead":
         return LookaheadCondition(lookahead_name=d.get("lookahead_name", ""))
@@ -460,6 +487,12 @@ class ClassifierPipeline:
                 errors.append(f"Node {node_name!r}: min_rank must be ≥ 1.")
             if condition.max_rank < condition.min_rank:
                 errors.append(f"Node {node_name!r}: max_rank must be ≥ min_rank.")
+
+        elif isinstance(condition, FilenameContainsCondition):
+            if not condition.patterns:
+                errors.append(
+                    f"Node {node_name!r}: FilenameContainsCondition has no patterns."
+                )
 
         elif isinstance(condition, LookaheadCondition):
             if not condition.lookahead_name:

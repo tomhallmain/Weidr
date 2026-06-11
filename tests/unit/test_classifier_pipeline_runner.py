@@ -14,6 +14,7 @@ from compare.classifier_pipeline import (
     ClassifierRankCondition,
     CompositeCondition,
     EmbeddingCondition,
+    FilenameContainsCondition,
     LookaheadCondition,
     NodeOutcome,
     NodeResultCondition,
@@ -26,6 +27,7 @@ from compare.classifier_pipeline_runner import (
     _evaluate_condition,
     _eval_classifier_rank,
     _eval_composite,
+    _eval_filename_contains,
     _eval_lookahead,
     _eval_prompt,
     _eval_prototype,
@@ -295,6 +297,91 @@ class TestPromptCondition:
         self._mock_extractor(monkeypatch, positive="Beautiful Sunset")
         result, _ = _eval_prompt(PromptCondition(prompts=["sunset"]), IMAGE)
         assert result is True
+
+
+# ---------------------------------------------------------------------------
+# FilenameContainsCondition
+# ---------------------------------------------------------------------------
+
+class TestFilenameContainsCondition:
+    def test_match_case_insensitive(self):
+        cond = FilenameContainsCondition(["draft"], case_sensitive=False)
+        result, score = _eval_filename_contains(cond, "/some/path/My_Draft_v2.jpg")
+        assert result is True
+        assert score == "draft"
+
+    def test_no_match(self):
+        cond = FilenameContainsCondition(["draft"], case_sensitive=False)
+        result, _ = _eval_filename_contains(cond, "/some/path/final_image.jpg")
+        assert result is False
+
+    def test_case_sensitive_match(self):
+        cond = FilenameContainsCondition(["Draft"], case_sensitive=True)
+        result, score = _eval_filename_contains(cond, "/path/My_Draft_v2.jpg")
+        assert result is True
+        assert score == "Draft"
+
+    def test_case_sensitive_no_match_due_to_case(self):
+        cond = FilenameContainsCondition(["draft"], case_sensitive=True)
+        result, _ = _eval_filename_contains(cond, "/path/My_Draft_v2.jpg")
+        assert result is False
+
+    def test_empty_patterns_returns_false(self):
+        cond = FilenameContainsCondition([], case_sensitive=False)
+        result, _ = _eval_filename_contains(cond, "/path/anything.jpg")
+        assert result is False
+
+    def test_multiple_patterns_first_match_returned(self):
+        cond = FilenameContainsCondition(["alpha", "beta", "gamma"], case_sensitive=False)
+        result, score = _eval_filename_contains(cond, "/path/beta_image.jpg")
+        assert result is True
+        assert score == "beta"
+
+    def test_only_filename_checked_not_directory(self):
+        # "draft" appears in the directory path but not in the filename itself
+        cond = FilenameContainsCondition(["draft"], case_sensitive=False)
+        result, _ = _eval_filename_contains(cond, "/draft/images/final.jpg")
+        assert result is False
+
+    def test_via_evaluate_condition_dispatch(self):
+        cond = FilenameContainsCondition(["_hq"], case_sensitive=False)
+        result, score = _evaluate_condition(cond, "/photos/sunset_hq.jpg", {}, {})
+        assert result is True
+        assert score == "_hq"
+
+    def test_via_run_pipeline_executes_action(self):
+        cond = FilenameContainsCondition(["_reject"], case_sensitive=False)
+        p = _pipeline(
+            _node("n1", cond, on_match=_execute(ClassifierActionType.HIDE),
+                  on_no_match=NodeOutcome.accept())
+        )
+        calls, hide, notify, mark, blur = _callbacks()
+        result = run_pipeline(p, "/media/photo_reject_001.jpg", hide_callback=hide,
+                              notify_callback=notify)
+        assert result == ClassifierActionType.HIDE
+        assert "/media/photo_reject_001.jpg" in calls["hide"]
+
+    def test_via_run_pipeline_no_match_accepts(self):
+        cond = FilenameContainsCondition(["_reject"], case_sensitive=False)
+        p = _pipeline(
+            _node("n1", cond, on_match=_execute(ClassifierActionType.HIDE),
+                  on_no_match=NodeOutcome.accept())
+        )
+        result = run_pipeline(p, "/media/photo_keep_001.jpg")
+        assert result is None
+
+    def test_serialization_round_trip(self):
+        original = FilenameContainsCondition(["_wip", "_draft"], case_sensitive=True)
+        from compare.classifier_pipeline import _condition_from_dict
+        restored = _condition_from_dict(original.to_dict())
+        assert isinstance(restored, FilenameContainsCondition)
+        assert restored.patterns == ["_wip", "_draft"]
+        assert restored.case_sensitive is True
+
+    def test_summary_contains_patterns(self):
+        cond = FilenameContainsCondition(["foo", "bar"])
+        assert "foo" in cond.summary()
+        assert "bar" in cond.summary()
 
 
 # ---------------------------------------------------------------------------

@@ -74,6 +74,141 @@ def _always_match_prevalidation(name: str, action: ClassifierActionType) -> Prev
     )
 
 
+class TestFilenameContainsAction:
+    """Tests for the use_filename_contains validation type on ClassifierAction."""
+
+    def _action(self, patterns, case_sensitive=False):
+        return ClassifierAction(
+            name="test_fn",
+            action=ClassifierActionType.NOTIFY,
+            use_embedding=False,
+            use_filename_contains=True,
+            filename_contains_patterns=patterns,
+            filename_contains_case_sensitive=case_sensitive,
+        )
+
+    # ------------------------------------------------------------------
+    # _check_filename_contains
+    # ------------------------------------------------------------------
+
+    def test_match_case_insensitive(self):
+        ca = self._action(["_draft"])
+        assert ca._check_filename_contains("/some/path/Image_Draft_001.jpg") is True
+
+    def test_no_match(self):
+        ca = self._action(["_draft"])
+        assert ca._check_filename_contains("/some/path/final_image.jpg") is False
+
+    def test_match_case_sensitive(self):
+        ca = self._action(["_Draft"], case_sensitive=True)
+        assert ca._check_filename_contains("/path/scan_Draft_v1.png") is True
+
+    def test_no_match_case_sensitive_wrong_case(self):
+        ca = self._action(["_draft"], case_sensitive=True)
+        assert ca._check_filename_contains("/path/scan_Draft_v1.png") is False
+
+    def test_empty_patterns_returns_false(self):
+        ca = ClassifierAction(
+            name="empty",
+            action=ClassifierActionType.NOTIFY,
+            use_embedding=False,
+            use_filename_contains=True,
+            filename_contains_patterns=[],
+        )
+        assert ca._check_filename_contains("/path/anything.jpg") is False
+
+    def test_only_filename_basename_checked(self):
+        # Pattern appears in directory component but not in the filename itself
+        ca = self._action(["draft"])
+        assert ca._check_filename_contains("/draft/images/final.jpg") is False
+
+    def test_multiple_patterns_any_match_is_enough(self):
+        ca = self._action(["alpha", "beta"])
+        assert ca._check_filename_contains("/path/beta_scan.jpg") is True
+        assert ca._check_filename_contains("/path/alpha_photo.jpg") is True
+        assert ca._check_filename_contains("/path/gamma_photo.jpg") is False
+
+    # ------------------------------------------------------------------
+    # _evaluate_image_path_match integration
+    # ------------------------------------------------------------------
+
+    def test_evaluate_returns_true_on_filename_match(self):
+        ca = self._action(["_wip"])
+        matched, _ = ca._evaluate_image_path_match("/data/project_wip_007.jpg")
+        assert matched is True
+
+    def test_evaluate_returns_false_on_no_match(self):
+        ca = self._action(["_wip"])
+        matched, _ = ca._evaluate_image_path_match("/data/project_final_007.jpg")
+        assert matched is False
+
+    # ------------------------------------------------------------------
+    # validate()
+    # ------------------------------------------------------------------
+
+    def test_validate_raises_when_no_patterns(self):
+        import pytest
+        ca = ClassifierAction(
+            name="bad",
+            action=ClassifierActionType.NOTIFY,
+            use_embedding=False,
+            use_filename_contains=True,
+            filename_contains_patterns=[],
+        )
+        with pytest.raises(Exception, match="pattern"):
+            ca.validate()
+
+    def test_validate_passes_with_patterns(self):
+        ca = self._action(["_hq"])
+        ca.validate()  # must not raise
+
+    def test_validate_counts_as_valid_type(self):
+        # use_filename_contains should satisfy the "at least one type" check
+        ca = ClassifierAction(
+            name="only_filename",
+            action=ClassifierActionType.NOTIFY,
+            use_embedding=False,
+            use_image_classifier=False,
+            use_prompts=False,
+            use_blacklist=False,
+            use_prototype=False,
+            use_pseudostatic_dynamic_media=False,
+            use_filename_contains=True,
+            filename_contains_patterns=["_tag"],
+        )
+        ca.validate()  # must not raise
+
+    # ------------------------------------------------------------------
+    # Serialization round-trip
+    # ------------------------------------------------------------------
+
+    def test_to_dict_and_from_dict_round_trip(self):
+        ca = self._action(["_wip", "_draft"], case_sensitive=True)
+        d = ca.to_dict()
+        assert d["use_filename_contains"] is True
+        assert d["filename_contains_patterns"] == ["_wip", "_draft"]
+        assert d["filename_contains_case_sensitive"] is True
+
+        restored = ClassifierAction.from_dict(dict(d))
+        assert restored.use_filename_contains is True
+        assert restored.filename_contains_patterns == ["_wip", "_draft"]
+        assert restored.filename_contains_case_sensitive is True
+
+    def test_from_dict_backward_compat_defaults(self):
+        # Dicts persisted before this feature was added have no filename_contains keys
+        old_dict = {
+            "name": "legacy",
+            "action": "NOTIFY",
+            "use_embedding": True,
+            "positives": ["cat"],
+            "negatives": [],
+        }
+        ca = ClassifierAction.from_dict(old_dict)
+        assert ca.use_filename_contains is False
+        assert ca.filename_contains_patterns == []
+        assert ca.filename_contains_case_sensitive is False
+
+
 class TestPrevalidateHideAndBlur:
     def test_hide_invokes_callback_and_caches_result(self):
         with tempfile.TemporaryDirectory() as root:

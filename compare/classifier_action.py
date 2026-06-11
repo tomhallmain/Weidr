@@ -63,6 +63,8 @@ class ClassifierAction:
                  negative_prototype_directory="", negative_prototype_lambda=0.5,
                  dynamic_content_sample_ratio=0.1, dynamic_content_positive_ratio=0.1,
                  _last_used_profile=None, lookahead_names=[],
+                 use_filename_contains=False, filename_contains_patterns=None,
+                 filename_contains_case_sensitive=False,
                  can_run: bool = True, initialization_error: Optional[str] = None):
         self.name = name
         self.positives = positives
@@ -88,6 +90,9 @@ class ClassifierAction:
         self.use_blacklist = use_blacklist
         self.use_pseudostatic_dynamic_media = bool(use_pseudostatic_dynamic_media)
         self.use_prototype = use_prototype  # Whether to use embedding prototype
+        self.use_filename_contains = use_filename_contains
+        self.filename_contains_patterns = list(filename_contains_patterns) if filename_contains_patterns else []
+        self.filename_contains_case_sensitive = filename_contains_case_sensitive
         self.prototype_directory = prototype_directory  # Directory containing sample images for positive prototype
         self.negative_prototype_directory = negative_prototype_directory  # Directory containing sample images for negative prototype
         self.negative_prototype_lambda = negative_prototype_lambda  # Weight for negative prototype (λ)
@@ -195,6 +200,18 @@ class ClassifierAction:
         except Exception as e:
             logger.error(f"Error checking prompt validation for {image_path}: {e}")
             return False
+
+    def _check_filename_contains(self, image_path: str) -> bool:
+        if not self.filename_contains_patterns:
+            return False
+        filename = os.path.basename(image_path)
+        if not self.filename_contains_case_sensitive:
+            filename = filename.lower()
+        for pattern in self.filename_contains_patterns:
+            p = pattern if self.filename_contains_case_sensitive else pattern.lower()
+            if p and p in filename:
+                return True
+        return False
 
     def _check_lookaheads(self, image_path, lookahead_eval_cache=None):
         """Check if any lookahead prevalidations are triggered. Returns True if any lookahead passes."""
@@ -475,7 +492,11 @@ class ClassifierAction:
         if self.use_prompts:
             if self._check_prompt_validation(image_path):
                 return True, None
-        
+
+        if self.use_filename_contains:
+            if self._check_filename_contains(image_path):
+                return True, None
+
         # No validation type passed
         return False, None
 
@@ -798,11 +819,15 @@ class ClassifierAction:
             or self.use_blacklist
             or self.use_prototype
             or self.use_pseudostatic_dynamic_media
+            or self.use_filename_contains
         ):
             raise Exception(
                 "At least one validation type (embedding, image classifier, prompts, "
-                "prompts blacklist, prototype, or pseudo-static dynamic media) must be enabled."
+                "prompts blacklist, prototype, pseudo-static dynamic media, or filename contains) must be enabled."
             )
+
+        if self.use_filename_contains and not self.filename_contains_patterns:
+            raise Exception("At least one filename pattern must be set when using filename contains validation.")
         
         # Validate prototype settings if enabled
         if self.use_prototype:
@@ -930,6 +955,9 @@ class ClassifierAction:
             "dynamic_content_positive_ratio": self.dynamic_content_positive_ratio,
             "_last_used_profile": self._last_used_profile,
             "lookahead_names": self.lookahead_names,
+            "use_filename_contains": self.use_filename_contains,
+            "filename_contains_patterns": self.filename_contains_patterns,
+            "filename_contains_case_sensitive": self.filename_contains_case_sensitive,
             }
 
     @staticmethod
@@ -972,6 +1000,12 @@ class ClassifierAction:
             d['dynamic_content_positive_ratio'] = 0.1
         if '_last_used_profile' not in d:
             d['_last_used_profile'] = None
+        if 'use_filename_contains' not in d:
+            d['use_filename_contains'] = False
+        if 'filename_contains_patterns' not in d:
+            d['filename_contains_patterns'] = None
+        if 'filename_contains_case_sensitive' not in d:
+            d['filename_contains_case_sensitive'] = False
         # Handle threshold backward compatibility
         if 'text_embedding_threshold' not in d:
             # Use existing threshold as text_embedding_threshold

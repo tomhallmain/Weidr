@@ -18,6 +18,7 @@ from compare.classifier_pipeline import (
     CompositeCondition,
     ClassifierRankCondition,
     EmbeddingCondition,
+    FilenameContainsCondition,
     LookaheadCondition,
     NodeOutcome,
     NodeResultCondition,
@@ -175,6 +176,9 @@ def _evaluate_condition(
     if isinstance(condition, PromptCondition):
         return _eval_prompt(condition, image_path)
 
+    if isinstance(condition, FilenameContainsCondition):
+        return _eval_filename_contains(condition, image_path)
+
     if isinstance(condition, LookaheadCondition):
         return _eval_lookahead(condition, image_path)
 
@@ -273,6 +277,21 @@ def _eval_prompt(
 
     matched = any(p.lower() in positive_prompt.lower() for p in condition.prompts)
     return matched, None
+
+
+def _eval_filename_contains(
+    condition: FilenameContainsCondition, image_path: str
+) -> tuple[bool, object]:
+    if not condition.patterns:
+        return False, None
+    filename = os.path.basename(image_path)
+    if not condition.case_sensitive:
+        filename = filename.lower()
+    for pattern in condition.patterns:
+        p = pattern if condition.case_sensitive else pattern.lower()
+        if p and p in filename:
+            return True, pattern
+    return False, None
 
 
 def _eval_lookahead(

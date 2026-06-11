@@ -191,6 +191,27 @@ class ClassifierActionModifyWindow(SmartDialog):
         grid.addWidget(self._use_pseudostatic_dynamic_cb, row, 1)
         row += 1
 
+        self._use_filename_contains_cb = QCheckBox(_("Match by Filename"))
+        self._use_filename_contains_cb.setChecked(ca.use_filename_contains)
+        self._use_filename_contains_cb.stateChanged.connect(self._update_ui_for_validation_types)
+        grid.addWidget(self._use_filename_contains_cb, row, 1)
+        row += 1
+
+        # -- Filename Contains patterns ------------------------------------
+        self._filename_patterns_lbl = self._lbl(_("Filename Patterns (comma-separated)"))
+        grid.addWidget(self._filename_patterns_lbl, row, 0, Qt.AlignLeft)
+        self._filename_patterns_edit = QLineEdit(
+            ", ".join(ca.filename_contains_patterns) if ca.filename_contains_patterns else ""
+        )
+        self._filename_patterns_edit.setPlaceholderText(_("e.g. _hq, draft, _final"))
+        grid.addWidget(self._filename_patterns_edit, row, 1)
+        row += 1
+
+        self._filename_case_sensitive_cb = QCheckBox(_("Case-sensitive filename matching"))
+        self._filename_case_sensitive_cb.setChecked(ca.filename_contains_case_sensitive)
+        grid.addWidget(self._filename_case_sensitive_cb, row, 1)
+        row += 1
+
         # -- Text Embedding Threshold -------------------------------------
         self._text_thresh_lbl = self._lbl(_("Text Embedding Threshold"))
         grid.addWidget(self._text_thresh_lbl, row, 0, Qt.AlignLeft)
@@ -385,6 +406,11 @@ class ClassifierActionModifyWindow(SmartDialog):
         self._proto_thresh_lbl.setVisible(use_proto)
         self._proto_thresh_slider.setVisible(use_proto)
 
+        use_fn = self._use_filename_contains_cb.isChecked()
+        self._filename_patterns_lbl.setVisible(use_fn)
+        self._filename_patterns_edit.setVisible(use_fn)
+        self._filename_case_sensitive_cb.setVisible(use_fn)
+
         self._update_specific_ui_for_validation_types()
 
     # ------------------------------------------------------------------
@@ -491,6 +517,10 @@ class ClassifierActionModifyWindow(SmartDialog):
         ca.use_prompts = self._use_prompts_cb.isChecked()
         ca.use_prototype = self._use_prototype_cb.isChecked()
         ca.use_pseudostatic_dynamic_media = self._use_pseudostatic_dynamic_cb.isChecked()
+        ca.use_filename_contains = self._use_filename_contains_cb.isChecked()
+        raw_patterns = self._filename_patterns_edit.text()
+        ca.filename_contains_patterns = [p.strip() for p in raw_patterns.split(",") if p.strip()]
+        ca.filename_contains_case_sensitive = self._filename_case_sensitive_cb.isChecked()
 
         ca.action = ClassifierActionType.get_action(
             self._action_combo.currentText()

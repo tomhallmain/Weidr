@@ -32,6 +32,7 @@ from compare.classifier_pipeline import (
     CompositeCondition,
     EmbeddingCondition,
     LookaheadCondition,
+    FilenameContainsCondition,
     NodeOutcome,
     NodeResultCondition,
     OutcomeType,
@@ -56,13 +57,14 @@ logger = get_logger("classifier_pipeline_editor_qt")
 # ---------------------------------------------------------------------------
 
 _CONDITION_ENTRIES = [
-    ("embedding",       _("Embedding")),
-    ("classifier_rank", _("Classifier Rank")),
-    ("prototype",       _("Prototype")),
-    ("prompt",          _("Prompt")),
-    ("lookahead",       _("Lookahead")),
-    ("node_result",     _("Prior Node Result")),
-    ("composite",       _("Composite")),
+    ("embedding",          _("Embedding")),
+    ("classifier_rank",    _("Classifier Rank")),
+    ("prototype",          _("Prototype")),
+    ("prompt",             _("Prompt")),
+    ("filename_contains",  _("Filename Contains")),
+    ("lookahead",          _("Lookahead")),
+    ("node_result",        _("Prior Node Result")),
+    ("composite",          _("Composite")),
 ]
 _CONDITION_TYPES   = [k for k, _ in _CONDITION_ENTRIES]
 _CONDITION_LABELS  = [v for _, v in _CONDITION_ENTRIES]
@@ -390,6 +392,40 @@ class _PromptPanel(QWidget):
         )
 
 
+class _FilenameContainsPanel(QWidget):
+    condition_type = "filename_contains"
+
+    def __init__(self, on_changed: Callable = None, parent=None):
+        super().__init__(parent)
+        self._on_changed = on_changed or (lambda: None)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 4, 0, 4)
+        layout.setSpacing(4)
+
+        layout.addWidget(_label(_("Filename patterns (match if any substring found in filename):")))
+
+        self._patterns = _StringListEditor(_("pattern"), on_changed=self._on_changed)
+        layout.addWidget(self._patterns)
+
+        self._case_sensitive_cb = QCheckBox(_("Case-sensitive"))
+        self._case_sensitive_cb.stateChanged.connect(self._on_changed)
+        layout.addWidget(self._case_sensitive_cb)
+
+    def load(self, condition) -> None:
+        if isinstance(condition, FilenameContainsCondition):
+            self._patterns.set_items(condition.patterns or [])
+            self._case_sensitive_cb.setChecked(condition.case_sensitive)
+        else:
+            self._patterns.set_items([])
+            self._case_sensitive_cb.setChecked(False)
+
+    def get_condition(self) -> FilenameContainsCondition:
+        return FilenameContainsCondition(
+            patterns=self._patterns.get_items(),
+            case_sensitive=self._case_sensitive_cb.isChecked(),
+        )
+
+
 class _LookaheadPanel(QWidget):
     condition_type = "lookahead"
 
@@ -513,6 +549,7 @@ class _SubCondRow(QWidget):
             _ClassifierRankPanel(on_changed=self._on_changed),
             _PrototypePanel(on_changed=self._on_changed),
             _PromptPanel(on_changed=self._on_changed),
+            _FilenameContainsPanel(on_changed=self._on_changed),
             _LookaheadPanel(on_changed=self._on_changed),
             _NodeResultPanel(on_changed=self._on_changed),
         ]
@@ -993,17 +1030,19 @@ class ClassifierPipelineEditorDialog(SmartDialog):
 
         # Condition panels (stacked)
         changed_cb = self._on_field_changed
-        self._embedding_panel      = _EmbeddingPanel(on_changed=changed_cb)
-        self._classifier_rank_panel = _ClassifierRankPanel(on_changed=changed_cb)
-        self._prototype_panel      = _PrototypePanel(on_changed=changed_cb)
-        self._prompt_panel         = _PromptPanel(on_changed=changed_cb)
-        self._lookahead_panel      = _LookaheadPanel(on_changed=changed_cb)
-        self._node_result_panel    = _NodeResultPanel(on_changed=changed_cb)
-        self._composite_panel      = _CompositePanel(on_changed=changed_cb)
+        self._embedding_panel          = _EmbeddingPanel(on_changed=changed_cb)
+        self._classifier_rank_panel    = _ClassifierRankPanel(on_changed=changed_cb)
+        self._prototype_panel          = _PrototypePanel(on_changed=changed_cb)
+        self._prompt_panel             = _PromptPanel(on_changed=changed_cb)
+        self._filename_contains_panel  = _FilenameContainsPanel(on_changed=changed_cb)
+        self._lookahead_panel          = _LookaheadPanel(on_changed=changed_cb)
+        self._node_result_panel        = _NodeResultPanel(on_changed=changed_cb)
+        self._composite_panel          = _CompositePanel(on_changed=changed_cb)
 
         self._cond_panels = [
             self._embedding_panel, self._classifier_rank_panel,
             self._prototype_panel, self._prompt_panel,
+            self._filename_contains_panel,
             self._lookahead_panel, self._node_result_panel,
             self._composite_panel,
         ]

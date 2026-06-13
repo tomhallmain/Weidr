@@ -443,22 +443,28 @@ class WindowLauncher:
                 )
                 # Keep the UI responsive during long-running prevalidation
                 QApplication.processEvents()
+                # closeEvent may have fired inside processEvents — bail out cleanly
+                if self._app._closing:
+                    logger.info("Prevalidations for base dir: application closing, stopping early")
+                    break
             if directory_was_excluded:
                 PrevalidationsTab.add_directory_to_exclusion_list(self._app.get_base_dir())
 
-            # Rescan from disk so counts and paths match any moves/deletes (fast once
-            # the directory is loaded; *force* bypasses the incremental-load refresh guard).
-            self._app.refresh(force=True)
-            self._app.notification_ctrl.toast(
-                _(
-                    "All prevalidations in this directory have finished.\n"
-                    "Files checked: {0} — outcomes: {1} — moves: {2} — copies: {3} — deletes: {4} — errors: {5}"
-                ).format(files_checked, outcomes, moves, copies, deletes, errors),
-                time_in_seconds=10,
-            )
+            if not self._app._closing:
+                # Rescan from disk so counts and paths match any moves/deletes (fast once
+                # the directory is loaded; *force* bypasses the incremental-load refresh guard).
+                self._app.refresh(force=True)
+                self._app.notification_ctrl.toast(
+                    _(
+                        "All prevalidations in this directory have finished.\n"
+                        "Files checked: {0} — outcomes: {1} — moves: {2} — copies: {3} — deletes: {4} — errors: {5}"
+                    ).format(files_checked, outcomes, moves, copies, deletes, errors),
+                    time_in_seconds=10,
+                )
         finally:
-            self._app.app_actions.stop_loading_spinner()
-            self._app.app_actions.stop_progress_bar()
+            if not self._app._closing:
+                self._app.app_actions.stop_loading_spinner()
+                self._app.app_actions.stop_progress_bar()
 
     @require_password(ProtectedActions.RUN_PREVALIDATIONS)
     def toggle_prevalidations(self, event=None) -> None:

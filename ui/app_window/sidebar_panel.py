@@ -7,6 +7,7 @@ key widgets so that controllers can read/write them.
 """
 
 from __future__ import annotations
+from datetime import datetime
 
 from typing import TYPE_CHECKING, Callable
 
@@ -121,7 +122,8 @@ class SidebarPanel(QWidget):
         # File filter: ';'-separated glob terms, prefix '!' to exclude
         self._add_label(_("Filter files (';' separated, '!' to exclude)"))
         self.file_filter_entry = AwareEntry(self)
-        self.file_filter_entry.setPlaceholderText(_("e.g. 2024;!_edit"))
+        current_year = datetime.now().year
+        self.file_filter_entry.setPlaceholderText(_("e.g. {0};!_edit").format(current_year))
         self.file_filter_entry.returnPressed.connect(self._on_set_file_filter)
         self._scroll.add_widget(self.file_filter_entry)
 

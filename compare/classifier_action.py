@@ -5,10 +5,11 @@ List storage and directory/prevalidation cache live in
 ``compare.classifier_actions_manager.ClassifierActionsManager``.
 """
 
+from dataclasses import dataclass, field
 from enum import Enum
 import math
 import os
-from typing import Optional
+from typing import ClassVar, Optional
 
 from compare.compare_embeddings_clip import CompareEmbeddingClip
 from compare.embedding_prototype import EmbeddingPrototype
@@ -48,66 +49,78 @@ class ImageClassifierClassificationMode(Enum):
 
 
 
+@dataclass(eq=False, repr=False)
 class ClassifierAction:
-    NO_POSITIVES_STR = _("(no positives set)")
-    NO_NEGATIVES_STR = _("(no negatives set)")
+    NO_POSITIVES_STR: ClassVar[str] = _("(no positives set)")
+    NO_NEGATIVES_STR: ClassVar[str] = _("(no negatives set)")
 
-    def __init__(self, name=_("New Classifier Action"), positives=[], negatives=[], threshold=0.23,
-                 text_embedding_threshold=None, prototype_threshold=0.23,
-                 action=ClassifierActionType.NOTIFY, action_modifier="",
-                 image_classifier_name="", image_classifier_selected_categories=[], 
-                 classification_mode=ImageClassifierClassificationMode.SELECTED_CATEGORIES,
-                 use_embedding=True, use_image_classifier=False, use_prompts=False, use_blacklist=False,
-                 use_pseudostatic_dynamic_media=False,
-                 is_active=True, use_prototype=False, prototype_directory="",
-                 negative_prototype_directory="", negative_prototype_lambda=0.5,
-                 dynamic_content_sample_ratio=0.1, dynamic_content_positive_ratio=0.1,
-                 _last_used_profile=None, lookahead_names=[],
-                 use_filename_contains=False, filename_contains_patterns=None,
-                 filename_contains_case_sensitive=False,
-                 can_run: bool = True, initialization_error: Optional[str] = None):
-        self.name = name
-        self.positives = positives
-        self.negatives = negatives
-        # Backward compatibility: if text_embedding_threshold is None, use threshold
-        self.text_embedding_threshold = text_embedding_threshold if text_embedding_threshold is not None else threshold
-        self.prototype_threshold = prototype_threshold
-        # Keep threshold for backward compatibility (maps to text_embedding_threshold)
+    # ------------------------------------------------------------------
+    # Serializable fields — all appear in the generated __init__
+    # ------------------------------------------------------------------
+    name: str = field(default_factory=lambda: _("New Classifier Action"))
+    positives: list = field(default_factory=list)
+    negatives: list = field(default_factory=list)
+    threshold: float = 0.23                    # backward-compat alias; resolved in __post_init__
+    text_embedding_threshold: Optional[float] = None
+    prototype_threshold: float = 0.23
+    action: ClassifierActionType = field(default=ClassifierActionType.NOTIFY)
+    action_modifier: str = ""
+    image_classifier_name: str = ""
+    image_classifier_selected_categories: list = field(default_factory=list)
+    classification_mode: ImageClassifierClassificationMode = field(
+        default=ImageClassifierClassificationMode.SELECTED_CATEGORIES
+    )
+    use_embedding: bool = True
+    use_image_classifier: bool = False
+    use_prompts: bool = False
+    use_blacklist: bool = False
+    use_pseudostatic_dynamic_media: bool = False
+    is_active: bool = True
+    use_prototype: bool = False
+    prototype_directory: str = ""
+    negative_prototype_directory: str = ""
+    negative_prototype_lambda: float = 0.5
+    dynamic_content_sample_ratio: float = 0.1
+    dynamic_content_positive_ratio: float = 0.1
+    _last_used_profile: Optional[str] = None
+    lookahead_names: list = field(default_factory=list)
+    use_filename_contains: bool = False
+    filename_contains_patterns: Optional[list] = None
+    filename_contains_case_sensitive: bool = False
+    can_run: bool = True
+    initialization_error: Optional[str] = None
+
+    # ------------------------------------------------------------------
+    # Runtime-only state — excluded from __init__, never serialized
+    # ------------------------------------------------------------------
+    image_classifier: object = field(init=False, default=None)
+    _missing_image_classifier_logged: bool = field(init=False, default=False)
+    image_classifier_categories: list = field(init=False, default_factory=list)
+    _cached_prototype: object = field(init=False, default=None)
+    _cached_negative_prototype: object = field(init=False, default=None)
+    _blocked_run_logged: bool = field(init=False, default=False)
+    _model_strategy_sig: Optional[tuple] = field(init=False, default=None)
+    _model_strategy_positives: Optional[frozenset] = field(init=False, default=None)
+
+    def __post_init__(self):
+        # Backward compat: if text_embedding_threshold is None, fall back to threshold
+        if self.text_embedding_threshold is None:
+            self.text_embedding_threshold = self.threshold
         self.threshold = self.text_embedding_threshold
-        self.action = action if isinstance(action, Enum) else ClassifierActionType[action]
-        self.action_modifier = action_modifier  # Target directory for MOVE/COPY actions
-        self.is_active = is_active  # Whether this action is enabled/active
-        self.image_classifier_name = image_classifier_name
-        self.image_classifier = None
-        self._missing_image_classifier_logged = False
-        self.image_classifier_categories = []
-        self.image_classifier_selected_categories = image_classifier_selected_categories
-        self.classification_mode = ImageClassifierClassificationMode.from_value(classification_mode)
-        self.lookahead_names = lookahead_names if lookahead_names else []  # List of lookahead names (strings)
-        self.use_embedding = use_embedding
-        self.use_image_classifier = use_image_classifier
-        self.use_prompts = use_prompts
-        self.use_blacklist = use_blacklist
-        self.use_pseudostatic_dynamic_media = bool(use_pseudostatic_dynamic_media)
-        self.use_prototype = use_prototype  # Whether to use embedding prototype
-        self.use_filename_contains = use_filename_contains
-        self.filename_contains_patterns = list(filename_contains_patterns) if filename_contains_patterns else []
-        self.filename_contains_case_sensitive = filename_contains_case_sensitive
-        self.prototype_directory = prototype_directory  # Directory containing sample images for positive prototype
-        self.negative_prototype_directory = negative_prototype_directory  # Directory containing sample images for negative prototype
-        self.negative_prototype_lambda = negative_prototype_lambda  # Weight for negative prototype (λ)
-        self._cached_prototype = None  # Cached positive prototype embedding
-        self._cached_negative_prototype = None  # Cached negative prototype embedding
-        self._last_used_profile = _last_used_profile  # Last used profile name or directory path (None for new actions)
-        # For dynamic media (video/GIF, etc.), sample this proportion of frames
-        # and require this proportion of positives before firing the action.
-        self.dynamic_content_sample_ratio = self._normalize_ratio(dynamic_content_sample_ratio, default_val=0.1)
-        self.dynamic_content_positive_ratio = self._normalize_ratio(dynamic_content_positive_ratio, default_val=0.1)
-        self.can_run = bool(can_run)
-        self.initialization_error = initialization_error
-        self._blocked_run_logged = False
-        self._model_strategy_sig: Optional[tuple] = None
-        self._model_strategy_positives: Optional[frozenset[str]] = None
+        # Normalize action enum
+        if not isinstance(self.action, Enum):
+            self.action = ClassifierActionType[self.action]
+        # Normalize classification mode
+        self.classification_mode = ImageClassifierClassificationMode.from_value(self.classification_mode)
+        # Normalize list fields that callers may pass as None
+        self.lookahead_names = list(self.lookahead_names) if self.lookahead_names else []
+        self.filename_contains_patterns = list(self.filename_contains_patterns) if self.filename_contains_patterns else []
+        # Normalize ratios
+        self.dynamic_content_sample_ratio = self._normalize_ratio(self.dynamic_content_sample_ratio, default_val=0.1)
+        self.dynamic_content_positive_ratio = self._normalize_ratio(self.dynamic_content_positive_ratio, default_val=0.1)
+        # Coerce bool fields that may arrive as ints/strings from JSON
+        self.use_pseudostatic_dynamic_media = bool(self.use_pseudostatic_dynamic_media)
+        self.can_run = bool(self.can_run)
 
     def mark_runtime_valid(self) -> None:
         """Call after validate() succeeds (e.g. user saved in the editor) to clear load-time failure state."""
@@ -1101,38 +1114,18 @@ class ClassifierAction:
 
 
 
+@dataclass(eq=False, repr=False)
 class Prevalidation(ClassifierAction):
-    def __init__(self, name=_("New Prevalidation"), positives=[], negatives=[], threshold=0.23,
-                 text_embedding_threshold=None, prototype_threshold=0.23,
-                 action=ClassifierActionType.NOTIFY, action_modifier="", run_on_folder=None, is_active=True,
-                 image_classifier_name="", image_classifier_selected_categories=[],
-                 classification_mode=ImageClassifierClassificationMode.SELECTED_CATEGORIES,
-                 use_embedding=True, use_image_classifier=False, use_prompts=False, use_blacklist=False,
-                 use_pseudostatic_dynamic_media=False,
-                 lookahead_names=[], profile_name=None, use_prototype=False, prototype_directory="",
-                 negative_prototype_directory="", negative_prototype_lambda=0.5,
-                 dynamic_content_sample_ratio=0.1, dynamic_content_positive_ratio=0.1,
-                 _last_used_profile=None,
-                 use_filename_contains=False, filename_contains_patterns=None,
-                 filename_contains_case_sensitive=False,
-                 can_run: bool = True, initialization_error: Optional[str] = None):
-        # Pass all parameters including prototype settings to parent ClassifierAction
-        super().__init__(name, positives, negatives, threshold,
-                        text_embedding_threshold, prototype_threshold, action, action_modifier,
-                        image_classifier_name, image_classifier_selected_categories, classification_mode,
-                        use_embedding, use_image_classifier, use_prompts, use_blacklist,
-                        use_pseudostatic_dynamic_media,
-                        is_active, use_prototype, prototype_directory,
-                        negative_prototype_directory, negative_prototype_lambda,
-                        dynamic_content_sample_ratio, dynamic_content_positive_ratio,
-                        _last_used_profile, lookahead_names=lookahead_names,
-                        use_filename_contains=use_filename_contains,
-                        filename_contains_patterns=filename_contains_patterns,
-                        filename_contains_case_sensitive=filename_contains_case_sensitive,
-                        can_run=can_run, initialization_error=initialization_error)
-        self.profile_name = profile_name  # Name of DirectoryProfile to use (None = global)
-        self.profile = None  # Cached DirectoryProfile instance (set after loading, or temporary for backward compatibility)
-        # Note: run_on_folder parameter is kept for backward compatibility in from_dict but not stored as instance variable
+    # Prevalidation-specific serializable field
+    profile_name: Optional[str] = None
+
+    # Runtime-only: populated by update_profile_instance(), never serialized
+    profile: Optional[DirectoryProfile] = field(init=False, default=None)
+
+    def __post_init__(self):
+        super().__post_init__()
+        # profile starts as None; update_profile_instance() populates it once
+        # the DirectoryProfile registry is available.
 
     def __eq__(self, other):
         """Check equality based on name (prevalidations are uniquely identified by name)."""
@@ -1309,14 +1302,15 @@ class Prevalidation(ClassifierAction):
         d.pop("can_run", None)
         d.pop("initialization_error", None)
 
-        # Handle backward compatibility: if run_on_folder exists but no profile_name, create temporary profile
-        run_on_folder = d.get('run_on_folder')
+        # Handle backward compatibility: if run_on_folder exists but no profile_name, create temporary profile.
+        # Pop run_on_folder so it is not forwarded to the dataclass __init__.
+        run_on_folder = d.pop('run_on_folder', None)
         if run_on_folder and not d.get('profile_name'):
             pv = Prevalidation(**d)
             # Use update_profile_instance to handle profile lookup/creation
             pv.update_profile_instance(profile_name=run_on_folder, directory_path=run_on_folder)
             return pv
-        
+
         return Prevalidation(**d)
 
     def __str__(self) -> str:

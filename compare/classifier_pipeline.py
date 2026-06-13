@@ -15,8 +15,9 @@ Phase 2 — execution engine.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
+from typing import ClassVar, Optional
 
 from utils.app_info_cache import app_info_cache
 from utils.constants import ClassifierActionType
@@ -30,15 +31,18 @@ logger = get_logger("classifier_pipeline")
 # Condition types
 # ---------------------------------------------------------------------------
 
+@dataclass
 class EmbeddingCondition:
     """CLIP text-embedding similarity check."""
-    condition_type = "embedding"
+    condition_type: ClassVar[str] = "embedding"
 
-    def __init__(self, positives: list[str] = None, negatives: list[str] = None,
-                 threshold: float = 0.23):
-        self.positives: list[str] = positives or []
-        self.negatives: list[str] = negatives or []
-        self.threshold: float = threshold
+    positives: Optional[list] = None
+    negatives: Optional[list] = None
+    threshold: float = 0.23
+
+    def __post_init__(self):
+        self.positives = list(self.positives) if self.positives else []
+        self.negatives = list(self.negatives) if self.negatives else []
 
     def to_dict(self) -> dict:
         return {
@@ -53,17 +57,19 @@ class EmbeddingCondition:
         return f"Embedding(+[{pos}], thresh={self.threshold})"
 
 
+@dataclass
 class ClassifierRankCondition:
     """Checks where specific categories appear in a model's ranked output."""
-    condition_type = "classifier_rank"
+    condition_type: ClassVar[str] = "classifier_rank"
 
-    def __init__(self, classifier_name: str = "", categories: list[str] = None,
-                 min_rank: int = 1, max_rank: int = 1, min_confidence: float = 0.0):
-        self.classifier_name: str = classifier_name
-        self.categories: list[str] = categories or []
-        self.min_rank: int = min_rank      # 1-based, inclusive
-        self.max_rank: int = max_rank      # 1-based, inclusive
-        self.min_confidence: float = min_confidence
+    classifier_name: str = ""
+    categories: Optional[list] = None
+    min_rank: int = 1
+    max_rank: int = 1
+    min_confidence: float = 0.0
+
+    def __post_init__(self):
+        self.categories = list(self.categories) if self.categories else []
 
     def to_dict(self) -> dict:
         return {
@@ -81,17 +87,15 @@ class ClassifierRankCondition:
         return f"ClassifierRank({self.classifier_name}, [{cats}], {rank})"
 
 
+@dataclass
 class PrototypeCondition:
     """Embedding prototype similarity check."""
-    condition_type = "prototype"
+    condition_type: ClassVar[str] = "prototype"
 
-    def __init__(self, prototype_directory: str = "",
-                 negative_prototype_directory: str = "",
-                 threshold: float = 0.23, negative_lambda: float = 0.5):
-        self.prototype_directory: str = prototype_directory
-        self.negative_prototype_directory: str = negative_prototype_directory
-        self.threshold: float = threshold
-        self.negative_lambda: float = negative_lambda
+    prototype_directory: str = ""
+    negative_prototype_directory: str = ""
+    threshold: float = 0.23
+    negative_lambda: float = 0.5
 
     def to_dict(self) -> dict:
         return {
@@ -106,13 +110,16 @@ class PrototypeCondition:
         return f"Prototype(thresh={self.threshold})"
 
 
+@dataclass
 class PromptCondition:
     """Prompt / blacklist text-detection check."""
-    condition_type = "prompt"
+    condition_type: ClassVar[str] = "prompt"
 
-    def __init__(self, prompts: list[str] = None, use_blacklist: bool = False):
-        self.prompts: list[str] = prompts or []
-        self.use_blacklist: bool = use_blacklist
+    prompts: Optional[list] = None
+    use_blacklist: bool = False
+
+    def __post_init__(self):
+        self.prompts = list(self.prompts) if self.prompts else []
 
     def to_dict(self) -> dict:
         return {
@@ -128,13 +135,16 @@ class PromptCondition:
         return f"Prompts([{terms}])"
 
 
+@dataclass
 class FilenameContainsCondition:
     """Checks whether the media filename contains any of the given substrings."""
-    condition_type = "filename_contains"
+    condition_type: ClassVar[str] = "filename_contains"
 
-    def __init__(self, patterns: list[str] = None, case_sensitive: bool = False):
-        self.patterns: list[str] = list(patterns) if patterns else []
-        self.case_sensitive: bool = case_sensitive
+    patterns: Optional[list] = None
+    case_sensitive: bool = False
+
+    def __post_init__(self):
+        self.patterns = list(self.patterns) if self.patterns else []
 
     def to_dict(self) -> dict:
         return {
@@ -149,12 +159,12 @@ class FilenameContainsCondition:
         return f"FilenameContains([{terms}], {cs})"
 
 
+@dataclass
 class LookaheadCondition:
     """References a named Lookahead check."""
-    condition_type = "lookahead"
+    condition_type: ClassVar[str] = "lookahead"
 
-    def __init__(self, lookahead_name: str = ""):
-        self.lookahead_name: str = lookahead_name
+    lookahead_name: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -166,13 +176,13 @@ class LookaheadCondition:
         return f"Lookahead({self.lookahead_name})"
 
 
+@dataclass
 class NodeResultCondition:
     """References the boolean result of an earlier pipeline node."""
-    condition_type = "node_result"
+    condition_type: ClassVar[str] = "node_result"
 
-    def __init__(self, node_name: str = "", expected_result: bool = True):
-        self.node_name: str = node_name
-        self.expected_result: bool = expected_result
+    node_name: str = ""
+    expected_result: bool = True
 
     def to_dict(self) -> dict:
         return {
@@ -186,16 +196,17 @@ class NodeResultCondition:
         return f"NodeResult({self.node_name}={val})"
 
 
+@dataclass
 class CompositeCondition:
     """AND / OR / NOT / XOR composition of other conditions."""
-    condition_type = "composite"
+    condition_type: ClassVar[str] = "composite"
+    VALID_OPERATORS: ClassVar[set] = {"AND", "OR", "NOT", "XOR"}
 
-    VALID_OPERATORS = {"AND", "OR", "NOT", "XOR"}
+    operator: str = "AND"
+    sub_conditions: Optional[list] = None
 
-    def __init__(self, operator: str = "AND",
-                 sub_conditions: list = None):
-        self.operator: str = operator
-        self.sub_conditions: list = sub_conditions or []
+    def __post_init__(self):
+        self.sub_conditions = list(self.sub_conditions) if self.sub_conditions else []
 
     def to_dict(self) -> dict:
         return {
@@ -283,21 +294,18 @@ class OutcomeType(str, Enum):
     REJECT   = "REJECT"     # halt with pipeline's default_reject_action
 
 
+@dataclass
 class NodeOutcome:
-    def __init__(self, outcome_type: OutcomeType | str = OutcomeType.CONTINUE,
-                 target_node: Optional[str] = None,
-                 action_type: Optional[ClassifierActionType] = None,
-                 action_modifier: str = ""):
-        self.outcome_type: OutcomeType = (
-            outcome_type if isinstance(outcome_type, OutcomeType)
-            else OutcomeType(outcome_type)
-        )
-        self.target_node: Optional[str] = target_node
-        self.action_type: Optional[ClassifierActionType] = (
-            action_type if (action_type is None or isinstance(action_type, ClassifierActionType))
-            else ClassifierActionType[action_type]
-        )
-        self.action_modifier: str = action_modifier
+    outcome_type: OutcomeType = field(default=OutcomeType.CONTINUE)
+    target_node: Optional[str] = None
+    action_type: Optional[ClassifierActionType] = None
+    action_modifier: str = ""
+
+    def __post_init__(self):
+        if not isinstance(self.outcome_type, OutcomeType):
+            self.outcome_type = OutcomeType(self.outcome_type)
+        if self.action_type is not None and not isinstance(self.action_type, ClassifierActionType):
+            self.action_type = ClassifierActionType[self.action_type]
 
     def to_dict(self) -> dict:
         return {
@@ -339,15 +347,20 @@ class NodeOutcome:
 # PipelineNode
 # ---------------------------------------------------------------------------
 
+@dataclass
 class PipelineNode:
-    def __init__(self, name: str = "",
-                 condition=None,
-                 on_match: Optional[NodeOutcome] = None,
-                 on_no_match: Optional[NodeOutcome] = None):
-        self.name: str = name
-        self.condition = condition or EmbeddingCondition()
-        self.on_match: NodeOutcome = on_match or NodeOutcome.continue_()
-        self.on_no_match: NodeOutcome = on_no_match or NodeOutcome.accept()
+    name: str = ""
+    condition: object = None          # NodeCondition; defaulted in __post_init__
+    on_match: Optional[NodeOutcome] = None
+    on_no_match: Optional[NodeOutcome] = None
+
+    def __post_init__(self):
+        if self.condition is None:
+            self.condition = EmbeddingCondition()
+        if self.on_match is None:
+            self.on_match = NodeOutcome.continue_()
+        if self.on_no_match is None:
+            self.on_no_match = NodeOutcome.accept()
 
     def to_dict(self) -> dict:
         return {
@@ -374,19 +387,18 @@ class PipelineNode:
 # ClassifierPipeline
 # ---------------------------------------------------------------------------
 
+@dataclass(eq=False, repr=False)
 class ClassifierPipeline:
-    def __init__(self, name: str = _("New Pipeline"),
-                 description: str = "",
-                 nodes: list[PipelineNode] = None,
-                 default_action: Optional[ClassifierActionType] = None,
-                 default_reject_action: Optional[ClassifierActionType] = None,
-                 is_active: bool = True):
-        self.name: str = name
-        self.description: str = description
-        self.nodes: list[PipelineNode] = nodes or []
-        self.default_action: Optional[ClassifierActionType] = default_action
-        self.default_reject_action: Optional[ClassifierActionType] = default_reject_action
-        self.is_active: bool = is_active
+    name: str = field(default_factory=lambda: _("New Pipeline"))
+    description: str = ""
+    nodes: Optional[list] = None      # list[PipelineNode]; defaulted in __post_init__
+    default_action: Optional[ClassifierActionType] = None
+    default_reject_action: Optional[ClassifierActionType] = None
+    is_active: bool = True
+
+    def __post_init__(self):
+        if self.nodes is None:
+            self.nodes = []
 
     def __eq__(self, other):
         return isinstance(other, ClassifierPipeline) and self.name == other.name
@@ -608,16 +620,20 @@ class ClassifierPipeline:
 # PrevalidationPipeline — profile-scoped subclass (mirrors Prevalidation)
 # ---------------------------------------------------------------------------
 
+@dataclass(eq=False, repr=False)
 class PrevalidationPipeline(ClassifierPipeline):
     """
     A ClassifierPipeline that is scoped to a DirectoryProfile, allowing it to
     participate in the prevalidation pass (Phase 5 integration).
     """
 
-    def __init__(self, profile_name: Optional[str] = None, **kwargs):
-        super().__init__(**kwargs)
-        self.profile_name: Optional[str] = profile_name
-        self.profile = None  # Lazily loaded DirectoryProfile instance
+    profile_name: Optional[str] = None
+
+    # Runtime-only: populated by update_profile_instance(), never serialized
+    profile: object = field(init=False, default=None)
+
+    def __post_init__(self):
+        super().__post_init__()
 
     def update_profile_instance(self, profile_name: Optional[str] = None) -> None:
         from files.directory_profile import DirectoryProfile

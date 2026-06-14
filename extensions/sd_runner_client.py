@@ -110,6 +110,7 @@ class SDRunnerClient:
         append=False,
         positive_prompt=None,
         negative_prompt=None,
+        edit_suffix=None,
     ):
         """Internal method that performs the actual run operation."""
         if not isinstance(_type, ImageGenerationType):
@@ -123,6 +124,8 @@ class SDRunnerClient:
                 args['positive_prompt'] = positive_prompt
             if negative_prompt is not None:
                 args['negative_prompt'] = negative_prompt
+            if edit_suffix is not None:
+                args['edit_suffix'] = edit_suffix
             command  = {'command': 'run', 'type': _type.value, 'args': args}
             resp = self.send(command)
             if "error" in resp:
@@ -145,6 +148,7 @@ class SDRunnerClient:
         append=False,
         positive_prompt=None,
         negative_prompt=None,
+        edit_suffix=None,
     ):
         """Queue a run request and wait for it to complete."""
         self._start_worker()  # Lazy initialization
@@ -153,7 +157,7 @@ class SDRunnerClient:
         self._request_queue.put(
             (
                 'run',
-                (_type, base_image, append, positive_prompt, negative_prompt),
+                (_type, base_image, append, positive_prompt, negative_prompt, edit_suffix),
                 result_container,
                 condition,
             )

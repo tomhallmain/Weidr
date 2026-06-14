@@ -236,6 +236,86 @@ def get_sources_with_downstream_in_dir(
     return results
 
 
+# Cache keyed by search_dir storing (filepath, related_path_or_None) for every
+# file in that directory. Amortises the filesystem scan and metadata reads across
+# all images prevalidated against the same directory.  Cleared by
+# clear_generate_gate_cache() after any file is written into a search directory.
+_generate_gate_dir_cache: dict[str, list[tuple[str, str | None]]] = {}
+
+
+def clear_generate_gate_cache(search_dir: str | None = None) -> None:
+    """Invalidate the generate-gate directory cache.
+
+    Call with the directory path after generating a file there so subsequent
+    gate checks pick up the new file.  Call with no argument to clear all entries.
+    """
+    if search_dir is None:
+        _generate_gate_dir_cache.clear()
+    else:
+        _generate_gate_dir_cache.pop(search_dir, None)
+
+
+def _scan_dir_cached(directory: str) -> list[tuple[str, str | None]]:
+    """Return (filepath, related_path_or_None) for every file in directory.
+
+    Results are cached per directory path.  Call clear_generate_gate_cache()
+    after any write to ensure subsequent calls reflect the new state.
+    """
+    if directory not in _generate_gate_dir_cache:
+        from files.file_browser import FileBrowser
+        browser = FileBrowser(directory=directory)
+        browser._gather_files()
+        _generate_gate_dir_cache[directory] = [
+            (fp, get_related_image_path(fp, check_extra_directories=None)[0])
+            for fp in browser.filepaths
+        ]
+    return _generate_gate_dir_cache[directory]
+
+
+def should_run_generate_action(
+    image_path: str,
+    edit_suffix: str,
+    search_dir: str,
+    count_threshold: int = 1,
+) -> bool:
+    """
+    Return True when a generate action should fire for image_path.
+
+    Returns False immediately if image_path is itself a downstream image of another file.
+    Otherwise counts how many downstream images of image_path in search_dir have a stem
+    ending with edit_suffix or edit_suffix followed by an integer (e.g. "_edit", "_edit1",
+    "_edit2"). Returns True if that count is below count_threshold (including zero), False
+    if it meets or exceeds the threshold.
+
+    Directory listings and related-image metadata are cached per search_dir to avoid
+    re-scanning the directory for every image in a prevalidation batch.
+    """
+    related_path, _ = get_related_image_path(image_path, check_extra_directories=None)
+    if related_path is not None:
+        return False
+
+    source_basename = os.path.basename(image_path)
+    source_stem, source_ext = os.path.splitext(source_basename)
+
+    downstream_stems: list[str] = []
+    for fp, related in _scan_dir_cached(search_dir):
+        if related is not None:
+            if related == image_path:
+                downstream_stems.append(os.path.splitext(os.path.basename(fp))[0])
+                continue
+            if len(os.path.basename(related)) > 10 and os.path.basename(related) == source_basename:
+                downstream_stems.append(os.path.splitext(os.path.basename(fp))[0])
+                continue
+        fp_stem, fp_ext = os.path.splitext(os.path.basename(fp))
+        m = _VARIANT_SUFFIX_RE_STRICT.match(fp_stem)
+        if m and m.group(1) == source_stem and fp_ext.lower() == source_ext.lower():
+            downstream_stems.append(fp_stem)
+
+    suffix_re = re.compile(re.escape(edit_suffix) + r'\d*$')
+    suffix_count = sum(1 for stem in downstream_stems if suffix_re.search(stem))
+    return suffix_count < count_threshold
+
+
 def get_downstream_files_for_sources(
     source_paths: list[str],
     other_base_dir: str,

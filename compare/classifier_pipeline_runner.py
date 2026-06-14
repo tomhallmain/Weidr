@@ -27,6 +27,7 @@ from compare.classifier_pipeline import (
     OutcomeType,
     PromptCondition,
     PrototypeCondition,
+    RelatedImageCondition,
 )
 from utils.constants import ActionType, ClassifierActionType
 from utils.logging_setup import get_logger
@@ -92,7 +93,7 @@ def run_pipeline(
 
         try:
             result, score = _evaluate_condition(
-                node.condition, image_path, node_results, node_scores
+                node.condition, image_path, node_results, node_scores, base_directory
             )
         except Exception:
             logger.exception(
@@ -158,6 +159,7 @@ def _evaluate_condition(
     image_path: str,
     node_results: dict[str, bool],
     node_scores: dict[str, object],
+    base_directory: Optional[str] = None,
 ) -> tuple[bool, object]:
     """Return (matched, score). Score is a raw float where available, else None."""
 
@@ -196,8 +198,11 @@ def _evaluate_condition(
             return False, None
         return (prior == condition.expected_result), float(prior)
 
+    if isinstance(condition, RelatedImageCondition):
+        return _eval_related_image(condition, image_path, base_directory)
+
     if isinstance(condition, CompositeCondition):
-        return _eval_composite(condition, image_path, node_results, node_scores)
+        return _eval_composite(condition, image_path, node_results, node_scores, base_directory)
 
     raise ValueError(f"Unknown condition type: {type(condition).__name__}")
 
@@ -341,14 +346,28 @@ def _eval_lookahead(
     return bool(result), None
 
 
+def _eval_related_image(
+    condition: RelatedImageCondition,
+    image_path: str,
+    base_directory: Optional[str],
+) -> tuple[bool, object]:
+    from files.related_image import should_run_generate_action
+    search_dir = condition.search_directory or base_directory or os.path.dirname(image_path)
+    result = should_run_generate_action(
+        image_path, condition.edit_suffix, search_dir, condition.count_threshold
+    )
+    return result, None
+
+
 def _eval_composite(
     condition: CompositeCondition,
     image_path: str,
     node_results: dict[str, bool],
     node_scores: dict[str, object],
+    base_directory: Optional[str] = None,
 ) -> tuple[bool, object]:
     sub_results = [
-        _evaluate_condition(sub, image_path, node_results, node_scores)[0]
+        _evaluate_condition(sub, image_path, node_results, node_scores, base_directory)[0]
         for sub in condition.sub_conditions
     ]
     op = condition.operator

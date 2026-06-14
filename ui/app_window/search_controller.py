@@ -483,8 +483,14 @@ class SearchController:
         _type: Optional[str] = None,
         media_path: Optional[str] = None,
         modify_call: bool = False,
+        edit_suffix: Optional[str] = None,
+        suppress_toast: bool = False,
     ) -> None:
-        """Trigger image generation via SD runner."""
+        """Trigger image generation via SD runner.
+
+        suppress_toast=True skips the completion toast; use for automated/batch
+        contexts where title_notify already provides per-action feedback.
+        """
         from extensions.sd_runner_client import SDRunnerClient
         from ui.image.media_details import MediaDetails
 
@@ -508,13 +514,18 @@ class SearchController:
             if prompt_overrides is not None:
                 run_kwargs["positive_prompt"] = prompt_overrides[0]
                 run_kwargs["negative_prompt"] = prompt_overrides[1]
+            if edit_suffix is not None:
+                run_kwargs["edit_suffix"] = edit_suffix
             sd_client.run(_type, media_path, **run_kwargs)
             MediaDetails.previous_image_generation_adapter_path = media_path
+            from files.related_image import clear_generate_gate_cache
+            clear_generate_gate_cache(os.path.dirname(media_path))
 
         worker = _CompareWorker(_do_run, [])
-        worker.signals.finished.connect(
-            lambda: self._app.notification_ctrl.toast(_("Running image gen: ") + str(_type))
-        )
+        if not suppress_toast:
+            worker.signals.finished.connect(
+                lambda: self._app.notification_ctrl.toast(_("Running image gen: ") + str(_type))
+            )
         worker.signals.error.connect(
             lambda msg: self._app.notification_ctrl.handle_error(
                 _("Error running image generation:") + "\n" + msg, title=_("Warning")

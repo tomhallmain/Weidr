@@ -15,6 +15,7 @@ Phase 2 — execution engine.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import ClassVar, Optional
@@ -245,6 +246,27 @@ class CompositeCondition:
         return f"Composite({self.operator}: {parts})"
 
 
+@dataclass
+class RelatedImageCondition:
+    """Checks whether a generate action should run based on downstream image state."""
+    condition_type: ClassVar[str] = "related_image"
+
+    edit_suffix: str = ""
+    search_directory: str = ""  # empty = use base_directory from pipeline run
+    count_threshold: int = 1
+
+    def to_dict(self) -> dict:
+        return {
+            "condition_type": self.condition_type,
+            "edit_suffix": self.edit_suffix,
+            "search_directory": self.search_directory,
+            "count_threshold": self.count_threshold,
+        }
+
+    def summary(self) -> str:
+        return f"RelatedImage(suffix={self.edit_suffix!r}, threshold={self.count_threshold})"
+
+
 # Union type alias (informational only — Python does not enforce it at runtime)
 NodeCondition = (
     EmbeddingCondition
@@ -256,6 +278,7 @@ NodeCondition = (
     | LookaheadCondition
     | NodeResultCondition
     | CompositeCondition
+    | RelatedImageCondition
 )
 
 
@@ -306,6 +329,12 @@ def _condition_from_dict(d: dict):
         return CompositeCondition(
             operator=d.get("operator", "AND"),
             sub_conditions=[_condition_from_dict(c) for c in d.get("sub_conditions", [])],
+        )
+    if ct == "related_image":
+        return RelatedImageCondition(
+            edit_suffix=d.get("edit_suffix", ""),
+            search_directory=d.get("search_directory", ""),
+            count_threshold=d.get("count_threshold", 1),
         )
     raise ValueError(f"Unknown condition_type: {ct!r}")
 
@@ -506,6 +535,18 @@ class ClassifierPipeline:
                 self._validate_condition(node.condition, node.name, defined_before)
             )
 
+            # RelatedImageCondition/GENERATE outcome consistency
+            if isinstance(node.condition, RelatedImageCondition):
+                for outcome in (node.on_match, node.on_no_match):
+                    if (outcome.outcome_type == OutcomeType.EXECUTE
+                            and outcome.action_type == ClassifierActionType.GENERATE
+                            and outcome.action_modifier != node.condition.edit_suffix):
+                        errors.append(
+                            f"Node {node.name!r}: RelatedImageCondition.edit_suffix "
+                            f"({node.condition.edit_suffix!r}) must match the GENERATE "
+                            f"outcome's action_modifier ({outcome.action_modifier!r})."
+                        )
+
         return errors
 
     def _validate_condition(self, condition, node_name: str,
@@ -567,6 +608,15 @@ class ClassifierPipeline:
                         )
                 except Exception:
                     pass
+
+        elif isinstance(condition, RelatedImageCondition):
+            if not condition.edit_suffix:
+                errors.append(f"Node {node_name!r}: RelatedImageCondition has no edit_suffix.")
+            if condition.search_directory and not os.path.isdir(condition.search_directory):
+                errors.append(
+                    f"Node {node_name!r}: RelatedImageCondition.search_directory "
+                    f"({condition.search_directory!r}) is not a valid directory."
+                )
 
         elif isinstance(condition, CompositeCondition):
             if condition.operator not in CompositeCondition.VALID_OPERATORS:

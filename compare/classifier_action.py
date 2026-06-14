@@ -83,6 +83,7 @@ class ClassifierAction:
     prototype_threshold: float = 0.23
     action: ClassifierActionType = field(default=ClassifierActionType.NOTIFY)
     action_modifier: str = ""
+    related_image_edit_suffix: str = ""
     image_classifier_name: str = ""
     image_classifier_selected_categories: list = field(default_factory=list)
     classification_mode: ImageClassifierClassificationMode = field(
@@ -843,6 +844,7 @@ class ClassifierAction:
         notify_callback = callbacks.notify_callback
         add_mark_callback = callbacks.add_mark_callback
         blur_callback = callbacks.blur_callback
+        generate_callback = callbacks.generate_callback
         base_message = self.name + _(" detected")
         if self.action == ClassifierActionType.SKIP:
             notify_callback("\n" + base_message + _(" - skipped"), base_message=base_message, action_type=ActionType.SYSTEM, is_manual=False)
@@ -938,6 +940,15 @@ class ClassifierAction:
             notify_callback("\n" + base_message + _(" - blurred"), base_message=base_message, action_type=ActionType.SYSTEM, is_manual=False)
             if blur_callback is not None:
                 blur_callback(image_path)
+        elif self.action == ClassifierActionType.GENERATE:
+            if self.related_image_edit_suffix:
+                from files.related_image import should_run_generate_action
+                search_dir = self.action_modifier or base_directory or os.path.dirname(image_path)
+                if not should_run_generate_action(image_path, self.related_image_edit_suffix, search_dir):
+                    return None
+            notify_callback("\n" + base_message + _(" - generating"), base_message=base_message, action_type=ActionType.GENERATE_IMAGE, is_manual=False)
+            if generate_callback is not None:
+                generate_callback(image_path, self.related_image_edit_suffix or None)
         return self.action
 
     def get_negatives_str(self):
@@ -1080,6 +1091,7 @@ class ClassifierAction:
             "prototype_threshold": self.prototype_threshold,
             "action": self.action.value,
             "action_modifier": self.action_modifier,
+            "related_image_edit_suffix": self.related_image_edit_suffix,
             "is_active": self.is_active,
             "image_classifier_name": self.image_classifier_name,
             "image_classifier_selected_categories": self.image_classifier_selected_categories,
@@ -1155,6 +1167,8 @@ class ClassifierAction:
             d['filename_contains_case_sensitive'] = False
         if 'applies_to_media_types' not in d:
             d['applies_to_media_types'] = None
+        if 'related_image_edit_suffix' not in d:
+            d['related_image_edit_suffix'] = ""
         # Handle threshold backward compatibility
         if 'text_embedding_threshold' not in d:
             # Use existing threshold as text_embedding_threshold

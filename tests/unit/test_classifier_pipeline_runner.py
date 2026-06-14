@@ -26,6 +26,7 @@ from compare.classifier_pipeline import (
     PipelineNode,
     PromptCondition,
     PrototypeCondition,
+    RelatedImageCondition,
 )
 from compare.classifier_pipeline_runner import (
     _evaluate_condition,
@@ -36,6 +37,7 @@ from compare.classifier_pipeline_runner import (
     _eval_media_type,
     _eval_prompt,
     _eval_prototype,
+    _eval_related_image,
     run_pipeline,
 )
 from utils.constants import ClassifierActionType, CompareMediaType
@@ -829,6 +831,109 @@ class TestMediaTypeConditionRunner:
             with patch("utils.media_utils.get_media_type_for_path", return_value=mt):
                 _, score = _eval_media_type(c, "/f")
             assert score == mt.value
+
+
+# ---------------------------------------------------------------------------
+# RelatedImageCondition
+# ---------------------------------------------------------------------------
+
+class TestRelatedImageConditionRunner:
+    def _cond(self, edit_suffix="_edit", search_directory="", count_threshold=1):
+        return RelatedImageCondition(
+            edit_suffix=edit_suffix,
+            search_directory=search_directory,
+            count_threshold=count_threshold,
+        )
+
+    def _patch_gate(self, result):
+        return patch("files.related_image.should_run_generate_action", return_value=result)
+
+    def test_gate_true_returns_true(self):
+        with self._patch_gate(True):
+            result, score = _eval_related_image(self._cond(), IMAGE, None)
+        assert result is True
+        assert score is None
+
+    def test_gate_false_returns_false(self):
+        with self._patch_gate(False):
+            result, _ = _eval_related_image(self._cond(), IMAGE, None)
+        assert result is False
+
+    def test_search_directory_on_condition_takes_priority(self):
+        captured = []
+
+        def fake_gate(image_path, edit_suffix, search_dir, count_threshold=1):
+            captured.append(search_dir)
+            return True
+
+        cond = self._cond(search_directory="/from_cond")
+        with patch("files.related_image.should_run_generate_action", side_effect=fake_gate):
+            _eval_related_image(cond, IMAGE, "/base_dir")
+
+        assert captured == ["/from_cond"]
+
+    def test_falls_back_to_base_directory(self):
+        captured = []
+
+        def fake_gate(image_path, edit_suffix, search_dir, count_threshold=1):
+            captured.append(search_dir)
+            return True
+
+        cond = self._cond(search_directory="")
+        with patch("files.related_image.should_run_generate_action", side_effect=fake_gate):
+            _eval_related_image(cond, IMAGE, "/base_dir")
+
+        assert captured == ["/base_dir"]
+
+    def test_falls_back_to_image_directory(self):
+        captured = []
+
+        def fake_gate(image_path, edit_suffix, search_dir, count_threshold=1):
+            captured.append(search_dir)
+            return True
+
+        cond = self._cond(search_directory="")
+        with patch("files.related_image.should_run_generate_action", side_effect=fake_gate):
+            _eval_related_image(cond, "/dir/source.jpg", None)
+
+        assert captured == ["/dir"]
+
+    def test_count_threshold_forwarded(self):
+        captured = []
+
+        def fake_gate(image_path, edit_suffix, search_dir, count_threshold=1):
+            captured.append(count_threshold)
+            return True
+
+        cond = self._cond(count_threshold=5)
+        with patch("files.related_image.should_run_generate_action", side_effect=fake_gate):
+            _eval_related_image(cond, IMAGE, None)
+
+        assert captured == [5]
+
+    def test_dispatched_via_evaluate_condition(self):
+        with self._patch_gate(True):
+            result, _ = _evaluate_condition(self._cond(), IMAGE, {}, {})
+        assert result is True
+
+    def test_base_directory_threaded_through_run_pipeline(self):
+        """base_directory passed to run_pipeline reaches _eval_related_image."""
+        captured = []
+
+        def fake_gate(image_path, edit_suffix, search_dir, count_threshold=1):
+            captured.append(search_dir)
+            return False
+
+        cond = RelatedImageCondition(edit_suffix="_edit", search_directory="")
+        p = _pipeline(
+            _node("n1", cond,
+                  on_match=_execute(ClassifierActionType.GENERATE),
+                  on_no_match=NodeOutcome.accept()),
+        )
+        with patch("files.related_image.should_run_generate_action", side_effect=fake_gate):
+            run_pipeline(p, IMAGE, ActionCallbacks(), base_directory="/pipeline_base")
+
+        assert captured == ["/pipeline_base"]
 
 
 # ---------------------------------------------------------------------------

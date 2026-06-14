@@ -19,6 +19,7 @@ from compare.classifier_pipeline import (
     LookaheadCondition,
     NodeResultCondition,
     CompositeCondition,
+    RelatedImageCondition,
     _condition_from_dict,
     # Outcome
     NodeOutcome,
@@ -135,6 +136,29 @@ class TestConditionSerialization:
         assert c2.operator == "NOT"
         assert isinstance(c2.sub_conditions[0], CompositeCondition)
         assert c2.sub_conditions[0].operator == "OR"
+
+    def test_related_image_roundtrip(self):
+        c = RelatedImageCondition(edit_suffix="_edit", search_directory="/custom", count_threshold=3)
+        c2 = _condition_from_dict(c.to_dict())
+        assert isinstance(c2, RelatedImageCondition)
+        assert c2.edit_suffix == "_edit"
+        assert c2.search_directory == "/custom"
+        assert c2.count_threshold == 3
+
+    def test_related_image_defaults(self):
+        c = RelatedImageCondition()
+        d = c.to_dict()
+        c2 = _condition_from_dict(d)
+        assert c2.edit_suffix == ""
+        assert c2.search_directory == ""
+        assert c2.count_threshold == 1
+
+    def test_related_image_missing_keys_default_on_deserialize(self):
+        c2 = _condition_from_dict({"condition_type": "related_image", "edit_suffix": "_v2"})
+        assert isinstance(c2, RelatedImageCondition)
+        assert c2.edit_suffix == "_v2"
+        assert c2.search_directory == ""
+        assert c2.count_threshold == 1
 
     def test_unknown_condition_type_raises(self):
         with pytest.raises(ValueError, match="Unknown condition_type"):
@@ -465,6 +489,90 @@ class TestValidation:
         errors = p.validate()
         assert any("empty" in e.lower() for e in errors)
 
+    def test_related_image_condition_no_edit_suffix_fails(self):
+        p = _simple_pipeline(_make_node("n1", RelatedImageCondition(edit_suffix="")))
+        errors = p.validate()
+        assert any("edit_suffix" in e for e in errors)
+
+    def test_related_image_condition_with_edit_suffix_no_error(self):
+        p = _simple_pipeline(_make_node("n1", RelatedImageCondition(edit_suffix="_edit")))
+        errors = [e for e in p.validate() if "edit_suffix" in e]
+        assert errors == []
+
+    def test_related_image_condition_nonexistent_search_directory_fails(self):
+        p = _simple_pipeline(
+            _make_node("n1", RelatedImageCondition(
+                edit_suffix="_edit",
+                search_directory="/definitely/does/not/exist",
+            ))
+        )
+        errors = p.validate()
+        assert any("search_directory" in e for e in errors)
+
+    def test_related_image_condition_valid_search_directory_no_error(self, tmp_path):
+        p = _simple_pipeline(
+            _make_node("n1", RelatedImageCondition(
+                edit_suffix="_edit",
+                search_directory=str(tmp_path),
+            ))
+        )
+        errors = [e for e in p.validate() if "search_directory" in e]
+        assert errors == []
+
+    def test_related_image_condition_empty_search_directory_no_error(self):
+        """Empty search_directory falls back to base_directory at runtime; not a validation error."""
+        p = _simple_pipeline(
+            _make_node("n1", RelatedImageCondition(edit_suffix="_edit", search_directory=""))
+        )
+        errors = [e for e in p.validate() if "search_directory" in e]
+        assert errors == []
+
+    def test_related_image_generate_outcome_mismatched_modifier_fails(self):
+        p = _simple_pipeline(
+            _make_node(
+                "n1",
+                RelatedImageCondition(edit_suffix="_edit"),
+                on_match=NodeOutcome(
+                    OutcomeType.EXECUTE,
+                    action_type=ClassifierActionType.GENERATE,
+                    action_modifier="_different",
+                ),
+            )
+        )
+        errors = p.validate()
+        assert any("action_modifier" in e for e in errors)
+
+    def test_related_image_generate_outcome_matching_modifier_no_error(self):
+        p = _simple_pipeline(
+            _make_node(
+                "n1",
+                RelatedImageCondition(edit_suffix="_edit"),
+                on_match=NodeOutcome(
+                    OutcomeType.EXECUTE,
+                    action_type=ClassifierActionType.GENERATE,
+                    action_modifier="_edit",
+                ),
+            )
+        )
+        errors = [e for e in p.validate() if "action_modifier" in e]
+        assert errors == []
+
+    def test_related_image_non_generate_outcome_modifier_not_checked(self):
+        """action_modifier mismatch is only flagged for GENERATE outcomes."""
+        p = _simple_pipeline(
+            _make_node(
+                "n1",
+                RelatedImageCondition(edit_suffix="_edit"),
+                on_match=NodeOutcome(
+                    OutcomeType.EXECUTE,
+                    action_type=ClassifierActionType.MOVE,
+                    action_modifier="_different",
+                ),
+            )
+        )
+        errors = [e for e in p.validate() if "action_modifier" in e]
+        assert errors == []
+
 
 # ---------------------------------------------------------------------------
 # Flow preview
@@ -526,6 +634,7 @@ class TestSummaries:
             NodeResultCondition("prev", False),
             CompositeCondition("OR", [EmbeddingCondition(), PromptCondition()]),
             MediaTypeCondition([CompareMediaType.IMAGE, CompareMediaType.GIF]),
+            RelatedImageCondition(edit_suffix="_edit", count_threshold=2),
         ]
         for c in conditions:
             assert isinstance(c.summary(), str)

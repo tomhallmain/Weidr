@@ -68,6 +68,13 @@ class MediaStats:
     single_frame_stream: bool = False       # True only for broken single-frame streams
 
 
+@dataclass
+class SeekPosition:
+    """A resolved seek target derived from a TriggerFrameResult."""
+    kind: str   # "ms" for video/GIF, "page" for PDF
+    value: int  # milliseconds (video/GIF) or 0-based page number (PDF)
+
+
 def _stats_media_type_for_sampled_video_path(media_path: str) -> str:
     """``media_type`` value stored in :attr:`FrameCache.media_stats_cache` for debug / UI."""
     return "gif" if media_path.lower().endswith(".gif") else "video"
@@ -768,7 +775,11 @@ class FrameCache:
 
     @classmethod
     def stream_frame_samples(
-        cls, media_path: str, sample_ratio: float = 0.1, detect_pseudostatic: bool = False
+        cls,
+        media_path: str,
+        sample_ratio: float = 0.1,
+        detect_pseudostatic: bool = False,
+        max_samples: Optional[int] = None,
     ) -> Tuple[int, Iterator[str]]:
         """
         Lazily produce sampled frame paths for video/GIF/PDF (or a single still path).
@@ -783,6 +794,12 @@ class FrameCache:
         is not cached.
 
         Falls back to ``get_image_path`` for non-dynamic media.
+
+        max_samples: when provided, overrides the config cap on how many frames/pages
+        are sampled. Pass a very large value (e.g. ``2**31 - 1``) to sample all
+        available frames — useful for interactive seek operations where precision
+        matters more than speed. Results are cached under a separate key so normal
+        batch scans are not affected.
         """
         media_path_lower = media_path.lower()
         is_video = config.enable_videos and is_video_path_by_extension(media_path)
@@ -798,11 +815,16 @@ class FrameCache:
             ratio = 0.1
         ratio = max(0.0, min(1.0, ratio))
         min_sample_count = config.dynamic_media_min_sample_count
-        max_sample_frames = config.dynamic_media_max_sample_frames
-        max_sample_pages = config.dynamic_media_max_sample_pages
+        max_sample_frames = max_samples if max_samples is not None else config.dynamic_media_max_sample_frames
+        max_sample_pages = max_samples if max_samples is not None else config.dynamic_media_max_sample_pages
         max_sample_duration_seconds = config.dynamic_media_max_sample_duration_seconds
         max_sample_size_mb = config.dynamic_media_max_sample_size_mb
-        cache_key = _make_sample_cache_key(media_path, ratio)
+        # When max_samples is overridden, use a distinct cache key so normal scans
+        # are not polluted with denser results (and vice-versa).
+        if max_samples is not None:
+            cache_key = f"{_make_sample_cache_key(media_path, ratio)}|n{max_samples}"
+        else:
+            cache_key = _make_sample_cache_key(media_path, ratio)
 
         if cache_key in cls.sampled_cache:
             cached = cls.sampled_cache[cache_key]
@@ -1344,6 +1366,41 @@ class FrameCache:
     def get_dynamic_media_stats(cls, media_path: str) -> Optional[MediaStats]:
         """Return lightweight metadata useful for debug logging, or None if not yet cached."""
         return cls.media_stats_cache.get(media_path)
+
+    @classmethod
+    def slot_index_to_seek_position(
+        cls,
+        media_path: str,
+        slot_index: int,
+        total_planned_slots: int,
+    ) -> Optional["SeekPosition"]:
+        """Convert a slot_index from find_first_trigger_slot() into a SeekPosition.
+
+        Requires that stream_frame_samples() has already been called for media_path
+        (which find_first_trigger_slot() always does internally).
+
+        Returns None when stats are unavailable or FPS is unknown.
+        """
+        stats = cls.media_stats_cache.get(media_path)
+        if stats is None or total_planned_slots <= 0 or not stats.total_items:
+            return None
+
+        step = max(1, stats.total_items // total_planned_slots)
+        actual_index = slot_index * step
+
+        if stats.media_type == "pdf":
+            return SeekPosition(kind="page", value=actual_index)
+
+        fps = stats.fps or 0.0
+        if fps <= 0:
+            if stats.duration_seconds and stats.duration_seconds > 0:
+                # Fallback: interpolate from duration
+                frac = slot_index / max(1, total_planned_slots - 1)
+                ms = int(frac * stats.duration_seconds * 1000)
+                return SeekPosition(kind="ms", value=ms)
+            return None
+
+        return SeekPosition(kind="ms", value=int(actual_index / fps * 1000))
 
     @classmethod
     def is_pseudostatic_dynamic_media(cls, media_path: str) -> bool:

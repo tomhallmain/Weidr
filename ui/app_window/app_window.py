@@ -1057,9 +1057,9 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         """Stop VLC playback in the media frame."""
         self.media_frame.video_stop()
 
-    def seek_media_position(self, position_ms: int) -> None:
+    def seek_media_position(self, position_ms: int, pause_after: bool = False) -> None:
         """Seek VLC playback to an absolute millisecond position."""
-        self.media_frame.video_seek_ms(position_ms)
+        self.media_frame.video_seek_ms(position_ms, pause_after=pause_after)
 
     def set_media_volume(self, volume: int) -> None:
         """Set VLC volume level (0-100)."""

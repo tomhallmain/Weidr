@@ -1111,7 +1111,7 @@ class MediaFrame(QFrame):
         if _VLC_AVAILABLE and self.vlc_media_player:
             self.vlc_media_player.set_position(pos)
 
-    def video_seek_ms(self, position_ms: int):
+    def video_seek_ms(self, position_ms: int, pause_after: bool = False):
         if self._gif_movie is not None and self._gif_is_animated and self._gif_total_duration_ms > 0:
             bounded = max(0, min(int(position_ms), int(self._gif_total_duration_ms)))
             frame_idx = 0
@@ -1132,16 +1132,75 @@ class MediaFrame(QFrame):
                 self._gif_movie.setPaused(True)
                 self._gif_movie.jumpToFrame(frame_idx)
             self._update_gif_overlay_progress()
-            if was_running:
+            if was_running and not pause_after:
                 self._gif_movie.setPaused(False)
+            if pause_after:
+                self.set_playback_paused(True)
             return
         if not _VLC_AVAILABLE or not self.vlc_media_player:
             return
         duration_ms = self.vlc_media_player.get_length()
         if duration_ms <= 0:
+            # Player may be in Ended state (get_length() returns 0 after playback
+            # finishes).  Use FrameCache duration to compute a fractional position
+            # and restart via play() + set_position() so VLC accepts the seek.
+            path = self.path if isinstance(self._video_ui, VideoUI) else None
+            if not path:
+                return
+            stats = FrameCache.get_dynamic_media_stats(path)
+            dur_s = getattr(stats, "duration_seconds", None) if stats else None
+            if not dur_s or dur_s <= 0:
+                return
+            frac = max(0.0, min(1.0, position_ms / (dur_s * 1000.0)))
+            self.vlc_media_player.play()
+            self.vlc_media_player.set_position(frac)
+            if pause_after:
+                self._vlc_pause_after_seek(int(frac * dur_s * 1000))
             return
         bounded = max(0, min(int(position_ms), int(duration_ms)))
         self.vlc_media_player.set_time(bounded)
+        if pause_after:
+            self._vlc_pause_after_seek(bounded)
+
+    def _vlc_pause_after_seek(self, target_ms: int) -> None:
+        """Poll get_time() until the seek frame is displayed, then pause.
+
+        set_time/set_position are fire-and-forget; get_time() reflects the PTS
+        of the frame actually on screen, so it's the correct signal to wait on.
+        We poll every 20 ms and pause once the displayed time is within 3 seconds
+        of the target (accounting for keyframe quantisation) and has moved
+        meaningfully from the pre-seek position. Hard timeout at 1 second.
+        """
+        player = self.vlc_media_player
+        if player is None:
+            return
+        pre_ms = player.get_time()  # -1 when ended/not started
+        polls = [0]
+        timer = QTimer(self)
+        timer.setSingleShot(False)
+        timer.setInterval(20)
+
+        def _check():
+            polls[0] += 1
+            t = player.get_time()
+            if t < 0:
+                if polls[0] >= 50:
+                    timer.stop(); timer.deleteLater()
+                    player.set_pause(1); self.set_playback_paused(True)
+                return
+            # "arrived" when displayed time is near target AND has moved from
+            # pre-seek (the >200 ms jump guards against normal playback ticks
+            # firing prematurely on very short forward seeks).
+            near_target = abs(t - target_ms) < 3000
+            jumped = pre_ms < 0 or abs(t - pre_ms) > 200
+            if (near_target and jumped) or polls[0] >= 50:
+                timer.stop()
+                timer.deleteLater()
+                player.set_pause(1)
+                self.set_playback_paused(True)
+
+        timer.timeout.connect(_check)
+        timer.start()
 
     def _apply_volume_eq(self) -> None:
         """Apply per-instance volume/mute via equalizer preamp + audio_set_mute.
@@ -1342,10 +1401,14 @@ class MediaFrame(QFrame):
             self._last_cursor_pos = QCursor.pos()
             return
 
-        # Hide controls whenever a different top-level window is active
-        # (e.g. a dialog opened from this window), so the overlay never
-        # obscures dialog content.
-        if active_window is None or active_window is not top_window:
+        # Hide controls whenever an unrelated top-level window is active so the
+        # overlay never obscures it.  Exception: non-modal child windows of this
+        # window (e.g. ClassifierManagementWindow) are allowed — the user can still
+        # interact with the main window while they are open.
+        if active_window is None or (
+            active_window is not top_window
+            and active_window.parentWidget() is not top_window
+        ):
             self._mouse_inside = False
             self._controls_overlay.dismiss()
             self._last_cursor_pos = QCursor.pos()
@@ -1370,7 +1433,12 @@ class MediaFrame(QFrame):
         self._last_cursor_pos = cursor
 
     def _has_visible_child_dialog(self, top_window) -> bool:
-        """Return True when any visible QDialog is owned by this window."""
+        """Return True when any visible *modal* QDialog is owned by this window.
+
+        Non-modal dialogs (e.g. ClassifierManagementWindow) are intentionally
+        excluded: the user can still interact with the main window while they are
+        open, so the overlay should not be suppressed.
+        """
         app = QApplication.instance()
         if app is None or top_window is None:
             return False
@@ -1378,6 +1446,8 @@ class MediaFrame(QFrame):
             if widget is top_window or widget is self._controls_overlay:
                 continue
             if not widget.isVisible() or not isinstance(widget, QDialog):
+                continue
+            if not widget.isModal():
                 continue
             parent = widget.parentWidget()
             while parent is not None:

@@ -32,6 +32,23 @@ from utils.utils import Utils
 logger = get_logger("classifier_action")
 
 
+@dataclass
+class TriggerDetail:
+    """What caused find_first_trigger_slot() to return a positive result."""
+    trigger_type: str                              # "image_classifier", "embedding", "prompt", "prototype", "filename"
+    category: Optional[str] = None                # matched category (image classifier only)
+    top_predictions: Optional[list] = None        # [(category, score), ...] ranked highest first
+
+
+@dataclass
+class TriggerFrameResult:
+    """Position of the first matching frame found by find_first_trigger_slot()."""
+    slot_index: int               # 0-based index into the planned sample slots
+    total_planned_slots: int      # planned_slots returned by stream_frame_samples
+    frame_path: str               # absolute path to the matching frame file
+    detail: Optional["TriggerDetail"] = None      # what triggered (populated for manual seeks)
+
+
 class ImageClassifierClassificationMode(Enum):
     SELECTED_CATEGORIES = "selected_categories"
     MODEL_STRATEGY = "model_strategy"
@@ -454,16 +471,22 @@ class ClassifierAction:
             self._run_with_batch_prototype_validation(directory_paths, hide_callback, notify_callback, add_mark_callback, max_images_per_batch)
 
     def _evaluate_image_path_match(
-        self, image_path: str, lookahead_eval_cache=None
+        self, image_path: str, lookahead_eval_cache=None, _detail_out: Optional[list] = None
     ) -> tuple[bool, Optional[str]]:
         # Note: Image classifier and prototype should be loaded before calling this method
         # (see ClassifierActionsWindow.run_classifier_action for pre-loading)
+        #
+        # _detail_out: optional single-element list. When provided, _detail_out[0] is set
+        # to a TriggerDetail describing what triggered. Used only for the manual seek flow;
+        # all normal callers leave it None.
         if not self.can_run:
             return False, None
 
-        # Check each enabled validation type with short-circuit OR logic        
+        # Check each enabled validation type with short-circuit OR logic
         if self.use_prototype:
             if self._check_prototype_validation(image_path):
+                if _detail_out is not None:
+                    _detail_out[0] = TriggerDetail(trigger_type="prototype")
                 return True, None
 
         # Check lookaheads first - if any pass, skip this prevalidation
@@ -472,8 +495,10 @@ class ClassifierAction:
 
         if self.use_embedding:
             if CompareEmbeddingClip.multi_text_compare(image_path, self.positives, self.negatives, self.text_embedding_threshold):
+                if _detail_out is not None:
+                    _detail_out[0] = TriggerDetail(trigger_type="embedding")
                 return True, None
-        
+
         if self.use_image_classifier:
             if self.image_classifier is None and self.image_classifier_name:
                 # Lazy attempt; no notify callback here.
@@ -483,6 +508,8 @@ class ClassifierAction:
                     predicted_category = self.image_classifier.classify_image(image_path)
                     positive_categories = self._resolve_model_strategy_positive_categories()
                     if predicted_category in positive_categories:
+                        if _detail_out is not None:
+                            _detail_out[0] = self._build_classifier_detail(image_path, predicted_category)
                         return True, predicted_category
                 else:
                     if self.image_classifier.test_image_for_categories(
@@ -494,6 +521,8 @@ class ClassifierAction:
                             )
                         except Exception:
                             predicted_category = None
+                        if _detail_out is not None:
+                            _detail_out[0] = self._build_classifier_detail(image_path, predicted_category)
                         if predicted_category in self.image_classifier_selected_categories:
                             return True, predicted_category
                         return True, None
@@ -501,23 +530,122 @@ class ClassifierAction:
                 if not self._missing_image_classifier_logged:
                     logger.error(f"Image classifier {self.image_classifier_name} not found for classifier action {self.name}")
                     self._missing_image_classifier_logged = True
-        
+
         if self.use_prompts:
             if self._check_prompt_validation(image_path):
+                if _detail_out is not None:
+                    _detail_out[0] = TriggerDetail(trigger_type="prompt")
                 return True, None
 
         if self.use_filename_contains:
             if self._check_filename_contains(image_path):
+                if _detail_out is not None:
+                    _detail_out[0] = TriggerDetail(trigger_type="filename")
                 return True, None
 
         # No validation type passed
         return False, None
+
+    def _build_classifier_detail(self, image_path: str, category: Optional[str]) -> "TriggerDetail":
+        """Build a TriggerDetail for an image-classifier match, including ranked predictions.
+        predict_image caches internally so this is effectively free after classify_image ran."""
+        top_preds = None
+        try:
+            if self.image_classifier:
+                top_preds = self.image_classifier.predict_image_ranked(image_path)
+        except Exception:
+            pass
+        return TriggerDetail(trigger_type="image_classifier", category=category, top_predictions=top_preds)
 
     def matches_image_path(self, image_path, lookahead_eval_cache=None) -> bool:
         is_match, _unused = self._evaluate_image_path_match(
             image_path, lookahead_eval_cache=lookahead_eval_cache
         )
         return is_match
+
+    def find_first_trigger_slot(
+        self, media_path: str, start_slot: int = 0, sample_ratio: Optional[float] = None
+    ) -> Optional["TriggerFrameResult"]:
+        """Scan sampled frames of a dynamic media file and return the position of the
+        first matching frame, provided the action's positive-frame threshold is met.
+
+        Mirrors run_on_media_path() sampling and threshold logic but returns seek
+        info instead of dispatching. Does not touch any prevalidation cache.
+        Returns None if the threshold is not met or the file is not dynamic media.
+
+        start_slot: skip all slots before this index, enabling "next trigger" cycling.
+            Call with start_slot = last_result.slot_index + 1 and wrap to 0 on None.
+
+        sample_ratio: when provided, overrides self.dynamic_content_sample_ratio and
+            disables the configured max-samples cap, sampling up to every available
+            frame. Use 1.0 for interactive seeks where precision matters more than speed.
+        """
+        if not is_classifier_dynamic_media_path(media_path):
+            return None
+
+        if sample_ratio is not None:
+            # Interactive/manual seek: sample densely with no artificial frame-count cap.
+            # _compute_sample_indices will still clamp to total_items, preventing runaway.
+            planned_slots, sample_iter = FrameCache.stream_frame_samples(
+                media_path,
+                sample_ratio=sample_ratio,
+                detect_pseudostatic=False,
+                max_samples=2 ** 31 - 1,
+            )
+        else:
+            planned_slots, sample_iter = FrameCache.stream_frame_samples(
+                media_path,
+                sample_ratio=self.dynamic_content_sample_ratio,
+                detect_pseudostatic=False,
+            )
+        if planned_slots <= 0:
+            return None
+
+        if start_slot > 0:
+            # Materialize (almost certainly already cached) and take the sub-range.
+            all_frames = list(sample_iter)
+            planned_slots = len(all_frames)
+            if start_slot >= planned_slots:
+                return None
+            scan_frames = all_frames[start_slot:]
+            slot_offset = start_slot
+        else:
+            scan_frames = sample_iter   # stay lazy when scanning from the beginning
+            slot_offset = 0
+
+        n = len(scan_frames) if hasattr(scan_frames, "__len__") else planned_slots
+        required = max(1, math.ceil(n * self.dynamic_content_positive_ratio))
+        positive_count = 0
+        first_positive: Optional[tuple] = None  # (absolute_slot_index, frame_path)
+
+        for local_idx, frame_path in enumerate(scan_frames):
+            try:
+                is_match, _unused = self._evaluate_image_path_match(frame_path)
+            except Exception:
+                is_match = False
+            if is_match:
+                positive_count += 1
+                if first_positive is None:
+                    first_positive = (slot_offset + local_idx, frame_path)
+                if positive_count >= required:
+                    # Re-evaluate the trigger frame with detail capture. predict_image
+                    # caches results internally so this extra call is effectively free.
+                    detail_out: list = [None]
+                    try:
+                        self._evaluate_image_path_match(first_positive[1], _detail_out=detail_out)
+                    except Exception:
+                        pass
+                    return TriggerFrameResult(
+                        slot_index=first_positive[0],
+                        total_planned_slots=planned_slots,
+                        frame_path=first_positive[1],
+                        detail=detail_out[0],
+                    )
+            remaining = n - local_idx - 1
+            if positive_count + remaining < required:
+                break
+
+        return None
 
     def run_on_media_path(
         self,

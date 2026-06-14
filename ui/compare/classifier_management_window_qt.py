@@ -592,6 +592,7 @@ class ClassifierManagementWindow(SmartDialog):
         from ui.compare.classifier_actions_tab_qt import ClassifierActionsTab
         from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
         from ui.compare.prevalidations_tab_qt import PrevalidationsTab
+        from ui.compare.seek_to_trigger_tab_qt import SeekToTriggerTab
 
         self._classifier_actions_tab = ClassifierActionsTab(
             self._tabs, app_actions
@@ -602,6 +603,9 @@ class ClassifierManagementWindow(SmartDialog):
         self._classifier_pipelines_tab = ClassifierPipelinesTab(
             self._tabs, app_actions
         )
+        self._seek_to_trigger_tab = SeekToTriggerTab(
+            self._tabs, app_actions
+        )
 
         self._tabs.addTab(
             self._classifier_actions_tab, _("Classifier Actions")
@@ -609,6 +613,9 @@ class ClassifierManagementWindow(SmartDialog):
         self._tabs.addTab(self._prevalidations_tab, _("Prevalidations"))
         self._tabs.addTab(
             self._classifier_pipelines_tab, _("Pipelines")
+        )
+        self._tabs.addTab(
+            self._seek_to_trigger_tab, _("Seek to Trigger")
         )
 
         if not config.enable_prevalidations:

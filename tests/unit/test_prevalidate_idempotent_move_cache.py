@@ -14,12 +14,11 @@ def _noop(*_args, **_kwargs):
 
 
 def _run_prevalidate(media_path: str, base_dir: str):
+    from compare.action_callbacks import ActionCallbacks
     return ClassifierActionsManager.prevalidate_media(
         media_path,
         lambda: base_dir,
-        _noop,
-        _noop,
-        _noop,
+        ActionCallbacks(hide_callback=_noop, notify_callback=_noop, add_mark_callback=_noop),
     )
 
 

@@ -25,13 +25,16 @@ def _run_prevalidate(
     blur_callback=None,
     force: bool = False,
 ):
+    from compare.action_callbacks import ActionCallbacks
     return ClassifierActionsManager.prevalidate_media(
         media_path,
         lambda: base_dir,
-        hide_callback,
-        notify_callback,
-        add_mark_callback,
-        blur_callback=blur_callback,
+        ActionCallbacks(
+            hide_callback=hide_callback,
+            notify_callback=notify_callback,
+            add_mark_callback=add_mark_callback,
+            blur_callback=blur_callback,
+        ),
         force=force,
     )
 

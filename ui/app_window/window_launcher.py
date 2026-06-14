@@ -422,9 +422,7 @@ class WindowLauncher:
                     result = PrevalidationsTab.prevalidate(
                         media_path,
                         self._app.get_base_dir,
-                        self._app.file_ops_ctrl.hide_current_media,
-                        self._app.notification_ctrl.title_notify,
-                        MarkedFiles.add_mark_if_not_present,
+                        self._app.app_actions.prevalidation_callbacks_with_mark,
                         force=False,  # TODO optionally allow force=True via different keybind
                     )
                     if result is not None:

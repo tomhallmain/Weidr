@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 from typing import Optional
 
+from compare.action_callbacks import ActionCallbacks
 from compare.classifier_pipeline import (
     ClassifierPipeline,
     CompositeCondition,
@@ -62,11 +63,8 @@ def _load_prototype(directory: str, cache: dict) -> object:
 def run_pipeline(
     pipeline: ClassifierPipeline,
     image_path: str,
+    callbacks: ActionCallbacks,
     *,
-    hide_callback=None,
-    notify_callback=None,
-    add_mark_callback=None,
-    blur_callback=None,
     base_directory: Optional[str] = None,
 ) -> Optional[ClassifierActionType]:
     """
@@ -114,8 +112,8 @@ def run_pipeline(
                 outcome.action_modifier or None,
                 pipeline.name,
                 image_path,
-                hide_callback, notify_callback, add_mark_callback,
-                blur_callback, base_directory,
+                callbacks,
+                base_directory,
             )
             return outcome.action_type
 
@@ -128,8 +126,8 @@ def run_pipeline(
                 None,
                 pipeline.name,
                 image_path,
-                hide_callback, notify_callback, add_mark_callback,
-                blur_callback, base_directory,
+                callbacks,
+                base_directory,
             )
             return pipeline.default_reject_action
 
@@ -145,8 +143,8 @@ def run_pipeline(
         None,
         pipeline.name,
         image_path,
-        hide_callback, notify_callback, add_mark_callback,
-        blur_callback, base_directory,
+        callbacks,
+        base_directory,
     )
     return pipeline.default_action
 
@@ -375,15 +373,17 @@ def _dispatch_action(
     action_modifier: Optional[str],
     pipeline_name: str,
     image_path: str,
-    hide_callback,
-    notify_callback,
-    add_mark_callback,
-    blur_callback,
+    callbacks: ActionCallbacks,
     base_directory: Optional[str],
 ) -> None:
     if action_type is None:
         return
 
+    hide_callback = callbacks.hide_callback
+    notify_callback = callbacks.notify_callback
+    add_mark_callback = callbacks.add_mark_callback
+    blur_callback = callbacks.blur_callback
+    generate_callback = callbacks.generate_callback
     _notify = notify_callback or (lambda *a, **kw: None)
     base_message = pipeline_name + _(" detected")
 
@@ -480,3 +480,11 @@ def _dispatch_action(
         )
         if blur_callback:
             blur_callback(image_path)
+
+    elif action_type == ClassifierActionType.GENERATE:
+        _notify(
+            "\n" + base_message + _(" - generating"),
+            base_message=base_message, action_type=ActionType.GENERATE_IMAGE, is_manual=False,
+        )
+        if generate_callback:
+            generate_callback(image_path, action_modifier or None)

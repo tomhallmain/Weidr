@@ -1,3 +1,4 @@
+from functools import cached_property
 from typing import Callable, Dict, Any, Optional
 
 from ui.app_style import AppStyle
@@ -80,3 +81,28 @@ class AppActions:
 
     def set_media_details_window(self, media_details_window):
         self._actions["_media_details_window"] = media_details_window
+
+    @cached_property
+    def prevalidation_callbacks(self):
+        return self._build_callbacks()
+
+    @cached_property
+    def prevalidation_callbacks_with_mark(self):
+        from files.marked_files import MarkedFiles
+        return self._build_callbacks(add_mark_callback=MarkedFiles.add_mark_if_not_present)
+
+    def make_prevalidation_callbacks(self, add_mark_callback):
+        """Build an ActionCallbacks bundle with a custom add_mark_callback."""
+        return self._build_callbacks(add_mark_callback=add_mark_callback)
+
+    def _build_callbacks(self, add_mark_callback=None):
+        from compare.action_callbacks import ActionCallbacks
+        return ActionCallbacks(
+            hide_callback=self.hide_current_media,
+            notify_callback=self.title_notify,
+            add_mark_callback=add_mark_callback,
+            blur_callback=self.request_media_blur,
+            generate_callback=lambda path, gen_type=None: self.run_image_generation(
+                media_path=path, _type=gen_type
+            ),
+        )

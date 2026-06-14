@@ -266,6 +266,7 @@ class ClassifierPipelinesTab(QWidget):
             return
 
         try:
+            from compare.action_callbacks import ActionCallbacks
             from compare.classifier_pipeline_runner import run_pipeline
 
             def _notify(msg, **_kw):
@@ -277,7 +278,7 @@ class ClassifierPipelinesTab(QWidget):
             result = run_pipeline(
                 pipeline,
                 image_path,
-                notify_callback=_notify,
+                ActionCallbacks(notify_callback=_notify),
             )
             msg = (
                 _("Pipeline '{}' result: {}").format(pipeline.name, result)

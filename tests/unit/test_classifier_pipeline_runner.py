@@ -11,6 +11,7 @@ import numpy as np
 
 from unittest.mock import patch
 
+from compare.action_callbacks import ActionCallbacks
 from compare.classifier_pipeline import (
     ClassifierPipeline,
     ClassifierRankCondition,
@@ -360,8 +361,8 @@ class TestFilenameContainsCondition:
                   on_no_match=NodeOutcome.accept())
         )
         calls, hide, notify, mark, blur = _callbacks()
-        result = run_pipeline(p, "/media/photo_reject_001.jpg", hide_callback=hide,
-                              notify_callback=notify)
+        result = run_pipeline(p, "/media/photo_reject_001.jpg",
+                              ActionCallbacks(hide_callback=hide, notify_callback=notify))
         assert result == ClassifierActionType.HIDE
         assert "/media/photo_reject_001.jpg" in calls["hide"]
 
@@ -371,7 +372,7 @@ class TestFilenameContainsCondition:
             _node("n1", cond, on_match=_execute(ClassifierActionType.HIDE),
                   on_no_match=NodeOutcome.accept())
         )
-        result = run_pipeline(p, "/media/photo_keep_001.jpg")
+        result = run_pipeline(p, "/media/photo_keep_001.jpg", ActionCallbacks())
         assert result is None
 
     def test_serialization_round_trip(self):
@@ -546,11 +547,11 @@ class TestRunPipelineControlFlow:
     def test_inactive_pipeline_returns_none(self, monkeypatch):
         p = _pipeline(_node("n1", EmbeddingCondition(["x"])))
         p.is_active = False
-        assert run_pipeline(p, IMAGE) is None
+        assert run_pipeline(p, IMAGE, ActionCallbacks()) is None
 
     def test_empty_pipeline_returns_none(self):
         p = ClassifierPipeline(name="empty")
-        assert run_pipeline(p, IMAGE) is None
+        assert run_pipeline(p, IMAGE, ActionCallbacks()) is None
 
     def test_execute_on_match(self, monkeypatch):
         self._patch_embedding(monkeypatch, True)
@@ -559,7 +560,7 @@ class TestRunPipelineControlFlow:
                   on_match=_execute(ClassifierActionType.NOTIFY))
         )
         calls, hide, notify, mark, blur = _callbacks()
-        result = run_pipeline(p, IMAGE, notify_callback=notify)
+        result = run_pipeline(p, IMAGE, ActionCallbacks(notify_callback=notify))
         assert result == ClassifierActionType.NOTIFY
         assert len(calls["notify"]) == 1
 
@@ -569,7 +570,7 @@ class TestRunPipelineControlFlow:
             _node("n1", EmbeddingCondition(["x"]),
                   on_no_match=NodeOutcome(OutcomeType.ACCEPT))
         )
-        assert run_pipeline(p, IMAGE) is None
+        assert run_pipeline(p, IMAGE, ActionCallbacks()) is None
 
     def test_continue_advances_to_next_node(self, monkeypatch):
         # n1 matches → CONTINUE; n2 matches → EXECUTE NOTIFY
@@ -582,7 +583,7 @@ class TestRunPipelineControlFlow:
                   on_match=_execute(ClassifierActionType.NOTIFY),
                   on_no_match=NodeOutcome.accept()),
         )
-        result = run_pipeline(p, IMAGE)
+        result = run_pipeline(p, IMAGE, ActionCallbacks())
         assert result == ClassifierActionType.NOTIFY
 
     def test_goto_skips_node(self, monkeypatch):
@@ -609,7 +610,7 @@ class TestRunPipelineControlFlow:
                   on_match=_execute(ClassifierActionType.NOTIFY),
                   on_no_match=NodeOutcome.accept()),
         )
-        result = run_pipeline(p, IMAGE)
+        result = run_pipeline(p, IMAGE, ActionCallbacks())
         assert result == ClassifierActionType.NOTIFY
 
     def test_reject_fires_default_reject_action(self, monkeypatch):
@@ -620,7 +621,7 @@ class TestRunPipelineControlFlow:
                   on_match=NodeOutcome(OutcomeType.REJECT))
         )
         p.default_reject_action = ClassifierActionType.NOTIFY
-        result = run_pipeline(p, IMAGE, notify_callback=notify)
+        result = run_pipeline(p, IMAGE, ActionCallbacks(notify_callback=notify))
         assert result == ClassifierActionType.NOTIFY
         assert len(calls["notify"]) == 1
 
@@ -632,7 +633,7 @@ class TestRunPipelineControlFlow:
             default_action=ClassifierActionType.NOTIFY,
         )
         calls, _, notify, _, _ = _callbacks()
-        result = run_pipeline(p, IMAGE, notify_callback=notify)
+        result = run_pipeline(p, IMAGE, ActionCallbacks(notify_callback=notify))
         assert result == ClassifierActionType.NOTIFY
 
     def test_node_exception_treated_as_no_match(self, monkeypatch):
@@ -646,7 +647,7 @@ class TestRunPipelineControlFlow:
                   on_match=_execute(ClassifierActionType.NOTIFY),
                   on_no_match=NodeOutcome.accept()),
         )
-        assert run_pipeline(p, IMAGE) is None
+        assert run_pipeline(p, IMAGE, ActionCallbacks()) is None
 
     def test_node_results_available_to_later_nodes(self, monkeypatch):
         """The CLIP-vs-model disagreement pattern from the design doc."""
@@ -664,7 +665,7 @@ class TestRunPipelineControlFlow:
                   on_no_match=NodeOutcome.accept()),
         )
         calls, _, notify, mark, _ = _callbacks()
-        result = run_pipeline(p, IMAGE, notify_callback=notify, add_mark_callback=mark)
+        result = run_pipeline(p, IMAGE, ActionCallbacks(notify_callback=notify, add_mark_callback=mark))
         assert result == ClassifierActionType.ADD_MARK
         assert IMAGE in calls["mark"]
 
@@ -688,10 +689,12 @@ class TestActionDispatch:
         calls, hide, notify, mark, blur = _callbacks()
         run_pipeline(
             p, IMAGE,
-            hide_callback=extra_callbacks.get("hide", hide),
-            notify_callback=extra_callbacks.get("notify", notify),
-            add_mark_callback=extra_callbacks.get("mark", mark),
-            blur_callback=extra_callbacks.get("blur", blur),
+            ActionCallbacks(
+                hide_callback=extra_callbacks.get("hide", hide),
+                notify_callback=extra_callbacks.get("notify", notify),
+                add_mark_callback=extra_callbacks.get("mark", mark),
+                blur_callback=extra_callbacks.get("blur", blur),
+            ),
         )
         return calls
 
@@ -732,7 +735,7 @@ class TestActionDispatch:
         p = _pipeline(_node("n1", EmbeddingCondition(["x"]),
                             on_match=_execute(ClassifierActionType.MOVE, target)))
         calls, _, notify, _, _ = _callbacks()
-        result = run_pipeline(p, IMAGE, notify_callback=notify)
+        result = run_pipeline(p, IMAGE, ActionCallbacks(notify_callback=notify))
         assert result == ClassifierActionType.MOVE
         assert len(moved) == 1
         assert moved[0][1] == target
@@ -750,14 +753,14 @@ class TestActionDispatch:
         p = _pipeline(_node("n1", EmbeddingCondition(["x"]),
                             on_match=_execute(ClassifierActionType.DELETE)))
         calls, _, notify, _, _ = _callbacks()
-        run_pipeline(p, str(img), notify_callback=notify)
+        run_pipeline(p, str(img), ActionCallbacks(notify_callback=notify))
         assert not img.exists()
 
     def test_no_callbacks_does_not_crash(self, monkeypatch):
         self._patch_embedding(monkeypatch)
         p = _pipeline(_node("n1", EmbeddingCondition(["x"]),
                             on_match=_execute(ClassifierActionType.NOTIFY)))
-        result = run_pipeline(p, IMAGE)  # no callbacks passed
+        result = run_pipeline(p, IMAGE, ActionCallbacks())
         assert result == ClassifierActionType.NOTIFY
 
 
@@ -850,14 +853,14 @@ class TestRunPipelineMediaTypeGate:
         p = self._matching_pipeline(applies_to=None)
         with _patch_media_type(CompareMediaType.VIDEO):
             with self._patch_embedding_match():
-                result = run_pipeline(p, IMAGE)
+                result = run_pipeline(p, IMAGE, ActionCallbacks())
         assert result == ClassifierActionType.NOTIFY
 
     def test_allowed_type_proceeds(self):
         p = self._matching_pipeline(applies_to=[CompareMediaType.IMAGE])
         with _patch_media_type(CompareMediaType.IMAGE):
             with self._patch_embedding_match():
-                result = run_pipeline(p, IMAGE)
+                result = run_pipeline(p, IMAGE, ActionCallbacks())
         assert result == ClassifierActionType.NOTIFY
 
     def test_disallowed_type_returns_none_without_evaluating(self):
@@ -866,7 +869,7 @@ class TestRunPipelineMediaTypeGate:
         with _patch_media_type(CompareMediaType.VIDEO):
             with patch.object(p.nodes[0], "condition",
                               wraps=p.nodes[0].condition) as mock_cond:
-                result = run_pipeline(p, IMAGE)
+                result = run_pipeline(p, IMAGE, ActionCallbacks())
         assert result is None
 
     def test_disallowed_type_does_not_call_evaluate_condition(self):
@@ -880,7 +883,7 @@ class TestRunPipelineMediaTypeGate:
 
         with _patch_media_type(CompareMediaType.IMAGE):
             with patch("compare.classifier_pipeline_runner._evaluate_condition", side_effect=spy):
-                result = run_pipeline(p, IMAGE)
+                result = run_pipeline(p, IMAGE, ActionCallbacks())
 
         assert result is None
         assert not calls, "_evaluate_condition must not be called for a disallowed type"
@@ -891,5 +894,5 @@ class TestRunPipelineMediaTypeGate:
                                nodes=[_node("n1", EmbeddingCondition(["x"]),
                                            on_match=_execute(ClassifierActionType.NOTIFY))])
         with _patch_media_type(CompareMediaType.IMAGE):
-            result = run_pipeline(p, IMAGE)
+            result = run_pipeline(p, IMAGE, ActionCallbacks())
         assert result is None

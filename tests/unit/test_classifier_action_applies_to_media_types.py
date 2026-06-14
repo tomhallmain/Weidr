@@ -17,6 +17,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
+from compare.action_callbacks import ActionCallbacks
 from compare.classifier_action import ClassifierAction
 from utils.constants import ClassifierActionType, CompareMediaType
 
@@ -147,7 +148,7 @@ class TestMediaTypeGatingRunOnMediaPath:
             with patch.object(ca, "_evaluate_image_path_match",
                               side_effect=lambda *a, **kw: evaluate_called.append(True) or (False, None)):
                 with patch("compare.classifier_action.is_classifier_dynamic_media_path", return_value=False):
-                    ca.run_on_media_path("/img/photo.jpg", lambda: None, lambda *a: None)
+                    ca.run_on_media_path("/img/photo.jpg", ActionCallbacks())
         assert evaluate_called, "_evaluate_image_path_match should be reached for an allowed type"
 
     def test_disallowed_type_returns_none_without_evaluating(self):
@@ -156,7 +157,7 @@ class TestMediaTypeGatingRunOnMediaPath:
         with _patch_media_type(CompareMediaType.VIDEO):
             with patch.object(ca, "_evaluate_image_path_match",
                               side_effect=lambda *a, **kw: evaluate_called.append(True) or (False, None)):
-                result = ca.run_on_media_path("/vid/clip.mp4", lambda: None, lambda *a: None)
+                result = ca.run_on_media_path("/vid/clip.mp4", ActionCallbacks())
         assert result is None
         assert not evaluate_called, "_evaluate_image_path_match must not be called for a disallowed type"
 
@@ -167,7 +168,7 @@ class TestMediaTypeGatingRunOnMediaPath:
             with patch("compare.classifier_action.is_classifier_dynamic_media_path", return_value=True):
                 with patch("compare.classifier_action.FrameCache.stream_frame_samples",
                            side_effect=lambda *a, **kw: stream_called.append(True)):
-                    result = ca.run_on_media_path("/vid/clip.mp4", lambda: None, lambda *a: None)
+                    result = ca.run_on_media_path("/vid/clip.mp4", ActionCallbacks())
         assert result is None
         assert not stream_called, "Frame sampling must not start for a disallowed type"
 
@@ -178,7 +179,7 @@ class TestMediaTypeGatingRunOnMediaPath:
             with patch.object(ca, "_evaluate_image_path_match",
                               side_effect=lambda *a, **kw: evaluate_called.append(True) or (False, None)):
                 with patch("compare.classifier_action.is_classifier_dynamic_media_path", return_value=False):
-                    ca.run_on_media_path("/vid/clip.mp4", lambda: None, lambda *a: None)
+                    ca.run_on_media_path("/vid/clip.mp4", ActionCallbacks())
         assert evaluate_called, "With applies_to_media_types=None all types should be allowed"
 
 

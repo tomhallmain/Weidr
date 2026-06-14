@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import os
 from collections import defaultdict
-from typing import Callable, Optional
+from typing import Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QPushButton, QScrollArea, QVBoxLayout, QWidget,
 )
 
+from compare.action_callbacks import ActionCallbacks
 from compare.classifier_action import ClassifierAction
 from compare.classifier_actions_manager import ClassifierActionsManager
 from files.directory_profile import DirectoryProfile
@@ -53,17 +54,13 @@ class ClassifierActionsTab(QWidget):
     def run_classifier_action(
         classifier_action: ClassifierAction,
         directory_paths: list[str],
-        hide_callback: Callable,
-        notify_callback: Callable,
-        add_mark_callback: Optional[Callable] = None,
+        callbacks: ActionCallbacks,
         profile_name_or_path: Optional[str] = None,
     ) -> None:
         """Run a classifier action across *directory_paths*."""
         classifier_action.run(
             directory_paths,
-            hide_callback,
-            notify_callback,
-            add_mark_callback,
+            callbacks,
             profile_name_or_path,
             ClassifierActionsTab.BATCH_VALIDATION_MAX_IMAGES,
         )
@@ -356,21 +353,10 @@ class ClassifierActionsTab(QWidget):
         if not qt_alert(_("Run Classifier Action"), full, kind="askokcancel", master=self):
             return
 
-        hide_cb = getattr(self._app_actions, "hide_current_media", None)
-        notify_cb = getattr(self._app_actions, "title_notify", None)
-        add_mark_cb = None
-        try:
-            from files.marked_files import MarkedFiles
-            add_mark_cb = MarkedFiles.add_mark_if_not_present
-        except ImportError:
-            pass
-
         ClassifierActionsTab.run_classifier_action(
             classifier_action,
             profile.directories,
-            hide_cb,
-            notify_cb,
-            add_mark_cb,
+            self._app_actions.prevalidation_callbacks_with_mark,
             profile.name,
         )
 
@@ -382,16 +368,8 @@ class ClassifierActionsTab(QWidget):
         if not qt_alert(self, _("Run Pipeline"), msg, kind="askokcancel"):
             return
 
-        hide_cb = getattr(self._app_actions, "hide_current_media", None)
-        notify_cb = getattr(self._app_actions, "title_notify", None)
-        add_mark_cb = None
-        try:
-            from files.marked_files import MarkedFiles
-            add_mark_cb = MarkedFiles.add_mark_if_not_present
-        except ImportError:
-            pass
-
         directories = list(profile.directories)
+        callbacks = self._app_actions.prevalidation_callbacks_with_mark
 
         def _worker():
             from compare.base_compare import gather_files
@@ -399,13 +377,7 @@ class ClassifierActionsTab(QWidget):
             for directory in directories:
                 for image_path in gather_files(directory):
                     try:
-                        run_pipeline(
-                            pipeline, image_path,
-                            hide_callback=hide_cb,
-                            notify_callback=notify_cb,
-                            add_mark_callback=add_mark_cb,
-                            base_directory=directory,
-                        )
+                        run_pipeline(pipeline, image_path, callbacks, base_directory=directory)
                     except Exception:
                         logger.exception("Pipeline run error on %s", image_path)
 
@@ -435,19 +407,10 @@ class ClassifierActionsTab(QWidget):
         if not qt_alert(_("Run All Classifier Actions"), full, kind="askokcancel", master=self):
             return
 
-        hide_cb = getattr(self._app_actions, "hide_current_media", None)
-        notify_cb = getattr(self._app_actions, "title_notify", None)
-        add_mark_cb = None
-        try:
-            from files.marked_files import MarkedFiles
-            add_mark_cb = MarkedFiles.add_mark_if_not_present
-        except ImportError:
-            pass
-
+        callbacks = self._app_actions.prevalidation_callbacks_with_mark
         for ca in active:
             ClassifierActionsTab.run_classifier_action(
-                ca, profile.directories, hide_cb, notify_cb,
-                add_mark_cb, profile.name,
+                ca, profile.directories, callbacks, profile.name,
             )
 
 

@@ -11,6 +11,7 @@ import math
 import os
 from typing import ClassVar, Optional
 
+from compare.action_callbacks import ActionCallbacks
 from compare.compare_embeddings_clip import CompareEmbeddingClip
 from compare.embedding_prototype import EmbeddingPrototype
 from compare.lookahead import Lookahead
@@ -395,7 +396,7 @@ class ClassifierAction:
             logger.error(f"Error checking prototype validation for {image_path}: {e}")
             return False
     
-    def _run_with_batch_prototype_validation(self, directory_paths: list[str], hide_callback, notify_callback, add_mark_callback=None, max_images_per_batch: Optional[int] = None):
+    def _run_with_batch_prototype_validation(self, directory_paths: list[str], callbacks: ActionCallbacks, max_images_per_batch: Optional[int] = None):
         """
         Run classifier action with batch prototype validation for efficiency.
         
@@ -422,14 +423,14 @@ class ClassifierAction:
                     threshold=self.prototype_threshold,
                     negative_prototype=self._cached_negative_prototype,
                     negative_lambda=self.negative_prototype_lambda,
-                    notify_callback=notify_callback,
+                    notify_callback=callbacks.notify_callback,
                     max_images_per_batch=max_images_per_batch
                 )
-                
+
                 # Run actions on matching images
                 for image_path in matching_paths:
                     try:
-                        self.run_action(image_path, hide_callback, notify_callback, add_mark_callback)
+                        self.run_action(image_path, callbacks)
                     except Exception as e:
                         logger.error(f"Error running action on {image_path}: {e}")
             except Exception as e:
@@ -438,7 +439,7 @@ class ClassifierAction:
         # Start batch validation and action execution in a separate thread
         start_thread(batch_validation_worker, use_asyncio=False)
 
-    def run(self, directory_paths: list[str], hide_callback, notify_callback, add_mark_callback=None, profile_name_or_path: Optional[str] = None, max_images_per_batch: Optional[int] = None):
+    def run(self, directory_paths: list[str], callbacks: ActionCallbacks, profile_name_or_path: Optional[str] = None, max_images_per_batch: Optional[int] = None):
         """Run the classifier action on the given directory paths.
         
         Args:
@@ -472,12 +473,12 @@ class ClassifierAction:
         logger.info(f"Running classifier action {self.name} on {len(directory_paths)} directories")
         
         # Pre-load image classifier and prototype before processing images
-        self.ensure_image_classifier_loaded(notify_callback)
-        self.ensure_prototype_loaded(notify_callback)
-        
+        self.ensure_image_classifier_loaded(callbacks.notify_callback)
+        self.ensure_prototype_loaded(callbacks.notify_callback)
+
         # Use batch prototype validation when prototype validation is enabled
         if self.use_prototype:
-            self._run_with_batch_prototype_validation(directory_paths, hide_callback, notify_callback, add_mark_callback, max_images_per_batch)
+            self._run_with_batch_prototype_validation(directory_paths, callbacks, max_images_per_batch)
 
     def _evaluate_image_path_match(
         self, image_path: str, lookahead_eval_cache=None, _detail_out: Optional[list] = None
@@ -661,16 +662,17 @@ class ClassifierAction:
     def run_on_media_path(
         self,
         media_path,
-        hide_callback,
-        notify_callback,
-        add_mark_callback=None,
-        blur_callback=None,
+        callbacks: ActionCallbacks,
         base_directory: Optional[str] = None,
     ) -> Optional[ClassifierActionType]:
         if not self.can_run:
             return None
         if not self.media_type_allowed(media_path):
             return None
+        hide_callback = callbacks.hide_callback
+        notify_callback = callbacks.notify_callback
+        add_mark_callback = callbacks.add_mark_callback
+        blur_callback = callbacks.blur_callback
         if is_classifier_dynamic_media_path(media_path):
             planned_slots, sample_iter = FrameCache.stream_frame_samples(
                 media_path,
@@ -748,10 +750,7 @@ class ClassifierAction:
                 if threshold_met or pseudostatic_match:
                     return self.run_action(
                         media_path,
-                        hide_callback,
-                        notify_callback,
-                        add_mark_callback,
-                        blur_callback=blur_callback,
+                        callbacks,
                         base_directory=base_directory or os.path.dirname(media_path),
                         resolved_category=resolved_match_category,
                     )
@@ -760,10 +759,7 @@ class ClassifierAction:
         try:
             return self.run_on_image_path(
                 media_path,
-                hide_callback,
-                notify_callback,
-                add_mark_callback,
-                blur_callback=blur_callback,
+                callbacks,
                 base_directory=base_directory or os.path.dirname(media_path),
             )
         except Exception as e:
@@ -775,20 +771,14 @@ class ClassifierAction:
                 raise e
             return self.run_on_image_path(
                 actual_image_path,
-                hide_callback,
-                notify_callback,
-                add_mark_callback,
-                blur_callback=blur_callback,
+                callbacks,
                 base_directory=base_directory or os.path.dirname(media_path),
             )
 
     def run_on_image_path(
         self,
         image_path,
-        hide_callback,
-        notify_callback,
-        add_mark_callback=None,
-        blur_callback=None,
+        callbacks: ActionCallbacks,
         base_directory: Optional[str] = None,
     ) -> Optional[ClassifierActionType]:
         if not self.can_run:
@@ -797,10 +787,7 @@ class ClassifierAction:
         if is_match:
             return self.run_action(
                 image_path,
-                hide_callback,
-                notify_callback,
-                add_mark_callback,
-                blur_callback=blur_callback,
+                callbacks,
                 base_directory=base_directory,
                 resolved_category=matched_category,
             )
@@ -848,13 +835,14 @@ class ClassifierAction:
     def run_action(
         self,
         image_path,
-        hide_callback,
-        notify_callback,
-        add_mark_callback=None,
-        blur_callback=None,
+        callbacks: ActionCallbacks,
         base_directory: Optional[str] = None,
         resolved_category: Optional[str] = None,
     ):
+        hide_callback = callbacks.hide_callback
+        notify_callback = callbacks.notify_callback
+        add_mark_callback = callbacks.add_mark_callback
+        blur_callback = callbacks.blur_callback
         base_message = self.name + _(" detected")
         if self.action == ClassifierActionType.SKIP:
             notify_callback("\n" + base_message + _(" - skipped"), base_message=base_message, action_type=ActionType.SYSTEM, is_manual=False)
@@ -1327,42 +1315,22 @@ class Prevalidation(ClassifierAction):
     def run_on_image_path(
         self,
         image_path,
-        hide_callback,
-        notify_callback,
-        add_mark_callback=None,
-        blur_callback=None,
+        callbacks: ActionCallbacks,
         base_directory: Optional[str] = None,
     ) -> Optional[ClassifierActionType]:
         # Lazy load the image classifier if needed
-        super().ensure_image_classifier_loaded(notify_callback)
-        return super().run_on_image_path(
-            image_path,
-            hide_callback,
-            notify_callback,
-            add_mark_callback,
-            blur_callback=blur_callback,
-            base_directory=base_directory,
-        )
+        super().ensure_image_classifier_loaded(callbacks.notify_callback)
+        return super().run_on_image_path(image_path, callbacks, base_directory=base_directory)
 
     def run_on_media_path(
         self,
         media_path,
-        hide_callback,
-        notify_callback,
-        add_mark_callback=None,
-        blur_callback=None,
+        callbacks: ActionCallbacks,
         base_directory: Optional[str] = None,
     ) -> Optional[ClassifierActionType]:
         # Keep lazy image-classifier loading behavior for sampled media paths too.
-        super().ensure_image_classifier_loaded(notify_callback)
-        return super().run_on_media_path(
-            media_path,
-            hide_callback,
-            notify_callback,
-            add_mark_callback,
-            blur_callback=blur_callback,
-            base_directory=base_directory,
-        )
+        super().ensure_image_classifier_loaded(callbacks.notify_callback)
+        return super().run_on_media_path(media_path, callbacks, base_directory=base_directory)
 
     def validate_dirs(self):
         super().validate_dirs()

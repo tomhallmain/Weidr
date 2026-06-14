@@ -414,7 +414,7 @@ class TestRunOnCurrent:
 
         calls = []
 
-        def _fake_run(pipeline, image_path, **kwargs):
+        def _fake_run(pipeline, image_path, callbacks=None, **kwargs):
             calls.append((pipeline.name, image_path))
             return None
 

@@ -25,12 +25,11 @@ def _noop(*_args, **_kwargs):
 
 
 def _run_prevalidate(media_path: str, base_dir: str, *, force: bool = False):
+    from compare.action_callbacks import ActionCallbacks
     return ClassifierActionsManager.prevalidate_media(
         media_path,
         lambda: base_dir,
-        _noop,
-        _noop,
-        _noop,
+        ActionCallbacks(hide_callback=_noop, notify_callback=_noop, add_mark_callback=_noop),
         force=force,
     )
 
@@ -134,7 +133,7 @@ class TestPrevalidationPipelineRunsWhenNoPrevalidationFires:
             second = _make_pv_pipeline("second")
             calls = []
 
-            def _fake_run(pipeline, image_path, **kwargs):
+            def _fake_run(pipeline, image_path, callbacks=None, **kwargs):
                 calls.append(pipeline.name)
                 return ClassifierActionType.HIDE if pipeline.name == "first" else ClassifierActionType.NOTIFY
 

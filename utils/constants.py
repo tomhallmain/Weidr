@@ -541,12 +541,13 @@ class ClassifierActionType(Enum):
     DELETE = "DELETE"
     ADD_MARK = "ADD_MARK"
     BLUR = "BLUR"
+    GENERATE = "GENERATE"
 
     def is_cache_type(self):
         # If the action is not one of these types, it should have been moved out of the directory.
         return (self == ClassifierActionType.HIDE or self == ClassifierActionType.NOTIFY
             or self == ClassifierActionType.SKIP or self == ClassifierActionType.ADD_MARK
-            or self == ClassifierActionType.BLUR)
+            or self == ClassifierActionType.BLUR or self == ClassifierActionType.GENERATE)
 
     def get_translation(self):
         if self == ClassifierActionType.HIDE:
@@ -565,6 +566,8 @@ class ClassifierActionType(Enum):
             return _("Add Mark")
         elif self == ClassifierActionType.BLUR:
             return _("Blur")
+        elif self == ClassifierActionType.GENERATE:
+            return _("Generate")
         raise Exception("Classifier action translation not found: " + str(self))
 
     @staticmethod

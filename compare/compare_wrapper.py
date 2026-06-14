@@ -171,10 +171,7 @@ class CompareWrapper:
                 prevalidation_action = ClassifierActionsManager.prevalidate_media(
                     media_path,
                     self._app_actions.get_base_dir,
-                    self._app_actions.hide_current_media,
-                    self._app_actions.title_notify,
-                    MarkedFiles.add_mark_if_not_present,
-                    blur_callback=self._app_actions.request_media_blur,
+                    self._app_actions.prevalidation_callbacks_with_mark,
                 )
             if prevalidation_action is not None:
                 if prevalidation_action == ClassifierActionType.BLUR:
@@ -182,6 +179,7 @@ class CompareWrapper:
                 return prevalidation_action not in (
                     ClassifierActionType.NOTIFY,
                     ClassifierActionType.BLUR,
+                    ClassifierActionType.GENERATE,
                 )
         return False
 
@@ -206,16 +204,14 @@ class CompareWrapper:
             deferred_marks.append(path)
 
         app_actions = self._app_actions
+        callbacks = self._app_actions.make_prevalidation_callbacks(_collect_mark)
 
         class _Worker(QThread):
             def run(self_inner):
                 result[0] = ClassifierActionsManager.prevalidate_media(
                     media_path,
                     app_actions.get_base_dir,
-                    app_actions.hide_current_media,
-                    app_actions.title_notify,
-                    _collect_mark,
-                    blur_callback=app_actions.request_media_blur,
+                    callbacks,
                 )
 
         loop = QEventLoop()

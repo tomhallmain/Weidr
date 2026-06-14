@@ -89,6 +89,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
+from compare.action_callbacks import ActionCallbacks
 from compare.classifier_action import Prevalidation
 from compare.classifier_actions_manager import ClassifierActionsManager
 from files.directory_profile import DirectoryProfile
@@ -261,20 +262,14 @@ class PrevalidationsTab(QWidget):
     def prevalidate(
         media_path,
         get_base_dir_func,
-        hide_callback,
-        notify_callback,
-        add_mark_callback,
-        blur_callback=None,
+        callbacks: ActionCallbacks,
         force: bool = False,
     ):
         """Run prevalidations and return action type or None."""
         return ClassifierActionsManager.prevalidate_media(
             media_path,
             get_base_dir_func,
-            hide_callback,
-            notify_callback,
-            add_mark_callback,
-            blur_callback=blur_callback,
+            callbacks,
             force=force,
         )
 

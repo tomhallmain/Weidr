@@ -14,6 +14,7 @@ import sys
 import time
 from typing import Dict, List, Optional
 
+from compare.action_callbacks import ActionCallbacks
 from compare.classifier_action import ClassifierAction, Prevalidation
 from compare.lookahead import Lookahead
 from files.directory_profile import DirectoryProfile
@@ -318,10 +319,7 @@ class ClassifierActionsManager:
     def prevalidate_media(
         media_path,
         get_base_dir_func,
-        hide_callback,
-        notify_callback,
-        add_mark_callback,
-        blur_callback=None,
+        callbacks: ActionCallbacks,
         force: bool = False,
     ) -> Optional[ClassifierActionType]:
         """Run active prevalidations for *media_path* while browsing *base_dir*.
@@ -396,10 +394,7 @@ class ClassifierActionsManager:
                     continue
                 prevalidation_action = prevalidation.run_on_media_path(
                     media_path,
-                    hide_callback,
-                    notify_callback,
-                    add_mark_callback,
-                    blur_callback=blur_callback,
+                    callbacks,
                     base_directory=base_dir,
                 )
                 if prevalidation_action is not None:
@@ -420,10 +415,7 @@ class ClassifierActionsManager:
                     pipeline_action = run_pipeline(
                         pipeline,
                         media_path,
-                        hide_callback=hide_callback,
-                        notify_callback=notify_callback,
-                        add_mark_callback=add_mark_callback,
-                        blur_callback=blur_callback,
+                        callbacks,
                         base_directory=base_dir,
                     )
                     if pipeline_action is not None:

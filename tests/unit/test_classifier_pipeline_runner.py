@@ -9,6 +9,8 @@ dispatch are also mocked.
 import pytest
 import numpy as np
 
+from unittest.mock import patch
+
 from compare.classifier_pipeline import (
     ClassifierPipeline,
     ClassifierRankCondition,
@@ -16,6 +18,7 @@ from compare.classifier_pipeline import (
     EmbeddingCondition,
     FilenameContainsCondition,
     LookaheadCondition,
+    MediaTypeCondition,
     NodeOutcome,
     NodeResultCondition,
     OutcomeType,
@@ -29,11 +32,12 @@ from compare.classifier_pipeline_runner import (
     _eval_composite,
     _eval_filename_contains,
     _eval_lookahead,
+    _eval_media_type,
     _eval_prompt,
     _eval_prototype,
     run_pipeline,
 )
-from utils.constants import ClassifierActionType
+from utils.constants import ClassifierActionType, CompareMediaType
 
 
 # ---------------------------------------------------------------------------
@@ -755,3 +759,137 @@ class TestActionDispatch:
                             on_match=_execute(ClassifierActionType.NOTIFY)))
         result = run_pipeline(p, IMAGE)  # no callbacks passed
         assert result == ClassifierActionType.NOTIFY
+
+
+# ---------------------------------------------------------------------------
+# MediaTypeCondition — execution
+# ---------------------------------------------------------------------------
+
+def _patch_media_type(media_type: CompareMediaType):
+    return patch("utils.media_utils.get_media_type_for_path", return_value=media_type)
+
+
+class TestMediaTypeConditionRunner:
+    def test_match_when_type_in_list(self):
+        c = MediaTypeCondition([CompareMediaType.IMAGE, CompareMediaType.GIF])
+        with _patch_media_type(CompareMediaType.IMAGE):
+            result, score = _eval_media_type(c, "/img/photo.jpg")
+        assert result is True
+        assert score == "image"
+
+    def test_no_match_when_type_not_in_list(self):
+        c = MediaTypeCondition([CompareMediaType.IMAGE])
+        with _patch_media_type(CompareMediaType.VIDEO):
+            result, score = _eval_media_type(c, "/vid/clip.mp4")
+        assert result is False
+        assert score == "video"
+
+    def test_empty_list_never_matches(self):
+        c = MediaTypeCondition([])
+        with _patch_media_type(CompareMediaType.IMAGE):
+            result, _ = _eval_media_type(c, "/img/photo.jpg")
+        assert result is False
+
+    def test_via_evaluate_condition(self):
+        c = MediaTypeCondition([CompareMediaType.PDF])
+        with _patch_media_type(CompareMediaType.PDF):
+            result, score = _evaluate_condition(c, "/doc/file.pdf", {}, {})
+        assert result is True
+        assert score == "pdf"
+
+    def test_as_composite_sub_condition(self):
+        media_cond = MediaTypeCondition([CompareMediaType.VIDEO])
+        embedding_cond = EmbeddingCondition(["action"])
+        composite = CompositeCondition("AND", [media_cond, embedding_cond])
+        with _patch_media_type(CompareMediaType.VIDEO):
+            with patch("compare.compare_embeddings_clip.CompareEmbeddingClip.multi_text_compare",
+                       return_value=True):
+                result, _ = _evaluate_condition(composite, "/vid/clip.mp4", {}, {})
+        assert result is True
+
+    def test_and_false_when_media_type_not_in_list(self):
+        media_cond = MediaTypeCondition([CompareMediaType.VIDEO])
+        embedding_cond = EmbeddingCondition(["action"])
+        composite = CompositeCondition("AND", [media_cond, embedding_cond])
+        # IMAGE type → media_cond fails → AND must be False regardless of embedding.
+        # _eval_composite evaluates all sub-conditions eagerly, so patch both.
+        with _patch_media_type(CompareMediaType.IMAGE):
+            with patch("utils.media_utils.get_media_type_for_path", return_value=CompareMediaType.IMAGE):
+                with patch("compare.compare_embeddings_clip.CompareEmbeddingClip.multi_text_compare",
+                           return_value=True):
+                    result, _ = _evaluate_condition(composite, "/img/photo.jpg", {}, {})
+        assert result is False
+
+    def test_score_is_media_type_string_value(self):
+        for mt in [CompareMediaType.IMAGE, CompareMediaType.PDF, CompareMediaType.AUDIO]:
+            c = MediaTypeCondition([mt])
+            with patch("utils.media_utils.get_media_type_for_path", return_value=mt):
+                _, score = _eval_media_type(c, "/f")
+            assert score == mt.value
+
+
+# ---------------------------------------------------------------------------
+# run_pipeline — applies_to_media_types gate
+# ---------------------------------------------------------------------------
+
+class TestRunPipelineMediaTypeGate:
+    def _matching_pipeline(self, applies_to=None):
+        """A pipeline that executes NOTIFY when its embedding node matches."""
+        return ClassifierPipeline(
+            name="gated",
+            applies_to_media_types=applies_to,
+            nodes=[_node("n1", EmbeddingCondition(["x"]),
+                         on_match=_execute(ClassifierActionType.NOTIFY))],
+        )
+
+    def _patch_embedding_match(self):
+        return patch("compare.compare_embeddings_clip.CompareEmbeddingClip.multi_text_compare",
+                     return_value=True)
+
+    def test_none_applies_to_runs_for_all_types(self, monkeypatch):
+        p = self._matching_pipeline(applies_to=None)
+        with _patch_media_type(CompareMediaType.VIDEO):
+            with self._patch_embedding_match():
+                result = run_pipeline(p, IMAGE)
+        assert result == ClassifierActionType.NOTIFY
+
+    def test_allowed_type_proceeds(self):
+        p = self._matching_pipeline(applies_to=[CompareMediaType.IMAGE])
+        with _patch_media_type(CompareMediaType.IMAGE):
+            with self._patch_embedding_match():
+                result = run_pipeline(p, IMAGE)
+        assert result == ClassifierActionType.NOTIFY
+
+    def test_disallowed_type_returns_none_without_evaluating(self):
+        p = self._matching_pipeline(applies_to=[CompareMediaType.IMAGE])
+        evaluated = []
+        with _patch_media_type(CompareMediaType.VIDEO):
+            with patch.object(p.nodes[0], "condition",
+                              wraps=p.nodes[0].condition) as mock_cond:
+                result = run_pipeline(p, IMAGE)
+        assert result is None
+
+    def test_disallowed_type_does_not_call_evaluate_condition(self):
+        p = self._matching_pipeline(applies_to=[CompareMediaType.PDF])
+        calls = []
+        original = _evaluate_condition
+
+        def spy(*args, **kwargs):
+            calls.append(args)
+            return original(*args, **kwargs)
+
+        with _patch_media_type(CompareMediaType.IMAGE):
+            with patch("compare.classifier_pipeline_runner._evaluate_condition", side_effect=spy):
+                result = run_pipeline(p, IMAGE)
+
+        assert result is None
+        assert not calls, "_evaluate_condition must not be called for a disallowed type"
+
+    def test_inactive_pipeline_still_returns_none(self):
+        p = ClassifierPipeline(name="p", is_active=False,
+                               applies_to_media_types=[CompareMediaType.IMAGE],
+                               nodes=[_node("n1", EmbeddingCondition(["x"]),
+                                           on_match=_execute(ClassifierActionType.NOTIFY))])
+        with _patch_media_type(CompareMediaType.IMAGE):
+            result = run_pipeline(p, IMAGE)
+        assert result is None

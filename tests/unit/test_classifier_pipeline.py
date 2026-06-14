@@ -13,6 +13,7 @@ from compare.classifier_pipeline import (
     # Conditions
     EmbeddingCondition,
     ClassifierRankCondition,
+    MediaTypeCondition,
     PrototypeCondition,
     PromptCondition,
     LookaheadCondition,
@@ -29,7 +30,7 @@ from compare.classifier_pipeline import (
     PrevalidationPipeline,
     ClassifierPipelines,
 )
-from utils.constants import ClassifierActionType
+from utils.constants import ClassifierActionType, CompareMediaType
 
 
 # ---------------------------------------------------------------------------
@@ -524,6 +525,7 @@ class TestSummaries:
             LookaheadCondition("lk"),
             NodeResultCondition("prev", False),
             CompositeCondition("OR", [EmbeddingCondition(), PromptCondition()]),
+            MediaTypeCondition([CompareMediaType.IMAGE, CompareMediaType.GIF]),
         ]
         for c in conditions:
             assert isinstance(c.summary(), str)
@@ -532,3 +534,156 @@ class TestSummaries:
     def test_pipeline_node_condition_summary(self):
         node = _make_node("n", EmbeddingCondition(["test"]))
         assert "Embedding" in node.condition_summary()
+
+
+# ---------------------------------------------------------------------------
+# MediaTypeCondition — model, serialization, validation
+# ---------------------------------------------------------------------------
+
+class TestMediaTypeCondition:
+    def test_enum_instances_stored(self):
+        c = MediaTypeCondition([CompareMediaType.IMAGE, CompareMediaType.VIDEO])
+        assert c.media_types == [CompareMediaType.IMAGE, CompareMediaType.VIDEO]
+
+    def test_string_values_coerced(self):
+        c = MediaTypeCondition(["image", "pdf", "gif"])
+        assert c.media_types == [CompareMediaType.IMAGE, CompareMediaType.PDF, CompareMediaType.GIF]
+
+    def test_mixed_coercion(self):
+        c = MediaTypeCondition([CompareMediaType.SVG, "audio"])
+        assert c.media_types == [CompareMediaType.SVG, CompareMediaType.AUDIO]
+
+    def test_invalid_string_raises(self):
+        with pytest.raises(ValueError):
+            MediaTypeCondition(["not_a_type"])
+
+    def test_roundtrip(self):
+        c = MediaTypeCondition([CompareMediaType.IMAGE, CompareMediaType.VIDEO])
+        c2 = _condition_from_dict(c.to_dict())
+        assert isinstance(c2, MediaTypeCondition)
+        assert c2.media_types == [CompareMediaType.IMAGE, CompareMediaType.VIDEO]
+
+    def test_serializes_to_string_values(self):
+        c = MediaTypeCondition([CompareMediaType.PDF, CompareMediaType.GIF])
+        d = c.to_dict()
+        assert d["condition_type"] == "media_type"
+        assert d["media_types"] == ["pdf", "gif"]
+
+    def test_condition_from_dict_dispatch(self):
+        c = _condition_from_dict({"condition_type": "media_type", "media_types": ["image"]})
+        assert isinstance(c, MediaTypeCondition)
+        assert c.media_types == [CompareMediaType.IMAGE]
+
+    def test_empty_list_from_dict(self):
+        c = _condition_from_dict({"condition_type": "media_type", "media_types": []})
+        assert isinstance(c, MediaTypeCondition)
+        assert c.media_types == []
+
+    def test_summary_contains_type_values(self):
+        c = MediaTypeCondition([CompareMediaType.IMAGE, CompareMediaType.VIDEO])
+        s = c.summary()
+        assert "image" in s
+        assert "video" in s
+
+    def test_validation_rejects_empty_media_types(self):
+        p = _simple_pipeline(_make_node("n1", MediaTypeCondition([])))
+        errors = p.validate()
+        assert any("MediaTypeCondition" in e and "no media_types" in e for e in errors)
+
+    def test_validation_accepts_non_empty(self):
+        p = _simple_pipeline(
+            _make_node("n1", MediaTypeCondition([CompareMediaType.IMAGE]),
+                       on_match=NodeOutcome(OutcomeType.EXECUTE,
+                                            action_type=ClassifierActionType.NOTIFY),
+                       on_no_match=NodeOutcome.accept()),
+        )
+        assert p.validate() == []
+
+    def test_usable_as_composite_sub_condition(self):
+        c = CompositeCondition("AND", [
+            MediaTypeCondition([CompareMediaType.VIDEO]),
+            EmbeddingCondition(["action"]),
+        ])
+        c2 = _condition_from_dict(c.to_dict())
+        assert isinstance(c2, CompositeCondition)
+        assert isinstance(c2.sub_conditions[0], MediaTypeCondition)
+        assert c2.sub_conditions[0].media_types == [CompareMediaType.VIDEO]
+
+
+# ---------------------------------------------------------------------------
+# ClassifierPipeline.applies_to_media_types — model, serialization
+# ---------------------------------------------------------------------------
+
+class TestPipelineAppliesToMediaTypes:
+    def test_default_is_none(self):
+        p = ClassifierPipeline(name="p")
+        assert p.applies_to_media_types is None
+
+    def test_enum_instances_stored(self):
+        p = ClassifierPipeline(name="p",
+                               applies_to_media_types=[CompareMediaType.IMAGE, CompareMediaType.PDF])
+        assert p.applies_to_media_types == [CompareMediaType.IMAGE, CompareMediaType.PDF]
+
+    def test_string_values_coerced(self):
+        p = ClassifierPipeline(name="p", applies_to_media_types=["video", "gif"])
+        assert p.applies_to_media_types == [CompareMediaType.VIDEO, CompareMediaType.GIF]
+
+    def test_empty_list_collapses_to_none(self):
+        p = ClassifierPipeline(name="p", applies_to_media_types=[])
+        assert p.applies_to_media_types is None
+
+    def test_none_serializes_to_none(self):
+        d = ClassifierPipeline(name="p").to_dict()
+        assert d["applies_to_media_types"] is None
+
+    def test_list_serializes_to_string_values(self):
+        p = ClassifierPipeline(name="p",
+                               applies_to_media_types=[CompareMediaType.IMAGE, CompareMediaType.VIDEO])
+        assert p.to_dict()["applies_to_media_types"] == ["image", "video"]
+
+    def test_none_round_trips(self):
+        p = ClassifierPipeline(name="p")
+        p2 = ClassifierPipeline.from_dict(p.to_dict())
+        assert p2.applies_to_media_types is None
+
+    def test_list_round_trips(self):
+        p = ClassifierPipeline(name="p",
+                               applies_to_media_types=[CompareMediaType.GIF, CompareMediaType.PDF])
+        p2 = ClassifierPipeline.from_dict(p.to_dict())
+        assert p2.applies_to_media_types == [CompareMediaType.GIF, CompareMediaType.PDF]
+
+    def test_backward_compat_missing_key(self):
+        d = ClassifierPipeline(name="p").to_dict()
+        d.pop("applies_to_media_types")
+        p2 = ClassifierPipeline.from_dict(d)
+        assert p2.applies_to_media_types is None
+
+    def test_media_type_allowed_none_permits_all(self):
+        p = ClassifierPipeline(name="p", applies_to_media_types=None)
+        from unittest.mock import patch
+        for mt in CompareMediaType:
+            with patch("utils.media_utils.get_media_type_for_path", return_value=mt):
+                assert p.media_type_allowed("/any/path") is True
+
+    def test_media_type_allowed_restricts(self):
+        p = ClassifierPipeline(name="p",
+                               applies_to_media_types=[CompareMediaType.IMAGE])
+        from unittest.mock import patch
+        with patch("utils.media_utils.get_media_type_for_path",
+                   return_value=CompareMediaType.IMAGE):
+            assert p.media_type_allowed("/img/photo.jpg") is True
+        with patch("utils.media_utils.get_media_type_for_path",
+                   return_value=CompareMediaType.VIDEO):
+            assert p.media_type_allowed("/vid/clip.mp4") is False
+
+    def test_prevalidation_pipeline_inherits_field(self):
+        p = PrevalidationPipeline(name="pv", profile_name="prof",
+                                  applies_to_media_types=[CompareMediaType.PDF])
+        assert p.applies_to_media_types == [CompareMediaType.PDF]
+
+    def test_prevalidation_pipeline_round_trips(self):
+        p = PrevalidationPipeline(name="pv", profile_name="prof",
+                                  applies_to_media_types=[CompareMediaType.IMAGE])
+        p2 = PrevalidationPipeline.from_dict(p.to_dict())
+        assert p2.applies_to_media_types == [CompareMediaType.IMAGE]
+        assert p2.profile_name == "prof"

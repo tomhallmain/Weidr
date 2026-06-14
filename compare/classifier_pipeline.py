@@ -20,7 +20,7 @@ from enum import Enum
 from typing import ClassVar, Optional
 
 from utils.app_info_cache import app_info_cache
-from utils.constants import ClassifierActionType
+from utils.constants import ClassifierActionType, CompareMediaType
 from utils.logging_setup import get_logger
 from utils.translations import _
 
@@ -160,6 +160,31 @@ class FilenameContainsCondition:
 
 
 @dataclass
+class MediaTypeCondition:
+    """Tests whether the file's resolved media type is one of the listed types."""
+    condition_type: ClassVar[str] = "media_type"
+
+    media_types: Optional[list] = None   # list[CompareMediaType]
+
+    def __post_init__(self):
+        raw = list(self.media_types) if self.media_types else []
+        self.media_types = [
+            mt if isinstance(mt, CompareMediaType) else CompareMediaType(mt)
+            for mt in raw
+        ]
+
+    def to_dict(self) -> dict:
+        return {
+            "condition_type": self.condition_type,
+            "media_types": [mt.value for mt in self.media_types],
+        }
+
+    def summary(self) -> str:
+        names = ", ".join(mt.value for mt in self.media_types) if self.media_types else "(none)"
+        return f"MediaType([{names}])"
+
+
+@dataclass
 class LookaheadCondition:
     """References a named Lookahead check."""
     condition_type: ClassVar[str] = "lookahead"
@@ -227,6 +252,7 @@ NodeCondition = (
     | PrototypeCondition
     | PromptCondition
     | FilenameContainsCondition
+    | MediaTypeCondition
     | LookaheadCondition
     | NodeResultCondition
     | CompositeCondition
@@ -267,6 +293,8 @@ def _condition_from_dict(d: dict):
             patterns=d.get("patterns", []),
             case_sensitive=d.get("case_sensitive", False),
         )
+    if ct == "media_type":
+        return MediaTypeCondition(media_types=d.get("media_types", []))
     if ct == "lookahead":
         return LookaheadCondition(lookahead_name=d.get("lookahead_name", ""))
     if ct == "node_result":
@@ -395,10 +423,24 @@ class ClassifierPipeline:
     default_action: Optional[ClassifierActionType] = None
     default_reject_action: Optional[ClassifierActionType] = None
     is_active: bool = True
+    applies_to_media_types: Optional[list] = None   # list[CompareMediaType]; None = all types
 
     def __post_init__(self):
         if self.nodes is None:
             self.nodes = []
+        if self.applies_to_media_types is not None:
+            coerced = [
+                mt if isinstance(mt, CompareMediaType) else CompareMediaType(mt)
+                for mt in self.applies_to_media_types
+            ]
+            self.applies_to_media_types = coerced if coerced else None
+
+    def media_type_allowed(self, path: str) -> bool:
+        """Return False when applies_to_media_types is set and path's type is not in it."""
+        if self.applies_to_media_types is None:
+            return True
+        from utils.media_utils import get_media_type_for_path
+        return get_media_type_for_path(path) in self.applies_to_media_types
 
     def __eq__(self, other):
         return isinstance(other, ClassifierPipeline) and self.name == other.name
@@ -506,6 +548,12 @@ class ClassifierPipeline:
                     f"Node {node_name!r}: FilenameContainsCondition has no patterns."
                 )
 
+        elif isinstance(condition, MediaTypeCondition):
+            if not condition.media_types:
+                errors.append(
+                    f"Node {node_name!r}: MediaTypeCondition has no media_types."
+                )
+
         elif isinstance(condition, LookaheadCondition):
             if not condition.lookahead_name:
                 errors.append(f"Node {node_name!r}: LookaheadCondition has no lookahead_name.")
@@ -597,6 +645,10 @@ class ClassifierPipeline:
                 self.default_reject_action.value if self.default_reject_action else None
             ),
             "is_active": self.is_active,
+            "applies_to_media_types": (
+                [mt.value for mt in self.applies_to_media_types]
+                if self.applies_to_media_types is not None else None
+            ),
         }
 
     @staticmethod
@@ -613,6 +665,7 @@ class ClassifierPipeline:
             default_action=_opt_action(d.get("default_action")),
             default_reject_action=_opt_action(d.get("default_reject_action")),
             is_active=d.get("is_active", True),
+            applies_to_media_types=d.get("applies_to_media_types"),
         )
 
 
@@ -667,6 +720,7 @@ class PrevalidationPipeline(ClassifierPipeline):
             default_action=_opt_action(d.get("default_action")),
             default_reject_action=_opt_action(d.get("default_reject_action")),
             is_active=d.get("is_active", True),
+            applies_to_media_types=d.get("applies_to_media_types"),
         )
 
 

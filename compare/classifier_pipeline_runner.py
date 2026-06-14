@@ -20,6 +20,7 @@ from compare.classifier_pipeline import (
     EmbeddingCondition,
     FilenameContainsCondition,
     LookaheadCondition,
+    MediaTypeCondition,
     NodeOutcome,
     NodeResultCondition,
     OutcomeType,
@@ -77,6 +78,8 @@ def run_pipeline(
     GOTO jumps forward; CONTINUE advances sequentially.
     """
     if not pipeline.is_active or not pipeline.nodes:
+        return None
+    if not pipeline.media_type_allowed(image_path):
         return None
 
     node_results: dict[str, bool] = {}
@@ -179,6 +182,9 @@ def _evaluate_condition(
     if isinstance(condition, FilenameContainsCondition):
         return _eval_filename_contains(condition, image_path)
 
+    if isinstance(condition, MediaTypeCondition):
+        return _eval_media_type(condition, image_path)
+
     if isinstance(condition, LookaheadCondition):
         return _eval_lookahead(condition, image_path)
 
@@ -277,6 +283,14 @@ def _eval_prompt(
 
     matched = any(p.lower() in positive_prompt.lower() for p in condition.prompts)
     return matched, None
+
+
+def _eval_media_type(
+    condition: MediaTypeCondition, image_path: str
+) -> tuple[bool, object]:
+    from utils.media_utils import get_media_type_for_path
+    media_type = get_media_type_for_path(image_path)
+    return media_type in condition.media_types, media_type.value
 
 
 def _eval_filename_contains(

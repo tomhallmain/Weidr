@@ -21,8 +21,8 @@ from image.image_data_extractor import image_data_extractor
 from image.frame_cache import FrameCache
 from image.image_ops import ImageOps
 from utils.config import config
-from utils.media_utils import is_classifier_dynamic_media_path
-from utils.constants import ActionType, ClassifierActionType
+from utils.media_utils import get_media_type_for_path, is_classifier_dynamic_media_path
+from utils.constants import ActionType, ClassifierActionType, CompareMediaType
 from utils.logging_setup import get_logger
 from utils.running_tasks_registry import start_thread
 from utils.translations import _
@@ -104,6 +104,7 @@ class ClassifierAction:
     use_filename_contains: bool = False
     filename_contains_patterns: Optional[list] = None
     filename_contains_case_sensitive: bool = False
+    applies_to_media_types: Optional[list] = None
     can_run: bool = True
     initialization_error: Optional[str] = None
 
@@ -138,6 +139,14 @@ class ClassifierAction:
         # Coerce bool fields that may arrive as ints/strings from JSON
         self.use_pseudostatic_dynamic_media = bool(self.use_pseudostatic_dynamic_media)
         self.can_run = bool(self.can_run)
+        # Normalize applies_to_media_types: None means all types; otherwise coerce each
+        # element to CompareMediaType (accepting enum instances or their string values).
+        if self.applies_to_media_types is not None:
+            coerced = [
+                mt if isinstance(mt, CompareMediaType) else CompareMediaType(mt)
+                for mt in self.applies_to_media_types
+            ]
+            self.applies_to_media_types = coerced if coerced else None
 
     def mark_runtime_valid(self) -> None:
         """Call after validate() succeeds (e.g. user saved in the editor) to clear load-time failure state."""
@@ -557,11 +566,11 @@ class ClassifierAction:
             pass
         return TriggerDetail(trigger_type="image_classifier", category=category, top_predictions=top_preds)
 
-    def matches_image_path(self, image_path, lookahead_eval_cache=None) -> bool:
-        is_match, _unused = self._evaluate_image_path_match(
-            image_path, lookahead_eval_cache=lookahead_eval_cache
-        )
-        return is_match
+    def media_type_allowed(self, path: str) -> bool:
+        """Return False when applies_to_media_types is set and path's type is not in it."""
+        if self.applies_to_media_types is None:
+            return True
+        return get_media_type_for_path(path) in self.applies_to_media_types
 
     def find_first_trigger_slot(
         self, media_path: str, start_slot: int = 0, sample_ratio: Optional[float] = None
@@ -581,6 +590,8 @@ class ClassifierAction:
             frame. Use 1.0 for interactive seeks where precision matters more than speed.
         """
         if not is_classifier_dynamic_media_path(media_path):
+            return None
+        if not self.media_type_allowed(media_path):
             return None
 
         if sample_ratio is not None:
@@ -657,6 +668,8 @@ class ClassifierAction:
         base_directory: Optional[str] = None,
     ) -> Optional[ClassifierActionType]:
         if not self.can_run:
+            return None
+        if not self.media_type_allowed(media_path):
             return None
         if is_classifier_dynamic_media_path(media_path):
             planned_slots, sample_iter = FrameCache.stream_frame_samples(
@@ -987,7 +1000,7 @@ class ClassifierAction:
             raise Exception("At least one of positive or negative texts must be set when using embedding or prompt validation.")
         
         # Validate image classifier settings if enabled (registry only — no lazy load here;
-        # wrappers load during prevalidation / matches_image_path via ensure_image_classifier_loaded).
+        # wrappers load lazily during prevalidation via ensure_image_classifier_loaded).
         if self.use_image_classifier:
             name = (self.image_classifier_name or "").strip()
             if name:
@@ -1099,6 +1112,11 @@ class ClassifierAction:
             "use_filename_contains": self.use_filename_contains,
             "filename_contains_patterns": self.filename_contains_patterns,
             "filename_contains_case_sensitive": self.filename_contains_case_sensitive,
+            "applies_to_media_types": (
+                [mt.value for mt in self.applies_to_media_types]
+                if self.applies_to_media_types is not None
+                else None
+            ),
             }
 
     @staticmethod
@@ -1147,6 +1165,8 @@ class ClassifierAction:
             d['filename_contains_patterns'] = None
         if 'filename_contains_case_sensitive' not in d:
             d['filename_contains_case_sensitive'] = False
+        if 'applies_to_media_types' not in d:
+            d['applies_to_media_types'] = None
         # Handle threshold backward compatibility
         if 'text_embedding_threshold' not in d:
             # Use existing threshold as text_embedding_threshold

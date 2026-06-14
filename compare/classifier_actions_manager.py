@@ -392,6 +392,8 @@ class ClassifierActionsManager:
                     continue
                 if prevalidation.profile is not None and base_dir not in prevalidation.profile.directories:
                     continue
+                if not prevalidation.media_type_allowed(media_path):
+                    continue
                 prevalidation_action = prevalidation.run_on_media_path(
                     media_path,
                     hide_callback,
@@ -412,6 +414,8 @@ class ClassifierActionsManager:
                     if not pipeline.is_active:
                         continue
                     if pipeline.profile is not None and base_dir not in pipeline.profile.directories:
+                        continue
+                    if not pipeline.media_type_allowed(media_path):
                         continue
                     pipeline_action = run_pipeline(
                         pipeline,

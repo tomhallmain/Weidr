@@ -119,6 +119,7 @@ class Config:
             ".aac", ".wma", ".weba", ".aiff", ".aif", ".au", ".ape", ".wv",
         ]
         self.enable_audio = True
+        self.enable_images = True
         self.image_classifier_models = []
         self.enable_videos = True
         self.enable_gifs = True
@@ -213,6 +214,7 @@ class Config:
                             "escape_backslash_filepaths",
                             "fill_canvas",
                             "save_screenshot_to_same_dir",
+                            "enable_images",
                             "enable_videos",
                             "enable_audio",
                             "enable_gifs",
@@ -667,7 +669,7 @@ class Config:
 
     def _rebuild_file_types(self) -> None:
         """Merge enabled category extension lists into ``file_types`` (browse)."""
-        self.file_types = list(self.image_types)
+        self.file_types = list(self.image_types) if self.enable_images else []
         if self.enable_videos:
             self.file_types.extend(list(self.video_types))
         if getattr(self, "enable_audio", False):

@@ -82,6 +82,7 @@
     ".aac", ".wma", ".weba", ".aiff", ".aif", ".au", ".ape", ".wv"
   ],
   "media_volume_use_eq": true,
+  "enable_images": true,
   "enable_videos": true,
   "enable_audio": true,
   "enable_gifs": true,

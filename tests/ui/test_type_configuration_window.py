@@ -14,7 +14,7 @@ from utils.translations import _
 _tr = _
 
 _TOGGLEABLE_TYPES = tuple(
-    mt for mt in CompareMediaType if mt not in (CompareMediaType.IMAGE, CompareMediaType.UNCONFIGURED)
+    mt for mt in CompareMediaType if mt != CompareMediaType.UNCONFIGURED
 )
 
 
@@ -64,11 +64,14 @@ class TestTypeConfigurationPersistence:
 
 class TestTypeConfigurationApplyLogic:
     def test_get_initial_value_reflects_config_flags(self):
+        config.enable_images = True
         config.enable_audio = False
         config.enable_videos = True
         assert TypeConfigurationWindow._get_initial_value(CompareMediaType.IMAGE) is True
         assert TypeConfigurationWindow._get_initial_value(CompareMediaType.AUDIO) is False
         assert TypeConfigurationWindow._get_initial_value(CompareMediaType.VIDEO) is True
+        config.enable_images = False
+        assert TypeConfigurationWindow._get_initial_value(CompareMediaType.IMAGE) is False
 
     def test_has_changes_detects_audio_toggle(self):
         TypeConfigurationWindow._original_config = {CompareMediaType.AUDIO: True}
@@ -102,6 +105,31 @@ class TestTypeConfigurationApplyLogic:
         for ext in config.audio_types:
             assert ext in config.file_types
 
+    def test_apply_changes_disables_images_and_strips_extensions(self):
+        config.enable_images = True
+        for ext in config.image_types:
+            if ext not in config.file_types:
+                config.file_types.append(ext)
+
+        TypeConfigurationWindow._original_config = {CompareMediaType.IMAGE: True}
+        TypeConfigurationWindow._pending_changes = {CompareMediaType.IMAGE: False}
+        TypeConfigurationWindow.apply_changes()
+
+        assert config.enable_images is False
+        assert not set(config.image_types) & set(config.file_types)
+
+    def test_apply_changes_enables_images_and_adds_extensions(self):
+        config.enable_images = False
+        image_set = set(config.image_types)
+        config.file_types = [e for e in config.file_types if e not in image_set]
+
+        TypeConfigurationWindow._pending_changes = {CompareMediaType.IMAGE: True}
+        TypeConfigurationWindow.apply_changes()
+
+        assert config.enable_images is True
+        for ext in config.image_types:
+            assert ext in config.file_types
+
     def test_audio_has_description(self):
         desc = TypeConfigurationWindow.MEDIA_TYPE_DESCRIPTIONS[CompareMediaType.AUDIO]
         assert isinstance(desc, str) and len(desc) > 0
@@ -122,14 +150,15 @@ class TestTypeConfigurationWindowUI:
         qtbot.waitExposed(dlg, timeout=3000)
 
         assert dlg.isVisible()
-        assert set(dlg._checkboxes.keys()) == set(_TOGGLEABLE_TYPES) | {CompareMediaType.IMAGE}
+        assert set(dlg._checkboxes.keys()) == set(_TOGGLEABLE_TYPES)
 
         titles = [lbl.text() for lbl in dlg.findChildren(QLabel)]
         assert _tr("Configure Media Types") in titles
 
-    def test_image_checkbox_always_checked_and_disabled(
+    def test_image_checkbox_enabled_and_reflects_config(
         self, window_with_dir, qtbot
     ):
+        config.enable_images = True
         win, _ = window_with_dir
         win.window_launcher.open_type_configuration_window()
         qtbot.waitUntil(
@@ -138,7 +167,23 @@ class TestTypeConfigurationWindowUI:
         )
         image_cb = TypeConfigurationWindow._instance._checkboxes[CompareMediaType.IMAGE]
         assert image_cb.isChecked()
-        assert not image_cb.isEnabled()
+        assert image_cb.isEnabled()
+
+    def test_unchecking_image_stores_pending_change(self, window_with_dir, qtbot):
+        config.enable_images = True
+        win, _ = window_with_dir
+        win.window_launcher.open_type_configuration_window()
+        qtbot.waitUntil(
+            lambda: TypeConfigurationWindow._instance is not None,
+            timeout=5000,
+        )
+        image_cb = TypeConfigurationWindow._instance._checkboxes[CompareMediaType.IMAGE]
+        assert image_cb.isChecked()
+
+        with qtbot.waitSignal(image_cb.stateChanged):
+            image_cb.setChecked(False)
+
+        assert TypeConfigurationWindow._pending_changes.get(CompareMediaType.IMAGE) is False
 
     def test_audio_checkbox_matches_config(self, window_with_dir, qtbot):
         config.enable_audio = False

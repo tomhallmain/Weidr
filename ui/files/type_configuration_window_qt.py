@@ -114,6 +114,7 @@ class TypeConfigurationWindow(SmartDialog):
             raise ValueError("AppActions instance must be provided")
 
         cls._original_config = {
+            CompareMediaType.IMAGE: config.enable_images,
             CompareMediaType.VIDEO: config.enable_videos,
             CompareMediaType.GIF: config.enable_gifs,
             CompareMediaType.PDF: config.enable_pdfs,
@@ -181,12 +182,9 @@ class TypeConfigurationWindow(SmartDialog):
             cb.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
             self._checkboxes[media_type] = cb
 
-            # IMAGE is always on; disable if dependency missing
+            # Disable if dependency missing
             dep = self.DEPENDENCY_INFO.get(media_type)
-            if media_type == CompareMediaType.IMAGE:
-                cb.setEnabled(False)
-                cb.setChecked(True)
-            elif dep and not dep["available"]:
+            if dep and not dep["available"]:
                 cb.setEnabled(False)
             else:
                 cb.stateChanged.connect(
@@ -240,7 +238,7 @@ class TypeConfigurationWindow(SmartDialog):
     @staticmethod
     def _get_initial_value(media_type: CompareMediaType) -> bool:
         return {
-            CompareMediaType.IMAGE: True,
+            CompareMediaType.IMAGE: config.enable_images,
             CompareMediaType.VIDEO: config.enable_videos,
             CompareMediaType.GIF: config.enable_gifs,
             CompareMediaType.PDF: config.enable_pdfs,
@@ -290,7 +288,16 @@ class TypeConfigurationWindow(SmartDialog):
             return
 
         for media_type, enabled in cls._pending_changes.items():
-            if media_type == CompareMediaType.VIDEO:
+            if media_type == CompareMediaType.IMAGE:
+                config.enable_images = enabled
+                if enabled:
+                    for ext in config.image_types:
+                        if ext not in config.file_types:
+                            config.file_types.append(ext)
+                else:
+                    image_set = set(config.image_types)
+                    config.file_types = [e for e in config.file_types if e not in image_set]
+            elif media_type == CompareMediaType.VIDEO:
                 config.enable_videos = enabled
                 if enabled:
                     for ext in config.video_types:

@@ -701,6 +701,11 @@ class CompareManager:
         """Update compare for readded file (delegated to all wrappers)."""
         for wrapper in self._wrappers.values():
             wrapper.update_compare_for_readded_file(readded_file)
+
+    def _sync_result_after_deletion(self, filepath: str) -> None:
+        """Update stored compare result after a file deletion (delegated to primary wrapper)."""
+        if self._primary_wrapper() is not None:
+            self._primary_wrapper()._sync_result_after_deletion(filepath)
     
     def _get_file_group_map(self, app_mode):
         """Get file group map (delegated to primary wrapper)."""

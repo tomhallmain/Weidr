@@ -4,6 +4,7 @@ import pprint
 from typing import Optional
 
 from compare.compare_args import CompareArgs
+from compare.compare_result import CompareResult
 from compare.compare_colors import CompareColors
 from compare.compare_embeddings_align import CompareEmbeddingAlign
 from compare.compare_embeddings_clip import CompareEmbeddingClip
@@ -375,6 +376,7 @@ class CompareWrapper:
         self.current_group_index = 0
         self.has_media_matches = False
 
+        self._remove_stored_result()
         self._app_actions.set_mode(Mode.BROWSE)
         self._app_actions._set_label_state(_("Set a directory to run comparison."))
         self._app_actions.refresh()
@@ -717,6 +719,57 @@ class CompareWrapper:
 
     def update_compare_for_readded_file(self, readded_file):
         self._compare.readd_files([readded_file])
+
+    def _sync_result_after_deletion(self, filepath: str) -> None:
+        """Update the on-disk CompareResult checkpoint to reflect a deleted file.
+
+        Silently no-ops when no compare object exists, no checkpoint has been
+        written to disk, or any part of the update fails.
+        """
+        if self._compare is None:
+            return
+        compare_result = getattr(self._compare, "compare_result", None)
+        if compare_result is None:
+            return
+        cache_path = CompareResult.cache_path(
+            self._compare.base_dir,
+            getattr(self._compare, "COMPARE_MODE", None),
+        )
+        if not os.path.exists(cache_path):
+            return
+
+        compare_result.file_groups = {
+            idx: dict(group) for idx, group in self.file_groups.items()
+        }
+        try:
+            compare_result._dir_files_hash.remove(filepath)
+        except (ValueError, AttributeError):
+            pass
+        active_group_indexes = set(self.file_groups.keys())
+        compare_result.files_grouped = {
+            k: v for k, v in compare_result.files_grouped.items()
+            if v[0] in active_group_indexes
+        }
+        try:
+            compare_result.store()
+        except Exception as exc:
+            logger.error(
+                "Failed to update compare result after deletion of %s: %s", filepath, exc
+            )
+
+    def _remove_stored_result(self) -> None:
+        """Delete the on-disk CompareResult checkpoint for this compare session."""
+        if self._compare is None:
+            return
+        cache_path = CompareResult.cache_path(
+            self._compare.base_dir,
+            getattr(self._compare, "COMPARE_MODE", None),
+        )
+        try:
+            if os.path.exists(cache_path):
+                os.remove(cache_path)
+        except Exception as exc:
+            logger.error("Failed to remove stored compare result: %s", exc)
 
     def get_grouped_filepaths(self, app_mode) -> list:
         """Return all comparison files ordered group-by-group.

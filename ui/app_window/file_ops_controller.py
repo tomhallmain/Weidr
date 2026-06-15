@@ -156,6 +156,7 @@ class FileOpsController:
                 self._cm.match_index,
                 show_next_media=self._app.direction,
             )
+            self._cm._sync_result_after_deletion(filepath)
         else:
             self._app.notification_ctrl.handle_error(
                 _("Failed to delete current file, unable to get valid filepath")
@@ -699,6 +700,7 @@ class FileOpsController:
                 )
             except KeyError:
                 pass
+            self._cm._sync_result_after_deletion(filepath)
 
     # ==================================================================
     # External file operations

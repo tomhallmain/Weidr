@@ -1,17 +1,22 @@
 """
-Integration test for the Random Purge feature.
+Integration tests for the Random Purge feature.
 
-Verifies the full end-to-end flow:
-  - Group compare runs and produces multi-file similarity groups
-  - random_purge_groups() confirms via dialog, deletes all but one file per group
-  - Exactly one file per group survives on disk
-  - Group state is fully cleared after the operation
+Covers two layers:
+
+1. End-to-end (AppWindow): group compare runs, random_purge_groups() confirms,
+   deletes all but one file per group, and clears group state.
+
+2. Quality filter (CompareWrapper direct): when a group contains only one image
+   that meets the minimum dimension threshold, that image is always kept and the
+   undersized ones are deleted.
 """
 
 import os
 
 import pytest
+from PIL import Image
 from PySide6.QtWidgets import QApplication
+from unittest.mock import MagicMock
 
 from tests.ui.app_window_fixtures import _teardown_app_window
 from ui.app_window.app_window import AppWindow
@@ -93,4 +98,44 @@ class TestRandomPurge:
         assert len(survivors) == group_count, (
             f"Expected exactly {group_count} surviving file(s) (one per group), "
             f"got {len(survivors)}"
+        )
+
+
+class TestRandomPurgeQualityFilter:
+    """CompareWrapper directly: the dimension gate must favour the qualifying image."""
+
+    def test_only_image_above_min_dimension_is_kept(self, tmp_path):
+        """
+        Group has three 48×48 images (below the 120px threshold) and one 200×200
+        image (above it).  random_purge_groups() must always keep the large image
+        regardless of random ordering.
+        """
+        from compare.compare_wrapper import CompareWrapper
+
+        # Create one large (qualifying) and three small (disqualified) images.
+        large = str(tmp_path / "large.png")
+        smalls = [str(tmp_path / f"small_{i}.png") for i in range(3)]
+        Image.new("RGB", (200, 200), (100, 100, 100)).save(large)
+        for path in smalls:
+            Image.new("RGB", (48, 48), (100, 100, 100)).save(path)
+
+        all_paths = [large] + smalls
+
+        deleted = []
+
+        app_actions = MagicMock()
+        app_actions.alert.return_value = True
+        app_actions.delete.side_effect = lambda path, **kw: (
+            deleted.append(path), os.remove(path)
+        )
+
+        wrapper = CompareWrapper(master=None, compare_mode=None, app_actions=app_actions)
+        wrapper.file_groups = {0: {p: 1.0 for p in all_paths}}
+        wrapper.group_indexes = [0]
+
+        wrapper.random_purge_groups()
+
+        survivors = [p for p in all_paths if os.path.exists(p)]
+        assert survivors == [large], (
+            f"Expected only the large image to survive, got: {survivors}"
         )

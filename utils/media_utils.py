@@ -276,6 +276,17 @@ def is_large_image_dims(dims: tuple[int, int]) -> bool:
     return w > threshold or h > threshold
 
 
+def get_image_dimensions(path: str) -> tuple[int, int] | None:
+    """Return (width, height) for a PIL-readable image, or None if the file
+    cannot be opened as an image (video, audio, missing, corrupt, etc.)."""
+    try:
+        from PIL import Image
+        with Image.open(path) as img:
+            return img.size
+    except Exception:
+        return None
+
+
 def is_classifier_dynamic_media_path(path: str) -> bool:
     """True when *path* is an existing video, GIF, or PDF file with that type enabled in config."""
     if not path or not os.path.isfile(path):

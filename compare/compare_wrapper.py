@@ -276,6 +276,113 @@ class CompareWrapper:
             self.current_group_index += 1
         self.set_current_group()
 
+    def random_purge_groups(self, event=None) -> None:
+        """Delete all but one randomly-chosen file from every similarity group.
+
+        Presents a confirmation dialog showing the number of files that will be
+        deleted.  On confirm, iterates every group, picks one survivor at random,
+        and deletes the rest via app_actions.delete.  Resets group state and
+        returns to browse mode when complete.
+        """
+        import random
+        from PySide6.QtWidgets import QApplication
+
+        if not self.file_groups:
+            self._app_actions.warn(_("No groups available to purge."))
+            return
+
+        group_count = len(self.file_groups)
+        files_in_groups = sum(len(g) for g in self.file_groups.values())
+        files_to_delete = files_in_groups - group_count
+
+        if files_to_delete <= 0:
+            self._app_actions.warn(_("All groups already have only one file."))
+            return
+
+        ok = self._app_actions.alert(
+            _("Random Purge"),
+            _(
+                "This will permanently delete {delete_count} of {total_count} files "
+                "across {group_count} groups, keeping one random file per group.\n\n"
+                "This action cannot be undone. Continue?"
+            ).format(
+                delete_count=files_to_delete,
+                total_count=files_in_groups,
+                group_count=group_count,
+            ),
+            kind="askokcancel",
+        )
+        if not ok:
+            return
+
+        # Snapshot before the loop so live mutations to file_groups don't
+        # corrupt iteration.
+        groups_snapshot = {
+            idx: list(group.keys()) for idx, group in self.file_groups.items()
+        }
+
+        deleted = 0
+        errors = 0
+
+        self._app_actions.release_media_canvas()
+        self._app_actions.start_loading_spinner(force=True)
+        self._app_actions.start_progress_bar()
+        try:
+            for group_num, (group_index, filepaths) in enumerate(
+                groups_snapshot.items(), start=1
+            ):
+                if len(filepaths) <= 1:
+                    continue
+                keeper = random.choice(filepaths)
+                for filepath in filepaths:
+                    if filepath == keeper:
+                        continue
+                    try:
+                        MarkedFiles.handle_file_removal(filepath)
+                        self._app_actions.delete(
+                            filepath, toast=False, manual_delete=False
+                        )
+                        deleted += 1
+                    except Exception as exc:
+                        errors += 1
+                        logger.error(
+                            "Random purge: failed to delete %s: %s", filepath, exc
+                        )
+
+                self._app_actions._set_label_state(
+                    _("Purging: group {current} / {total}").format(
+                        current=group_num, total=group_count
+                    )
+                )
+                QApplication.processEvents()
+        finally:
+            self._app_actions.stop_loading_spinner()
+            self._app_actions.stop_progress_bar()
+
+        # Reset group state — same fields cleared by _update_groups_for_removed_file
+        # when the last group is removed.
+        self.file_groups = {}
+        self.files_grouped = {}
+        self.group_indexes = []
+        self.files_matched = []
+        self.match_index = 0
+        self.current_group_index = 0
+        self.has_media_matches = False
+
+        self._app_actions.set_mode(Mode.BROWSE)
+        self._app_actions._set_label_state(_("Set a directory to run comparison."))
+        self._app_actions.refresh()
+
+        if errors:
+            msg = _(
+                "Random purge complete: {deleted} files deleted, {errors} error(s)."
+            ).format(deleted=deleted, errors=errors)
+        else:
+            msg = _(
+                "Random purge complete: {deleted} files deleted across {groups} groups."
+            ).format(deleted=deleted, groups=group_count)
+        self._app_actions.toast(msg, time_in_seconds=8)
+
     def set_current_group(self, start_match_index=0) -> None:
         '''
         While in group mode, navigate between the groups.

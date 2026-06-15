@@ -626,7 +626,12 @@ class CompareManager:
         """Show next group (delegated to primary wrapper)."""
         if self._primary_wrapper() is not None:
             return self._primary_wrapper().show_next_group(event, file_browser)
-    
+
+    def random_purge_groups(self, event=None):
+        """Delete all but one random file per group (delegated to primary wrapper)."""
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().random_purge_groups()
+
     def set_current_group(self, start_match_index=0):
         """Set current group (delegated to primary wrapper)."""
         if self._primary_wrapper() is not None:

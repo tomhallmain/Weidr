@@ -457,6 +457,11 @@ class SidebarPanel(QWidget):
                 "Next group",
                 self._app.compare_manager.show_next_group,
             )
+            self.add_button(
+                "random_purge_btn",
+                "Random purge",
+                self._app.compare_manager.random_purge_groups,
+            )
 
         elif mode == Mode.DUPLICATES:
             pass  # no extra buttons currently
@@ -477,7 +482,7 @@ class SidebarPanel(QWidget):
 
     def remove_group_mode_buttons(self) -> None:
         """Remove buttons specific to group/duplicates mode."""
-        for name in ("prev_group_btn", "next_group_btn"):
+        for name in ("prev_group_btn", "next_group_btn", "random_purge_btn"):
             self.destroy_button(name)
 
     # ==================================================================

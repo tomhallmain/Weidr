@@ -346,7 +346,7 @@ class SeekToTriggerTab(QWidget):
             start_slot=start_slot, sample_ratio=sample_ratio, parent=self,
         )
         self._worker.found.connect(
-            lambda r: self._on_found(r, media_path, classifier_action.name, nav_key)
+            lambda r: self._on_found(r, media_path, classifier_action.name, nav_key, start_slot)
         )
         self._worker.not_found.connect(
             lambda n: self._on_not_found(n, classifier_action.name)
@@ -363,21 +363,25 @@ class SeekToTriggerTab(QWidget):
         self._rebuild_rows(is_dynamic=bool(path and is_classifier_dynamic_media_path(path)))
 
     def _on_found(
-        self, result: TriggerFrameResult, media_path: str, action_name: str, nav_key: tuple
+        self, result: TriggerFrameResult, media_path: str, action_name: str,
+        nav_key: tuple, start_slot: int = 0,
     ) -> None:
+        wrapped = start_slot > 0 and result.slot_index < start_slot
         SeekToTriggerTab._last_trigger_slot[nav_key] = result.slot_index
 
         from image.frame_cache import FrameCache
         pos = FrameCache.slot_index_to_seek_position(
             media_path, result.slot_index, result.total_planned_slots
         )
+        notify = self._app_actions.warn if wrapped else self._app_actions.toast
+
         if pos is None:
             msg = _(
                 "Trigger found (sample {slot}/{total}) but seek position could not be computed."
             ).format(slot=result.slot_index + 1, total=result.total_planned_slots)
             self._set_status(msg)
             self._set_detail(_NBSP)
-            self._app_actions.toast(msg)
+            notify(msg)
             return
 
         if pos.kind == "ms":
@@ -406,7 +410,7 @@ class SeekToTriggerTab(QWidget):
         self._set_status(msg)
         detail_line = _format_trigger_detail(result.detail)
         self._set_detail(detail_line if detail_line else _NBSP)
-        self._app_actions.toast(msg)
+        notify(msg)
 
     def _on_not_found(self, planned_slots: int, action_name: str) -> None:
         msg = _(
@@ -543,6 +547,8 @@ class SeekToTriggerTab(QWidget):
         cls._headless_worker = worker  # prevent GC while running
 
         def _on_found(result):
+            wrapped = start_slot > 0 and result.slot_index < start_slot
+            notify = app_actions.warn if wrapped else app_actions.toast
             cls._last_trigger_slot[nav_key] = result.slot_index
             from image.frame_cache import FrameCache
             pos = FrameCache.slot_index_to_seek_position(
@@ -575,7 +581,7 @@ class SeekToTriggerTab(QWidget):
                     slot=result.slot_index + 1,
                     total=result.total_planned_slots,
                 )
-            app_actions.toast(msg)
+            notify(msg)
 
         def _on_not_found(n):
             app_actions.toast(

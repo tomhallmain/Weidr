@@ -30,13 +30,15 @@ from PySide6.QtWidgets import (
 from compare.classifier_action import ClassifierAction, Prevalidation, TriggerDetail, TriggerFrameResult
 from compare.classifier_actions_manager import ClassifierActionsManager
 from ui.app_style import AppStyle
+from utils.app_info_cache import app_info_cache
 from utils.logging_setup import get_logger
 from utils.media_utils import is_classifier_dynamic_media_path
 from utils.translations import _
 
 logger = get_logger("seek_to_trigger_tab_qt")
 
-_NBSP = " "  # non-breaking space used as a height-preserving placeholder
+_NBSP = chr(0x00A0)  # non-breaking space used as a height-preserving placeholder
+_LAST_ACTION_CACHE_KEY = "seek_to_trigger_last_action"
 
 
 # ---------------------------------------------------------------------------
@@ -104,12 +106,15 @@ class SeekToTriggerTab(QWidget):
     _DEFAULT_SAMPLE_PCT = 30
     _WARN_SAMPLE_PCT    = 75
 
+    # Class-level state shared with the headless keybind path in WindowLauncher.
+    _last_action: Optional["ClassifierAction"] = None
+    _last_trigger_slot: dict = {}  # (action_id, media_path) → last slot_index
+
     def __init__(self, parent: QWidget, app_actions) -> None:
         super().__init__(parent)
         self._app_actions = app_actions
         self._worker: Optional[SeekToTriggerWorker] = None
         self._active_media_path: Optional[str] = None
-        self._last_trigger_slot: dict = {}
         self._ca_items: list = []   # ClassifierAction objects matching _actions_list rows
         self._pv_items: list = []   # ClassifierAction objects matching _prevals_list rows
 
@@ -180,6 +185,16 @@ class SeekToTriggerTab(QWidget):
         self._density_warn_lbl.setVisible(False)
         root.addWidget(self._density_warn_lbl)
 
+        # -- Last action label -------------------------------------------
+        # Persistently shows which action was most recently used for a seek
+        # (updated both here and by the headless Ctrl+L keybind path).
+        self._last_action_lbl = QLabel(_NBSP)
+        self._last_action_lbl.setStyleSheet(
+            f"color: {AppStyle.FG_COLOR}; font-size: 9pt; font-style: italic;"
+        )
+        self._last_action_lbl.setWordWrap(True)
+        root.addWidget(self._last_action_lbl)
+
         # -- Status labels -----------------------------------------------
         # Both labels are always populated (with _NBSP when empty) so the
         # layout height stays constant and elements below never jump.
@@ -235,6 +250,7 @@ class SeekToTriggerTab(QWidget):
         root.addLayout(columns, 1)
 
         self.refresh()
+        self._update_last_action_lbl()
 
     # ------------------------------------------------------------------
     # Refresh / rebuild
@@ -303,8 +319,12 @@ class SeekToTriggerTab(QWidget):
             self._set_status(_("A scan is already in progress."))
             return
 
+        SeekToTriggerTab._last_action = classifier_action
+        app_info_cache.set_meta(_LAST_ACTION_CACHE_KEY, classifier_action.name)
+        self._update_last_action_lbl()
+
         nav_key = (id(classifier_action), media_path)
-        last_slot = self._last_trigger_slot.get(nav_key)
+        last_slot = SeekToTriggerTab._last_trigger_slot.get(nav_key)
         start_slot = (last_slot + 1) if last_slot is not None else 0
 
         self._set_status(
@@ -345,7 +365,7 @@ class SeekToTriggerTab(QWidget):
     def _on_found(
         self, result: TriggerFrameResult, media_path: str, action_name: str, nav_key: tuple
     ) -> None:
-        self._last_trigger_slot[nav_key] = result.slot_index
+        SeekToTriggerTab._last_trigger_slot[nav_key] = result.slot_index
 
         from image.frame_cache import FrameCache
         pos = FrameCache.slot_index_to_seek_position(
@@ -407,6 +427,13 @@ class SeekToTriggerTab(QWidget):
     # Helpers
     # ------------------------------------------------------------------
 
+    def _update_last_action_lbl(self) -> None:
+        action = SeekToTriggerTab._last_action
+        if action is not None:
+            self._last_action_lbl.setText(_("Last action: {name}").format(name=action.name))
+        else:
+            self._last_action_lbl.setText(_NBSP)
+
     def _on_density_toggled(self, checked: bool) -> None:
         self._density_slider.setEnabled(checked)
         self._density_lbl.setEnabled(checked)
@@ -434,6 +461,138 @@ class SeekToTriggerTab(QWidget):
     def showEvent(self, event) -> None:  # noqa: N802
         super().showEvent(event)
         self.refresh()
+        self._update_last_action_lbl()
+
+    # ------------------------------------------------------------------
+    # Headless / keybind entry point
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def _restore_last_action_from_cache(cls) -> Optional[ClassifierAction]:
+        """Return the ClassifierAction whose name was last saved, searching both
+        classifier_actions and prevalidations. Returns None if not found."""
+        name = app_info_cache.get_meta(_LAST_ACTION_CACHE_KEY)
+        if not name:
+            return None
+        all_actions = (
+            list(ClassifierActionsManager.classifier_actions)
+            + list(ClassifierActionsManager.prevalidations)
+        )
+        for action in all_actions:
+            if action.name == name:
+                return action
+        return None
+
+    @classmethod
+    def run_last_seek_to_trigger(cls, app_actions) -> None:
+        """Run a seek-to-trigger for the last-used action without opening the window.
+
+        If the ClassifierManagementWindow is already visible, delegates to its
+        tab so the tab's labels and cycling state stay in sync.  Otherwise runs
+        a standalone background scan and shows results as a toast.
+        """
+        import os
+        from ui.compare.classifier_management_window_qt import ClassifierManagementWindow
+
+        action = cls._last_action
+        if action is None:
+            action = cls._restore_last_action_from_cache()
+            if action is not None:
+                cls._last_action = action  # warm the in-memory cache for this session
+        if action is None:
+            app_actions.toast(
+                _("No previous seek-to-trigger action — use the Seek to Trigger tab first.")
+            )
+            return
+
+        # Delegate to the visible tab so its labels and cycling state stay in sync.
+        mgmt = ClassifierManagementWindow._instance
+        if mgmt is not None:
+            try:
+                if mgmt.isVisible():
+                    mgmt._seek_to_trigger_tab._seek_to_trigger(action)
+                    return
+            except (RuntimeError, AttributeError):
+                pass
+
+        # Window not up — run headless and emit results as a toast.
+        media_path = app_actions.get_active_media_filepath()
+        if not media_path:
+            app_actions.toast(_("No media loaded."))
+            return
+        if not is_classifier_dynamic_media_path(media_path):
+            app_actions.toast(_("Current media is not video, GIF, or PDF."))
+            return
+
+        if getattr(cls, '_headless_worker', None) is not None:
+            if cls._headless_worker.isRunning():
+                app_actions.toast(_("A seek scan is already in progress."))
+                return
+
+        nav_key = (id(action), media_path)
+        last_slot = cls._last_trigger_slot.get(nav_key)
+        start_slot = (last_slot + 1) if last_slot is not None else 0
+
+        app_actions.toast(
+            _("Scanning '{name}' on {file}…").format(
+                name=action.name, file=os.path.basename(media_path)
+            )
+        )
+
+        worker = SeekToTriggerWorker(action, media_path, start_slot=start_slot)
+        cls._headless_worker = worker  # prevent GC while running
+
+        def _on_found(result):
+            cls._last_trigger_slot[nav_key] = result.slot_index
+            from image.frame_cache import FrameCache
+            pos = FrameCache.slot_index_to_seek_position(
+                media_path, result.slot_index, result.total_planned_slots
+            )
+            if pos is None:
+                msg = _(
+                    "Trigger found (sample {slot}/{total}) but seek position could not be computed."
+                ).format(slot=result.slot_index + 1, total=result.total_planned_slots)
+            elif pos.kind == "ms":
+                app_actions.seek_media(pos.value, pause_after=True)
+                minutes, seconds = divmod(pos.value // 1000, 60)
+                detail_line = _format_trigger_detail(result.detail)
+                msg = _(
+                    "'{name}' triggers at {position} (sample {slot}/{total})."
+                ).format(
+                    name=action.name,
+                    position=f"{minutes:02d}:{seconds:02d}",
+                    slot=result.slot_index + 1,
+                    total=result.total_planned_slots,
+                )
+                if detail_line:
+                    msg = f"{msg}  {detail_line}"
+            else:
+                msg = _(
+                    "'{name}' triggers on page {page} (sample {slot}/{total})."
+                ).format(
+                    name=action.name,
+                    page=pos.value + 1,
+                    slot=result.slot_index + 1,
+                    total=result.total_planned_slots,
+                )
+            app_actions.toast(msg)
+
+        def _on_not_found(n):
+            app_actions.toast(
+                _("'{name}' did not trigger on the current media ({n} samples scanned).").format(
+                    name=action.name, n=n
+                )
+            )
+
+        def _on_error(msg):
+            logger.error("Headless seek-to-trigger error: %s", msg)
+            app_actions.toast(_("Error during trigger scan: {0}").format(msg))
+
+        worker.found.connect(_on_found)
+        worker.not_found.connect(_on_not_found)
+        worker.error.connect(_on_error)
+        worker.finished.connect(lambda: setattr(cls, '_headless_worker', None))
+        worker.start()
 
 
 # ---------------------------------------------------------------------------

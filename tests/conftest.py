@@ -90,6 +90,12 @@ def isolated_singletons(tmp_path, monkeypatch):
     except Exception:
         pass
 
+    try:
+        import ui.compare.seek_to_trigger_tab_qt as _stt
+        monkeypatch.setattr(_stt, "app_info_cache", new_cache)
+    except Exception:
+        pass
+
     # Silence startup log spam; patch before instantiation so __init__ skips the print.
     monkeypatch.setattr(cfg.Config, "print_config_settings", lambda self: None)
     monkeypatch.setattr(cfg, "config", cfg.Config())
@@ -146,6 +152,15 @@ def reset_app_globals():
         try:
             from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
             ClassifierPipelinesTab._editor_window = None
+        except Exception:
+            pass
+
+        # SeekToTriggerTab — class-level action cache and cycling state
+        try:
+            from ui.compare.seek_to_trigger_tab_qt import SeekToTriggerTab
+            SeekToTriggerTab._last_action = None
+            SeekToTriggerTab._last_trigger_slot.clear()
+            SeekToTriggerTab._headless_worker = None
         except Exception:
             pass
 

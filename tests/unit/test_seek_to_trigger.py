@@ -6,6 +6,7 @@ Covers:
   - TriggerDetail population via _evaluate_image_path_match _detail_out
   - FrameCache.slot_index_to_seek_position() conversion
   - _format_trigger_detail() display helper
+  - SeekToTriggerTab._restore_last_action_from_cache() cross-session persistence
 
 All tests mock FrameCache.stream_frame_samples and the action's
 _evaluate_image_path_match so no real media files or models are needed.
@@ -16,8 +17,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from compare.classifier_action import ClassifierAction, Prevalidation, TriggerDetail, TriggerFrameResult
+from compare.classifier_actions_manager import ClassifierActionsManager
 from image.frame_cache import FrameCache, MediaStats, SeekPosition
-from ui.compare.seek_to_trigger_tab_qt import _format_trigger_detail
+from ui.compare.seek_to_trigger_tab_qt import (
+    _format_trigger_detail,
+    _LAST_ACTION_CACHE_KEY,
+    SeekToTriggerTab,
+)
 from utils.constants import ClassifierActionType
 
 
@@ -722,3 +728,123 @@ class TestFormatTriggerDetail:
             assert f"cat_{i}" in result
         for i in range(5, 10):
             assert f"cat_{i}" not in result
+
+
+# ---------------------------------------------------------------------------
+# Cross-session persistence via app_info_cache
+# ---------------------------------------------------------------------------
+
+class TestLastActionPersistence:
+    """
+    Verify that _restore_last_action_from_cache() reads the persisted action
+    name from app_info_cache and resolves it to a live ClassifierAction, and
+    that run_last_seek_to_trigger() uses the restored action when _last_action
+    is None (i.e. fresh session).
+    """
+
+    def setup_method(self, _method):
+        SeekToTriggerTab._last_action = None
+        SeekToTriggerTab._last_trigger_slot.clear()
+
+    def teardown_method(self, _method):
+        SeekToTriggerTab._last_action = None
+        SeekToTriggerTab._last_trigger_slot.clear()
+
+    # -- _restore_last_action_from_cache -------------------------------------
+
+    def test_restore_finds_classifier_action_by_name(self):
+        """Persisted name resolves to the matching ClassifierAction object."""
+        from utils.app_info_cache import app_info_cache
+
+        ca = _action(name="my_seek_action")
+        old = ClassifierActionsManager.classifier_actions[:]
+        ClassifierActionsManager.classifier_actions = [ca]
+        try:
+            app_info_cache.set_meta(_LAST_ACTION_CACHE_KEY, "my_seek_action")
+            result = SeekToTriggerTab._restore_last_action_from_cache()
+            assert result is ca
+        finally:
+            ClassifierActionsManager.classifier_actions = old
+
+    def test_restore_finds_prevalidation_by_name(self):
+        """Persisted name also searches prevalidations, not just classifier actions."""
+        from utils.app_info_cache import app_info_cache
+        from compare.classifier_action import Prevalidation
+
+        pv = Prevalidation(name="my_preval", action=ClassifierActionType.HIDE, use_embedding=False)
+        old_pv = ClassifierActionsManager.prevalidations[:]
+        ClassifierActionsManager.prevalidations = [pv]
+        try:
+            app_info_cache.set_meta(_LAST_ACTION_CACHE_KEY, "my_preval")
+            result = SeekToTriggerTab._restore_last_action_from_cache()
+            assert result is pv
+        finally:
+            ClassifierActionsManager.prevalidations = old_pv
+
+    def test_restore_returns_none_when_name_absent_from_managers(self):
+        """Returns None gracefully when the cached name no longer matches any action."""
+        from utils.app_info_cache import app_info_cache
+
+        old = ClassifierActionsManager.classifier_actions[:]
+        ClassifierActionsManager.classifier_actions = []
+        try:
+            app_info_cache.set_meta(_LAST_ACTION_CACHE_KEY, "deleted_action")
+            result = SeekToTriggerTab._restore_last_action_from_cache()
+            assert result is None
+        finally:
+            ClassifierActionsManager.classifier_actions = old
+
+    def test_restore_returns_none_when_cache_empty(self):
+        """Returns None when no name has ever been saved."""
+        result = SeekToTriggerTab._restore_last_action_from_cache()
+        assert result is None
+
+    # -- run_last_seek_to_trigger with cache restore -------------------------
+
+    def test_headless_run_restores_action_from_cache_on_fresh_session(self):
+        """With _last_action=None, run_last_seek_to_trigger restores from cache
+        and warms _last_action for subsequent in-session calls."""
+        from utils.app_info_cache import app_info_cache
+
+        ca = _action(name="cached_action")
+        old = ClassifierActionsManager.classifier_actions[:]
+        ClassifierActionsManager.classifier_actions = [ca]
+        try:
+            app_info_cache.set_meta(_LAST_ACTION_CACHE_KEY, "cached_action")
+
+            toasts = []
+
+            class _FakeActions:
+                def get_active_media_filepath(self):
+                    return None  # no media → early exit after action is restored
+                def toast(self, msg, **kw):
+                    toasts.append(msg)
+
+            SeekToTriggerTab.run_last_seek_to_trigger(_FakeActions())
+
+            # The class-level cache should now be warmed
+            assert SeekToTriggerTab._last_action is ca
+            # And the toast should be about missing media, not missing action
+            assert toasts, "Expected at least one toast"
+            assert not any("Seek to Trigger tab" in t for t in toasts), (
+                f"Got 'no previous action' toast instead of 'no media' toast: {toasts}"
+            )
+        finally:
+            ClassifierActionsManager.classifier_actions = old
+
+    def test_headless_run_shows_no_action_toast_when_cache_empty(self):
+        """Without any persisted name, the user gets a clear prompt to use the tab."""
+        toasts = []
+
+        class _FakeActions:
+            def get_active_media_filepath(self):
+                return None
+            def toast(self, msg, **kw):
+                toasts.append(msg)
+
+        SeekToTriggerTab.run_last_seek_to_trigger(_FakeActions())
+
+        assert toasts, "Expected a toast"
+        assert any("Seek to Trigger tab" in t for t in toasts), (
+            f"Expected 'use the Seek to Trigger tab' message, got: {toasts}"
+        )

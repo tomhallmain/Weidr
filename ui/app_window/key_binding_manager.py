@@ -35,7 +35,7 @@ Keybinding map  (■ = bound  · = free | cols: Shift | Ctrl | Ctrl+Shift)
     I  ■ ■ ·   V  ■ ■ ·
     J  ■ ■ ·   W  ■ ■ ·
     K  ■ ■ ■   X  · ■ ·
-    L  ■ · ·   Y  ■ ■ ■
+    L  ■ ■ ·   Y  ■ ■ ■
     M  ■ ■ ■   Z  ■ ■ ·
 
     Special: 0-9 ■ (bare + Shift), Left/Right ■ (bare + Shift),
@@ -93,6 +93,14 @@ class KeyBindingManager:
         shortcut = QShortcut(QKeySequence(key), self._app)
         shortcut.activated.connect(target)
         self._shortcuts.append(shortcut)
+
+    # ------------------------------------------------------------------
+    # Named handlers
+    # ------------------------------------------------------------------
+
+    def _run_last_seek_to_trigger(self) -> None:
+        from ui.compare.seek_to_trigger_tab_qt import SeekToTriggerTab
+        SeekToTriggerTab.run_last_seek_to_trigger(self._app.app_actions)
 
     # ------------------------------------------------------------------
     # All bindings -- ported from App.__init__ lines 405-475
@@ -337,6 +345,11 @@ class KeyBindingManager:
         # ==============================================================
         self._bind("Ctrl+Shift+S", app.search_ctrl.next_text_embedding_preset, guarded=False)
         self._bind("Ctrl+B", app.return_to_browsing_mode, guarded=False)
+
+        # ==============================================================
+        # Seek to trigger (Ctrl+L — repeat last action)
+        # ==============================================================
+        self._bind("Ctrl+L", self._run_last_seek_to_trigger, guarded=False)
 
         # ==============================================================
         # F-keys

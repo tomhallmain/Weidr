@@ -1,5 +1,6 @@
 import queue
 import threading
+import time
 from multiprocessing.connection import Client
 
 from image.image_data_extractor import image_data_extractor
@@ -23,13 +24,35 @@ class SDRunnerClient:
         self._shutdown = False
         self._worker_lock = threading.Lock()
 
-    def start(self):
-        try:
-            self._conn = Client((self._host, self._port), authkey=str.encode(config.sd_runner_client_password))
-            logger.info("Started SDRunner Client")
-        except Exception as e:
-            logger.error(f"Failed to connect to SD Runner: {e}")
-            raise e
+    def start(self, max_retries: int = 1, retry_delay: float = 0.5) -> None:
+        """Connect to the SD runner server, retrying on ConnectionRefusedError.
+
+        Retries handle the case where the server is still starting up or is
+        briefly unavailable after a crash.  Non-connection errors are raised
+        immediately without retrying.
+        """
+        last_error: Exception | None = None
+        for attempt in range(max_retries):
+            try:
+                self._conn = Client(
+                    (self._host, self._port),
+                    authkey=str.encode(config.sd_runner_client_password),
+                )
+                logger.info("Started SDRunner Client")
+                return
+            except ConnectionRefusedError as e:
+                last_error = e
+                if attempt < max_retries - 1:
+                    logger.warning(
+                        f"SD Runner connection refused (attempt {attempt + 1}/{max_retries}),"
+                        f" retrying in {retry_delay}s..."
+                    )
+                    time.sleep(retry_delay)
+            except Exception as e:
+                logger.error(f"Failed to connect to SD Runner: {e}")
+                raise
+        logger.error(f"Failed to connect to SD Runner after {max_retries} attempts: {last_error}")
+        raise last_error
 
     def send(self, msg):
         if config.debug:

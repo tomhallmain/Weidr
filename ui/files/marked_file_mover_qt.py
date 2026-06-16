@@ -272,6 +272,12 @@ class MarkedFileMover(SmartDialog):
         QShortcut(QKeySequence("Ctrl+H"), self).activated.connect(
             self._open_hotkey_actions_window
         )
+        QShortcut(QKeySequence("Ctrl+M"), self).activated.connect(
+            self._clear_manual_filter
+        )
+        QShortcut(QKeySequence("Ctrl+K"), self).activated.connect(
+            self._clear_manual_filter
+        )
 
         QTimer.singleShot(1, self.activateWindow)
 

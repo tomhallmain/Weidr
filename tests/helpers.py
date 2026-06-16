@@ -31,8 +31,11 @@ class HangingVlcPlayer:
 
     def stop(self):
         self.stop_called.set()
-        # Sleep well beyond the 3-second timeout in video_stop().
-        time.sleep(30)
+        # Sleep past the 3-second timeout in video_stop() -- just enough to
+        # reliably trigger the abandon-and-replace path, not so long that the
+        # thread (and the real player it wraps) stays alive across dozens of
+        # later, unrelated tests and their Qt teardown.
+        time.sleep(5)
 
     def set_media(self, _media):
         pass

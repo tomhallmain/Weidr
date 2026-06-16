@@ -15,6 +15,9 @@ _VJEPA2_DEFAULT_DIM = 1024
 class CompareEmbeddingVJepa2(BaseCompareEmbedding):
     COMPARE_MODE = CompareMode.VJEPA2_EMBEDDING
     CACHE_FILENAME = "image_embeddings_vjepa2.pkl"
+    # image_embeddings_vjepa2 already samples video frames itself (_sample_vjepa2_frames);
+    # skip BaseCompareEmbedding's own multi-frame averaging to avoid double-sampling.
+    EMBEDS_DYNAMIC_MEDIA_NATIVELY = True
     THRESHHOLD_POTENTIAL_DUPLICATE = config.threshold_potential_duplicate_embedding
     THRESHHOLD_PROBABLE_MATCH = 0.98
     THRESHHOLD_GROUP_CUTOFF = 4500
@@ -39,6 +42,7 @@ class CompareEmbeddingVJepa2(BaseCompareEmbedding):
             image1,
             image2,
             image_embeddings_vjepa2,
+            sample_dynamic_media=False,
         )
 
 

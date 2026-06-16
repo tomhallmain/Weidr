@@ -9,14 +9,22 @@ from compare.base_compare import BaseCompare, gather_files
 from compare.compare_args import CompareArgs
 from compare.compare_result import CompareResult
 from compare.model import embedding_similarity
+from image.frame_cache import FrameCache
 from utils.config import config
 from utils.logging_setup import get_logger
+from utils.media_utils import is_classifier_dynamic_media_path
 from utils.utils import Utils
 
 logger = get_logger("base_compare_embedding")
 
 
 class BaseCompareEmbedding(BaseCompare):
+    # Set True on subclasses whose image_embeddings_func already samples video
+    # frames itself (e.g. V-JEPA 2) -- compute_embedding_for_path() then skips
+    # its own multi-frame sampling/averaging to avoid double-sampling and
+    # diluting the model's own temporal encoding with repeated-still-frame passes.
+    EMBEDS_DYNAMIC_MEDIA_NATIVELY = False
+
     def __init__(self, args=CompareArgs(), gather_files_func=gather_files):
         super().__init__(args, gather_files_func)
         self.embedding_similarity_threshold = self.args.threshold
@@ -55,6 +63,79 @@ class BaseCompareEmbedding(BaseCompare):
         logger.info(f" compare mode: {self.COMPARE_MODE}")
         logger.info("|--------------------------------------------------------------------|\n\n")
 
+    @staticmethod
+    def _get_dynamic_media_sample_paths(path: str) -> list:
+        '''
+        Sampled frame/page paths for video, GIF, or PDF media, reusing the same
+        FrameCache sampling primitives as prevalidation's frame-trigger scan
+        (compare/classifier_action.py). Capped by the compare-specific
+        ``compare_embedding_dynamic_media_max_samples`` rather than the
+        (larger) prevalidation cap, since each sample here costs a full
+        embedding-model forward pass instead of a lighter classifier call.
+
+        Falls back to a single-item list (the resolved still frame) on any
+        sampling failure so callers can treat the result uniformly.
+        '''
+        try:
+            _planned, sample_iter = FrameCache.stream_frame_samples(
+                path,
+                sample_ratio=config.compare_embedding_dynamic_media_sample_ratio,
+                max_samples=config.compare_embedding_dynamic_media_max_samples,
+            )
+            sample_paths = list(sample_iter)
+            return sample_paths if sample_paths else [FrameCache.get_image_path(path)]
+        except Exception as e:
+            logger.debug(f"Dynamic-media sampling failed for {path}, using single frame: {e}")
+            return [FrameCache.get_image_path(path)]
+
+    @classmethod
+    def compute_embedding_for_path(cls, path: str, image_embeddings_func, sample_dynamic_media: bool = True):
+        '''
+        Compute an embedding for *path*.
+
+        For video/GIF/PDF media, combines embeddings from multiple sampled
+        frames/pages (mean-pooled, then re-normalized so the result remains a
+        valid unit vector for cosine similarity) instead of relying on a
+        single first-frame snapshot -- the rest of a video's duration or a
+        PDF's pages otherwise never contributes to compare/search results.
+
+        Falls back to the single resolved still frame for plain images, when
+        *sample_dynamic_media* is False (set by subclasses whose
+        image_embeddings_func already samples video natively, e.g. V-JEPA 2),
+        or when sampling yields nothing usable.
+
+        Per-sample failures (exceptions or a None embedding, e.g. no face
+        detected in that frame for face embeddings) are skipped rather than
+        failing the whole file; the caller's own exception handling still
+        applies to the always-present single-frame fallback path.
+        '''
+        if not sample_dynamic_media or not is_classifier_dynamic_media_path(path):
+            return image_embeddings_func(FrameCache.get_image_path(path))
+
+        sample_paths = cls._get_dynamic_media_sample_paths(path)
+        if len(sample_paths) <= 1:
+            return image_embeddings_func(sample_paths[0] if sample_paths else FrameCache.get_image_path(path))
+
+        embeddings = []
+        for sample_path in sample_paths:
+            try:
+                sample_embedding = image_embeddings_func(sample_path)
+            except (OSError, ValueError, SyntaxError, Image.DecompressionBombError):
+                continue
+            if sample_embedding is not None:
+                embeddings.append(sample_embedding)
+
+        if not embeddings:
+            return image_embeddings_func(FrameCache.get_image_path(path))
+        if len(embeddings) == 1:
+            return embeddings[0]
+
+        mean_embedding = np.mean(np.array(embeddings), axis=0)
+        norm = np.linalg.norm(mean_embedding)
+        if norm > 0:
+            mean_embedding = mean_embedding / norm
+        return mean_embedding.tolist()
+
     def get_data(self):
         '''
         For all the found files in the base directory, either load the cached
@@ -75,7 +156,7 @@ class BaseCompareEmbedding(BaseCompare):
             # Check for cancellation during data gathering
             if self.is_cancelled():
                 self.raise_cancellation_exception()
-            
+
             if Utils.is_invalid_file(f, counter, self.is_run_search, self.args.file_filter):
                 continue
 
@@ -85,9 +166,11 @@ class BaseCompareEmbedding(BaseCompare):
             if f in self.compare_data.file_data_dict:
                 embedding = self.compare_data.file_data_dict[f]
             else:
-                image_file_path = self.get_image_path(f)
                 try:
-                    embedding = self.image_embeddings_func(image_file_path)
+                    embedding = self.compute_embedding_for_path(
+                        f, self.image_embeddings_func,
+                        sample_dynamic_media=not self.EMBEDS_DYNAMIC_MEDIA_NATIVELY,
+                    )
                 except Image.DecompressionBombError as e:
                     logger.warning(f"{f} - skipping, image too large: {e}")
                     continue
@@ -367,7 +450,10 @@ class BaseCompareEmbedding(BaseCompare):
             if self.verbose:
                 logger.info("Filepath not found in initial list - gathering new file data")
             try:
-                embedding = self.image_embeddings_func(search_media_path)
+                embedding = self.compute_embedding_for_path(
+                    search_media_path, self.image_embeddings_func,
+                    sample_dynamic_media=not self.EMBEDS_DYNAMIC_MEDIA_NATIVELY,
+                )
             except OSError as e:
                 if self.verbose:
                     logger.error(f"{search_media_path} - {e}")
@@ -576,7 +662,10 @@ class BaseCompareEmbedding(BaseCompare):
         if self.verbose:
             logger.info(f"Tokenizing {descriptor}: \"{image_path}\"")
         try:
-            embedding = self.image_embeddings_func(image_path)
+            embedding = self.compute_embedding_for_path(
+                image_path, self.image_embeddings_func,
+                sample_dynamic_media=not self.EMBEDS_DYNAMIC_MEDIA_NATIVELY,
+            )
             embeddings.append(embedding)
         except OSError as e:
             if self.verbose:
@@ -610,7 +699,10 @@ class BaseCompareEmbedding(BaseCompare):
                 readded_indexes.append(len(self.compare_data.files_found))
                 self.compare_data.files_found.append(f)
                 try:
-                    embedding = self.image_embeddings_func(f)
+                    embedding = self.compute_embedding_for_path(
+                        f, self.image_embeddings_func,
+                        sample_dynamic_media=not self.EMBEDS_DYNAMIC_MEDIA_NATIVELY,
+                    )
                 except OSError as e:
                     logger.error(f"Error generating embedding from file {f}: {e}")
                     continue
@@ -634,11 +726,12 @@ class BaseCompareEmbedding(BaseCompare):
         return text_embedding
 
     @staticmethod
-    def single_text_compare(image_path, texts_dict, image_embeddings_func, text_cache, text_embeddings_func):
+    def single_text_compare(image_path, texts_dict, image_embeddings_func, text_cache, text_embeddings_func, sample_dynamic_media=True):
         logger.info(f"Running text comparison for \"{image_path}\" - text = {texts_dict}")
         similarities = {}
         try:
-            image_embedding = image_embeddings_func(image_path)
+            image_embedding = BaseCompareEmbedding.compute_embedding_for_path(
+                image_path, image_embeddings_func, sample_dynamic_media=sample_dynamic_media)
         except OSError as e:
             logger.error(f"{image_path} - {e}")
             raise AssertionError(
@@ -648,14 +741,15 @@ class BaseCompareEmbedding(BaseCompare):
         return similarities
 
     @staticmethod
-    def multi_text_compare(image_path, positives, negatives, image_embeddings_func, text_cache, text_embeddings_func, multi_cache, threshold=0.3):
+    def multi_text_compare(image_path, positives, negatives, image_embeddings_func, text_cache, text_embeddings_func, multi_cache, threshold=0.3, sample_dynamic_media=True):
         key = (image_path, "::p", tuple(positives), "::n", tuple(negatives))
         if key in multi_cache:
             return bool(multi_cache[key] > threshold)
         positive_similarities = []
         negative_similarities = []
         try:
-            image_embedding = image_embeddings_func(image_path)
+            image_embedding = BaseCompareEmbedding.compute_embedding_for_path(
+                image_path, image_embeddings_func, sample_dynamic_media=sample_dynamic_media)
         except OSError as e:
             logger.error(f"{image_path} - {e}")
             raise AssertionError(
@@ -680,10 +774,12 @@ class BaseCompareEmbedding(BaseCompare):
         return combined_similarity > threshold
 
     @staticmethod
-    def is_related(image1, image2, image_embeddings_func):
+    def is_related(image1, image2, image_embeddings_func, sample_dynamic_media=True):
         try:
-            emb1 = image_embeddings_func(image1)
-            emb2 = image_embeddings_func(image2)
+            emb1 = BaseCompareEmbedding.compute_embedding_for_path(
+                image1, image_embeddings_func, sample_dynamic_media=sample_dynamic_media)
+            emb2 = BaseCompareEmbedding.compute_embedding_for_path(
+                image2, image_embeddings_func, sample_dynamic_media=sample_dynamic_media)
         except OSError as e:
             logger.error(f"{image1} - {e}")
             raise AssertionError(

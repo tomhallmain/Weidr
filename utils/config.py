@@ -149,6 +149,13 @@ class Config:
         # proportionally.  A file twice this size gets half the duration cap, etc.,
         # with a floor of 30 s.  Set to 0 to disable size-based scaling.
         self.dynamic_media_max_sample_size_mb = 500
+        # Embedding compare jobs (CLIP/SigLIP/FLAVA/etc.): combine embeddings from
+        # multiple sampled frames/pages of video/GIF/PDF media into one mean-pooled,
+        # re-normalized vector instead of embedding only the first frame. Reuses the
+        # same FrameCache sampling primitives as prevalidation, but with its own
+        # (smaller) sample cap since each sample costs a full model forward pass.
+        self.compare_embedding_dynamic_media_sample_ratio = 0.1
+        self.compare_embedding_dynamic_media_max_samples = 6
         self.show_negative_prompt = True
         self.sd_runner_client_port = 6000
         self.sd_runner_client_password = "<PASSWORD>"
@@ -266,6 +273,7 @@ class Config:
                             "dynamic_media_max_sample_pages",
                             "dynamic_media_max_sample_duration_seconds",
                             "dynamic_media_max_sample_size_mb",
+                            "compare_embedding_dynamic_media_max_samples",
                             "vjepa2_num_frames",
                             "sd_runner_client_port",
                             "refacdir_client_port")
@@ -277,6 +285,7 @@ class Config:
                             "large_image_hq_downscale_ratio_threshold",
                             "large_image_promotion_min_free_ram_gb",
                             "large_image_promotion_available_ram_fraction",
+                            "compare_embedding_dynamic_media_sample_ratio",
                             "slideshow_dynamic_video_max_seconds",
                             "slideshow_dynamic_gif_max_seconds")
 

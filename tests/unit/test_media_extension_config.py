@@ -20,7 +20,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _CONFIG_EXAMPLE = _REPO_ROOT / "configs" / "config_example.json"
 
 TIER_A_IMAGE_EXTENSIONS = (".jfif", ".jpe", ".pjpeg", ".pjp", ".ico", ".heif", ".apng")
-TIER_C_IMAGE_EXTENSIONS = (".jxl",)
+TIER_C_IMAGE_EXTENSIONS = (".jxl", ".dib", ".psd")
 
 
 def _load_config_example() -> dict:

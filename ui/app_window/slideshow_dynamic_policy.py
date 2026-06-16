@@ -31,11 +31,18 @@ from __future__ import annotations
 import time
 from typing import Any
 
+from utils.audio_media import is_audio_for_display
 from utils.config import config
 from utils.media_utils import get_pdf_page_count, is_video_for_display
 
 # VLC duration/time can lag slightly behind the true end.
 _SLIDESHOW_END_TOLERANCE_MS = 250
+
+
+def _is_video_or_audio_for_display(path: str) -> bool:
+    """Audio plays through the same VideoUI/VLC plumbing as video, so the
+    video dwell rules (finite cap / intrinsic end) apply identically."""
+    return is_video_for_display(path) or is_audio_for_display(path)
 
 
 def _pdf_effective_page_budget(path: str, pages_cfg: int) -> int:
@@ -61,7 +68,7 @@ def skip_classic_slideshow_primary_tick(media_frame: Any, path: str | None) -> b
     if not path:
         return False
     v_cap = float(config.slideshow_dynamic_video_max_seconds)
-    if is_video_for_display(path):
+    if _is_video_or_audio_for_display(path):
         if v_cap > 0:
             return True
         if v_cap < 0 and getattr(
@@ -93,7 +100,7 @@ def slideshow_poll_should_run(media_frame: Any, path: str | None) -> bool:
     if not path:
         return False
     v_cap = float(config.slideshow_dynamic_video_max_seconds)
-    if is_video_for_display(path):
+    if _is_video_or_audio_for_display(path):
         if v_cap > 0:
             return True
         if v_cap < 0 and getattr(
@@ -127,7 +134,7 @@ def should_advance_slideshow_poll(
     now = time.monotonic()
 
     cap_v = float(config.slideshow_dynamic_video_max_seconds)
-    if cap_v < 0 and is_video_for_display(path):
+    if cap_v < 0 and _is_video_or_audio_for_display(path):
         if not getattr(
             media_frame, "slideshow_vlc_natural_dwell_supported", lambda: False
         )():
@@ -139,7 +146,7 @@ def should_advance_slideshow_poll(
             return True
         return False
 
-    if cap_v > 0 and is_video_for_display(path):
+    if cap_v > 0 and _is_video_or_audio_for_display(path):
         if getattr(media_frame, "slideshow_vlc_has_ended", lambda: False)():
             return True
         cur_ms, dur_ms = getattr(media_frame, "slideshow_vlc_time_ms", lambda: (0, 0))()

@@ -69,11 +69,12 @@ You can change extension lists in `config.json` or the **type configuration** wi
 
 ### Supported file types (defaults)
 
-**Still images** (`image_types`): `.jpg`, `.jpeg`, `.png`, `.tif`, `.tiff`, `.webp`, `.bmp`, `.heic`, `.heif`, `.avif`, `.ico`, `.jfif`, `.jpe`, `.pjpeg`, `.pjp`, `.apng`, `.jxl`
+**Still images** (`image_types`): `.jpg`, `.jpeg`, `.png`, `.tif`, `.tiff`, `.webp`, `.bmp`, `.heic`, `.heif`, `.avif`, `.ico`, `.jfif`, `.jpe`, `.pjpeg`, `.pjp`, `.apng`, `.jxl`, `.dib`, `.psd`
 
 - **HEIC / HEIF / AVIF** need optional Pillow plugins (`pillow-heif`, `pillow-avif-plugin`) on some systems; Qt may decode others natively.
 - **JPEG XL (`.jxl`)** is in the default browse list but has **no Qt reader**; install `pip install pillow-jxl-plugin` so Pillow can decode (libjxl is bundled with that wheel on most platforms). Without it, `.jxl` files appear in browse but may fail to display.
 - **Animated WebP and APNG** play like GIF when Qt reports animation (`QMovie`); otherwise they show as a static frame. `.webp` and `.apng` are in `image_types`; animated playback does not require extra packages beyond Qt.
+- **`.dib`** is the same bitstream as `.bmp`; **`.psd`** decodes via Pillow's built-in PSD reader (composite/flattened view only — no per-layer access). Neither needs an optional plugin.
 
 **Video** (`video_types`, requires `enable_videos`): `.mp4`, `.mkv`, `.avi`, `.wmv`, `.mov`, `.flv`, `.webm`, `.m4v`, `.ogv`, `.mpeg`, `.mpg` — playback uses **VLC** when installed.
 
@@ -81,7 +82,7 @@ You can change extension lists in `config.json` or the **type configuration** wi
 
 **Other browse types** (flags above): GIF, PDF (first page for compare/cache), SVG, HTML (HTML uses headless render + first-page raster for cache; can be slow on first open).
 
-**Not in defaults:** RAW, PSD, and many legacy extensions; add an extension to `image_types` if you want them in browse (decode may still need extra libraries).
+**Not in defaults:** Camera RAW (`.cr2`, `.nef`, `.dng`, etc.) and other legacy/scientific-imaging extensions (JPEG 2000, Netpbm, `.qoi`, `.xpm`, `.sgi`/`.rgb`/`.rgba`); add an extension to `image_types` if you want them in browse (decode may still need extra libraries — RAW in particular needs a dedicated develop pipeline, not just an extension).
 
 **Go to file** can open paths outside `file_types`; browse and compare gathering respect the configured lists.
 

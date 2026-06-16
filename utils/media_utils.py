@@ -9,7 +9,12 @@ from __future__ import annotations
 import functools
 import os
 
-from utils.audio_media import is_audio_for_display, is_audio_path_by_extension
+from utils.audio_media import (
+    has_real_video_stream,
+    is_ambiguous_audio_video_extension,
+    is_audio_for_display,
+    is_audio_path_by_extension,
+)
 from utils.config import config
 from utils.constants import MediaType
 
@@ -42,10 +47,14 @@ def is_video_path_by_extension(path: str) -> bool:
 
     Does not require the path to exist or ``enable_videos`` to be set — use for
     routing/display logic (e.g. media frame, frame cache when combined with
-    ``enable_videos``).
+    ``enable_videos``) — except for an ambiguous audio/video extension (e.g.
+    ``.m4a``), which is probed via :func:`~utils.audio_media.has_real_video_stream`
+    and requires the file to exist.
     """
     if not path:
         return False
+    if is_ambiguous_audio_video_extension(path):
+        return has_real_video_stream(path)
     if is_audio_path_by_extension(path):
         return False
     path_lower = path.lower()
@@ -161,6 +170,8 @@ def is_video_file(path: str) -> bool:
         return False
     if not config.enable_videos:
         return False
+    if is_ambiguous_audio_video_extension(path):
+        return has_real_video_stream(path)
     if is_audio_path_by_extension(path):
         return False
     ext = os.path.splitext(path)[1].lower()

@@ -109,6 +109,7 @@ class Config:
             ".heic", ".heif", ".avif", ".ico",
             ".jfif", ".jpe", ".pjpeg", ".pjp",
             ".apng", ".jxl",
+            ".dib", ".psd",
         ]
         self.video_types = [
             ".mp4", ".mkv", ".avi", ".wmv", ".mov", ".flv",

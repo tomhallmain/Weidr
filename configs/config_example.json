@@ -71,7 +71,8 @@
     ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".bmp",
     ".heic", ".heif", ".avif", ".ico",
     ".jfif", ".jpe", ".pjpeg", ".pjp",
-    ".apng", ".jxl"
+    ".apng", ".jxl",
+    ".dib", ".psd"
   ],
   "video_types": [
     ".mp4", ".mkv", ".avi", ".wmv", ".mov", ".flv",

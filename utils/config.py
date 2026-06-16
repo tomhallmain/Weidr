@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 from image.image_edit_configuration import ImageEditConfiguration
-from utils.constants import CompareMode, SortBy
+from utils.constants import CompareMode, Sort, SortBy
 from utils.logging_setup import get_logger
 from utils.running_tasks_registry import running_tasks_registry
 from utils.utils import Utils
@@ -81,6 +81,7 @@ class Config:
         self.default_main_window_size = "1400x950"
         self.default_secondary_window_size = "600x700"
         self.sort_by = SortBy.NAME
+        self.compare_group_sort = Sort.DESC
         self.toasts_persist_seconds = 2
         self.title_notify_persist_seconds = 5
         self.delete_instantly = False
@@ -306,6 +307,12 @@ class Config:
                 self.sort_by = SortBy[self.dict["sort_by"]]
             except Exception:
                 raise AssertionError("Invalid sort type for sort_by config setting. Must be one of NAME, FULL_PATH, CREATION_TIME, TYPE")
+
+            if "compare_group_sort" in self.dict:
+                try:
+                    self.compare_group_sort = Sort[self.dict["compare_group_sort"]]
+                except Exception:
+                    raise AssertionError("Invalid value for compare_group_sort config setting. Must be one of ASC, DESC")
         else:
             self._rebuild_file_types()
 
@@ -628,6 +635,7 @@ class Config:
         persisted = dict(self.dict) if isinstance(self.dict, dict) else {}
         persisted["image_classifier_models"] = list(self.image_classifier_models)
         persisted["enable_prevalidations"] = bool(self.enable_prevalidations)
+        persisted["compare_group_sort"] = self.compare_group_sort.name
         return persisted
 
     def persist(self):

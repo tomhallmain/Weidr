@@ -209,6 +209,10 @@ class Sort(Enum):
     def __str__(self):
         return self.value
 
+    @classmethod
+    def non_random_options(cls):
+        return [s for s in cls if s != Sort.RANDOM]
+
 
 class HfHubVisualMediaTask(Enum):
     ALL_VISUAL_MEDIA = ""

@@ -29,7 +29,7 @@ from ui.app_style import AppStyle
 from ui.compare.add_instance_dialog_qt import AddInstanceDialog, MAX_INSTANCES
 from ui.compare.filter_builder_panel_qt import FilterBuilderPanel
 from utils.config import config
-from utils.constants import CompareMode
+from utils.constants import CompareMode, Sort
 from utils.translations import _
 from utils.logging_setup import get_logger
 logger = get_logger("compare_settings_window_qt")
@@ -104,6 +104,7 @@ class CompareSettingsWindow(SmartDialog):
         self._set_file_filter = set_file_filter
         self._weight_vars: Dict[str, QLineEdit] = {}   # instance_id -> weight edit
         self._threshold_combo: Optional[QComboBox] = None
+        self._group_sort_combo: Optional[QComboBox] = None
         self._add_instance_btn: Optional[QPushButton] = None
         self._instance_list_layout: Optional[QVBoxLayout] = None
 
@@ -286,6 +287,23 @@ class CompareSettingsWindow(SmartDialog):
         self._search_closest_cb = QCheckBox(_("Search only return closest"))
         self._search_closest_cb.setChecked(config.search_only_return_closest)
         right.addWidget(self._search_closest_cb)
+
+        # Group sort order
+        group_sort_row = QHBoxLayout()
+        group_sort_lbl = QLabel(_("Group sort order:"))
+        group_sort_lbl.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
+        group_sort_row.addWidget(group_sort_lbl)
+
+        self._group_sort_combo = QComboBox()
+        for s in Sort.non_random_options():
+            self._group_sort_combo.addItem(s.get_text(), s)
+        self._group_sort_combo.setCurrentIndex(
+            Sort.non_random_options().index(config.compare_group_sort)
+            if config.compare_group_sort in Sort.non_random_options() else 0
+        )
+        group_sort_row.addWidget(self._group_sort_combo)
+        group_sort_row.addStretch()
+        right.addLayout(group_sort_row)
 
         right.addWidget(_h_separator())
 
@@ -570,6 +588,13 @@ class CompareSettingsWindow(SmartDialog):
             self._matrix_compare_cb.isChecked()
         )
         config.search_only_return_closest = self._search_closest_cb.isChecked()
+
+        # Group sort order
+        if self._group_sort_combo is not None:
+            selected_sort = self._group_sort_combo.currentData()
+            if isinstance(selected_sort, Sort):
+                config.compare_group_sort = selected_sort
+                config.persist()
 
         # Data filter
         self._compare_manager.set_data_filter(self._filter_panel.get_filter())

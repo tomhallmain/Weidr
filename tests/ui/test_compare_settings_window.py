@@ -1,9 +1,11 @@
 """UI smoke tests for CompareSettingsWindow (via WindowLauncher)."""
 
 import pytest
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLabel, QPushButton
 
 from ui.compare.compare_settings_window_qt import CompareSettingsWindow
+from utils.constants import Sort
 from utils.translations import _
 
 _tr = _
@@ -84,3 +86,38 @@ class TestCompareSettingsWindowOpen:
             _tr("+ Add Instance") in btn.text() or "Add Instance" in btn.text()
             for btn in buttons
         )
+
+    def test_group_sort_combo_is_present(self, compare_settings_window):
+        settings_win, _ = compare_settings_window
+        assert settings_win._group_sort_combo is not None
+        assert settings_win._group_sort_combo.count() == len(Sort.non_random_options())
+
+    def test_group_sort_combo_apply_updates_config(
+        self, compare_settings_window, qtbot, monkeypatch
+    ):
+        """Selecting ASC in the group sort combo and clicking Apply persists
+        Sort.ASC to config.compare_group_sort."""
+        import utils.config as cfg_module
+        import ui.compare.compare_settings_window_qt as csw_module
+
+        settings_win, _ = compare_settings_window
+
+        # compare_settings_window_qt bound `config` at import time, before the
+        # per-test isolated singleton was created.  Route its module-level name
+        # to the isolated instance so _on_apply writes to the right object.
+        monkeypatch.setattr(csw_module, "config", cfg_module.config)
+
+        combo = settings_win._group_sort_combo
+        asc_index = next(
+            i for i in range(combo.count()) if combo.itemData(i) == Sort.ASC
+        )
+        combo.setCurrentIndex(asc_index)
+
+        apply_text = _tr("Apply")
+        apply_btn = next(
+            btn for btn in settings_win.findChildren(QPushButton)
+            if btn.text() == apply_text
+        )
+        qtbot.mouseClick(apply_btn, Qt.MouseButton.LeftButton)
+
+        assert cfg_module.config.compare_group_sort == Sort.ASC

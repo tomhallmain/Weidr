@@ -62,6 +62,17 @@ class TestSortGroups:
         sizes = [len(cr.file_groups[i]) for i in order]
         assert sizes == sorted(sizes)
 
+    def test_sorted_descending_by_group_size(self, tmp_path):
+        cr = CompareResult(str(tmp_path))
+        cr.file_groups = {
+            0: {"a.jpg": 0.1, "b.jpg": 0.2, "c.jpg": 0.3},  # size 3
+            1: {"x.jpg": 0.1},                                 # size 1
+            2: {"m.jpg": 0.1, "n.jpg": 0.2},                  # size 2
+        }
+        order = cr.sort_groups(cr.file_groups, reverse=True)
+        sizes = [len(cr.file_groups[i]) for i in order]
+        assert sizes == sorted(sizes, reverse=True)
+
     def test_empty_groups(self, tmp_path):
         cr = CompareResult(str(tmp_path))
         assert cr.sort_groups({}) == []

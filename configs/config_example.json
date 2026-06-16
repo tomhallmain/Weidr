@@ -8,6 +8,7 @@
   "log_level": "info",
   "clip_model": "ViT-B/32",
   "compare_mode": "CLIP_EMBEDDING",
+  "compare_group_sort": "DESC",
   "max_search_results": 200,
   "search_only_return_closest": false,
   "file_actions_history_max": 500,

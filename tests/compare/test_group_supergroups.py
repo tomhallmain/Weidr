@@ -62,15 +62,27 @@ class TestClusterGroupIndexes:
         clusters = cluster_group_indexes(centroids, threshold=0.9)
         assert sorted(sorted(c) for c in clusters) == [[1], [2]]
 
-    def test_transitive_chain_merges_via_single_link(self):
-        """A~B and B~C (but not A~C directly) still end up in one cluster."""
+    def test_transitive_chain_does_not_merge_with_complete_link(self):
+        """A~B and B~C (but not A~C directly): complete-link keeps A+B together
+        but refuses to absorb C because dot(A, C) is below the threshold."""
         a = _unit([1.0, 0.0, 0.0])
         b = _unit([0.7, 0.7, 0.0])
         c = _unit([0.0, 1.0, 0.0])
         centroids = {1: a, 2: b, 3: c}
-        # a.b and b.c are both >= 0.7 similarity; a.c is 0 -- only transitive
-        # (single-link) clustering merges all three into one cluster.
+        # dot(a,b) ≈ 0.7 >= 0.69 → {1,2} merge.
+        # dot(a,c) = 0 < 0.69 → complete-link blocks {1,2} from absorbing 3.
         clusters = cluster_group_indexes(centroids, threshold=0.69)
+        assert len(clusters) == 2
+        flat = [sorted(c) for c in clusters]
+        assert sorted(flat) == [[1, 2], [3]]
+
+    def test_all_mutually_similar_centroids_merge(self):
+        """When every pair exceeds the threshold, complete-link produces one cluster."""
+        a = _unit([1.0, 0.0, 0.0])
+        b = _unit([0.99, 0.1, 0.0])
+        c = _unit([0.98, 0.15, 0.0])
+        centroids = {1: a, 2: b, 3: c}
+        clusters = cluster_group_indexes(centroids, threshold=0.9)
         assert len(clusters) == 1
         assert sorted(clusters[0]) == [1, 2, 3]
 
@@ -545,3 +557,75 @@ class TestSupergroupLabelSuffix:
     def test_group_not_in_any_supergroup_returns_empty(self):
         wrapper = _make_wrapper(supergroups=[[0]], group_indexes=[0, 1])
         assert wrapper._supergroup_label_suffix(1) == ""
+
+
+# ---------------------------------------------------------------------------
+# _requires_new_compare
+# ---------------------------------------------------------------------------
+
+def _make_wrapper_with_result(base_dir, compare_mode, applied_group_sort=None):
+    """Return a CompareWrapper whose _compare stub has a matching base_dir,
+    COMPARE_MODE, and compare_result with the given applied_group_sort."""
+    from utils.constants import Sort
+    wrapper = CompareWrapper(master=MagicMock(), compare_mode=compare_mode, app_actions=MagicMock())
+    result = SimpleNamespace(applied_group_sort=applied_group_sort)
+    wrapper._compare = SimpleNamespace(
+        base_dir=base_dir,
+        COMPARE_MODE=compare_mode,
+        compare_result=result,
+    )
+    return wrapper
+
+
+class TestRequiresNewCompare:
+    def test_true_when_no_compare(self):
+        wrapper = CompareWrapper(master=MagicMock(), compare_mode=CompareMode.CLIP_EMBEDDING, app_actions=MagicMock())
+        assert wrapper._requires_new_compare("/some/dir", is_group=True) is True
+
+    def test_false_when_same_dir_mode_and_sort(self, monkeypatch):
+        from utils.constants import Sort
+        import utils.config as cfg_module
+        monkeypatch.setattr(cfg_module.config, "compare_group_sort", Sort.DESC)
+        wrapper = _make_wrapper_with_result("/dir", CompareMode.CLIP_EMBEDDING, applied_group_sort=Sort.DESC)
+        assert wrapper._requires_new_compare("/dir", is_group=True) is False
+
+    def test_true_when_base_dir_changed(self, monkeypatch):
+        from utils.constants import Sort
+        import utils.config as cfg_module
+        monkeypatch.setattr(cfg_module.config, "compare_group_sort", Sort.DESC)
+        wrapper = _make_wrapper_with_result("/old", CompareMode.CLIP_EMBEDDING, applied_group_sort=Sort.DESC)
+        assert wrapper._requires_new_compare("/new", is_group=True) is True
+
+    def test_true_when_compare_mode_changed(self, monkeypatch):
+        from utils.constants import Sort
+        import utils.config as cfg_module
+        monkeypatch.setattr(cfg_module.config, "compare_group_sort", Sort.DESC)
+        wrapper = _make_wrapper_with_result("/dir", CompareMode.COLOR_MATCHING, applied_group_sort=Sort.DESC)
+        wrapper.compare_mode = CompareMode.CLIP_EMBEDDING
+        assert wrapper._requires_new_compare("/dir", is_group=True) is True
+
+    def test_true_when_group_sort_changed_in_group_mode(self, monkeypatch):
+        from utils.constants import Sort
+        import utils.config as cfg_module
+        # Last group run used ASC; config is now DESC.
+        monkeypatch.setattr(cfg_module.config, "compare_group_sort", Sort.DESC)
+        wrapper = _make_wrapper_with_result("/dir", CompareMode.CLIP_EMBEDDING, applied_group_sort=Sort.ASC)
+        assert wrapper._requires_new_compare("/dir", is_group=True) is True
+
+    def test_false_when_group_sort_changed_but_not_group_mode(self, monkeypatch):
+        """Sort change must not force a new compare for search requests — sort
+        only affects group display ordering."""
+        from utils.constants import Sort
+        import utils.config as cfg_module
+        monkeypatch.setattr(cfg_module.config, "compare_group_sort", Sort.DESC)
+        wrapper = _make_wrapper_with_result("/dir", CompareMode.CLIP_EMBEDDING, applied_group_sort=Sort.ASC)
+        assert wrapper._requires_new_compare("/dir", is_group=False) is False
+
+    def test_false_when_no_applied_sort_stored(self, monkeypatch):
+        """applied_group_sort=None means no group run has happened yet;
+        sort change should not force a new compare in that case."""
+        from utils.constants import Sort
+        import utils.config as cfg_module
+        monkeypatch.setattr(cfg_module.config, "compare_group_sort", Sort.DESC)
+        wrapper = _make_wrapper_with_result("/dir", CompareMode.CLIP_EMBEDDING, applied_group_sort=None)
+        assert wrapper._requires_new_compare("/dir", is_group=True) is False

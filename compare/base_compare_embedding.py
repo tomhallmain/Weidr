@@ -1,6 +1,5 @@
 import getopt
 import os
-import pprint
 import sys
 
 import numpy as np
@@ -21,37 +20,49 @@ logger = get_logger("base_compare_embedding")
 
 def cluster_group_indexes(centroids: dict, threshold: float) -> list:
     '''
-    Greedy single-link clustering of group_index values by centroid cosine
-    similarity (centroids are already unit vectors, so dot product is cosine
-    similarity). O(g^2) over the number of groups, not files -- group counts
-    are typically far smaller than file counts, so this is cheap.
+    Complete-link agglomerative clustering of group_index values by centroid
+    cosine similarity (centroids are already unit vectors, so dot product equals
+    cosine similarity).
+
+    Two clusters merge only when *every* cross-cluster pair of centroids exceeds
+    the threshold. This prevents the single-link "chaining" effect where a long
+    chain of barely-connected groups collapses into one giant supergroup.
+
+    O(g^2) pairwise pre-computation followed by iterative merging; g is the
+    number of groups, which is typically far smaller than the file count.
 
     Returns a list of clusters, each a list of group_index values. Order is
     arbitrary; callers that care about ordering (see compute_supergroups)
     sort the result themselves.
     '''
     indexes = list(centroids.keys())
-    parent = {i: i for i in indexes}
+    if not indexes:
+        return []
 
-    def find(i):
-        while parent[i] != i:
-            i = parent[i]
-        return i
-
-    def union(a, b):
-        ra, rb = find(a), find(b)
-        if ra != rb:
-            parent[ra] = rb
-
+    # Pre-compute all pairwise similarities once to avoid redundant dot products.
+    sim: dict = {}
     for i, a in enumerate(indexes):
-        for b in indexes[i + 1:]:
-            if np.dot(centroids[a], centroids[b]) >= threshold:
-                union(a, b)
+        for b in indexes[i:]:
+            s = float(np.dot(centroids[a], centroids[b]))
+            sim[(a, b)] = s
+            sim[(b, a)] = s
 
-    clusters: dict = {}
-    for i in indexes:
-        clusters.setdefault(find(i), []).append(i)
-    return list(clusters.values())
+    clusters = [[idx] for idx in indexes]
+
+    changed = True
+    while changed:
+        changed = False
+        for i in range(len(clusters)):
+            for j in range(i + 1, len(clusters)):
+                if all(sim[(a, b)] >= threshold for a in clusters[i] for b in clusters[j]):
+                    clusters[i] += clusters[j]
+                    clusters.pop(j)
+                    changed = True
+                    break
+            if changed:
+                break
+
+    return clusters
 
 
 class BaseCompareEmbedding(BaseCompare):
@@ -66,7 +77,7 @@ class BaseCompareEmbedding(BaseCompare):
     # similarity threshold for clustering group mean embeddings is derived
     # from this run's own embedding_similarity_threshold rather than a fixed
     # constant, scaled by this ratio.
-    SUPERGROUP_THRESHOLD_RATIO = 0.9
+    SUPERGROUP_THRESHOLD_RATIO = 0.85
     # Below this, embedding_similarity_threshold is already loose enough that
     # supergrouping would over-merge unrelated groups -- skip it entirely.
     SUPERGROUP_MIN_VIABLE_THRESHOLD = 0.5
@@ -264,21 +275,7 @@ class BaseCompareEmbedding(BaseCompare):
         clusters = cluster_group_indexes(centroids, threshold)
         clusters.sort(key=lambda cluster: sum(len(self.compare_result.file_groups[g]) for g in cluster))
         self.compare_result.supergroups = clusters
-        self._log_supergroups(clusters)
         return clusters
-
-    def _log_supergroups(self, clusters: list) -> None:
-        if not clusters:
-            logger.info("Supergroups: none formed")
-            return
-        for supergroup_index, cluster in enumerate(clusters):
-            stranded = [g for g in cluster if len(self.compare_result.file_groups.get(g, {})) == 1]
-            logger.info(
-                "Supergroup %d: groups %s%s",
-                supergroup_index,
-                pprint.pformat(cluster),
-                f" (stranded: {pprint.pformat(stranded)})" if stranded else "",
-            )
 
     def get_data(self):
         '''

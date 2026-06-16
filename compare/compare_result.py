@@ -7,6 +7,16 @@ from utils.utils import Utils
 logger = get_logger("compare_result")
 
 
+def _format_group_sizes(group_sizes: dict, summary_threshold: int = 8, top_n: int = 5) -> str:
+    """Compact one-line representation of a {group_index: file_count} dict.
+    Groups with more than *summary_threshold* entries are summarised to avoid
+    flooding the log with hundreds of lines."""
+    if len(group_sizes) <= summary_threshold:
+        return str(group_sizes)
+    top = dict(sorted(group_sizes.items(), key=lambda kv: kv[1], reverse=True)[:top_n])
+    return f"{len(group_sizes)} groups; largest: {top}"
+
+
 class CompareResult:
     # TODO: Re-enable file output in a more usable form — JSON, written only when
     # a config setting (e.g. `save_compare_output`) is enabled, with a filename
@@ -25,6 +35,7 @@ class CompareResult:
         # by BaseCompareEmbedding.compute_supergroups(); empty for compare
         # modes with no per-file embedding to average (color/size/models/exact-prompt).
         self.supergroups: list = []
+        self.applied_group_sort = None
         self.is_complete = False
         self.i = 1  # start at 1 because index 0 is identity comparison roll index
 
@@ -84,7 +95,7 @@ class CompareResult:
                     # TODO handle stranded group members
                 group_counter += 1
                 if group_counter <= group_print_cutoff:
-                    print("Group " + str(group_counter))
+                    print(f"Group {group_counter} ({len(group)} files)")
                     for f in sorted(group, key=lambda f: group[f]):
                         print(f)
                 elif to_print_etc:
@@ -101,31 +112,88 @@ class CompareResult:
                 self.is_complete = True
                 self.store()
 
-    def sort_groups(self, file_groups):
+    def sort_groups(self, file_groups, reverse=False):
         return sorted(file_groups,
-                      key=lambda group_index: len(file_groups[group_index]))
+                      key=lambda group_index: len(file_groups[group_index]),
+                      reverse=reverse)
 
-    def prune_stale_supergroups(self) -> None:
+    def build_sorted_group_indexes(self, file_groups, reverse=False) -> list:
+        """Return a group_indexes list sorted with supergroup membership as the
+        primary key and individual group size as the secondary key (both in the
+        same direction).  self.supergroups is reordered in-place to match the
+        final display order and then logged.  Groups not covered by any
+        supergroup are appended last, sorted by size."""
+        if self.supergroups:
+            # Primary sort: supergroups by aggregate file count.
+            self.supergroups.sort(
+                key=lambda cluster: sum(len(file_groups.get(g, {})) for g in cluster),
+                reverse=reverse,
+            )
+            result = []
+            covered: set = set()
+            for cluster in self.supergroups:
+                valid = sorted(
+                    (g for g in cluster if g in file_groups),
+                    key=lambda g: len(file_groups[g]),
+                    reverse=reverse,
+                )
+                result.extend(valid)
+                covered.update(valid)
+            ungrouped = sorted(
+                (g for g in file_groups if g not in covered),
+                key=lambda g: len(file_groups[g]),
+                reverse=reverse,
+            )
+            result.extend(ungrouped)
+        else:
+            logger.info("Supergroups: none formed")
+            result = self.sort_groups(file_groups, reverse=reverse)
+
+        self._log_supergroups(result)
+        return result
+
+    def _log_supergroups(self, group_indexes: list) -> None:
+        if not self.supergroups:
+            return
+        # Map internal group_index → 1-based display position to match the UI.
+        display_pos = {g: pos + 1 for pos, g in enumerate(group_indexes)}
+        total = len(self.supergroups)
+        for i, cluster in enumerate(self.supergroups):
+            group_sizes = {
+                display_pos[g]: len(self.file_groups.get(g, {}))
+                for g in cluster if g in display_pos
+            }
+            total_files = sum(group_sizes.values())
+            stranded = [pos for g, pos in display_pos.items() if g in cluster and len(self.file_groups.get(g, {})) == 1]
+            logger.info(
+                "Supergroup %d/%d: %s — %d files total%s",
+                i + 1,
+                total,
+                _format_group_sizes(group_sizes),
+                total_files,
+                f" (stranded: {stranded})" if stranded else "",
+            )
+
+    def prune_stale_supergroups(self, active_group_indexes=None) -> None:
         '''
-        Drop any group_index a supergroup referenced that no longer exists in
-        self.file_groups (the whole group was removed -- e.g.
-        CompareWrapper._update_groups_for_removed_file's "remove this group
-        as it will only have one file" branch), and drop any cluster left
-        empty by that. A cluster that shrinks to a single surviving
-        group_index is left as-is -- same as any size-1 cluster
-        BaseCompareEmbedding.compute_supergroups() can produce on its own.
+        Drop any group_index a supergroup referenced that no longer exists,
+        and drop any cluster left empty by that. A cluster that shrinks to a
+        single surviving group_index is left as-is.
 
-        Reads self.file_groups directly rather than taking the active set as
-        a parameter -- callers (e.g. CompareWrapper._sync_result_after_deletion)
-        already assign the post-removal file_groups onto self before calling this.
+        active_group_indexes: optional set of currently-live group_index keys.
+        When omitted, falls back to set(self.file_groups.keys()) — callers that
+        have already synced compare_result.file_groups can omit it; callers that
+        haven't (e.g. CompareWrapper._update_groups_for_removed_file) should
+        pass the live set explicitly.
 
-        No-op when supergroups is empty (nothing to prune) or absent (a
-        CompareResult unpickled from before this feature existed).
+        No-op when supergroups is empty or absent (CompareResult unpickled
+        from before this feature existed).
         '''
         existing = getattr(self, "supergroups", None)
         if not existing:
             return
-        active_group_indexes = set(self.file_groups.keys())
+        if active_group_indexes is None:
+            active_group_indexes = set(self.file_groups.keys())
         self.supergroups = [
             surviving for cluster in existing
             if (surviving := [g for g in cluster if g in active_group_indexes])

@@ -25,7 +25,7 @@ from files.marked_files import MarkedFiles
 from utils.audio_media import is_audio_for_display
 from utils.media_utils import get_image_dimensions
 from utils.config import config
-from utils.constants import Mode, CompareMode, Direction, ClassifierActionType
+from utils.constants import Mode, CompareMode, Direction, ClassifierActionType, Sort
 from utils.logging_setup import get_logger
 from utils.translations import _
 from utils.utils import Utils
@@ -515,10 +515,19 @@ class CompareWrapper:
             selected = self.files_matched[start_index:end_index+1]
         return selected
 
-    def _requires_new_compare(self, base_dir):
-        return self._compare is None \
-            or self._compare.base_dir != base_dir \
-            or self.compare_mode != self._compare.COMPARE_MODE
+    def _requires_new_compare(self, base_dir, is_group=False):
+        if self._compare is None:
+            return True
+        if self._compare.base_dir != base_dir:
+            return True
+        if self.compare_mode != self._compare.COMPARE_MODE:
+            return True
+        if is_group:
+            result = getattr(self._compare, "compare_result", None)
+            applied = getattr(result, "applied_group_sort", None)
+            if applied is not None and applied != config.compare_group_sort:
+                return True
+        return False
 
     def run(self, args=CompareArgs()):
         get_new_data = True
@@ -530,7 +539,7 @@ class CompareWrapper:
         self.match_index = 0
         self.search_media_path = args.search_media_path
 
-        if self._requires_new_compare(args.base_dir):
+        if self._requires_new_compare(args.base_dir, is_group=args.not_searching()):
             self._app_actions._set_label_state(Utils._wrap_text_to_fit_length(
                 _("Gathering media data... setup may take a while depending on number of files involved."), 30))
             self.new_compare(args)
@@ -649,7 +658,10 @@ class CompareWrapper:
             self._app_actions.refresh_masonry()
             return
 
-        self.group_indexes = self._compare.compare_result.sort_groups(self.file_groups)
+        self.group_indexes = self._compare.compare_result.build_sorted_group_indexes(
+            self.file_groups, reverse=(config.compare_group_sort == Sort.DESC)
+        )
+        self._compare.compare_result.applied_group_sort = config.compare_group_sort
         self.max_group_index = max(self.file_groups.keys())
         self._app_actions._add_buttons_for_mode()
         self.current_group_index = 0
@@ -740,6 +752,9 @@ class CompareWrapper:
                     k: v for k, v in self.files_grouped.items() if v[0] != actual_index}
             del self.file_groups[actual_index]
             del self.group_indexes[group_index]
+            compare_result = getattr(getattr(self, "_compare", None), "compare_result", None)
+            if compare_result is not None:
+                compare_result.prune_stale_supergroups(active_group_indexes=set(self.file_groups.keys()))
             if group_index < self.current_group_index:
                 self.current_group_index -= 1
 

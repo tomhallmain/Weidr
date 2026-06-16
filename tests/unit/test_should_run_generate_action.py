@@ -36,10 +36,29 @@ def _patch_scan_dir(entries):
 # ---------------------------------------------------------------------------
 
 class TestShouldRunGenerateActionDerivativeCheck:
-    def test_image_is_derivative_returns_false(self):
-        """If image_path itself has a parent (is a downstream), never generate."""
+    def test_derivative_with_source_in_search_dir_returns_false(self):
+        """If image_path's source is present in search_dir, never generate."""
+        entries = [("/base/parent.jpg", None)]
         with _patch_related("/base/parent.jpg"):
+            with _patch_scan_dir(entries):
+                result = should_run_generate_action(IMAGE, "_edit", SEARCH_DIR)
+        assert result is False
+
+    def test_derivative_with_source_outside_search_dir_proceeds(self):
+        """A related-image pointer to a source NOT in search_dir does not block
+        generation -- only downstream-ness relative to the current directory matters.
+        With no downstream entries, the suffix-count check then allows generation."""
+        with _patch_related("/elsewhere/parent.jpg"):
             with _patch_scan_dir([]):
+                result = should_run_generate_action(IMAGE, "_edit", SEARCH_DIR)
+        assert result is True
+
+    def test_derivative_with_source_in_search_dir_matched_by_basename(self):
+        """Source match also works via basename when the related-path string
+        differs from the scanned filepath but the (long) basename matches."""
+        entries = [("/base/sub/long_parent_name.jpg", None)]
+        with _patch_related("/different/location/long_parent_name.jpg"):
+            with _patch_scan_dir(entries):
                 result = should_run_generate_action(IMAGE, "_edit", SEARCH_DIR)
         assert result is False
 

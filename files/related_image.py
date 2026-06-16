@@ -281,24 +281,35 @@ def should_run_generate_action(
     """
     Return True when a generate action should fire for image_path.
 
-    Returns False immediately if image_path is itself a downstream image of another file.
-    Otherwise counts how many downstream images of image_path in search_dir have a stem
-    ending with edit_suffix or edit_suffix followed by an integer (e.g. "_edit", "_edit1",
-    "_edit2"). Returns True if that count is below count_threshold (including zero), False
-    if it meets or exceeds the threshold.
+    Returns False immediately if image_path is itself a downstream image of another file
+    that is present in search_dir. A related-image pointer to a source outside search_dir
+    does not block generation -- only downstream-ness relative to the current directory
+    matters. Otherwise counts how many downstream images of image_path in search_dir have
+    a stem ending with edit_suffix or edit_suffix followed by an integer (e.g. "_edit",
+    "_edit1", "_edit2"). Returns True if that count is below count_threshold (including
+    zero), False if it meets or exceeds the threshold.
 
     Directory listings and related-image metadata are cached per search_dir to avoid
     re-scanning the directory for every image in a prevalidation batch.
     """
+    dir_entries = _scan_dir_cached(search_dir)
+
     related_path, _ = get_related_image_path(image_path, check_extra_directories=None)
     if related_path is not None:
-        return False
+        related_basename = os.path.basename(related_path)
+        source_in_search_dir = any(
+            fp == related_path
+            or (len(related_basename) > 10 and os.path.basename(fp) == related_basename)
+            for fp, _r in dir_entries
+        )
+        if source_in_search_dir:
+            return False
 
     source_basename = os.path.basename(image_path)
     source_stem, source_ext = os.path.splitext(source_basename)
 
     downstream_stems: list[str] = []
-    for fp, related in _scan_dir_cached(search_dir):
+    for fp, related in dir_entries:
         if related is not None:
             if related == image_path:
                 downstream_stems.append(os.path.splitext(os.path.basename(fp))[0])

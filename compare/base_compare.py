@@ -308,6 +308,9 @@ class BaseCompare:
     def find_similars_to_media(self, search_path, search_file_index):
         pass
 
+    def supports_supergrouping(self) -> bool:
+        return False
+
     def remove_from_groups(self, removed_files=[]):
         pass
 

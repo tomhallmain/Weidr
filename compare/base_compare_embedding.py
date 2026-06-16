@@ -1,5 +1,6 @@
 import getopt
 import os
+import pprint
 import sys
 
 import numpy as np
@@ -181,6 +182,9 @@ class BaseCompareEmbedding(BaseCompare):
             mean_embedding = mean_embedding / norm
         return mean_embedding.tolist()
 
+    def supports_supergrouping(self) -> bool:
+        return True
+
     def compute_group_centroids(self) -> dict:
         '''
         Mean-pooled, re-normalized embedding per group in self.compare_result.file_groups
@@ -242,11 +246,17 @@ class BaseCompareEmbedding(BaseCompare):
         member was since removed -- a stranded single-file group still gets one).
         '''
         if self.embedding_similarity_threshold < self.SUPERGROUP_MIN_VIABLE_THRESHOLD:
+            logger.info(
+                "Supergroups skipped: embedding_similarity_threshold %.3f is below "
+                "SUPERGROUP_MIN_VIABLE_THRESHOLD %.3f",
+                self.embedding_similarity_threshold, self.SUPERGROUP_MIN_VIABLE_THRESHOLD,
+            )
             self.compare_result.clear_supergroups()
             return []
 
         centroids = self.compute_group_centroids()
         if len(centroids) < 2:
+            logger.info("Supergroups skipped: only %d group(s) have a usable centroid", len(centroids))
             self.compare_result.clear_supergroups()
             return []
 
@@ -254,7 +264,21 @@ class BaseCompareEmbedding(BaseCompare):
         clusters = cluster_group_indexes(centroids, threshold)
         clusters.sort(key=lambda cluster: sum(len(self.compare_result.file_groups[g]) for g in cluster))
         self.compare_result.supergroups = clusters
+        self._log_supergroups(clusters)
         return clusters
+
+    def _log_supergroups(self, clusters: list) -> None:
+        if not clusters:
+            logger.info("Supergroups: none formed")
+            return
+        for supergroup_index, cluster in enumerate(clusters):
+            stranded = [g for g in cluster if len(self.compare_result.file_groups.get(g, {})) == 1]
+            logger.info(
+                "Supergroup %d: groups %s%s",
+                supergroup_index,
+                pprint.pformat(cluster),
+                f" (stranded: {pprint.pformat(stranded)})" if stranded else "",
+            )
 
     def get_data(self):
         '''

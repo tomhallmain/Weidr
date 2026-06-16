@@ -1137,8 +1137,10 @@ class CompareManager:
             # embeddings are used, no cross-instance centroid combination.
             # compute_supergroups() reads compare_result.file_groups, which
             # must be synced to the just-rebuilt filtered_groups first (it
-            # still held the pre-filter grouping otherwise).
-            if compare_result is not None:
+            # still held the pre-filter grouping otherwise). Skipped for
+            # non-embedding primary modes (color/size/models/exact-prompt),
+            # which have no per-file vector to build a centroid from.
+            if compare_result is not None and wrapper._compare.supports_supergrouping():
                 compare_result.file_groups = {idx: dict(group) for idx, group in filtered_groups.items()}
                 wrapper._compare.compute_supergroups()
 

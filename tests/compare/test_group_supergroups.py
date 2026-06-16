@@ -405,6 +405,51 @@ class TestCompositeRecomputesSupergroupsAgainstRebuiltGroups:
 
         assert compare.compare_result.supergroups == []
 
+    def test_non_embedding_primary_with_embedding_secondary_skips_supergroups(self, tmp_path):
+        """Composite bundle has one embedding instance and one non-embedding
+        instance, with the non-embedding one as primary. supports_supergrouping()
+        must gate the recompute so this doesn't crash (CompareColors has no
+        per-file vector to build a centroid from); supergroups stay empty."""
+        from compare.compare_colors import CompareColors
+        from compare.compare_manager import CompareManager
+
+        mgr = CompareManager(master=MagicMock(), app_actions=MagicMock())
+        mgr.set_primary_mode(CompareMode.COLOR_MATCHING)
+        mgr.add_mode_instance(CompareMode.CLIP_EMBEDDING)
+
+        primary_compare = CompareColors(args=CompareArgs(base_dir=str(tmp_path)))
+        wrapper = mgr._primary_wrapper()
+        wrapper._compare = primary_compare
+        wrapper.file_groups = {0: {"/a.png": 0.0, "/b.png": 0.0}}
+        mgr._combined_results = {"/a.png": 1.0, "/b.png": 1.0}
+
+        mgr._apply_combined_results_to_primary(is_group_mode=True)  # must not raise
+
+        assert wrapper.file_groups == {0: {"/a.png": 0.0, "/b.png": 0.0}}
+        assert primary_compare.compare_result.supergroups == []
+
+    def test_both_instances_non_embedding_skips_supergroups(self, tmp_path):
+        """Neither instance in the composite bundle is embedding-based --
+        recompute must be skipped entirely (no centroid math possible) and the
+        rebuild must still complete without crashing."""
+        from compare.compare_colors import CompareColors
+        from compare.compare_manager import CompareManager
+
+        mgr = CompareManager(master=MagicMock(), app_actions=MagicMock())
+        mgr.set_primary_mode(CompareMode.COLOR_MATCHING)
+        mgr.add_mode_instance(CompareMode.SIZE)
+
+        primary_compare = CompareColors(args=CompareArgs(base_dir=str(tmp_path)))
+        wrapper = mgr._primary_wrapper()
+        wrapper._compare = primary_compare
+        wrapper.file_groups = {0: {"/a.png": 0.0, "/b.png": 0.0}}
+        mgr._combined_results = {"/a.png": 1.0, "/b.png": 1.0}
+
+        mgr._apply_combined_results_to_primary(is_group_mode=True)  # must not raise
+
+        assert wrapper.file_groups == {0: {"/a.png": 0.0, "/b.png": 0.0}}
+        assert primary_compare.compare_result.supergroups == []
+
 
 # ---------------------------------------------------------------------------
 # CompareWrapper supergroup navigation / label

@@ -186,17 +186,28 @@ class BaseCompareEmbedding(BaseCompare):
         Mean-pooled, re-normalized embedding per group in self.compare_result.file_groups
         (same mean+renormalize pattern as compute_embedding_for_path / EmbeddingPrototype).
 
-        Groups with only one member are excluded -- a single file has no
-        meaningful "average" distinct from its own embedding, mirroring
-        CompareResult.finalize_group_result's existing len(group) < 2 skip.
+        Single-member ("stranded") groups are deliberately included -- the
+        centroid of one file is just that file's own embedding. Stranding
+        happens in _process_similarity_results: when a file already assigned
+        to group G is later matched to a different file at a meaningfully
+        worse score (the previous_diff_score - threshold_group_cutoff >
+        diff_score branch), both get moved into a brand-new group, abandoning
+        the first file's original groupmate -- which was almost certainly
+        still similar to *something*. Excluding it from clustering would
+        permanently strand it; including it gives it a real chance to land in
+        a supergroup with its old group (or any other related one) instead of
+        looking orphaned forever. compare_wrapper.py's "Stranded Group Members
+        Found" alert and run_group()'s initial-view skip only affect which
+        group is auto-displayed first -- stranded groups stay fully present in
+        file_groups/group_indexes regardless, so including them here is
+        consistent with how they already behave everywhere else.
+
         Members not found in compare_data.files_found (e.g. since removed)
         are silently skipped; a group left with no resolvable members is omitted.
         '''
         path_to_index = {p: i for i, p in enumerate(self.compare_data.files_found)}
         centroids = {}
         for group_index, members in self.compare_result.file_groups.items():
-            if len(members) < 2:
-                continue
             idxs = [path_to_index[p] for p in members if p in path_to_index]
             if not idxs:
                 continue
@@ -226,7 +237,9 @@ class BaseCompareEmbedding(BaseCompare):
         already below SUPERGROUP_MIN_VIABLE_THRESHOLD -- a loose base threshold
         means an already-derived, even-looser supergroup threshold would merge
         unrelated groups together. Also skipped when fewer than 2 groups have
-        a usable centroid (compute_group_centroids excludes singleton groups).
+        a usable centroid (compute_group_centroids only omits a group when
+        none of its members can be resolved to an embedding at all, e.g. every
+        member was since removed -- a stranded single-file group still gets one).
         '''
         if self.embedding_similarity_threshold < self.SUPERGROUP_MIN_VIABLE_THRESHOLD:
             self.compare_result.supergroups = []

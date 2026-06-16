@@ -94,14 +94,18 @@ class TestComputeGroupCentroids:
         assert centroids[0] == pytest.approx(expected)
         assert np.linalg.norm(centroids[0]) == pytest.approx(1.0)
 
-    def test_singleton_group_excluded(self, tmp_path):
+    def test_singleton_stranded_group_centroid_is_its_own_embedding(self, tmp_path):
+        """A single-member ("stranded") group's centroid is just that file's
+        own embedding -- included deliberately, not excluded, so a stranded
+        file can still land in a supergroup with a related group."""
         compare = _make_compare(tmp_path)
         _seed(
             compare,
             {"/a.jpg": [1.0, 0.0]},
             {0: {"/a.jpg": 0.0}},
         )
-        assert compare.compute_group_centroids() == {}
+        centroids = compare.compute_group_centroids()
+        assert centroids[0] == pytest.approx(_unit([1.0, 0.0]))
 
     def test_member_missing_from_files_found_is_skipped(self, tmp_path):
         compare = _make_compare(tmp_path)
@@ -144,6 +148,24 @@ class TestComputeGroupCentroids:
 # ---------------------------------------------------------------------------
 
 class TestComputeSupergroups:
+    def test_stranded_singleton_joins_supergroup_with_its_related_group(self, tmp_path):
+        """The scenario stranding is meant to recover from: /a.jpg was abandoned
+        by its original groupmate (now alone in group 0), but it's still close
+        enough to group 1's content to land in the same supergroup -- no longer
+        looking orphaned."""
+        compare = _make_compare(tmp_path, threshold=0.9)
+        _seed(
+            compare,
+            {
+                "/a.jpg": [1.0, 0.0],
+                "/c.jpg": [0.99, 0.05], "/d.jpg": [0.99, 0.05],
+            },
+            {0: {"/a.jpg": 0.0}, 1: {"/c.jpg": 0.0, "/d.jpg": 0.0}},
+        )
+        supergroups = compare.compute_supergroups()
+        assert len(supergroups) == 1
+        assert sorted(supergroups[0]) == [0, 1]
+
     def test_similar_groups_become_one_supergroup(self, tmp_path):
         compare = _make_compare(tmp_path, threshold=0.9)
         _seed(

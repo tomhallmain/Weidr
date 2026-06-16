@@ -159,3 +159,32 @@ class TestThresholdSensitivity:
         # Even if similarity passes, duplicate gate requires diff_score < 50.
         # Cross-family diff_score is >> 50, so no duplicates expected.
         assert dupes == []
+
+
+# ---------------------------------------------------------------------------
+# DecompressionBombError resilience
+# ---------------------------------------------------------------------------
+
+class TestDecompressionBombResilience:
+    def test_oversized_image_skipped_and_compare_completes(self, tmp_path, monkeypatch):
+        """get_data() skips images that exceed PIL's pixel limit and finishes normally."""
+        from PIL import Image as _Image
+
+        # PIL raises DecompressionBombError only when pixels > 2 * MAX_IMAGE_PIXELS
+        # and emits a warning for pixels > MAX_IMAGE_PIXELS.  Set the limit to 500
+        # so 10×10 images (100 px) are valid and a 50×50 image (2500 px) raises.
+        monkeypatch.setattr(_Image, "MAX_IMAGE_PIXELS", 500)
+
+        valid_a = os.path.join(str(tmp_path), "valid_a.png")
+        valid_b = os.path.join(str(tmp_path), "valid_b.png")
+        oversized = os.path.join(str(tmp_path), "oversized.png")
+        _Image.new("RGB", (10, 10), (220, 0, 0)).save(valid_a)
+        _Image.new("RGB", (10, 10), (220, 0, 0)).save(valid_b)
+        _Image.new("RGB", (50, 50), (0, 200, 0)).save(oversized)
+
+        # Must not raise despite the oversized image being present
+        cc = _run_compare(tmp_path)
+
+        found = cc.compare_data.files_found
+        assert oversized not in found, "Oversized image should have been skipped"
+        assert len(found) == 2, f"Expected 2 valid files, got {len(found)}: {found}"

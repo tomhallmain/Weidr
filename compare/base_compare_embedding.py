@@ -3,6 +3,7 @@ import os
 import sys
 
 import numpy as np
+from PIL import Image
 
 from compare.base_compare import BaseCompare, gather_files
 from compare.compare_args import CompareArgs
@@ -87,6 +88,9 @@ class BaseCompareEmbedding(BaseCompare):
                 image_file_path = self.get_image_path(f)
                 try:
                     embedding = self.image_embeddings_func(image_file_path)
+                except Image.DecompressionBombError as e:
+                    logger.warning(f"{f} - skipping, image too large: {e}")
+                    continue
                 except OSError as e:
                     logger.error(f"{f} - {e}")
                     continue

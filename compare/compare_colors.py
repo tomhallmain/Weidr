@@ -11,6 +11,8 @@ from sklearn.cluster import KMeans
 from skimage.color import rgb2lab
 # from imutils import face_utils
 
+from PIL import Image
+
 from compare.base_compare import BaseCompare, gather_files
 from compare.compare_args import CompareArgs
 from compare.compare_result import CompareResult
@@ -139,6 +141,8 @@ def get_image_array(filepath):
     '''
     try:
         image = imageio.imread(filepath)
+    except Image.DecompressionBombError:
+        raise
     except Exception as e:
         filepath = FrameCache.get_image_path(filepath)
         image = imageio.imread(filepath)
@@ -250,6 +254,9 @@ class CompareColors(BaseCompare):
                 image_file_path = self.get_image_path(f)
                 try:
                     image_array = get_image_array(image_file_path)
+                except Image.DecompressionBombError as e:
+                    logger.warning(f"{f} - skipping, image too large: {e}")
+                    continue
                 except OSError as e:
                     logger.error(f"{f} - {e}")
                     continue

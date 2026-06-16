@@ -306,6 +306,8 @@ def image_embeddings_clip(image_path):
     try:
         with Image.open(image_path) as pil_img:
             image = _get_clip_preprocess()(pil_img).unsqueeze(0).to(device)
+    except Image.DecompressionBombError:
+        raise
     except Exception as e:
         image_path = FrameCache.get_image_path(image_path)
         with Image.open(image_path) as pil_img:
@@ -331,6 +333,8 @@ def image_embeddings_siglip(image_path):
         with Image.open(image_path) as pil_img:
             # Process image with SIGLIP processor
             inputs = _get_siglip_processor()(images=pil_img, return_tensors="pt").to(device)
+    except Image.DecompressionBombError:
+        raise
     except Exception as e:
         image_path = FrameCache.get_image_path(image_path)
         with Image.open(image_path) as pil_img:
@@ -364,6 +368,8 @@ def image_embeddings_flava(image_path):
             # Process image with FLAVA processor
             inputs = _get_flava_processor()(images=image, return_tensors="pt").to(device)
             image.close()
+    except Image.DecompressionBombError:
+        raise
     except Exception as e:
         image_path = FrameCache.get_image_path(image_path)
         with Image.open(image_path) as img:
@@ -401,6 +407,8 @@ def image_embeddings_align(image_path):
             # Process image with ALIGN processor
             inputs = _get_align_processor()(images=image, return_tensors="pt").to(device)
             image.close()
+    except Image.DecompressionBombError:
+        raise
     except Exception as e:
         image_path = FrameCache.get_image_path(image_path)
         with Image.open(image_path) as img:
@@ -439,6 +447,8 @@ def image_embeddings_xvlm(image_path):
             # Process image with XVLM transform
             image_tensor = _get_xvlm_img_transform()(image).unsqueeze(0).to(device)
             image.close()
+    except Image.DecompressionBombError:
+        raise
     except Exception as e:
         image_path = FrameCache.get_image_path(image_path)
         with Image.open(image_path) as img:
@@ -477,6 +487,8 @@ def image_embeddings_laion(image_path):
             # Process image with LAION processor
             inputs = _get_laion_processor()(images=image, return_tensors="pt").to(device)
             image.close()
+    except Image.DecompressionBombError:
+        raise
     except Exception as e:
         image_path = FrameCache.get_image_path(image_path)
         with Image.open(image_path) as img:
@@ -509,6 +521,8 @@ def image_embeddings_eva_clip(image_path):
     try:
         with Image.open(image_path) as img:
             image = _get_eva_clip_preprocess()(img.convert("RGB")).unsqueeze(0).to(device)
+    except Image.DecompressionBombError:
+        raise
     except Exception:
         image_path = FrameCache.get_image_path(image_path)
         with Image.open(image_path) as img:
@@ -535,6 +549,8 @@ def image_embeddings_metaclip(image_path):
     try:
         with Image.open(image_path) as img:
             inputs = _get_metaclip_processor()(images=img.convert("RGB"), return_tensors="pt").to(device)
+    except Image.DecompressionBombError:
+        raise
     except Exception:
         image_path = FrameCache.get_image_path(image_path)
         with Image.open(image_path) as img:

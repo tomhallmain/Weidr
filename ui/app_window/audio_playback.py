@@ -11,6 +11,8 @@ import os
 import time
 from typing import TYPE_CHECKING
 
+from image.frame_cache import FrameCache
+from image.video_ops import VideoOps
 from utils.audio_media import audio_placeholder_title, is_audio_for_display
 from utils.logging_setup import get_logger
 
@@ -20,9 +22,22 @@ if TYPE_CHECKING:
 logger = get_logger("audio_playback")
 
 
+def _show_cover_or_placeholder(frame: "MediaFrame", path: str) -> None:
+    """Show extracted cover art for *path* if present, else a text placeholder."""
+    cover_path = VideoOps.extract_attached_pic(path, FrameCache.get_cache_dir())
+    if cover_path:
+        frame._show_image_in_view(cover_path)
+        if frame.media_displayed:
+            return
+    frame._graphics_view.hide()
+    frame._placeholder_label.setText(audio_placeholder_title(path))
+    frame._placeholder_label.show()
+
+
 def show_in_frame(frame: "MediaFrame", path: str) -> None:
     """
-    Play *path* as audio on *frame*'s VLC instance, or show a text placeholder.
+    Play *path* as audio on *frame*'s VLC instance, showing embedded cover art
+    (or a text placeholder when none exists).
 
     No-op when *path* is not an enabled audio file.
     """
@@ -36,7 +51,8 @@ def show_in_frame(frame: "MediaFrame", path: str) -> None:
     )
 
     if not _VLC_AVAILABLE or not frame.vlc_media_player:
-        frame._show_placeholder(audio_placeholder_title(path))
+        frame.clear()
+        _show_cover_or_placeholder(frame, path)
         return
 
     if frame._pending_blur_path == path:
@@ -59,9 +75,7 @@ def show_in_frame(frame: "MediaFrame", path: str) -> None:
         logger.warning("VLC failed to play audio path=%s", path)
         return
 
-    frame._graphics_view.hide()
-    frame._placeholder_label.setText(audio_placeholder_title(path))
-    frame._placeholder_label.show()
+    _show_cover_or_placeholder(frame, path)
     frame._controls_overlay.set_audio_controls_visible(True)
     from PySide6.QtCore import Qt
     frame.setCursor(Qt.CursorShape.ArrowCursor)

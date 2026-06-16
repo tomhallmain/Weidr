@@ -47,6 +47,8 @@ try:
 except ImportError:
     _FRAME_CACHE_AVAILABLE = False
 
+from image.video_ops import VideoOps
+
 logger = get_logger("masonry_browser")
 
 # Number of tiles shown per page (fixed, not scaled by directory size).
@@ -111,7 +113,14 @@ class _ThumbnailLoader(QRunnable):
         path = self._filepath
 
         if is_audio_for_display(path):
-            return QImage()
+            if _FRAME_CACHE_AVAILABLE:
+                cover_path = VideoOps.extract_attached_pic(path, FrameCache.get_cache_dir())
+                if cover_path:
+                    path = cover_path  # fall through to normal QImageReader / Pillow load
+                else:
+                    return QImage()
+            else:
+                return QImage()
 
         # --- QImageReader (fast path) ---
         reader = QImageReader(path)

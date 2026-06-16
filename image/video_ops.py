@@ -529,14 +529,119 @@ class VideoOps:
             positive = "\n".join(lines)
         return positive, negative, [], [], False
 
+    @staticmethod
+    def extract_attached_pic(media_path: str, cache_dir: str) -> str | None:
+        """
+        Extract the first ``attached_pic`` stream from *media_path* into *cache_dir*.
+
+        Returns the path to the extracted JPEG, or ``None`` if there is no
+        such stream, ffmpeg/ffprobe is unavailable, or extraction fails.
+        Cached: a previously-extracted file for the same path is reused.
+        """
+        stem = os.path.splitext(os.path.basename(media_path))[0]
+        out_path = os.path.join(cache_dir, f"{stem}_cover.jpg")
+        if os.path.isfile(out_path):
+            return out_path
+
+        try:
+            probe = VideoOps.ffprobe_json(media_path)
+        except Exception:
+            return None
+        streams = probe.get("streams") or []
+        has_attached_pic = any(
+            s.get("codec_type") == "video"
+            and (s.get("disposition") or {}).get("attached_pic", 0)
+            for s in streams
+        )
+        if not has_attached_pic:
+            return None
+
+        ffmpeg = VideoOps.find_ffmpeg_executable()
+        if not ffmpeg:
+            return None
+
+        try:
+            os.makedirs(cache_dir, exist_ok=True)
+        except OSError:
+            return None
+
+        cmd = [
+            ffmpeg,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-nostdin",
+            "-y",
+            "-i",
+            media_path,
+            "-map",
+            "0:v:0",
+            "-vframes",
+            "1",
+            "-update",
+            "1",
+            out_path,
+        ]
+        try:
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                stdin=subprocess.DEVNULL,
+                timeout=60,
+            )
+        except (subprocess.TimeoutExpired, OSError) as e:
+            logger.debug("ffmpeg attached_pic extraction failed for %s: %s", media_path, e)
+            return None
+
+        if proc.returncode != 0 or not os.path.isfile(out_path):
+            return None
+        return out_path
+
+
+# Caches probe_has_video_stream() results keyed by (path, mtime) so repeated
+# calls during a single playback session don't re-run ffprobe.
+_has_video_stream_cache: dict[tuple[str, float], bool] = {}
+
 
 def probe_has_video_stream(path: str) -> bool:
     """
-    Return True if *path* contains at least one video stream.
+    Return True if *path* contains at least one real (non-cover-art) video stream.
 
-    Checks with PyAV first, then OpenCV. Falls back to True when neither library
-    is available so callers are never worse off than before this guard existed.
+    A stream with ``disposition.attached_pic == 1`` (e.g. an embedded MP3/FLAC
+    cover) is a still image, not a video, and is excluded. Checks via ffprobe
+    first; falls back to PyAV then OpenCV (existing logic) when ffprobe is
+    unavailable or fails. Falls back to True when nothing is available so
+    callers are never worse off than before this guard existed.
     """
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        mtime = 0.0
+    cache_key = (path, mtime)
+    cached = _has_video_stream_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    result = _probe_has_video_stream_uncached(path)
+    _has_video_stream_cache[cache_key] = result
+    return result
+
+
+def _probe_has_video_stream_uncached(path: str) -> bool:
+    try:
+        probe = VideoOps.ffprobe_json(path)
+        streams = probe.get("streams") or []
+        if streams:  # ffprobe succeeded — trust it
+            real_video = [
+                s for s in streams
+                if s.get("codec_type") == "video"
+                and not (s.get("disposition") or {}).get("attached_pic", 0)
+            ]
+            return bool(real_video)
+    except Exception:
+        pass
+
     try:
         import av as _av
 

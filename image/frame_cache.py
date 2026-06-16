@@ -1540,6 +1540,11 @@ class FrameCache:
         return indices
 
     @classmethod
+    def get_cache_dir(cls) -> str:
+        """Shared temp directory used for extracted frames, samples, and cover art."""
+        return cls.temporary_directory.name
+
+    @classmethod
     def get_cached_path(cls, media_path: str) -> Optional[str]:
         """
         Return the cached temp path for a media file (e.g. SVG -> PNG path), if any.

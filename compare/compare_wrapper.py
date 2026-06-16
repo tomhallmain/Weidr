@@ -471,6 +471,8 @@ class CompareWrapper:
         current_supergroup_index, since plain group navigation (Shift+Left/Right)
         can move into a different supergroup without updating that cursor.
         '''
+        if not self._compare.compare_result.has_meaningful_supergroups():
+            return ""
         supergroups = self._get_supergroups()
         for i, cluster in enumerate(supergroups):
             if actual_group_index in cluster:
@@ -752,9 +754,7 @@ class CompareWrapper:
                     k: v for k, v in self.files_grouped.items() if v[0] != actual_index}
             del self.file_groups[actual_index]
             del self.group_indexes[group_index]
-            compare_result = getattr(getattr(self, "_compare", None), "compare_result", None)
-            if compare_result is not None:
-                compare_result.prune_stale_supergroups(active_group_indexes=set(self.file_groups.keys()))
+            self._compare.compare_result.prune_stale_supergroups(active_group_indexes=set(self.file_groups.keys()))
             if group_index < self.current_group_index:
                 self.current_group_index -= 1
 

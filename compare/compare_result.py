@@ -199,6 +199,13 @@ class CompareResult:
             if (surviving := [g for g in cluster if g in active_group_indexes])
         ]
 
+    def has_meaningful_supergroups(self) -> bool:
+        """Return True only when at least one supergroup clusters multiple base
+        groups together.  When every cluster contains exactly one group the
+        supergroup partition is equivalent to the base groups and adds no new
+        information worth surfacing in the UI."""
+        return any(len(cluster) > 1 for cluster in getattr(self, "supergroups", []))
+
     def clear_supergroups(self) -> None:
         '''
         Wipe supergroups entirely -- for operations where group_index values

@@ -326,6 +326,43 @@ class TestPruneStaleSupergroups:
         result.prune_stale_supergroups()
         assert result.supergroups == [[0], [1, 2]]
 
+    def test_explicit_active_indexes_takes_precedence_over_file_groups(self):
+        """_update_groups_for_removed_file deletes from its own self.file_groups
+        before compare_result.file_groups is synced.  Passing active_group_indexes
+        explicitly lets the live wrapper state win."""
+        result = CompareResult()
+        # file_groups still has group 1 (not yet synced)
+        result.file_groups = {0: {"/a.jpg": 0.0}, 1: {"/b.jpg": 0.0}, 2: {"/c.jpg": 0.0}}
+        result.supergroups = [[0, 1], [2]]
+        # But the wrapper already deleted group 1 from its own dict
+        result.prune_stale_supergroups(active_group_indexes={0, 2})
+        assert result.supergroups == [[0], [2]]
+
+
+class TestHasMeaningfulSupergroups:
+    def test_false_when_empty(self):
+        assert CompareResult().has_meaningful_supergroups() is False
+
+    def test_false_when_all_clusters_are_singletons(self):
+        result = CompareResult()
+        result.supergroups = [[0], [1], [2]]
+        assert result.has_meaningful_supergroups() is False
+
+    def test_true_when_one_cluster_has_multiple_groups(self):
+        result = CompareResult()
+        result.supergroups = [[0, 1], [2]]
+        assert result.has_meaningful_supergroups() is True
+
+    def test_true_when_all_clusters_have_multiple_groups(self):
+        result = CompareResult()
+        result.supergroups = [[0, 1], [2, 3]]
+        assert result.has_meaningful_supergroups() is True
+
+    def test_false_when_attribute_absent(self):
+        result = CompareResult()
+        del result.supergroups
+        assert result.has_meaningful_supergroups() is False
+
 
 class TestClearSupergroups:
     def test_wipes_to_empty_list(self):
@@ -469,7 +506,9 @@ class TestCompositeRecomputesSupergroupsAgainstRebuiltGroups:
 
 def _make_wrapper(supergroups, group_indexes):
     wrapper = CompareWrapper(master=MagicMock(), compare_mode=CompareMode.CLIP_EMBEDDING, app_actions=MagicMock())
-    wrapper._compare = SimpleNamespace(compare_result=SimpleNamespace(supergroups=supergroups))
+    compare_result = CompareResult()
+    compare_result.supergroups = supergroups
+    wrapper._compare = SimpleNamespace(compare_result=compare_result)
     wrapper.group_indexes = group_indexes
     wrapper.file_groups = {g: {f"/{g}.jpg": 0.0} for g in group_indexes}
     return wrapper
@@ -555,8 +594,31 @@ class TestSupergroupLabelSuffix:
         assert "2/2" in suffix
 
     def test_group_not_in_any_supergroup_returns_empty(self):
-        wrapper = _make_wrapper(supergroups=[[0]], group_indexes=[0, 1])
+        # Cluster [0, 2] is meaningful (2 members) but group 1 is not a member.
+        wrapper = _make_wrapper(supergroups=[[0, 2]], group_indexes=[0, 1, 2])
         assert wrapper._supergroup_label_suffix(1) == ""
+
+    def test_empty_when_all_clusters_singleton(self):
+        """Every cluster has exactly one group -- the partition mirrors the base
+        groups and the label must be suppressed entirely."""
+        wrapper = _make_wrapper(supergroups=[[0], [1]], group_indexes=[0, 1])
+        assert wrapper._supergroup_label_suffix(0) == ""
+        assert wrapper._supergroup_label_suffix(1) == ""
+
+    def test_label_suppressed_after_deletion_collapses_last_multi_group_cluster(self):
+        """Deleting a group that leaves every remaining cluster as a singleton
+        should cause the label to disappear (total count changed AND trivial)."""
+        wrapper = _make_wrapper(supergroups=[[0, 1]], group_indexes=[0, 1])
+        # group 1 is still present — label is active
+        assert wrapper._supergroup_label_suffix(0) != ""
+
+        # Simulate _update_groups_for_removed_file removing group 1
+        del wrapper.file_groups[1]
+        wrapper._compare.compare_result.prune_stale_supergroups(
+            active_group_indexes=set(wrapper.file_groups.keys())
+        )
+        # Only cluster [0] survives — all singletons now, label must be suppressed
+        assert wrapper._supergroup_label_suffix(0) == ""
 
 
 # ---------------------------------------------------------------------------

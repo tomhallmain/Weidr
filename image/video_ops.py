@@ -384,6 +384,8 @@ class VideoOps:
                 cmd,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 stdin=subprocess.DEVNULL,
                 timeout=120,
             )
@@ -417,6 +419,68 @@ class VideoOps:
                     merged[lk] = str(v)
             break
         return merged
+
+    @staticmethod
+    def ffprobe_audio_info(
+        probe: dict[str, Any],
+    ) -> tuple[str, str, str, str, str, str, str]:
+        """Extract display strings from an audio ffprobe result.
+
+        Returns ``(codec, duration_str, bitrate_str, sample_rate_str,
+        title, artist, album)``.  Any field may be an empty string when
+        the information is absent.
+        """
+        codec = ""
+        sample_rate_str = ""
+        for s in probe.get("streams") or []:
+            if s.get("codec_type") == "audio":
+                codec = str(s.get("codec_name") or "")
+                sr = s.get("sample_rate")
+                if sr:
+                    try:
+                        sample_rate_str = f"{int(sr):,} Hz"
+                    except (ValueError, TypeError):
+                        pass
+                break
+
+        fmt = probe.get("format") or {}
+
+        duration_str = ""
+        raw_dur = fmt.get("duration")
+        if raw_dur:
+            try:
+                total_secs = float(raw_dur)
+                mins = int(total_secs // 60)
+                secs = int(total_secs % 60)
+                duration_str = f"{mins}:{secs:02d}"
+            except (ValueError, TypeError):
+                pass
+
+        bitrate_str = ""
+        raw_br = fmt.get("bit_rate")
+        if raw_br:
+            try:
+                bitrate_str = f"{int(raw_br) // 1000} kbps"
+            except (ValueError, TypeError):
+                pass
+
+        tags: dict[str, str] = {}
+        for k, v in ((fmt.get("tags") or {}).items()):
+            tags[str(k).lower()] = str(v)
+        # Also pick up any audio-stream-level tags not present at format level
+        for s in probe.get("streams") or []:
+            if s.get("codec_type") == "audio":
+                for k, v in (s.get("tags") or {}).items():
+                    lk = str(k).lower()
+                    if lk not in tags:
+                        tags[lk] = str(v)
+                break
+
+        title = tags.get("title", "")
+        artist = tags.get("artist", "") or tags.get("album_artist", "")
+        album = tags.get("album", "")
+
+        return codec, duration_str, bitrate_str, sample_rate_str, title, artist, album
 
     @staticmethod
     def ffprobe_video_mode_and_dims(probe: dict[str, Any]) -> tuple[str, str]:

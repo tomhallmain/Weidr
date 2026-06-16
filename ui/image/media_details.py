@@ -193,6 +193,17 @@ class MediaDetails(SmartWindow):
                 related_image_text,
                 self._prompt_extraction_failed,
             ) = self._gather_video_details()
+        elif self.media_type.is_audio():
+            (
+                image_mode,
+                image_dims,
+                positive,
+                negative,
+                models,
+                loras,
+                related_image_text,
+                self._prompt_extraction_failed,
+            ) = self._gather_audio_details()
         elif self.media_type.is_unconfigured():
             (
                 image_mode,
@@ -514,13 +525,31 @@ class MediaDetails(SmartWindow):
         )
 
     def _gather_video_details(self) -> tuple[str, str, str, str, list[str], list[str], str, bool]:
-        """Load mode, dimensions, and tag-derived prompts from the video file via ffprobe."""
+        """Load mode, dimensions, and tag-derived prompts from the video file via ffprobe.
+
+        If the probe reveals no video stream (e.g. an M4A/M4P file misclassified
+        as video), falls back to ``_gather_audio_details`` using the same probe
+        so ffprobe is only run once.
+        """
         probe: dict | None = None
         try:
             if VideoOps.find_ffprobe_executable():
                 probe = VideoOps.ffprobe_json(self._media_path)
         except RuntimeError as e:
             logger.debug("ffprobe failed: %s", e)
+
+        if probe is not None:
+            has_video_stream = any(
+                s.get("codec_type") == "video"
+                and not s.get("disposition", {}).get("attached_pic", 0)
+                for s in (probe.get("streams") or [])
+            )
+            if not has_video_stream:
+                logger.debug(
+                    "%s has no video stream — treating as audio", self._media_path
+                )
+                return self._gather_audio_details(probe)
+
         try:
             if probe:
                 image_mode, image_dims = VideoOps.ffprobe_video_mode_and_dims(probe)
@@ -559,9 +588,71 @@ class MediaDetails(SmartWindow):
             prompt_failed,
         )
 
+    def _gather_audio_details(
+        self, probe: dict | None = None
+    ) -> tuple[str, str, str, str, list[str], list[str], str, bool]:
+        """Load metadata from an audio file via ffprobe.
+
+        *probe* may be passed in when the caller already ran ffprobe (e.g.
+        ``_gather_video_details`` discovered there is no video stream).
+        """
+        if probe is None:
+            try:
+                if VideoOps.find_ffprobe_executable():
+                    probe = VideoOps.ffprobe_json(self._media_path)
+            except RuntimeError as e:
+                logger.debug("ffprobe failed for audio: %s", e)
+
+        if probe is None:
+            return (
+                _("Audio (ffprobe unavailable)"),
+                "",
+                "",
+                "",
+                [],
+                [],
+                _("(Not available)"),
+                True,
+            )
+
+        try:
+            codec, duration_str, bitrate_str, sample_rate_str, title, artist, album = (
+                VideoOps.ffprobe_audio_info(probe)
+            )
+
+            image_mode = _("Audio ({0})").format(codec) if codec else _("Audio")
+
+            dims_parts = [p for p in [duration_str, bitrate_str, sample_rate_str] if p]
+            image_dims = " · ".join(dims_parts)
+
+            if title or artist or album:
+                tag_lines = []
+                if title:
+                    tag_lines.append(f"{_('Title')}: {title}")
+                if artist:
+                    tag_lines.append(f"{_('Artist')}: {artist}")
+                if album:
+                    tag_lines.append(f"{_('Album')}: {album}")
+                positive = "\n".join(tag_lines)
+                prompt_failed = False
+            else:
+                tags = VideoOps.merge_ffprobe_tag_dicts(probe)
+                if tags:
+                    positive = "\n".join(f"{k}: {v}" for k, v in sorted(tags.items()))
+                    prompt_failed = False
+                else:
+                    positive = ""
+                    prompt_failed = True
+
+        except Exception as e:
+            logger.warning("Audio details gather failed: %s", e)
+            return _("Audio"), "", "", "", [], [], _("(Could not load audio details)"), True
+
+        return image_mode, image_dims, positive, "", [], [], _("(Not available)"), prompt_failed
+
     def _path_for_metadata_window(self) -> str:
         """Path shown in the metadata viewer title (media file, not a cached frame)."""
-        if self.media_type.is_video() or self.media_type.is_unconfigured():
+        if self.media_type.is_video() or self.media_type.is_audio() or self.media_type.is_unconfigured():
             return self._media_path
         return self._image_path
 
@@ -578,7 +669,7 @@ class MediaDetails(SmartWindow):
             return _("Unknown"), ""
 
     def _get_file_info(self) -> tuple[str, str]:
-        if self.media_type.is_video() or self.media_type.is_unconfigured():
+        if self.media_type.is_video() or self.media_type.is_audio() or self.media_type.is_unconfigured():
             stat_path = self._media_path
         else:
             stat_path = self._image_path
@@ -611,6 +702,17 @@ class MediaDetails(SmartWindow):
                 related_image_text,
                 self._prompt_extraction_failed,
             ) = self._gather_video_details()
+        elif self.media_type.is_audio():
+            (
+                image_mode,
+                image_dims,
+                positive,
+                negative,
+                models,
+                loras,
+                related_image_text,
+                self._prompt_extraction_failed,
+            ) = self._gather_audio_details()
         elif self.media_type.is_unconfigured():
             (
                 image_mode,
@@ -1102,7 +1204,7 @@ class MediaDetails(SmartWindow):
         if self.media_type.is_unconfigured():
             self._app_actions.toast(_("Metadata is not available for this path"))
             return
-        if self.media_type.is_video():
+        if self.media_type.is_video() or self.media_type.is_audio():
             try:
                 if not VideoOps.find_ffprobe_executable():
                     self._app_actions.warn(_("ffprobe not found on PATH"))
@@ -1176,6 +1278,8 @@ class MediaDetails(SmartWindow):
             return _("(Not available)")
         if self.media_type.is_video():
             return _("(Related image lookup is not available for video)")
+        if self.media_type.is_audio():
+            return _("(Related image lookup is not available for audio)")
         return _get_related_image_text(self._image_path, _DEFAULT_NODE_ID)
 
     def open_related_image(self, event=None) -> None:

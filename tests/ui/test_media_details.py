@@ -1,10 +1,12 @@
 """UI smoke tests for MediaDetails (metadata labels, refresh)."""
 
 import os
+import types
 
 import pytest
 from PySide6.QtWidgets import QApplication
 
+from image.video_ops import VideoOps
 from ui.image.media_details import MediaDetails
 
 
@@ -97,3 +99,109 @@ class TestMediaDetailsWindow:
 
         assert details._lbl_dims.text() == "10x10"
         assert details._lbl_path.text() == second_path
+
+
+# ---------------------------------------------------------------------------
+# Audio metadata gather — no Qt window needed
+# ---------------------------------------------------------------------------
+
+def _audio_stub(path: str) -> types.SimpleNamespace:
+    """Minimal stand-in for a MediaDetails instance for the gather methods."""
+    stub = types.SimpleNamespace(
+        _media_path=path,
+        get_related_image_text=lambda: "(Not available)",
+    )
+    stub._gather_audio_details = MediaDetails._gather_audio_details.__get__(stub, MediaDetails)
+    stub._gather_video_details = MediaDetails._gather_video_details.__get__(stub, MediaDetails)
+    return stub
+
+
+class TestAudioMetadataGather:
+    def test_audio_file_with_tags_shows_title_artist_album(self, monkeypatch):
+        """A regular audio file whose tags include title/artist/album surfaces
+        that info in the positive field and reports the codec + duration."""
+        probe = {
+            "streams": [
+                {
+                    "codec_type": "audio",
+                    "codec_name": "flac",
+                    "sample_rate": "44100",
+                    "disposition": {"attached_pic": 0},
+                }
+            ],
+            "format": {
+                "duration": "225.0",   # 3:45
+                "bit_rate": "800000",
+                "tags": {
+                    "title": "My Song",
+                    "artist": "Test Artist",
+                    "album": "Test Album",
+                },
+            },
+        }
+        monkeypatch.setattr(VideoOps, "find_ffprobe_executable", staticmethod(lambda: "ffprobe"))
+        monkeypatch.setattr(VideoOps, "ffprobe_json", staticmethod(lambda _path: probe))
+
+        stub = _audio_stub("song.flac")
+        image_mode, image_dims, positive, negative, models, loras, _related, failed = (
+            stub._gather_audio_details()
+        )
+
+        assert "flac" in image_mode.lower()
+        assert "3:45" in image_dims
+        assert "800 kbps" in image_dims
+        assert "44,100 Hz" in image_dims
+        assert "My Song" in positive
+        assert "Test Artist" in positive
+        assert "Test Album" in positive
+        assert negative == ""
+        assert models == []
+        assert not failed
+
+    def test_ambiguous_container_with_attached_pic_stream_shows_audio_details(
+        self, monkeypatch
+    ):
+        """An M4A whose only 'video' stream is an embedded cover (attached_pic=1)
+        must be treated as audio, not video, even when _gather_video_details is
+        the entry point (i.e. media_type was wrongly classified as VIDEO)."""
+        probe = {
+            "streams": [
+                {
+                    "codec_type": "audio",
+                    "codec_name": "aac",
+                    "sample_rate": "44100",
+                    "disposition": {"attached_pic": 0},
+                },
+                {
+                    "codec_type": "video",
+                    "codec_name": "mjpeg",
+                    "width": 1280,
+                    "height": 720,
+                    "disposition": {"attached_pic": 1},
+                },
+            ],
+            "format": {
+                "duration": "181.0",   # 3:01
+                "bit_rate": "132861",
+                "tags": {
+                    "title": "The Farmers Song",
+                    "artist": "Some Artist",
+                    "major_brand": "M4A ",
+                },
+            },
+        }
+        monkeypatch.setattr(VideoOps, "find_ffprobe_executable", staticmethod(lambda: "ffprobe"))
+        monkeypatch.setattr(VideoOps, "ffprobe_json", staticmethod(lambda _path: probe))
+
+        stub = _audio_stub("song.m4a")
+        # Call via _gather_video_details to simulate the misclassified-as-VIDEO path
+        image_mode, image_dims, positive, negative, models, loras, _related, failed = (
+            stub._gather_video_details()
+        )
+
+        assert "aac" in image_mode.lower(), f"Expected audio codec in mode, got: {image_mode!r}"
+        assert "3:01" in image_dims, f"Expected duration in dims, got: {image_dims!r}"
+        assert "The Farmers Song" in positive
+        assert "Some Artist" in positive
+        assert negative == ""
+        assert not failed

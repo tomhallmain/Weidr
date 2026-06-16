@@ -242,12 +242,12 @@ class BaseCompareEmbedding(BaseCompare):
         member was since removed -- a stranded single-file group still gets one).
         '''
         if self.embedding_similarity_threshold < self.SUPERGROUP_MIN_VIABLE_THRESHOLD:
-            self.compare_result.supergroups = []
+            self.compare_result.clear_supergroups()
             return []
 
         centroids = self.compute_group_centroids()
         if len(centroids) < 2:
-            self.compare_result.supergroups = []
+            self.compare_result.clear_supergroups()
             return []
 
         threshold = self.embedding_similarity_threshold * self.SUPERGROUP_THRESHOLD_RATIO

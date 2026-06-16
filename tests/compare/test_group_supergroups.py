@@ -9,6 +9,7 @@ supergroup navigation / label suffix.
 """
 from __future__ import annotations
 
+import os
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -271,6 +272,138 @@ class TestCompareResultSupergroupsField:
         r1.supergroups.append([1, 2])
         r2 = CompareResult()
         assert r2.supergroups == []
+
+
+class TestPruneStaleSupergroups:
+    def test_removed_group_dropped_from_its_cluster(self):
+        """Group 1 was removed entirely (e.g. shrank to one file and got
+        deleted by _update_groups_for_removed_file) -- file_groups no longer
+        has it, so it must disappear from the cluster it used to share with 2."""
+        result = CompareResult()
+        result.file_groups = {0: {"/a.jpg": 0.0}, 2: {"/c.jpg": 0.0}}
+        result.supergroups = [[0], [1, 2]]
+        result.prune_stale_supergroups()
+        assert result.supergroups == [[0], [2]]
+
+    def test_cluster_emptied_entirely_is_removed(self):
+        result = CompareResult()
+        result.file_groups = {0: {"/a.jpg": 0.0}}
+        result.supergroups = [[0], [1, 2]]
+        result.prune_stale_supergroups()
+        assert result.supergroups == [[0]]
+
+    def test_noop_when_supergroups_already_empty(self):
+        result = CompareResult()
+        result.file_groups = {0: {"/a.jpg": 0.0}}
+        result.prune_stale_supergroups()
+        assert result.supergroups == []
+
+    def test_noop_when_attribute_absent_old_pickle(self):
+        """A CompareResult unpickled from before this feature existed won't
+        have the attribute at all -- must not raise."""
+        result = CompareResult()
+        del result.supergroups
+        result.file_groups = {0: {"/a.jpg": 0.0}}
+        result.prune_stale_supergroups()  # should not raise
+        assert not hasattr(result, "supergroups")
+
+    def test_nothing_stale_leaves_supergroups_unchanged(self):
+        result = CompareResult()
+        result.file_groups = {0: {"/a.jpg": 0.0}, 1: {"/b.jpg": 0.0}, 2: {"/c.jpg": 0.0}}
+        result.supergroups = [[0], [1, 2]]
+        result.prune_stale_supergroups()
+        assert result.supergroups == [[0], [1, 2]]
+
+
+class TestClearSupergroups:
+    def test_wipes_to_empty_list(self):
+        result = CompareResult()
+        result.supergroups = [[0], [1, 2]]
+        result.clear_supergroups()
+        assert result.supergroups == []
+
+
+class TestRandomPurgeWipesSupergroups:
+    def test_supergroups_cleared_after_purge(self, tmp_path):
+        """No groups survive a random purge, so any existing supergroups
+        (which reference group_index values that all just stopped existing)
+        must be wiped, not left stale."""
+        from PIL import Image
+
+        paths = [str(tmp_path / f"{i}.png") for i in range(4)]
+        for p in paths:
+            Image.new("RGB", (10, 10), (100, 100, 100)).save(p)
+
+        app_actions = MagicMock()
+        app_actions.alert.return_value = True
+        app_actions.delete.side_effect = lambda path, **kw: os.remove(path)
+
+        wrapper = CompareWrapper(master=None, compare_mode=CompareMode.CLIP_EMBEDDING, app_actions=app_actions)
+        wrapper.file_groups = {0: {paths[0]: 0.0, paths[1]: 0.0}, 1: {paths[2]: 0.0, paths[3]: 0.0}}
+        wrapper.current_supergroup_index = 1
+        compare_result = CompareResult()
+        compare_result.supergroups = [[0, 1]]
+        wrapper._compare = SimpleNamespace(
+            compare_result=compare_result, base_dir=str(tmp_path), COMPARE_MODE=CompareMode.CLIP_EMBEDDING
+        )
+
+        wrapper.random_purge_groups()
+
+        assert wrapper._compare.compare_result.supergroups == []
+        assert wrapper.current_supergroup_index == 0
+
+
+class TestCompositeRecomputesSupergroupsAgainstRebuiltGroups:
+    def test_supergroups_reference_new_renumbered_indices_not_old_ones(self, tmp_path):
+        """Group 1 ({c, g}) loses g to the composite filter and drops below 2
+        members, so it's discarded entirely -- group 2 ({d, e}) shifts down to
+        new index 1. Supergroups recomputed afterward must reflect that shift:
+        the merged cluster should be [0, 1] (new indices), never referencing
+        the stale old index 2."""
+        from compare.compare_manager import CompareManager
+
+        a, b = [1.0, 0.0], [1.0, 0.0]
+        d, e = [0.99, 0.05], [0.99, 0.05]
+        c, g = [0.0, 1.0], [0.0, 1.0]
+
+        compare = _make_compare(tmp_path, threshold=0.9)
+        compare.compare_data.files_found = ["/a.jpg", "/b.jpg", "/c.jpg", "/g.jpg", "/d.jpg", "/e.jpg"]
+        compare._file_embeddings = np.array([a, b, c, g, d, e])
+
+        mgr = CompareManager(master=MagicMock(), app_actions=MagicMock())
+        mgr.set_primary_mode(CompareMode.CLIP_EMBEDDING)
+        wrapper = mgr._primary_wrapper()
+        wrapper._compare = compare
+        wrapper.file_groups = {
+            0: {"/a.jpg": 0.0, "/b.jpg": 0.0},
+            1: {"/c.jpg": 0.0, "/g.jpg": 0.0},
+            2: {"/d.jpg": 0.0, "/e.jpg": 0.0},
+        }
+        mgr._combined_results = {p: 1.0 for p in ("/a.jpg", "/b.jpg", "/c.jpg", "/d.jpg", "/e.jpg")}  # /g.jpg excluded
+
+        mgr._apply_combined_results_to_primary(is_group_mode=True)
+
+        assert wrapper.file_groups == {0: {"/a.jpg": 0.0, "/b.jpg": 0.0}, 1: {"/d.jpg": 0.0, "/e.jpg": 0.0}}
+        supergroups = compare.compare_result.supergroups
+        assert len(supergroups) == 1
+        assert sorted(supergroups[0]) == [0, 1]
+
+    def test_no_surviving_groups_clears_supergroups(self, tmp_path):
+        from compare.compare_manager import CompareManager
+
+        compare = _make_compare(tmp_path, threshold=0.9)
+        compare.compare_result.supergroups = [[0, 1]]
+
+        mgr = CompareManager(master=MagicMock(), app_actions=MagicMock())
+        mgr.set_primary_mode(CompareMode.CLIP_EMBEDDING)
+        wrapper = mgr._primary_wrapper()
+        wrapper._compare = compare
+        wrapper.file_groups = {0: {"/a.jpg": 0.0, "/b.jpg": 0.0}}
+        mgr._combined_results = {"/a.jpg": 1.0}  # /b.jpg excluded -> group drops to 1 member -> discarded
+
+        mgr._apply_combined_results_to_primary(is_group_mode=True)
+
+        assert compare.compare_result.supergroups == []
 
 
 # ---------------------------------------------------------------------------

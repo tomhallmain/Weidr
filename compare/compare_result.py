@@ -105,6 +105,41 @@ class CompareResult:
         return sorted(file_groups,
                       key=lambda group_index: len(file_groups[group_index]))
 
+    def prune_stale_supergroups(self) -> None:
+        '''
+        Drop any group_index a supergroup referenced that no longer exists in
+        self.file_groups (the whole group was removed -- e.g.
+        CompareWrapper._update_groups_for_removed_file's "remove this group
+        as it will only have one file" branch), and drop any cluster left
+        empty by that. A cluster that shrinks to a single surviving
+        group_index is left as-is -- same as any size-1 cluster
+        BaseCompareEmbedding.compute_supergroups() can produce on its own.
+
+        Reads self.file_groups directly rather than taking the active set as
+        a parameter -- callers (e.g. CompareWrapper._sync_result_after_deletion)
+        already assign the post-removal file_groups onto self before calling this.
+
+        No-op when supergroups is empty (nothing to prune) or absent (a
+        CompareResult unpickled from before this feature existed).
+        '''
+        existing = getattr(self, "supergroups", None)
+        if not existing:
+            return
+        active_group_indexes = set(self.file_groups.keys())
+        self.supergroups = [
+            surviving for cluster in existing
+            if (surviving := [g for g in cluster if g in active_group_indexes])
+        ]
+
+    def clear_supergroups(self) -> None:
+        '''
+        Wipe supergroups entirely -- for operations where group_index values
+        are fully invalidated rather than just partially stale (e.g. random
+        purge removing every group, or a composite-filter rebuild renumbering
+        groups from scratch).
+        '''
+        self.supergroups = []
+
     def store(self):
         save_path = CompareResult.cache_path(self.base_dir, self._mode)
         with open(save_path, "wb") as f:

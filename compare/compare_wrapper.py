@@ -421,7 +421,12 @@ class CompareWrapper:
         self.files_matched = []
         self.match_index = 0
         self.current_group_index = 0
+        self.current_supergroup_index = 0
         self.has_media_matches = False
+
+        compare_result = getattr(self._compare, "compare_result", None) if self._compare else None
+        if compare_result is not None:
+            compare_result.clear_supergroups()
 
         self._remove_stored_result()
         self._app_actions.set_mode(Mode.BROWSE)
@@ -742,6 +747,7 @@ class CompareWrapper:
                 self._app_actions.alert(_("No More Groups"),
                            _("There are no more media groups remaining for this directory and current filter settings."))
                 self.current_group_index = 0
+                self.current_supergroup_index = 0
                 self.files_grouped = {}
                 self.file_groups = {}
                 self.match_index = 0
@@ -810,6 +816,7 @@ class CompareWrapper:
             k: v for k, v in compare_result.files_grouped.items()
             if v[0] in active_group_indexes
         }
+        compare_result.prune_stale_supergroups()
         try:
             compare_result.store()
         except Exception as exc:

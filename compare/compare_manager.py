@@ -1102,7 +1102,16 @@ class CompareManager:
                     filtered_groups[new_idx] = kept
                     new_idx += 1
 
+            # Renumbering from scratch means any existing supergroups would
+            # reference group_index values that now mean something different.
+            # Old indices are invalid regardless of what happens next, so reset
+            # the navigation cursor unconditionally here.
+            compare_result = getattr(wrapper._compare, "compare_result", None)
+            wrapper.current_supergroup_index = 0
+
             if not filtered_groups:
+                if compare_result is not None:
+                    compare_result.clear_supergroups()
                 wrapper.has_media_matches = False
                 wrapper.file_groups = {}
                 wrapper.files_grouped = {}
@@ -1121,6 +1130,17 @@ class CompareManager:
             wrapper.current_group_index = 0
             wrapper.has_media_matches = True
             wrapper.label_suffix = " (composite)"
+
+            # Recompute (not just discard) supergroups against the rebuilt
+            # group structure -- same "primary instance decides structure"
+            # scope as the membership filtering above: only the primary's own
+            # embeddings are used, no cross-instance centroid combination.
+            # compute_supergroups() reads compare_result.file_groups, which
+            # must be synced to the just-rebuilt filtered_groups first (it
+            # still held the pre-filter grouping otherwise).
+            if compare_result is not None:
+                compare_result.file_groups = {idx: dict(group) for idx, group in filtered_groups.items()}
+                wrapper._compare.compute_supergroups()
 
             logger.info(
                 f"Composite GROUP result: {len(filtered_groups)} group(s) "

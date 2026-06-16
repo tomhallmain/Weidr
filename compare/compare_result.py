@@ -20,6 +20,11 @@ class CompareResult:
         self.file_groups = {}
         self.files_grouped = {}
         self.group_index = 0
+        # Partition of group_index values into "supergroups" (clusters of
+        # related groups based on group mean-embedding similarity). Populated
+        # by BaseCompareEmbedding.compute_supergroups(); empty for compare
+        # modes with no per-file embedding to average (color/size/models/exact-prompt).
+        self.supergroups: list = []
         self.is_complete = False
         self.i = 1  # start at 1 because index 0 is identity comparison roll index
 

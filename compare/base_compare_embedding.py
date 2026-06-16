@@ -18,12 +18,57 @@ from utils.utils import Utils
 logger = get_logger("base_compare_embedding")
 
 
+def cluster_group_indexes(centroids: dict, threshold: float) -> list:
+    '''
+    Greedy single-link clustering of group_index values by centroid cosine
+    similarity (centroids are already unit vectors, so dot product is cosine
+    similarity). O(g^2) over the number of groups, not files -- group counts
+    are typically far smaller than file counts, so this is cheap.
+
+    Returns a list of clusters, each a list of group_index values. Order is
+    arbitrary; callers that care about ordering (see compute_supergroups)
+    sort the result themselves.
+    '''
+    indexes = list(centroids.keys())
+    parent = {i: i for i in indexes}
+
+    def find(i):
+        while parent[i] != i:
+            i = parent[i]
+        return i
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[ra] = rb
+
+    for i, a in enumerate(indexes):
+        for b in indexes[i + 1:]:
+            if np.dot(centroids[a], centroids[b]) >= threshold:
+                union(a, b)
+
+    clusters: dict = {}
+    for i in indexes:
+        clusters.setdefault(find(i), []).append(i)
+    return list(clusters.values())
+
+
 class BaseCompareEmbedding(BaseCompare):
     # Set True on subclasses whose image_embeddings_func already samples video
     # frames itself (e.g. V-JEPA 2) -- compute_embedding_for_path() then skips
     # its own multi-frame sampling/averaging to avoid double-sampling and
     # diluting the model's own temporal encoding with repeated-still-frame passes.
     EMBEDS_DYNAMIC_MEDIA_NATIVELY = False
+
+    # Supergrouping: clusters of related groups based on group mean-embedding
+    # similarity (see compute_supergroups / cluster_group_indexes below). The
+    # similarity threshold for clustering group mean embeddings is derived
+    # from this run's own embedding_similarity_threshold rather than a fixed
+    # constant, scaled by this ratio.
+    SUPERGROUP_THRESHOLD_RATIO = 0.9
+    # Below this, embedding_similarity_threshold is already loose enough that
+    # supergrouping would over-merge unrelated groups -- skip it entirely.
+    SUPERGROUP_MIN_VIABLE_THRESHOLD = 0.5
 
     def __init__(self, args=CompareArgs(), gather_files_func=gather_files):
         super().__init__(args, gather_files_func)
@@ -135,6 +180,68 @@ class BaseCompareEmbedding(BaseCompare):
         if norm > 0:
             mean_embedding = mean_embedding / norm
         return mean_embedding.tolist()
+
+    def compute_group_centroids(self) -> dict:
+        '''
+        Mean-pooled, re-normalized embedding per group in self.compare_result.file_groups
+        (same mean+renormalize pattern as compute_embedding_for_path / EmbeddingPrototype).
+
+        Groups with only one member are excluded -- a single file has no
+        meaningful "average" distinct from its own embedding, mirroring
+        CompareResult.finalize_group_result's existing len(group) < 2 skip.
+        Members not found in compare_data.files_found (e.g. since removed)
+        are silently skipped; a group left with no resolvable members is omitted.
+        '''
+        path_to_index = {p: i for i, p in enumerate(self.compare_data.files_found)}
+        centroids = {}
+        for group_index, members in self.compare_result.file_groups.items():
+            if len(members) < 2:
+                continue
+            idxs = [path_to_index[p] for p in members if p in path_to_index]
+            if not idxs:
+                continue
+            mean = np.mean(self._file_embeddings[idxs], axis=0)
+            norm = np.linalg.norm(mean)
+            centroids[group_index] = mean / norm if norm > 0 else mean
+        return centroids
+
+    def compute_supergroups(self) -> list:
+        '''
+        Cluster groups by mean-embedding similarity into "supergroups" and store
+        the partition on self.compare_result.supergroups (list of lists of
+        group_index, ascending by total member-file count -- mirrors
+        CompareResult.sort_groups's existing ascending-by-size convention for
+        ordinary groups).
+
+        This is a navigation-only layer: file_groups / files_grouped are never
+        rewritten, so marks/purge/composite-filter code that keys off
+        group_index is unaffected. Computed once per run_comparison() call
+        (cache-hit and freshly-computed paths both call this) and is NOT
+        re-clustered afterward if file_groups later mutates (random purge,
+        single-file removal, composite-filter rebuild) -- callers that read
+        compare_result.supergroups should tolerate a group_index that no
+        longer exists in file_groups.
+
+        Skipped (supergroups set to []) when embedding_similarity_threshold is
+        already below SUPERGROUP_MIN_VIABLE_THRESHOLD -- a loose base threshold
+        means an already-derived, even-looser supergroup threshold would merge
+        unrelated groups together. Also skipped when fewer than 2 groups have
+        a usable centroid (compute_group_centroids excludes singleton groups).
+        '''
+        if self.embedding_similarity_threshold < self.SUPERGROUP_MIN_VIABLE_THRESHOLD:
+            self.compare_result.supergroups = []
+            return []
+
+        centroids = self.compute_group_centroids()
+        if len(centroids) < 2:
+            self.compare_result.supergroups = []
+            return []
+
+        threshold = self.embedding_similarity_threshold * self.SUPERGROUP_THRESHOLD_RATIO
+        clusters = cluster_group_indexes(centroids, threshold)
+        clusters.sort(key=lambda cluster: sum(len(self.compare_result.file_groups[g]) for g in cluster))
+        self.compare_result.supergroups = clusters
+        return clusters
 
     def get_data(self):
         '''
@@ -261,6 +368,7 @@ class BaseCompareEmbedding(BaseCompare):
         logger.debug(f"Store checkpoints: {store_checkpoints}")
         self.compare_result = CompareResult.load(self.base_dir, self.compare_data.files_found, mode=self.COMPARE_MODE, overwrite=overwrite)
         if self.compare_result.is_complete:
+            self.compute_supergroups()
             return (self.compare_result.files_grouped, self.compare_result.file_groups)
 
         # Ensure we have correct counts of data compared to files found
@@ -316,6 +424,7 @@ class BaseCompareEmbedding(BaseCompare):
             self.compare_result.file_groups[group_index] = file_group
 
         self.compare_result.finalize_group_result(store_checkpoints=store_checkpoints)
+        self.compute_supergroups()
         return (self.compare_result.files_grouped, self.compare_result.file_groups)
 
     def _compute_matrix_similarities(self):

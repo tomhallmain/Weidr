@@ -38,7 +38,7 @@ Keybinding map  (■ = bound  · = free | cols: Shift | Ctrl | Ctrl+Shift)
     L  ■ ■ ·   Y  ■ ■ ■
     M  ■ ■ ■   Z  ■ ■ ·
 
-    Special: 0-9 ■ (bare + Shift), Left/Right ■ (bare + Shift),
+    Special: 0-9 ■ (bare + Shift), Left/Right ■ (bare + Shift + Ctrl+Shift),
              Home/End/PgUp/PgDown ■ (bare), Backspace ■ (Shift),
              Delete ■ (Shift + Ctrl+Shift), Escape ■ (bare + Shift),
              Return ■ (Ctrl + Ctrl+Shift + Ctrl+Alt),
@@ -132,6 +132,8 @@ class KeyBindingManager:
                 file_browser=(app.file_browser if app.mode == Mode.BROWSE else None)
             ),
         )
+        self._bind("Ctrl+Shift+Left", app.compare_manager.show_prev_supergroup)
+        self._bind("Ctrl+Shift+Right", app.compare_manager.show_next_supergroup)
         self._bind("Home", lambda: app.media_navigator.home())
         self._bind("End", lambda: app.media_navigator.home(last_file=True))
         self._bind("PgUp", app.media_navigator.page_up)

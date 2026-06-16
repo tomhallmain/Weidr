@@ -47,6 +47,7 @@ class CompareWrapper:
         self.has_media_matches = False
         self.current_group = None
         self.current_group_index = 0
+        self.current_supergroup_index = 0
         self.match_index = 0
         self.group_indexes = []
         self.max_group_index = 0
@@ -278,6 +279,52 @@ class CompareWrapper:
             self.current_group_index += 1
         self.set_current_group()
 
+    def _get_supergroups(self) -> list:
+        '''
+        Partition of group_index values into supergroups -- clusters of
+        related groups based on group mean-embedding similarity, computed by
+        BaseCompareEmbedding.compute_supergroups() and stored on
+        compare_result.supergroups (list of lists of group_index). Returns []
+        when unavailable: no compare instance yet, compare mode has no
+        per-file embedding to average, or fewer than 2 groups survived
+        clustering. getattr default also covers a CompareResult unpickled
+        from before this feature existed, which won't have the attribute.
+        '''
+        if self._compare is None:
+            return []
+        compare_result = getattr(self._compare, "compare_result", None)
+        if compare_result is None:
+            return []
+        return getattr(compare_result, "supergroups", [])
+
+    def show_prev_supergroup(self, event=None) -> None:
+        '''While in group mode, navigate to the previous supergroup.'''
+        self._show_adjacent_supergroup(forward=False)
+
+    def show_next_supergroup(self, event=None) -> None:
+        '''While in group mode, navigate to the next supergroup.'''
+        self._show_adjacent_supergroup(forward=True)
+
+    def _show_adjacent_supergroup(self, forward: bool) -> None:
+        supergroups = self._get_supergroups()
+        if not supergroups:
+            self._app_actions.toast(_("No Supergroups Found"))
+            return
+        step = 1 if forward else -1
+        self.current_supergroup_index = (self.current_supergroup_index + step) % len(supergroups)
+        # Defensive: supergroups are computed once by compute_supergroups() and not
+        # re-clustered after later group-mutating operations (random purge, single-file
+        # removal, composite-filter rebuild), so a member group_index may no longer exist
+        # in group_indexes -- skip any that don't, and pick whichever surviving candidate
+        # sorts first per the existing within-group ordering.
+        candidates = [g for g in supergroups[self.current_supergroup_index] if g in self.group_indexes]
+        if not candidates:
+            self._app_actions.toast(_("Supergroup no longer available"))
+            return
+        target_group = min(candidates, key=self.group_indexes.index)
+        self.current_group_index = self.group_indexes.index(target_group)
+        self.set_current_group()
+
     def random_purge_groups(self, event=None) -> None:
         """Delete all but one randomly-chosen file from every similarity group.
 
@@ -408,9 +455,22 @@ class CompareWrapper:
             self.files_matched.append(f)
 
         self._app_actions._set_label_state(group_number=self.current_group_index, size=len(self.files_matched),
-                                            suffix=self.label_suffix)
+                                            suffix=self.label_suffix + self._supergroup_label_suffix(actual_group_index))
         self._master.update()
         self._app_actions.create_media(self.current_match())
+
+    def _supergroup_label_suffix(self, actual_group_index: int) -> str:
+        '''
+        " | Supergroup X/Y" when actual_group_index belongs to a known
+        supergroup, else "". Looked up by membership rather than
+        current_supergroup_index, since plain group navigation (Shift+Left/Right)
+        can move into a different supergroup without updating that cursor.
+        '''
+        supergroups = self._get_supergroups()
+        for i, cluster in enumerate(supergroups):
+            if actual_group_index in cluster:
+                return _(" | Supergroup {0}/{1}").format(i + 1, len(supergroups))
+        return ""
 
     def page_down(self, half_length=False):
         paging_length = self._get_paging_length(half_length=half_length)

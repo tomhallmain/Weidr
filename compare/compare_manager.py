@@ -520,7 +520,20 @@ class CompareManager:
         """Set current group index on primary wrapper (for backward compatibility)."""
         if self._primary_wrapper() is not None:
             self._primary_wrapper().current_group_index = value
-    
+
+    @property
+    def current_supergroup_index(self) -> int:
+        """Get current supergroup index from primary wrapper (for backward compatibility)."""
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().current_supergroup_index
+        return 0
+
+    @current_supergroup_index.setter
+    def current_supergroup_index(self, value: int):
+        """Set current supergroup index on primary wrapper (for backward compatibility)."""
+        if self._primary_wrapper() is not None:
+            self._primary_wrapper().current_supergroup_index = value
+
     @property
     def search_media_path(self) -> Optional[str]:
         """Get search file path from primary wrapper."""
@@ -626,6 +639,16 @@ class CompareManager:
         """Show next group (delegated to primary wrapper)."""
         if self._primary_wrapper() is not None:
             return self._primary_wrapper().show_next_group(event, file_browser)
+
+    def show_prev_supergroup(self, event=None):
+        """Show previous supergroup (delegated to primary wrapper)."""
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().show_prev_supergroup(event)
+
+    def show_next_supergroup(self, event=None):
+        """Show next supergroup (delegated to primary wrapper)."""
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().show_next_supergroup(event)
 
     def random_purge_groups(self, event=None):
         """Delete all but one random file per group (delegated to primary wrapper)."""

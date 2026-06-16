@@ -15,16 +15,16 @@ from utils.utils import Utils
 logger = get_logger("compare_models")
 
 
-def extract_models_from_image(image_path: str) -> Tuple[List[str], List[str]]:
+def extract_models_from_media(media_path: str) -> Tuple[List[str], List[str]]:
     """
-    Extract models and loras from an image file.
+    Extract models and loras from a media file.
     Returns (models, loras) tuple.
     """
     try:
-        models, loras = image_data_extractor.get_models(image_path)
+        models, loras = image_data_extractor.get_models(media_path)
         return models, loras
     except Exception as e:
-        logger.error(f"Error extracting models from {image_path}: {e}")
+        logger.error(f"Error extracting models from {media_path}: {e}")
         return [], []
 
 
@@ -175,7 +175,7 @@ class CompareModels(BaseCompare):
                 models_data = self.compare_data.file_data_dict[f]
                 models, loras = models_data if isinstance(models_data, tuple) and len(models_data) == 2 else ([], [])
             else:
-                models, loras = extract_models_from_image(f)
+                models, loras = extract_models_from_media(f)
                 # Store as tuple (models, loras)
                 self.compare_data.file_data_dict[f] = (models, loras)
                 self.compare_data.has_new_file_data = True
@@ -187,9 +187,9 @@ class CompareModels(BaseCompare):
         # Save model data
         self.compare_data.save_data(self.args.overwrite, verbose=self.verbose)
 
-    def find_similars_to_image(self, search_path, search_file_index):
+    def find_similars_to_media(self, search_path, search_file_index):
         '''
-        Search for images with similar models to the provided image.
+        Search for media with similar models to the provided media file.
         '''
         files_grouped = {}
         _files_found = list(self.compare_data.files_found)
@@ -197,12 +197,12 @@ class CompareModels(BaseCompare):
         if self.verbose:
             logger.info("Identifying similar model files...")
         
-        # Get the search image's models
+        # Get the search media's models
         if search_path in self.compare_data.file_data_dict:
             search_models_data = self.compare_data.file_data_dict[search_path]
             search_models, search_loras = search_models_data if isinstance(search_models_data, tuple) and len(search_models_data) == 2 else ([], [])
         else:
-            search_models, search_loras = extract_models_from_image(search_path)
+            search_models, search_loras = extract_models_from_media(search_path)
             self.compare_data.file_data_dict[search_path] = (search_models, search_loras)
 
         # Remove search file from comparison list
@@ -247,9 +247,9 @@ class CompareModels(BaseCompare):
         search_loras = []
         search_for_no_models = False
 
-        # If a search image is provided, extract its models
+        # If a search media file is provided, extract its models
         if self.args.search_media_path is not None:
-            search_models, search_loras = extract_models_from_image(self.args.search_media_path)
+            search_models, search_loras = extract_models_from_media(self.args.search_media_path)
 
         # If search text is provided and not empty, parse it as model names (comma-separated)
         if self.args.search_text is not None and self.args.search_text.strip() != "":
@@ -258,7 +258,7 @@ class CompareModels(BaseCompare):
                 if model_name:
                     search_models.append(model_name)
 
-        # If no models found (empty search text or search image had no models), search for images without models
+        # If no models found (empty search text or search media had no models), search for media without models
         if not search_models and not search_loras:
             # Check if we have any search criteria at all
             if self.args.search_media_path is None and (self.args.search_text is None or self.args.search_text.strip() == ""):
@@ -455,15 +455,15 @@ class CompareModels(BaseCompare):
                 del self.compare_data.file_data_dict[f]
 
     @staticmethod
-    def is_related(image1, image2):
+    def is_related(media1, media2):
         """
         Determine relation by comparing extracted models only.
         """
         try:
-            models1, loras1 = extract_models_from_image(image1)
-            models2, loras2 = extract_models_from_image(image2)
+            models1, loras1 = extract_models_from_media(media1)
+            models2, loras2 = extract_models_from_media(media2)
         except OSError as e:
-            logger.error(f"{image1} or {image2} - {e}")
+            logger.error(f"{media1} or {media2} - {e}")
             raise AssertionError(
                 "Encountered an error accessing the provided file paths in the file system.")
         except Exception as e:

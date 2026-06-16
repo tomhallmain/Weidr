@@ -37,9 +37,9 @@ class CompareEmbeddingClip(BaseCompareEmbedding):
         )
 
     @staticmethod
-    def single_text_compare(image_path, texts_dict):
+    def single_text_compare(media_path, texts_dict):
         return BaseCompareEmbedding.single_text_compare(
-            image_path,
+            media_path,
             texts_dict,
             image_embeddings_clip,
             CompareEmbeddingClip.TEXT_EMBEDDING_CACHE,
@@ -47,9 +47,9 @@ class CompareEmbeddingClip(BaseCompareEmbedding):
         )
 
     @staticmethod
-    def multi_text_compare(image_path, positives, negatives, threshold=0.3):
+    def multi_text_compare(media_path, positives, negatives, threshold=0.3):
         return BaseCompareEmbedding.multi_text_compare(
-            image_path,
+            media_path,
             positives,
             negatives,
             image_embeddings_clip,
@@ -60,10 +60,10 @@ class CompareEmbeddingClip(BaseCompareEmbedding):
         )
 
     @staticmethod
-    def is_related(image1, image2):
+    def is_related(media1, media2):
         return BaseCompareEmbedding.is_related(
-            image1,
-            image2,
+            media1,
+            media2,
             image_embeddings_clip
         )
 

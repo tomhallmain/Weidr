@@ -6,7 +6,7 @@ from compare.base_compare_embedding import BaseCompareEmbedding, gather_files
 from compare.compare_args import CompareArgs
 from compare.compare_data import CompareData
 from compare.compare_result import CompareResult
-from compare.compare_prompts_exact import extract_prompts_from_image, _ensure_str
+from compare.compare_prompts_exact import extract_prompts_from_media, _ensure_str
 from compare.model import text_embeddings_flava
 from utils.config import config
 from utils.constants import CompareMode
@@ -17,13 +17,13 @@ from utils.utils import Utils
 logger = get_logger("compare_prompts")
 
 
-def prompt_embedding_from_image(image_path):
+def prompt_embedding_from_media(media_path):
     """
     Module-level helper to extract prompts and convert them to a single embedding
     vector using FLAVA, combined as (positive - 0.5 * negative).
     """
     try:
-        positive_prompt, negative_prompt = extract_prompts_from_image(image_path)
+        positive_prompt, negative_prompt = extract_prompts_from_media(media_path)
         if positive_prompt is None and negative_prompt is None:
             return np.zeros(768)
 
@@ -38,7 +38,7 @@ def prompt_embedding_from_image(image_path):
         negative_embedding = np.array(text_embeddings_flava(negative_prompt))
         return positive_embedding - (0.5 * negative_embedding)
     except Exception as e:
-        logger.error(f"Error extracting prompt embedding from {image_path}: {e}")
+        logger.error(f"Error extracting prompt embedding from {media_path}: {e}")
         return np.zeros(768)
 
 
@@ -65,7 +65,7 @@ class ComparePrompts(BaseCompareEmbedding):
         self.compare_data = CompareData(base_dir=self.base_dir, data_filename=ComparePrompts.CACHE_FILENAME)
         
         # Set up image embeddings function for text search
-        self.image_embeddings_func = prompt_embedding_from_image
+        self.image_embeddings_func = prompt_embedding_from_media
 
     def set_base_dir(self, base_dir):
         '''
@@ -159,7 +159,7 @@ class ComparePrompts(BaseCompareEmbedding):
             if f in self.compare_data.file_data_dict:
                 prompts = self.compare_data.file_data_dict[f]
             else:
-                positive_prompt, negative_prompt = extract_prompts_from_image(f)
+                positive_prompt, negative_prompt = extract_prompts_from_media(f)
                 if positive_prompt is None and negative_prompt is None:
                     # Skip files with no prompt data - this is normal for many images
                     # if self.verbose:
@@ -172,7 +172,7 @@ class ComparePrompts(BaseCompareEmbedding):
             counter += 1
             # Convert prompts to embeddings using the centralized method
             try:
-                prompt_embedding = prompt_embedding_from_image(f)
+                prompt_embedding = prompt_embedding_from_media(f)
                 self._file_embeddings = np.vstack((self._file_embeddings, [prompt_embedding]))
                 self.compare_data.files_found.append(f)
                 self._handle_progress(counter, self.max_files_processed_even)
@@ -193,9 +193,9 @@ class ComparePrompts(BaseCompareEmbedding):
             return similarities > self.threshold_duplicate, similarities
         return similarities > self.threshold_duplicate
 
-    def find_similars_to_image(self, search_path, search_file_index):
+    def find_similars_to_media(self, search_path, search_file_index):
         '''
-        Search for images with similar prompts to the provided image.
+        Search for media with similar prompts to the provided media file.
         '''
         files_grouped = {}
         _files_found = list(self.compare_data.files_found)
@@ -257,12 +257,12 @@ class ComparePrompts(BaseCompareEmbedding):
                 logger.info("Filepath not found in initial list - gathering new prompt data")
             try:
                 # Extract prompts from the search image and store them
-                positive_prompt, negative_prompt = extract_prompts_from_image(search_media_path)
+                positive_prompt, negative_prompt = extract_prompts_from_media(search_media_path)
                 if positive_prompt is None and negative_prompt is None:
                     raise AssertionError("No prompt data found in the provided image. This image may not contain prompt metadata.")
                 
                 # Generate embedding for the search image using the centralized method
-                search_embedding = prompt_embedding_from_image(search_media_path)
+                search_embedding = prompt_embedding_from_media(search_media_path)
                 
                 # Add to the beginning of our data; keep cache in sync only if still in memory
                 # (save_data() clears file_data_dict to free memory after persist)
@@ -282,7 +282,7 @@ class ComparePrompts(BaseCompareEmbedding):
                 raise AssertionError(
                     "Encountered an error gathering prompt data from the file provided.")
 
-        files_grouped = self.find_similars_to_image(
+        files_grouped = self.find_similars_to_media(
             search_media_path, self.compare_data.files_found.index(search_media_path))
         search_media_path = None
         return files_grouped
@@ -418,11 +418,11 @@ class ComparePrompts(BaseCompareEmbedding):
                 self.compare_data.files_found.remove(f)
 
     @staticmethod
-    def is_related(image1, image2):
+    def is_related(media1, media2):
         return BaseCompareEmbedding.is_related(
-            image1,
-            image2,
-            prompt_embedding_from_image
+            media1,
+            media2,
+            prompt_embedding_from_media
         )
 
 

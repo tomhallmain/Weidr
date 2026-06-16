@@ -68,15 +68,15 @@ def get_image_data_extractor():
         _image_data_extractor = ImageDataExtractor()
     return _image_data_extractor
 
-def extract_prompts_from_image(image_path):
+def extract_prompts_from_media(media_path):
     try:
         extractor = get_image_data_extractor()
-        positive, negative = extractor.extract_prompts_all_strategies(image_path)
+        positive, negative = extractor.extract_prompts_all_strategies(media_path)
         if positive is not None:
             return positive, negative
         return None, None
     except Exception as e:
-        logger.error(f"Error extracting prompt from {image_path}: {e}")
+        logger.error(f"Error extracting prompt from {media_path}: {e}")
         return None, None
 
 def _levenshtein_distance(s1: str, s2: str) -> int:
@@ -279,7 +279,7 @@ class ComparePromptsExact(BaseCompare):
             if f in self.compare_data.file_data_dict:
                 prompts = self.compare_data.file_data_dict[f]
             else:
-                positive_prompt, negative_prompt = extract_prompts_from_image(f)
+                positive_prompt, negative_prompt = extract_prompts_from_media(f)
                 if positive_prompt is None and negative_prompt is None:
                     # Skip files with no prompt data - this is normal for many images
                     # if self.verbose:
@@ -320,9 +320,9 @@ class ComparePromptsExact(BaseCompare):
             self._file_pos_texts.append(pos)
             self._file_neg_texts.append(neg)
 
-    def find_similars_to_image(self, search_path, search_file_index):
+    def find_similars_to_media(self, search_path, search_file_index):
         '''
-        Search for images with similar prompts to the provided image using exact text matching.
+        Search for media with similar prompts to the provided media file using exact text matching.
         Uses in-memory _file_pos_texts / _file_neg_texts when aligned with files_found;
         otherwise falls back to file_data_dict or extraction (e.g. when search file was just added).
         '''
@@ -342,7 +342,7 @@ class ComparePromptsExact(BaseCompare):
             search_positive = self._file_pos_texts[search_file_index]
             search_negative = self._file_neg_texts[search_file_index]
         else:
-            search_positive, search_negative = extract_prompts_from_image(search_path)
+            search_positive, search_negative = extract_prompts_from_media(search_path)
             if search_positive is None and search_negative is None:
                 if self.verbose:
                     logger.warning(f"No prompt data found in search image {search_path}")
@@ -410,7 +410,7 @@ class ComparePromptsExact(BaseCompare):
             self.compare_data.files_found.insert(0, search_media_path)
             
             # Extract and store prompts for the search image
-            positive_prompt, negative_prompt = extract_prompts_from_image(search_media_path)
+            positive_prompt, negative_prompt = extract_prompts_from_media(search_media_path)
             if positive_prompt is None and negative_prompt is None:
                 raise AssertionError("No prompt data found in the provided image. This image may not contain prompt metadata.")
             # Keep in-memory arrays in sync (primary source for comparison); update dict only if still in memory
@@ -419,7 +419,7 @@ class ComparePromptsExact(BaseCompare):
             if self.compare_data.file_data_dict is not None:
                 self.compare_data.file_data_dict[search_media_path] = (positive_prompt, negative_prompt)
 
-        files_grouped = self.find_similars_to_image(
+        files_grouped = self.find_similars_to_media(
             search_media_path, self.compare_data.files_found.index(search_media_path))
         search_media_path = None
         return files_grouped
@@ -440,7 +440,7 @@ class ComparePromptsExact(BaseCompare):
 
         # If a search image is provided, use its positive as positive and its negative as negative
         if self.args.search_media_path is not None:
-            pos, neg = extract_prompts_from_image(self.args.search_media_path)
+            pos, neg = extract_prompts_from_media(self.args.search_media_path)
             if pos is not None:
                 positive_texts.append(_ensure_str(pos))
             if neg is not None:
@@ -448,7 +448,7 @@ class ComparePromptsExact(BaseCompare):
 
         # If a negative search image is provided, treat its positive as negative context
         if self.args.negative_search_media_path is not None:
-            pos, neg = extract_prompts_from_image(self.args.negative_search_media_path)
+            pos, neg = extract_prompts_from_media(self.args.negative_search_media_path)
             if pos:
                 negative_texts.append(pos)
             if neg:
@@ -685,17 +685,17 @@ class ComparePromptsExact(BaseCompare):
                 self._file_neg_texts.pop(i)
 
     @staticmethod
-    def is_related(image1, image2):
+    def is_related(media1, media2):
         """
         Determine relation by comparing extracted prompt texts directly.
         Uses the same text similarity as search (exact/substring/structured/word) and
-        considers images related if the weighted similarity exceeds a threshold.
+        considers media related if the weighted similarity exceeds a threshold.
         """
         try:
-            pos1, neg1 = extract_prompts_from_image(image1)
-            pos2, neg2 = extract_prompts_from_image(image2)
+            pos1, neg1 = extract_prompts_from_media(media1)
+            pos2, neg2 = extract_prompts_from_media(media2)
         except OSError as e:
-            logger.error(f"{image1} or {image2} - {e}")
+            logger.error(f"{media1} or {media2} - {e}")
             raise AssertionError(
                 "Encountered an error accessing the provided file paths in the file system.")
         except Exception as e:

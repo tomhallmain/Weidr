@@ -28,9 +28,9 @@ from compare.compare_filters import (
 FILES = ["/img/a.png", "/img/b.png", "/img/c.png"]
 
 def _size_reader(sizes: dict):
-    """Return a patcher for extract_size_from_image keyed by file path."""
+    """Return a patcher for extract_size_from_media keyed by file path."""
     return patch(
-        "compare.compare_size.extract_size_from_image",
+        "compare.compare_size.extract_size_from_media",
         side_effect=lambda fp: sizes.get(fp),
     )
 
@@ -192,7 +192,7 @@ class TestApplySizeFilter:
         assert result == ["/img/a.png"]
 
     def test_unreadable_file_is_excluded(self):
-        # extract_size_from_image returns None for unreadable files
+        # extract_size_from_media returns None for unreadable files
         with _size_reader({}):
             result = apply_filter(["/img/a.png"],
                                   SizeFilter(min_size=(1, 1)))

@@ -305,7 +305,7 @@ class BaseCompare:
     def run_comparison(self, store_checkpoints=False):
         pass
 
-    def find_similars_to_image(self, search_path, search_file_index):
+    def find_similars_to_media(self, search_path, search_file_index):
         pass
 
     def remove_from_groups(self, removed_files=[]):

@@ -4,7 +4,7 @@ Unit tests for compare/compare_colors.py.
 Covers pure helper functions (is_any_x_true_consecutive, is_any_x_true_weighted,
 get_median_values, RGB2HEX, get_image_thumb_colors), CompareColors constructor
 configuration, _compute_color_diff with synthetic numpy arrays, and the
-get_data / run_comparison / find_similars_to_image pipeline with real PNG files
+get_data / run_comparison / find_similars_to_media pipeline with real PNG files
 from the compare_colors_dir fixture.
 """
 
@@ -238,7 +238,7 @@ class TestComputeColorDiff:
 
 
 # ---------------------------------------------------------------------------
-# Pipeline: get_data, run_comparison, find_similars_to_image
+# Pipeline: get_data, run_comparison, find_similars_to_media
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
@@ -286,7 +286,7 @@ class TestRunComparison:
             assert is_pure, f"Group {group_idx} mixes color families: {group_files}"
 
 
-class TestFindSimilarsToImage:
+class TestFindSimilarsToMedia:
     def test_red_query_returns_only_red_siblings(self, loaded_compare, monkeypatch):
         import compare.compare_colors as _cc_module
         monkeypatch.setattr(_cc_module.config, "search_only_return_closest", True)
@@ -294,7 +294,7 @@ class TestFindSimilarsToImage:
         cc, colors = loaded_compare
         search_path = colors["red"][0]
         search_idx = cc.compare_data.files_found.index(search_path)
-        result = cc.find_similars_to_image(search_path, search_idx)
+        result = cc.find_similars_to_media(search_path, search_idx)
 
         matched = set(result[0].keys())
         assert matched.issubset(set(colors["red"])), (
@@ -311,7 +311,7 @@ class TestFindSimilarsToImage:
         cc, colors = loaded_compare
         search_path = colors["red"][0]
         search_idx = cc.compare_data.files_found.index(search_path)
-        cc.find_similars_to_image(search_path, search_idx)
+        cc.find_similars_to_media(search_path, search_idx)
 
         scores = list(cc.compare_result.files_grouped.values())
         assert scores == sorted(scores), "compare_result.files_grouped should be sorted"

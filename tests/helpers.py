@@ -35,7 +35,7 @@ class HangingVlcPlayer:
         # reliably trigger the abandon-and-replace path, not so long that the
         # thread (and the real player it wraps) stays alive across dozens of
         # later, unrelated tests and their Qt teardown.
-        time.sleep(5)
+        time.sleep(10)
 
     def set_media(self, _media):
         pass

@@ -254,14 +254,14 @@ def _apply_group(
 # ---------------------------------------------------------------------------
 
 def _apply_size(files: list, f: SizeFilter) -> list:
-    from compare.compare_size import extract_size_from_image  # local to avoid circular
+    from compare.compare_size import extract_size_from_media  # local to avoid circular
 
     total = len(files)
     passed = []
     unreadable = 0
 
     for fp in files:
-        dims = extract_size_from_image(fp)
+        dims = extract_size_from_media(fp)
         if dims is None:
             unreadable += 1
             logger.debug(f"SizeFilter: could not read dimensions of '{fp}' — excluded")

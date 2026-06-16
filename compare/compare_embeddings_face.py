@@ -32,10 +32,10 @@ class CompareEmbeddingFace(BaseCompareEmbedding):
         return insightface_loaded
 
     @staticmethod
-    def is_related(image1, image2):
+    def is_related(media1, media2):
         return BaseCompareEmbedding.is_related(
-            image1,
-            image2,
+            media1,
+            media2,
             image_embeddings_face,
         )
 

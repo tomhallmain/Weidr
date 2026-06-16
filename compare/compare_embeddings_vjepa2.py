@@ -37,10 +37,10 @@ class CompareEmbeddingVJepa2(BaseCompareEmbedding):
         self.multi_embedding_cache = CompareEmbeddingVJepa2.MULTI_EMBEDDING_CACHE
 
     @staticmethod
-    def is_related(image1, image2):
+    def is_related(media1, media2):
         return BaseCompareEmbedding.is_related(
-            image1,
-            image2,
+            media1,
+            media2,
             image_embeddings_vjepa2,
             sample_dynamic_media=False,
         )

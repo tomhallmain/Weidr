@@ -21,17 +21,17 @@ from utils.utils import Utils
 logger = get_logger("compare_size")
 
 
-def extract_size_from_image(image_path: str) -> Optional[Tuple[int, int]]:
+def extract_size_from_media(media_path: str) -> Optional[Tuple[int, int]]:
     """
-    Extract width and height from an image file.
+    Extract width and height from a media file.
     Returns (width, height) tuple or None if extraction fails.
     """
     try:
-        image_path = FrameCache.get_image_path(image_path)
+        image_path = FrameCache.get_image_path(media_path)
         with Image.open(image_path) as img:
             return img.size  # Returns (width, height)
     except Exception as e:
-        logger.error(f"Error extracting size from {image_path}: {e}")
+        logger.error(f"Error extracting size from {media_path}: {e}")
         return None
 
 
@@ -206,7 +206,7 @@ class CompareSize(BaseCompare):
             if f in self.compare_data.file_data_dict:
                 size = self.compare_data.file_data_dict[f]
             else:
-                size = extract_size_from_image(f)
+                size = extract_size_from_media(f)
                 if size is None:
                     # Skip files where size extraction fails
                     if self.verbose:
@@ -222,21 +222,21 @@ class CompareSize(BaseCompare):
         # Save size data
         self.compare_data.save_data(self.args.overwrite, verbose=self.verbose)
 
-    def find_similars_to_image(self, search_path, search_file_index):
+    def find_similars_to_media(self, search_path, search_file_index):
         '''
-        Search for images with similar sizes to the provided image.
+        Search for media with similar sizes to the provided media file.
         '''
         files_grouped = {}
         _files_found = list(self.compare_data.files_found)
 
         if self.verbose:
             logger.info("Identifying similar size files...")
-        
-        # Get the search image's size
+
+        # Get the search media's size
         if search_path in self.compare_data.file_data_dict:
             search_size = self.compare_data.file_data_dict[search_path]
         else:
-            search_size = extract_size_from_image(search_path)
+            search_size = extract_size_from_media(search_path)
             if search_size is None:
                 if self.verbose:
                     logger.warning(f"Could not extract size from search image {search_path}")
@@ -281,11 +281,11 @@ class CompareSize(BaseCompare):
 
         search_size = None
 
-        # If a search image is provided, extract its size
+        # If a search media file is provided, extract its size
         if self.args.search_media_path is not None:
-            search_size = extract_size_from_image(self.args.search_media_path)
+            search_size = extract_size_from_media(self.args.search_media_path)
             if search_size is None:
-                logger.error(f"Could not extract size from search image: {self.args.search_media_path}")
+                logger.error(f"Could not extract size from search media: {self.args.search_media_path}")
                 return files_grouped
 
         # If search text is provided, parse it as a size
@@ -368,16 +368,16 @@ class CompareSize(BaseCompare):
                 del self.compare_data.file_data_dict[f]
 
     @staticmethod
-    def is_related(image1, image2):
+    def is_related(media1, media2):
         """
-        Determine relation by comparing image sizes.
-        Images are considered related if they have the same dimensions.
+        Determine relation by comparing media sizes.
+        Media files are considered related if they have the same dimensions.
         """
         try:
-            size1 = extract_size_from_image(image1)
-            size2 = extract_size_from_image(image2)
+            size1 = extract_size_from_media(media1)
+            size2 = extract_size_from_media(media2)
         except OSError as e:
-            logger.error(f"{image1} or {image2} - {e}")
+            logger.error(f"{media1} or {media2} - {e}")
             raise AssertionError(
                 "Encountered an error accessing the provided file paths in the file system.")
         except Exception as e:

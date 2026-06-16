@@ -385,10 +385,10 @@ class BaseCompareEmbedding(BaseCompare):
                 self.compare_result.files_grouped[base_index] = (existing_group_index, diff_score)
 
 
-    def find_similars_to_image(self, search_path, search_file_index):
+    def find_similars_to_media(self, search_path, search_file_index):
         '''
-        Search the numpy array of all known image arrays for similar
-        characteristics to the provided image.
+        Search the numpy array of all known media embeddings for similar
+        characteristics to the provided media file.
         '''
         files_grouped = {}
         _files_found = list(self.compare_data.files_found)
@@ -468,7 +468,7 @@ class BaseCompareEmbedding(BaseCompare):
             self._file_embeddings = np.insert(self._file_embeddings, 0, [embedding], 0)
             self.compare_data.files_found.insert(0, search_media_path)
 
-        files_grouped = self.find_similars_to_image(
+        files_grouped = self.find_similars_to_media(
             search_media_path, self.compare_data.files_found.index(search_media_path))
         search_media_path = None
         return files_grouped
@@ -573,10 +573,10 @@ class BaseCompareEmbedding(BaseCompare):
         negative_embeddings = []
 
         if self.args.search_media_path is not None:
-            self._tokenize_image(self.args.search_media_path, positive_embeddings)
+            self._tokenize_media(self.args.search_media_path, positive_embeddings)
 
         if self.args.negative_search_media_path is not None:
-            self._tokenize_image(self.args.negative_search_media_path, negative_embeddings, "negative search image")
+            self._tokenize_media(self.args.negative_search_media_path, negative_embeddings, "negative search media")
 
         if self.args.search_text is not None and self.args.search_text.strip() != "":
             for text in self.args.search_text.split(","):
@@ -588,8 +588,8 @@ class BaseCompareEmbedding(BaseCompare):
 
         if len(positive_embeddings) == 0 and len(negative_embeddings) == 0:
             logger.error(f"Failed to generate embeddings.\n"
-                  f"search image = {self.args.search_media_path}\n"
-                  f"negative search image = {self.args.negative_search_media_path}\n"
+                  f"search media = {self.args.search_media_path}\n"
+                  f"negative search media = {self.args.negative_search_media_path}\n"
                   f"search text = {self.args.search_text}\n"
                   f"search text negative = {self.args.search_text_negative}")
             return files_grouped  # TODO better exception handling
@@ -658,18 +658,18 @@ class BaseCompareEmbedding(BaseCompare):
             raise AssertionError(
                 f"Encountered an error generating token embedding for {descriptor}")
 
-    def _tokenize_image(self, image_path, embeddings=[], descriptor="search image"):
+    def _tokenize_media(self, media_path, embeddings=[], descriptor="search media"):
         if self.verbose:
-            logger.info(f"Tokenizing {descriptor}: \"{image_path}\"")
+            logger.info(f"Tokenizing {descriptor}: \"{media_path}\"")
         try:
             embedding = self.compute_embedding_for_path(
-                image_path, self.image_embeddings_func,
+                media_path, self.image_embeddings_func,
                 sample_dynamic_media=not self.EMBEDS_DYNAMIC_MEDIA_NATIVELY,
             )
             embeddings.append(embedding)
         except OSError as e:
             if self.verbose:
-                logger.error(f"{image_path} - {e}")
+                logger.error(f"{media_path} - {e}")
             raise AssertionError(
                 "Encountered an error accessing the provided file path in the file system.")
 
@@ -726,40 +726,40 @@ class BaseCompareEmbedding(BaseCompare):
         return text_embedding
 
     @staticmethod
-    def single_text_compare(image_path, texts_dict, image_embeddings_func, text_cache, text_embeddings_func, sample_dynamic_media=True):
-        logger.info(f"Running text comparison for \"{image_path}\" - text = {texts_dict}")
+    def single_text_compare(media_path, texts_dict, image_embeddings_func, text_cache, text_embeddings_func, sample_dynamic_media=True):
+        logger.info(f"Running text comparison for \"{media_path}\" - text = {texts_dict}")
         similarities = {}
         try:
-            image_embedding = BaseCompareEmbedding.compute_embedding_for_path(
-                image_path, image_embeddings_func, sample_dynamic_media=sample_dynamic_media)
+            media_embedding = BaseCompareEmbedding.compute_embedding_for_path(
+                media_path, image_embeddings_func, sample_dynamic_media=sample_dynamic_media)
         except OSError as e:
-            logger.error(f"{image_path} - {e}")
+            logger.error(f"{media_path} - {e}")
             raise AssertionError(
-                f"Encountered an error accessing the provided file path {image_path} in the file system.")
+                f"Encountered an error accessing the provided file path {media_path} in the file system.")
         for key, text in texts_dict.items():
-            similarities[key] = embedding_similarity(image_embedding, BaseCompareEmbedding._get_text_embedding_from_cache(text, text_cache, text_embeddings_func))
+            similarities[key] = embedding_similarity(media_embedding, BaseCompareEmbedding._get_text_embedding_from_cache(text, text_cache, text_embeddings_func))
         return similarities
 
     @staticmethod
-    def multi_text_compare(image_path, positives, negatives, image_embeddings_func, text_cache, text_embeddings_func, multi_cache, threshold=0.3, sample_dynamic_media=True):
-        key = (image_path, "::p", tuple(positives), "::n", tuple(negatives))
+    def multi_text_compare(media_path, positives, negatives, image_embeddings_func, text_cache, text_embeddings_func, multi_cache, threshold=0.3, sample_dynamic_media=True):
+        key = (media_path, "::p", tuple(positives), "::n", tuple(negatives))
         if key in multi_cache:
             return bool(multi_cache[key] > threshold)
         positive_similarities = []
         negative_similarities = []
         try:
-            image_embedding = BaseCompareEmbedding.compute_embedding_for_path(
-                image_path, image_embeddings_func, sample_dynamic_media=sample_dynamic_media)
+            media_embedding = BaseCompareEmbedding.compute_embedding_for_path(
+                media_path, image_embeddings_func, sample_dynamic_media=sample_dynamic_media)
         except OSError as e:
-            logger.error(f"{image_path} - {e}")
+            logger.error(f"{media_path} - {e}")
             raise AssertionError(
-                f"Encountered an error accessing the provided file path {image_path} in the file system.")
+                f"Encountered an error accessing the provided file path {media_path} in the file system.")
 
         for text in positives:
-            similarity = embedding_similarity(image_embedding, BaseCompareEmbedding._get_text_embedding_from_cache(text, text_cache, text_embeddings_func))
+            similarity = embedding_similarity(media_embedding, BaseCompareEmbedding._get_text_embedding_from_cache(text, text_cache, text_embeddings_func))
             positive_similarities.append(float(similarity[0]))
         for text in negatives:
-            similarity = embedding_similarity(image_embedding, BaseCompareEmbedding._get_text_embedding_from_cache(text, text_cache, text_embeddings_func))
+            similarity = embedding_similarity(media_embedding, BaseCompareEmbedding._get_text_embedding_from_cache(text, text_cache, text_embeddings_func))
             negative_similarities.append(1/float(similarity[0]))
 
         combined_positive_similarity = sum(positive_similarities)/max(len(positive_similarities),1)
@@ -774,14 +774,14 @@ class BaseCompareEmbedding(BaseCompare):
         return combined_similarity > threshold
 
     @staticmethod
-    def is_related(image1, image2, image_embeddings_func, sample_dynamic_media=True):
+    def is_related(media1, media2, image_embeddings_func, sample_dynamic_media=True):
         try:
             emb1 = BaseCompareEmbedding.compute_embedding_for_path(
-                image1, image_embeddings_func, sample_dynamic_media=sample_dynamic_media)
+                media1, image_embeddings_func, sample_dynamic_media=sample_dynamic_media)
             emb2 = BaseCompareEmbedding.compute_embedding_for_path(
-                image2, image_embeddings_func, sample_dynamic_media=sample_dynamic_media)
+                media2, image_embeddings_func, sample_dynamic_media=sample_dynamic_media)
         except OSError as e:
-            logger.error(f"{image1} - {e}")
+            logger.error(f"{media1} - {e}")
             raise AssertionError(
                 "Encountered an error accessing the provided file paths in the file system.")
         similarity = embedding_similarity(emb1, emb2)[0]

@@ -303,10 +303,10 @@ class CompareColors(BaseCompare):
         else:
             return similars
 
-    def find_similars_to_image(self, search_path, search_file_index):
+    def find_similars_to_media(self, search_path, search_file_index):
         '''
-        Search the numpy array of all known image arrays for similar
-        characteristics to the provide image.
+        Search the numpy array of all known media color arrays for similar
+        characteristics to the provided media file.
         '''
         files_grouped = {}
         _files_found = list(self.compare_data.files_found)
@@ -386,7 +386,7 @@ class CompareColors(BaseCompare):
             self._file_colors = np.insert(self._file_colors, 0, [colors], 0)
             self.compare_data.files_found.insert(0, search_media_path)
 
-        files_grouped = self.find_similars_to_image(
+        files_grouped = self.find_similars_to_media(
             search_media_path, self.compare_data.files_found.index(search_media_path))
         search_media_path = None
         return files_grouped
@@ -547,7 +547,7 @@ class CompareColors(BaseCompare):
                 self.compare_data.files_found.remove(f)
 
     @staticmethod
-    def is_related(image1, image2):
+    def is_related(media1, media2):
         # TODO implement this method for this compare mode
         return False
 

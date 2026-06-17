@@ -597,8 +597,10 @@ class FrameCache:
                     media_type="pdf", total_items=len(pdf)
                 )
                 page = pdf[0]
-                # Use a higher scale for better quality
-                image = page.render(scale=4).to_pil()
+                # Use a higher scale for better quality. Fill with white so pages
+                # with no background specification (e.g. Wikipedia print exports)
+                # are readable on dark-themed UIs.
+                image = page.render(scale=4, fill_color=(255, 255, 255, 255)).to_pil()
                 
                 mh = _stable_media_path_hash(pdf_path)
                 frame_path = os.path.join(cls.temporary_directory.name, f"{mh}_first.jpg")
@@ -626,7 +628,10 @@ class FrameCache:
             mh = _stable_media_path_hash(svg_path)
             frame_path = os.path.join(cls.temporary_directory.name, f"{mh}.png")
             
-            # Convert SVG to PNG using cairosvg
+            # Convert SVG to PNG using cairosvg.
+            # NOTE: passing background_color="white" here would fix transparent-background
+            # SVGs on dark UIs, but many SVGs intentionally use transparency for compositing
+            # so it is left unset for now.
             cairosvg.svg2png(url=svg_path, write_to=frame_path)
             cls.cache[svg_path] = frame_path
         except Exception as e:
@@ -1489,7 +1494,7 @@ class FrameCache:
             try:
                 for page_index in page_indices:
                     page = pdf_ref[page_index]
-                    image = page.render(scale=4).to_pil()
+                    image = page.render(scale=4, fill_color=(255, 255, 255, 255)).to_pil()
                     page_path = os.path.join(
                         cls.temporary_directory.name,
                         f"{media_hash}_sample_page_{page_index}.jpg",

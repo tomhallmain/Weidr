@@ -352,6 +352,16 @@ class MediaFrame(QFrame):
             reader.setScaledSize(target_size)
         img = reader.read()
         if not img.isNull():
+            # Qt's native PDF renderer produces ARGB images with a transparent
+            # background. Composite onto white before display so text is readable
+            # on dark-themed UIs.
+            if path.lower().endswith('.pdf') and img.hasAlphaChannel():
+                white = QImage(img.size(), QImage.Format.Format_RGB32)
+                white.fill(QColor(255, 255, 255))
+                p = QPainter(white)
+                p.drawImage(0, 0, img)
+                p.end()
+                img = white
             if not (_PIL_AVAILABLE and prefer_hq_downscale and source_dims and self._should_use_hq_downscale(source_dims, target_size)):
                 return img
         if _PIL_AVAILABLE:

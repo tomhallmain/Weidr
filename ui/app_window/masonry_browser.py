@@ -205,10 +205,18 @@ class MasonryTile(QFrame):
         inner.setContentsMargins(3, 3, 3, 3)
         inner.setSpacing(2)
 
-        # Image area — starts as a square placeholder, resizes after load
+        # Image area — pre-sized to the actual aspect ratio so that no layout
+        # reflow (and no filename-label flit) occurs when the thumbnail arrives.
+        # QImageReader.size() reads only the image header — no full decode.
+        w = tile_width - 6
+        pre_h = w  # square fallback
+        reader = QImageReader(filepath)
+        native = reader.size()
+        if native.isValid() and native.width() > 0:
+            pre_h = max(30, min(int(native.height() * w / native.width()), THUMB_MAX_DIM * 2))
         self._img_label = QLabel()
         self._img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._img_label.setFixedSize(tile_width - 6, tile_width - 6)
+        self._img_label.setFixedSize(w, pre_h)
         self._img_label.setStyleSheet(f"background-color: {AppStyle.BG_INPUT};")
         inner.addWidget(self._img_label)
 
@@ -249,10 +257,14 @@ class MasonryTile(QFrame):
         w = self._tile_width - 6
         # Always scale to tile width — scales both down and up to fill the cell
         pixmap = pixmap.scaledToWidth(w, Qt.TransformationMode.SmoothTransformation)
-        self._img_label.setPixmap(pixmap)
-        # Adjust label height to match the actual thumbnail aspect ratio
         h = max(30, min(pixmap.height(), THUMB_MAX_DIM * 2))
-        self._img_label.setFixedSize(w, h)
+        # Only resize if pre-sizing from the image header produced a different
+        # result (e.g. header unavailable so the square fallback was used).
+        # Skipping the call when dimensions match avoids a spurious layout
+        # reflow and the filename-label flit that comes with it.
+        if self._img_label.size() != QSize(w, h):
+            self._img_label.setFixedSize(w, h)
+        self._img_label.setPixmap(pixmap)
 
     def mousePressEvent(self, event) -> None:  # noqa: N802
         if event.button() == Qt.MouseButton.LeftButton:
@@ -444,23 +456,25 @@ class MasonryBrowser(QWidget):
 
     def _rebuild_tiles(self) -> None:
         """Clear existing tiles and build the grid for the current page."""
-        self._clear()
-
-        new_columns = self._compute_columns(self._scroll_area.viewport().width())
-        if new_columns != self._columns:
-            self._reset_columns(new_columns)
-
-        self._col_heights = [0] * self._columns
-
-        start = self._page * PAGE_SIZE
-        end = start + PAGE_SIZE
-        page_files = self._all_files[start:end]
-
-        tile_width = self._compute_tile_width()
-
-        # Suppress intermediate repaints and layout passes during bulk creation.
+        # Suppress all repaints for the entire clear→column-reset→populate
+        # sequence so the canvas never appears momentarily empty or with the
+        # wrong column count (the "flitting columns" artefact).
         self._canvas.setUpdatesEnabled(False)
         try:
+            self._clear()
+
+            new_columns = self._compute_columns(self._scroll_area.viewport().width())
+            if new_columns != self._columns:
+                self._reset_columns(new_columns)
+
+            self._col_heights = [0] * self._columns
+
+            start = self._page * PAGE_SIZE
+            end = start + PAGE_SIZE
+            page_files = self._all_files[start:end]
+
+            tile_width = self._compute_tile_width()
+
             for filepath in page_files:
                 col_idx = self._col_heights.index(min(self._col_heights))
                 tile = MasonryTile(filepath, tile_width, parent=self._col_widgets[col_idx])
@@ -488,15 +502,11 @@ class MasonryBrowser(QWidget):
         # Drop queued-but-not-started tasks before touching the tile list so
         # cancelled tasks do not race with the new populate() call.
         _get_thumb_pool().clear()
-        self._canvas.setUpdatesEnabled(False)
-        try:
-            for tile in self._tiles:
-                tile._cancelled = True
-                tile.setParent(None)  # detaches from column layout immediately
-                tile.deleteLater()
-            self._tiles.clear()
-        finally:
-            self._canvas.setUpdatesEnabled(True)
+        for tile in self._tiles:
+            tile._cancelled = True
+            tile.setParent(None)  # detaches from column layout immediately
+            tile.deleteLater()
+        self._tiles.clear()
         self._col_heights = [0] * self._columns
 
     def _highlight_current(self) -> None:

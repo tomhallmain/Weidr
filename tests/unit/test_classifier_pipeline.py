@@ -16,10 +16,13 @@ from compare.classifier_pipeline import (
     MediaTypeCondition,
     PrototypeCondition,
     PromptCondition,
+    FilenameContainsCondition,
     LookaheadCondition,
     NodeResultCondition,
     CompositeCondition,
     RelatedImageCondition,
+    GroupCondition,
+    GroupChildResultCondition,
     _condition_from_dict,
     # Outcome
     NodeOutcome,
@@ -159,6 +162,44 @@ class TestConditionSerialization:
         assert c2.edit_suffix == "_v2"
         assert c2.search_directory == ""
         assert c2.count_threshold == 1
+
+    def test_group_roundtrip(self):
+        child = PipelineNode(
+            name="c1",
+            condition=FilenameContainsCondition(["draft"], case_sensitive=True),
+        )
+        c = GroupCondition(operator="AND", nodes=[child])
+        c2 = _condition_from_dict(c.to_dict())
+        assert isinstance(c2, GroupCondition)
+        assert c2.operator == "AND"
+        assert len(c2.nodes) == 1
+        assert c2.nodes[0].name == "c1"
+        assert isinstance(c2.nodes[0].condition, FilenameContainsCondition)
+        assert c2.nodes[0].condition.patterns == ["draft"]
+        assert c2.nodes[0].condition.case_sensitive is True
+
+    def test_group_defaults(self):
+        c = GroupCondition()
+        assert c.operator == "OR"
+        assert c.nodes == []
+
+    def test_group_child_result_roundtrip(self):
+        c = GroupChildResultCondition(
+            group_node_name="grp",
+            child_node_name="child_a",
+            expected_result=False,
+        )
+        c2 = _condition_from_dict(c.to_dict())
+        assert isinstance(c2, GroupChildResultCondition)
+        assert c2.group_node_name == "grp"
+        assert c2.child_node_name == "child_a"
+        assert c2.expected_result is False
+
+    def test_group_child_result_defaults(self):
+        c = GroupChildResultCondition()
+        assert c.group_node_name == ""
+        assert c.child_node_name == ""
+        assert c.expected_result is True
 
     def test_unknown_condition_type_raises(self):
         with pytest.raises(ValueError, match="Unknown condition_type"):
@@ -306,7 +347,7 @@ class TestPrevalidationPipeline:
 
 class TestClassifierPipelinesStorage:
     def test_load_empty(self):
-        ClassifierPipelines.store()  # write [] to cache so key exists — distinguishes from first-run
+        ClassifierPipelines.store()
         ClassifierPipelines.load()
         assert ClassifierPipelines.pipelines == []
 
@@ -573,6 +614,150 @@ class TestValidation:
         errors = [e for e in p.validate() if "action_modifier" in e]
         assert errors == []
 
+    def test_group_no_children_fails(self):
+        p = _simple_pipeline(_make_node("n1", GroupCondition(operator="OR", nodes=[])))
+        errors = p.validate()
+        assert any("no child" in e.lower() for e in errors)
+
+    def test_group_bad_operator_fails(self):
+        child = PipelineNode("c1", FilenameContainsCondition(["x"]))
+        p = _simple_pipeline(_make_node("n1", GroupCondition(operator="XOR", nodes=[child])))
+        errors = p.validate()
+        assert any("operator" in e.lower() for e in errors)
+
+    def test_group_duplicate_child_names_fails(self):
+        p = _simple_pipeline(_make_node("n1", GroupCondition(operator="OR", nodes=[
+            PipelineNode("dup", FilenameContainsCondition(["a"])),
+            PipelineNode("dup", FilenameContainsCondition(["b"])),
+        ])))
+        errors = p.validate()
+        assert any("duplicate" in e.lower() for e in errors)
+
+    def test_group_valid_passes(self):
+        p = _simple_pipeline(_make_node("n1", GroupCondition(operator="OR", nodes=[
+            PipelineNode("c1", FilenameContainsCondition(["draft"])),
+            PipelineNode("c2", EmbeddingCondition(["portrait"])),
+        ])))
+        errors = p.validate()
+        assert errors == []
+
+    def test_group_child_result_no_group_name_fails(self):
+        p = _simple_pipeline(_make_node("n1", GroupChildResultCondition(
+            group_node_name="", child_node_name="c1"
+        )))
+        errors = p.validate()
+        assert any("group_node_name" in e for e in errors)
+
+    def test_group_child_result_no_child_name_fails(self):
+        p = _simple_pipeline(_make_node("n1", GroupChildResultCondition(
+            group_node_name="grp", child_node_name=""
+        )))
+        errors = p.validate()
+        assert any("child_node_name" in e for e in errors)
+
+    def test_group_child_result_references_non_prior_group_fails(self):
+        # "grp" doesn't exist as a prior node at all
+        p = _simple_pipeline(_make_node("n1", GroupChildResultCondition(
+            group_node_name="grp", child_node_name="c1"
+        )))
+        errors = p.validate()
+        assert any("grp" in e for e in errors)
+
+    def test_group_child_result_valid_when_prior_group_exists(self):
+        group_node = _make_node("grp", GroupCondition(operator="OR", nodes=[
+            PipelineNode("c1", FilenameContainsCondition(["x"])),
+        ]))
+        check_node = _make_node("check", GroupChildResultCondition(
+            group_node_name="grp", child_node_name="c1", expected_result=True
+        ))
+        p = _simple_pipeline(group_node, check_node)
+        assert p.validate() == []
+
+
+# ---------------------------------------------------------------------------
+# Demo pipeline
+# ---------------------------------------------------------------------------
+
+class TestDemoPipeline:
+    def test_node_count(self):
+        demo = ClassifierPipelines.build_demo_pipeline()
+        assert len(demo.nodes) == 9
+
+    def test_is_inactive(self):
+        demo = ClassifierPipelines.build_demo_pipeline()
+        assert demo.is_active is False
+
+    def test_all_condition_types_present(self):
+        # ClassifierRankCondition and LookaheadCondition are intentionally excluded from
+        # the demo because their validators require runtime-registered resources
+        # (classifiers and lookaheads) that don't exist outside a configured session.
+        demo = ClassifierPipelines.build_demo_pipeline()
+        top_level_types = {
+            getattr(n.condition, "condition_type", None) for n in demo.nodes
+        }
+        expected = {
+            "media_type", "group", "group_child_result", "embedding",
+            "composite", "prototype", "node_result", "related_image",
+        }
+        assert expected <= top_level_types, (
+            f"Missing condition types: {expected - top_level_types}"
+        )
+
+    def test_group_node_has_filename_contains_children(self):
+        demo = ClassifierPipelines.build_demo_pipeline()
+        group_nodes = [n for n in demo.nodes
+                       if getattr(n.condition, "condition_type", None) == "group"]
+        assert group_nodes, "Expected at least one GroupCondition node"
+        child_types = {
+            getattr(c.condition, "condition_type", None)
+            for n in group_nodes for c in n.condition.nodes
+        }
+        assert "filename_contains" in child_types
+
+    def test_composite_contains_embedding_and_prompt(self):
+        demo = ClassifierPipelines.build_demo_pipeline()
+        composite_nodes = [n for n in demo.nodes
+                           if getattr(n.condition, "condition_type", None) == "composite"]
+        assert composite_nodes
+        sub_types = {
+            getattr(s, "condition_type", None)
+            for n in composite_nodes for s in n.condition.sub_conditions
+        }
+        assert "embedding" in sub_types
+        assert "prompt" in sub_types
+
+    def test_all_outcome_types_present(self):
+        demo = ClassifierPipelines.build_demo_pipeline()
+        outcome_types = set()
+        for node in demo.nodes:
+            outcome_types.add(node.on_match.outcome_type)
+            outcome_types.add(node.on_no_match.outcome_type)
+        assert OutcomeType.CONTINUE in outcome_types
+        assert OutcomeType.GOTO in outcome_types
+        assert OutcomeType.EXECUTE in outcome_types
+        assert OutcomeType.ACCEPT in outcome_types
+        assert OutcomeType.REJECT in outcome_types
+
+    def test_validates_without_errors(self):
+        demo = ClassifierPipelines.build_demo_pipeline()
+        errors = demo.validate()
+        assert errors == [], f"Demo pipeline has validation errors: {errors}"
+
+    def test_roundtrip(self):
+        demo = ClassifierPipelines.build_demo_pipeline()
+        demo2 = ClassifierPipeline.from_dict(demo.to_dict())
+        assert demo2.name == demo.name
+        assert len(demo2.nodes) == len(demo.nodes)
+        for orig, restored in zip(demo.nodes, demo2.nodes):
+            assert orig.name == restored.name
+            assert orig.condition.condition_type == restored.condition.condition_type
+
+    def test_flow_summary_contains_all_node_names(self):
+        demo = ClassifierPipelines.build_demo_pipeline()
+        summary = demo.flow_summary()
+        for node in demo.nodes:
+            assert node.name in summary
+
 
 # ---------------------------------------------------------------------------
 # Flow preview
@@ -635,10 +820,36 @@ class TestSummaries:
             CompositeCondition("OR", [EmbeddingCondition(), PromptCondition()]),
             MediaTypeCondition([CompareMediaType.IMAGE, CompareMediaType.GIF]),
             RelatedImageCondition(edit_suffix="_edit", count_threshold=2),
+            GroupCondition(operator="AND", nodes=[
+                PipelineNode("c1", FilenameContainsCondition(["x"])),
+                PipelineNode("c2", EmbeddingCondition(["y"])),
+            ]),
+            GroupChildResultCondition(
+                group_node_name="grp", child_node_name="c1", expected_result=True
+            ),
         ]
         for c in conditions:
             assert isinstance(c.summary(), str)
             assert len(c.summary()) > 0
+
+    def test_group_summary_contains_operator_and_child_names(self):
+        c = GroupCondition(operator="OR", nodes=[
+            PipelineNode("alpha", FilenameContainsCondition(["x"])),
+            PipelineNode("beta", EmbeddingCondition(["y"])),
+        ])
+        s = c.summary()
+        assert "OR" in s
+        assert "alpha" in s
+        assert "beta" in s
+
+    def test_group_child_result_summary_contains_names(self):
+        c = GroupChildResultCondition(
+            group_node_name="my_group", child_node_name="child_x", expected_result=False
+        )
+        s = c.summary()
+        assert "my_group" in s
+        assert "child_x" in s
+        assert "False" in s
 
     def test_pipeline_node_condition_summary(self):
         node = _make_node("n", EmbeddingCondition(["test"]))

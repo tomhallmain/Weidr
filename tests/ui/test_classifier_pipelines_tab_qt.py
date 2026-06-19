@@ -157,7 +157,7 @@ class TestRowRendering:
 
 class TestRefresh:
     def test_refresh_adds_new_row(self, qtbot, isolated_singletons):
-        ClassifierPipelines.store()  # persist [] so load() skips demo pipeline
+        ClassifierPipelines.store()
         tab = _make_tab(qtbot)
         assert _row_count(tab) == 0
         ClassifierPipelines.add_pipeline(_make_pipeline("new_one"))
@@ -232,6 +232,7 @@ class TestDuplicate:
     def test_duplicate_adds_pipeline(self, qtbot, isolated_singletons):
         p = _make_pipeline("original")
         ClassifierPipelines.add_pipeline(p)
+        ClassifierPipelines.store()
         tab = _make_tab(qtbot)
         tab._duplicate(p)
         assert len(ClassifierPipelines.get_all_pipelines()) == 2
@@ -269,6 +270,7 @@ class TestDuplicate:
     def test_duplicate_stores_to_cache(self, qtbot, isolated_singletons):
         p = _make_pipeline("dup_store")
         ClassifierPipelines.add_pipeline(p)
+        ClassifierPipelines.store()
         tab = _make_tab(qtbot)
         tab._duplicate(p)
         ClassifierPipelines.pipelines = []
@@ -368,6 +370,45 @@ class TestMoveDown:
         ClassifierPipelines.load()
         names = [p.name for p in ClassifierPipelines.get_all_pipelines()]
         assert names == ["mv_b", "mv_a"]
+
+
+# ---------------------------------------------------------------------------
+# _load_demo
+# ---------------------------------------------------------------------------
+
+class TestLoadDemo:
+    def test_load_demo_inserts_pipeline(self, qtbot, isolated_singletons):
+        tab = _make_tab(qtbot)
+        assert len(ClassifierPipelines.get_all_pipelines()) == 0
+        tab._load_demo()
+        assert len(ClassifierPipelines.get_all_pipelines()) == 1
+
+    def test_load_demo_rebuilds_rows(self, qtbot, isolated_singletons):
+        tab = _make_tab(qtbot)
+        assert _row_count(tab) == 0
+        tab._load_demo()
+        assert _row_count(tab) == 1
+
+    def test_load_demo_stores_to_cache(self, qtbot, isolated_singletons):
+        tab = _make_tab(qtbot)
+        tab._load_demo()
+        ClassifierPipelines.pipelines = []
+        ClassifierPipelines.load()
+        assert len(ClassifierPipelines.get_all_pipelines()) == 1
+
+    def test_load_demo_twice_deduplicates_name(self, qtbot, isolated_singletons):
+        tab = _make_tab(qtbot)
+        tab._load_demo()
+        tab._load_demo()
+        names = [p.name for p in ClassifierPipelines.get_all_pipelines()]
+        assert len(names) == len(set(names)), f"Duplicate names: {names}"
+        assert len(names) == 2
+
+    def test_load_demo_is_inactive(self, qtbot, isolated_singletons):
+        tab = _make_tab(qtbot)
+        tab._load_demo()
+        demo = ClassifierPipelines.get_all_pipelines()[0]
+        assert demo.is_active is False
 
 
 # ---------------------------------------------------------------------------

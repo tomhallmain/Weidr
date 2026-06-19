@@ -18,6 +18,8 @@ from compare.classifier_pipeline import (
     CompositeCondition,
     EmbeddingCondition,
     FilenameContainsCondition,
+    GroupCondition,
+    GroupChildResultCondition,
     LookaheadCondition,
     MediaTypeCondition,
     NodeOutcome,
@@ -33,6 +35,7 @@ from compare.classifier_pipeline_runner import (
     _eval_classifier_rank,
     _eval_composite,
     _eval_filename_contains,
+    _eval_group,
     _eval_lookahead,
     _eval_media_type,
     _eval_prompt,
@@ -934,6 +937,166 @@ class TestRelatedImageConditionRunner:
             run_pipeline(p, IMAGE, ActionCallbacks(), base_directory="/pipeline_base")
 
         assert captured == ["/pipeline_base"]
+
+
+# ---------------------------------------------------------------------------
+# GroupCondition / GroupChildResultCondition
+# ---------------------------------------------------------------------------
+
+class TestGroupConditionRunner:
+    def _group(self, operator="OR", children=None):
+        """Build a GroupCondition with FilenameContains children (no ML deps)."""
+        nodes = [
+            PipelineNode(name, FilenameContainsCondition([name], case_sensitive=False))
+            for name in (children or [])
+        ]
+        return GroupCondition(operator=operator, nodes=nodes)
+
+    def test_or_any_child_matches(self):
+        cond = self._group("OR", ["alpha", "beta"])
+        nr, ns = {}, {}
+        result, _ = _eval_group(cond, "grp", "/path/alpha_image.jpg", nr, ns, None)
+        assert result is True
+        assert nr["grp/alpha"] is True
+        assert nr["grp/beta"] is False
+
+    def test_or_no_child_matches(self):
+        cond = self._group("OR", ["alpha", "beta"])
+        nr, ns = {}, {}
+        result, _ = _eval_group(cond, "grp", "/path/gamma.jpg", nr, ns, None)
+        assert result is False
+        assert nr["grp/alpha"] is False
+        assert nr["grp/beta"] is False
+
+    def test_and_all_match(self):
+        cond = self._group("AND", ["alpha", "beta"])
+        nr, ns = {}, {}
+        result, _ = _eval_group(cond, "grp", "/path/alpha_beta.jpg", nr, ns, None)
+        assert result is True
+
+    def test_and_one_fails(self):
+        cond = self._group("AND", ["alpha", "beta"])
+        nr, ns = {}, {}
+        result, _ = _eval_group(cond, "grp", "/path/alpha_only.jpg", nr, ns, None)
+        assert result is False
+        assert nr["grp/alpha"] is True
+        assert nr["grp/beta"] is False
+
+    def test_all_children_evaluated_no_short_circuit(self):
+        """OR does not short-circuit: all child results must be stored."""
+        cond = self._group("OR", ["a", "b", "c"])
+        nr, ns = {}, {}
+        _eval_group(cond, "g", "/path/a_image.jpg", nr, ns, None)
+        assert "g/a" in nr
+        assert "g/b" in nr
+        assert "g/c" in nr
+
+    def test_child_exception_treated_as_false(self, monkeypatch):
+        import compare.compare_embeddings_clip as clip_mod
+        monkeypatch.setattr(
+            clip_mod.CompareEmbeddingClip, "multi_text_compare",
+            staticmethod(lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("boom"))),
+        )
+        cond = GroupCondition(operator="OR", nodes=[
+            PipelineNode("exploding", EmbeddingCondition(["x"])),
+            PipelineNode("safe", FilenameContainsCondition(["safe"])),
+        ])
+        nr, ns = {}, {}
+        result, _ = _eval_group(cond, "g", "/path/safe.jpg", nr, ns, None)
+        assert nr["g/exploding"] is False
+        assert nr["g/safe"] is True
+        assert result is True  # OR: at least one matched
+
+    def test_dispatches_via_evaluate_condition(self):
+        cond = self._group("OR", ["draft"])
+        nr, ns = {}, {}
+        result, _ = _evaluate_condition(cond, "/path/draft.jpg", nr, ns, node_name="grp")
+        assert result is True
+        assert nr["grp/draft"] is True
+
+    def test_group_child_result_match(self):
+        cond = GroupChildResultCondition("grp", "alpha", expected_result=True)
+        result, score = _evaluate_condition(cond, IMAGE, {"grp/alpha": True}, {})
+        assert result is True
+        assert score == pytest.approx(1.0)
+
+    def test_group_child_result_expected_false(self):
+        cond = GroupChildResultCondition("grp", "alpha", expected_result=False)
+        result, _ = _evaluate_condition(cond, IMAGE, {"grp/alpha": False}, {})
+        assert result is True
+
+    def test_group_child_result_mismatch(self):
+        cond = GroupChildResultCondition("grp", "alpha", expected_result=True)
+        result, _ = _evaluate_condition(cond, IMAGE, {"grp/alpha": False}, {})
+        assert result is False
+
+    def test_group_child_result_missing_key(self):
+        cond = GroupChildResultCondition("grp", "ghost", expected_result=True)
+        result, _ = _evaluate_condition(cond, IMAGE, {}, {})
+        assert result is False
+
+    def test_run_pipeline_routes_on_child_match(self):
+        """Group stores child results; downstream GroupChildResult routes correctly."""
+        n_group = PipelineNode(
+            name="hints",
+            condition=GroupCondition(operator="OR", nodes=[
+                PipelineNode("hide", FilenameContainsCondition(["_hide"])),
+                PipelineNode("keep", FilenameContainsCondition(["_keep"])),
+            ]),
+            on_match=NodeOutcome.continue_(),
+            on_no_match=NodeOutcome.continue_(),
+        )
+        n_check = PipelineNode(
+            name="act_on_hide",
+            condition=GroupChildResultCondition("hints", "hide", expected_result=True),
+            on_match=NodeOutcome(OutcomeType.EXECUTE, action_type=ClassifierActionType.HIDE),
+            on_no_match=NodeOutcome.accept(),
+        )
+        p = ClassifierPipeline(name="t", nodes=[n_group, n_check])
+        calls, hide, _, _, _ = _callbacks()
+        result = run_pipeline(p, "/photos/cat_hide.jpg",
+                              ActionCallbacks(hide_callback=hide))
+        assert result == ClassifierActionType.HIDE
+        assert "/photos/cat_hide.jpg" in calls["hide"]
+
+    def test_run_pipeline_child_no_match_accepts(self):
+        """Non-matching child → GroupChildResult no_match → ACCEPT."""
+        n_group = PipelineNode(
+            name="hints",
+            condition=GroupCondition(operator="OR", nodes=[
+                PipelineNode("hide", FilenameContainsCondition(["_hide"])),
+                PipelineNode("keep", FilenameContainsCondition(["_keep"])),
+            ]),
+            on_match=NodeOutcome.continue_(),
+            on_no_match=NodeOutcome.continue_(),
+        )
+        n_check = PipelineNode(
+            name="act_on_hide",
+            condition=GroupChildResultCondition("hints", "hide", expected_result=True),
+            on_match=NodeOutcome(OutcomeType.EXECUTE, action_type=ClassifierActionType.HIDE),
+            on_no_match=NodeOutcome.accept(),
+        )
+        p = ClassifierPipeline(name="t", nodes=[n_group, n_check])
+        result = run_pipeline(p, "/photos/cat_keep.jpg", ActionCallbacks())
+        assert result is None  # accepted
+
+    def test_run_pipeline_and_group_all_must_match(self):
+        """AND group only matches when both children match."""
+        n_group = PipelineNode(
+            name="grp",
+            condition=GroupCondition(operator="AND", nodes=[
+                PipelineNode("a", FilenameContainsCondition(["_a_"])),
+                PipelineNode("b", FilenameContainsCondition(["_b_"])),
+            ]),
+            on_match=NodeOutcome(OutcomeType.EXECUTE, action_type=ClassifierActionType.NOTIFY),
+            on_no_match=NodeOutcome.accept(),
+        )
+        p = ClassifierPipeline(name="t", nodes=[n_group])
+        calls, _, notify, _, _ = _callbacks()
+        cb = ActionCallbacks(notify_callback=notify)
+
+        assert run_pipeline(p, "/path/_a_.jpg", cb) is None        # only a matches
+        assert run_pipeline(p, "/path/_a__b_.jpg", cb) == ClassifierActionType.NOTIFY
 
 
 # ---------------------------------------------------------------------------

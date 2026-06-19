@@ -267,6 +267,68 @@ class RelatedImageCondition:
         return f"RelatedImage(suffix={self.edit_suffix!r}, threshold={self.count_threshold})"
 
 
+@dataclass
+class GroupCondition:
+    """
+    An ordered group of child PipelineNodes evaluated as a unit.
+
+    Each child's condition is evaluated independently and its result is stored
+    in the shared node_results dict under the key ``"<outer_node>/<child_name>"``.
+    The group's own boolean result is OR (any child matched) or AND (all matched).
+
+    Child node on_match / on_no_match outcomes are intentionally ignored — routing
+    is controlled by the outer pipeline node that holds this condition.
+    """
+    condition_type: ClassVar[str] = "group"
+    VALID_OPERATORS: ClassVar[set] = {"OR", "AND"}
+
+    operator: str = "OR"
+    nodes: Optional[list] = None   # list[PipelineNode]
+
+    def __post_init__(self):
+        self.nodes = list(self.nodes) if self.nodes else []
+
+    def to_dict(self) -> dict:
+        return {
+            "condition_type": self.condition_type,
+            "operator": self.operator,
+            "nodes": [n.to_dict() for n in self.nodes],
+        }
+
+    def summary(self) -> str:
+        n = len(self.nodes)
+        names = ", ".join(c.name for c in self.nodes[:3])
+        suffix = f", +{n - 3}" if n > 3 else ""
+        return f"Group({self.operator}: {names}{suffix})"
+
+
+@dataclass
+class GroupChildResultCondition:
+    """
+    Checks the stored result of a specific child node inside a prior group node.
+
+    The runner stores child results under ``"<group_node_name>/<child_name>"``
+    so this condition can look them up without any extra runtime state.
+    """
+    condition_type: ClassVar[str] = "group_child_result"
+
+    group_node_name: str = ""
+    child_node_name: str = ""
+    expected_result: bool = True
+
+    def to_dict(self) -> dict:
+        return {
+            "condition_type": self.condition_type,
+            "group_node_name": self.group_node_name,
+            "child_node_name": self.child_node_name,
+            "expected_result": self.expected_result,
+        }
+
+    def summary(self) -> str:
+        val = "True" if self.expected_result else "False"
+        return f"GroupChild({self.group_node_name}/{self.child_node_name}={val})"
+
+
 # Union type alias (informational only — Python does not enforce it at runtime)
 NodeCondition = (
     EmbeddingCondition
@@ -279,6 +341,8 @@ NodeCondition = (
     | NodeResultCondition
     | CompositeCondition
     | RelatedImageCondition
+    | GroupCondition
+    | GroupChildResultCondition
 )
 
 
@@ -335,6 +399,17 @@ def _condition_from_dict(d: dict):
             edit_suffix=d.get("edit_suffix", ""),
             search_directory=d.get("search_directory", ""),
             count_threshold=d.get("count_threshold", 1),
+        )
+    if ct == "group":
+        return GroupCondition(
+            operator=d.get("operator", "OR"),
+            nodes=[PipelineNode.from_dict(n) for n in d.get("nodes", [])],
+        )
+    if ct == "group_child_result":
+        return GroupChildResultCondition(
+            group_node_name=d.get("group_node_name", ""),
+            child_node_name=d.get("child_node_name", ""),
+            expected_result=d.get("expected_result", True),
         )
     raise ValueError(f"Unknown condition_type: {ct!r}")
 
@@ -639,6 +714,45 @@ class ClassifierPipeline:
             for sub in condition.sub_conditions:
                 errors.extend(self._validate_condition(sub, node_name, defined_before))
 
+        elif isinstance(condition, GroupCondition):
+            if condition.operator not in GroupCondition.VALID_OPERATORS:
+                errors.append(
+                    f"Node {node_name!r}: GroupCondition has unknown operator {condition.operator!r}."
+                )
+            if not condition.nodes:
+                errors.append(f"Node {node_name!r}: GroupCondition has no child nodes.")
+            else:
+                seen_children: set[str] = set()
+                for child in condition.nodes:
+                    if not child.name.strip():
+                        errors.append(
+                            f"Node {node_name!r}: GroupCondition child has an empty name."
+                        )
+                    elif child.name in seen_children:
+                        errors.append(
+                            f"Node {node_name!r}: GroupCondition duplicate child name {child.name!r}."
+                        )
+                    else:
+                        seen_children.add(child.name)
+                    errors.extend(
+                        self._validate_condition(child.condition, f"{node_name}/{child.name}", defined_before)
+                    )
+
+        elif isinstance(condition, GroupChildResultCondition):
+            if not condition.group_node_name:
+                errors.append(
+                    f"Node {node_name!r}: GroupChildResultCondition has no group_node_name."
+                )
+            if not condition.child_node_name:
+                errors.append(
+                    f"Node {node_name!r}: GroupChildResultCondition has no child_node_name."
+                )
+            if condition.group_node_name and condition.group_node_name not in defined_before:
+                errors.append(
+                    f"Node {node_name!r}: GroupChildResultCondition references group "
+                    f"{condition.group_node_name!r} which is not a prior node."
+                )
+
         return errors
 
     # ------------------------------------------------------------------
@@ -657,11 +771,18 @@ class ClassifierPipeline:
             "lookahead": "Lookahead",
             "node_result": "NodeResult",
             "composite": "Composite",
+            "group": "Group",
+            "group_child_result": "GroupChild",
         }
         lines = []
         for node in self.nodes:
             cond_type = getattr(node.condition, "condition_type", "")
-            cond_label = _ABBREV.get(cond_type, cond_type)
+            if cond_type == "group":
+                op = getattr(node.condition, "operator", "OR")
+                n = len(getattr(node.condition, "nodes", []))
+                cond_label = f"Group({op},{n})"
+            else:
+                cond_label = _ABBREV.get(cond_type, cond_type)
             lines.append(f"{node.name} [{cond_label}]")
             lines.append(f"  ✓ {node.on_match.summary()}  ✗ {node.on_no_match.summary()}")
         if self.default_action:
@@ -674,6 +795,11 @@ class ClassifierPipeline:
         lines: list[str] = []
         for node in self.nodes:
             lines.append(f"[{node.name}: {node.condition_summary()}]")
+            if isinstance(node.condition, GroupCondition):
+                op = node.condition.operator
+                for child in node.condition.nodes:
+                    lines.append(f"  {'·'} {child.name}: {child.condition_summary()}")
+                lines.append(f"  ({op} of {len(node.condition.nodes)} children)")
             lines.append(f"  ✓ → {node.on_match.summary()}")
             lines.append(f"  ✗ → {node.on_no_match.summary()}")
             lines.append("")
@@ -800,14 +926,9 @@ class ClassifierPipelines:
 
     @staticmethod
     def load() -> None:
-        # Use None sentinel to distinguish "key never written" from "explicitly empty list".
         raw = app_info_cache.get_meta(_CACHE_KEY, default_val=None)
-        if raw is None:
-            ClassifierPipelines.pipelines = [ClassifierPipelines._build_demo_pipeline()]
-            ClassifierPipelines._rebuild_type_cache()
-            return
         result: list[ClassifierPipeline] = []
-        for d in raw:
+        for d in (raw or []):
             try:
                 if d.get("pipeline_class") == "prevalidation":
                     result.append(PrevalidationPipeline.from_dict(d))
@@ -819,31 +940,202 @@ class ClassifierPipelines:
         ClassifierPipelines._rebuild_type_cache()
 
     @staticmethod
-    def _build_demo_pipeline() -> "ClassifierPipeline":
-        node_portrait = PipelineNode(
-            name="Is a person?",
-            condition=EmbeddingCondition(
-                positives=["person", "human face", "portrait"],
-                negatives=["landscape", "animal", "object"],
-                threshold=0.25,
+    def build_demo_pipeline() -> "ClassifierPipeline":
+        """
+        Demo pipeline that exercises every available condition type.
+
+        Flow summary
+        ────────────
+        1  Media type check       MediaTypeCondition      — non-images are accepted immediately
+        2  Filename hints         GroupCondition (OR)     — 3 FilenameContains children
+        3  Filename says NSFW?    GroupChildResultCondition  — hide if "nsfw_" prefix matched
+        4  Filename says safe?    GroupChildResultCondition  — accept if "safe_" prefix matched
+        5  Person visible?        EmbeddingCondition      — skip person checks if no person
+        6  Sensitive content?     CompositeCondition (OR) — embedding + prompt sub-conditions
+        7  Safe prototype match?  PrototypeCondition      — jump past rank check if prototype matches
+        8  Had filename hint?     NodeResultCondition     — mark for review if hinted but not resolved
+        9  Classifier rank check  ClassifierRankCondition — accept if safe category ranks highly
+        10 Lookahead safety       LookaheadCondition      — accept if lookahead says safe
+        11 Related image exists?  RelatedImageCondition   — generate or reject
+        """
+
+        # ------------------------------------------------------------------
+        # Node 1 — MediaTypeCondition
+        # ------------------------------------------------------------------
+        node_media_type = PipelineNode(
+            name="Media type check",
+            condition=MediaTypeCondition(
+                media_types=[CompareMediaType.IMAGE, CompareMediaType.GIF],
             ),
-            on_match=NodeOutcome(OutcomeType.GOTO, target_node="Check if explicit"),
+            on_match=NodeOutcome(OutcomeType.CONTINUE),
             on_no_match=NodeOutcome(OutcomeType.ACCEPT),
         )
-        node_explicit = PipelineNode(
-            name="Check if explicit",
-            condition=EmbeddingCondition(
-                positives=["explicit content", "nudity", "nsfw"],
-                negatives=["clothed", "safe for work"],
-                threshold=0.28,
+
+        # ------------------------------------------------------------------
+        # Node 2 — GroupCondition (OR) with three FilenameContains children
+        # ------------------------------------------------------------------
+        node_filename_hints = PipelineNode(
+            name="Filename category hints",
+            condition=GroupCondition(
+                operator="OR",
+                nodes=[
+                    PipelineNode(
+                        name="is_marked_nsfw",
+                        condition=FilenameContainsCondition(
+                            patterns=["nsfw_", "_nsfw", "explicit_"],
+                            case_sensitive=False,
+                        ),
+                    ),
+                    PipelineNode(
+                        name="is_marked_safe",
+                        condition=FilenameContainsCondition(
+                            patterns=["safe_", "_safe", "sfw_"],
+                            case_sensitive=False,
+                        ),
+                    ),
+                    PipelineNode(
+                        name="is_a_draft",
+                        condition=FilenameContainsCondition(
+                            patterns=["draft_", "_draft", "_wip"],
+                            case_sensitive=False,
+                        ),
+                    ),
+                ],
+            ),
+            on_match=NodeOutcome(OutcomeType.CONTINUE),
+            on_no_match=NodeOutcome(OutcomeType.CONTINUE),
+        )
+
+        # ------------------------------------------------------------------
+        # Node 3 — GroupChildResultCondition (NSFW child)
+        # ------------------------------------------------------------------
+        node_nsfw_hint = PipelineNode(
+            name="Filename says NSFW?",
+            condition=GroupChildResultCondition(
+                group_node_name="Filename category hints",
+                child_node_name="is_marked_nsfw",
+                expected_result=True,
             ),
             on_match=NodeOutcome(OutcomeType.EXECUTE, action_type=ClassifierActionType.HIDE),
-            on_no_match=NodeOutcome(OutcomeType.ACCEPT),
+            on_no_match=NodeOutcome(OutcomeType.CONTINUE),
         )
+
+        # ------------------------------------------------------------------
+        # Node 4 — GroupChildResultCondition (safe child)
+        # ------------------------------------------------------------------
+        node_safe_hint = PipelineNode(
+            name="Filename says safe?",
+            condition=GroupChildResultCondition(
+                group_node_name="Filename category hints",
+                child_node_name="is_marked_safe",
+                expected_result=True,
+            ),
+            on_match=NodeOutcome(OutcomeType.ACCEPT),
+            on_no_match=NodeOutcome(OutcomeType.CONTINUE),
+        )
+
+        # ------------------------------------------------------------------
+        # Node 5 — EmbeddingCondition
+        # ------------------------------------------------------------------
+        node_person = PipelineNode(
+            name="Person visible?",
+            condition=EmbeddingCondition(
+                positives=["person", "human face", "portrait", "people"],
+                negatives=["landscape", "architecture", "food", "object without people"],
+                threshold=0.25,
+            ),
+            on_match=NodeOutcome(OutcomeType.CONTINUE),
+            on_no_match=NodeOutcome(OutcomeType.GOTO, target_node="Related image exists?"),
+        )
+
+        # ------------------------------------------------------------------
+        # Node 6 — CompositeCondition (OR) containing Embedding + Prompt
+        # ------------------------------------------------------------------
+        node_sensitive = PipelineNode(
+            name="Sensitive content?",
+            condition=CompositeCondition(
+                operator="OR",
+                sub_conditions=[
+                    EmbeddingCondition(
+                        positives=["explicit content", "nudity", "adult material"],
+                        negatives=["clothed", "safe for work", "family friendly"],
+                        threshold=0.28,
+                    ),
+                    PromptCondition(
+                        prompts=["nsfw", "nude", "explicit", "adult content"],
+                        use_blacklist=False,
+                    ),
+                ],
+            ),
+            on_match=NodeOutcome(OutcomeType.EXECUTE, action_type=ClassifierActionType.HIDE),
+            on_no_match=NodeOutcome(OutcomeType.CONTINUE),
+        )
+
+        # ------------------------------------------------------------------
+        # Node 7 — PrototypeCondition
+        # ------------------------------------------------------------------
+        node_prototype = PipelineNode(
+            name="Safe prototype match?",
+            condition=PrototypeCondition(
+                prototype_directory="prototypes/safe_content",
+                negative_prototype_directory="prototypes/unsafe_content",
+                threshold=0.23,
+            ),
+            on_match=NodeOutcome(OutcomeType.GOTO, target_node="Related image exists?"),
+            on_no_match=NodeOutcome(OutcomeType.CONTINUE),
+        )
+
+        # ------------------------------------------------------------------
+        # Node 8 — NodeResultCondition
+        # ------------------------------------------------------------------
+        node_hint_review = PipelineNode(
+            name="Had filename hint?",
+            condition=NodeResultCondition(
+                node_name="Filename category hints",
+                expected_result=True,
+            ),
+            on_match=NodeOutcome(OutcomeType.EXECUTE, action_type=ClassifierActionType.ADD_MARK),
+            on_no_match=NodeOutcome(OutcomeType.CONTINUE),
+        )
+
+        # ------------------------------------------------------------------
+        # Node 9 — RelatedImageCondition  (GOTO target from nodes 5 and 7)
+        # ------------------------------------------------------------------
+        node_related = PipelineNode(
+            name="Related image exists?",
+            condition=RelatedImageCondition(
+                edit_suffix="_reviewed",
+                search_directory="",
+                count_threshold=1,
+            ),
+            on_match=NodeOutcome(
+                OutcomeType.EXECUTE,
+                action_type=ClassifierActionType.GENERATE,
+                action_modifier="_reviewed",
+            ),
+            on_no_match=NodeOutcome(OutcomeType.REJECT),
+        )
+
         return ClassifierPipeline(
-            name="Example: Explicit Content Filter",
-            description="Demo pipeline (inactive). Two-node example: checks if a person appears, then hides if explicit.",
-            nodes=[node_portrait, node_explicit],
+            name="Example: Full Feature Demo",
+            description=(
+                "Demo pipeline (inactive). Exercises condition types that do not "
+                "require runtime-registered resources: "
+                "MediaType → Group(FilenameContains×3) → GroupChildResult×2 → "
+                "Embedding → Composite(Embedding+Prompt) → Prototype → "
+                "NodeResult → RelatedImage."
+            ),
+            nodes=[
+                node_media_type,
+                node_filename_hints,
+                node_nsfw_hint,
+                node_safe_hint,
+                node_person,
+                node_sensitive,
+                node_prototype,
+                node_hint_review,
+                node_related,
+            ],
             is_active=False,
         )
 

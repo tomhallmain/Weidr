@@ -20,6 +20,8 @@ from compare.classifier_pipeline import (
     ClassifierRankCondition,
     EmbeddingCondition,
     FilenameContainsCondition,
+    GroupCondition,
+    GroupChildResultCondition,
     LookaheadCondition,
     MediaTypeCondition,
     NodeOutcome,
@@ -93,7 +95,8 @@ def run_pipeline(
 
         try:
             result, score = _evaluate_condition(
-                node.condition, image_path, node_results, node_scores, base_directory
+                node.condition, image_path, node_results, node_scores, base_directory,
+                node_name=node.name,
             )
         except Exception:
             logger.exception(
@@ -160,6 +163,8 @@ def _evaluate_condition(
     node_results: dict[str, bool],
     node_scores: dict[str, object],
     base_directory: Optional[str] = None,
+    *,
+    node_name: str = "",
 ) -> tuple[bool, object]:
     """Return (matched, score). Score is a raw float where available, else None."""
 
@@ -203,6 +208,19 @@ def _evaluate_condition(
 
     if isinstance(condition, CompositeCondition):
         return _eval_composite(condition, image_path, node_results, node_scores, base_directory)
+
+    if isinstance(condition, GroupCondition):
+        return _eval_group(condition, node_name, image_path, node_results, node_scores, base_directory)
+
+    if isinstance(condition, GroupChildResultCondition):
+        key = f"{condition.group_node_name}/{condition.child_node_name}"
+        prior = node_results.get(key)
+        if prior is None:
+            logger.warning(
+                "GroupChildResultCondition references %r which has no result yet", key
+            )
+            return False, None
+        return (prior == condition.expected_result), float(prior)
 
     raise ValueError(f"Unknown condition type: {type(condition).__name__}")
 
@@ -357,6 +375,39 @@ def _eval_related_image(
         image_path, condition.edit_suffix, search_dir, condition.count_threshold
     )
     return result, None
+
+
+def _eval_group(
+    condition: GroupCondition,
+    outer_node_name: str,
+    image_path: str,
+    node_results: dict[str, bool],
+    node_scores: dict[str, object],
+    base_directory: Optional[str],
+) -> tuple[bool, object]:
+    """Evaluate every child node and store results under '<outer>/<child>' keys."""
+    for child in condition.nodes:
+        key = f"{outer_node_name}/{child.name}"
+        try:
+            child_result, child_score = _evaluate_condition(
+                child.condition, image_path, node_results, node_scores, base_directory
+            )
+        except Exception:
+            logger.exception(
+                "Group %r: error evaluating child %r — treating as no-match",
+                outer_node_name, child.name,
+            )
+            child_result, child_score = False, None
+        node_results[key] = child_result
+        node_scores[key] = child_score
+
+    child_results = [
+        node_results.get(f"{outer_node_name}/{c.name}", False)
+        for c in condition.nodes
+    ]
+    if condition.operator == "AND":
+        return all(child_results), None
+    return any(child_results), None   # OR (default)
 
 
 def _eval_composite(

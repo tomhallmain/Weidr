@@ -13,15 +13,17 @@ Layout:
 from __future__ import annotations
 
 import copy
+import math
 import os
 from typing import Callable, Optional
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtCore import Qt, QRectF
+from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog, QFormLayout,
+    QGraphicsScene, QGraphicsView,
     QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget,
-    QPlainTextEdit, QPushButton, QScrollArea, QSpinBox, QSplitter,
+    QPushButton, QScrollArea, QSpinBox, QSplitter,
     QStackedWidget, QVBoxLayout, QWidget,
 )
 
@@ -31,6 +33,8 @@ from compare.classifier_pipeline import (
     ClassifierRankCondition,
     CompositeCondition,
     EmbeddingCondition,
+    GroupCondition,
+    GroupChildResultCondition,
     LookaheadCondition,
     FilenameContainsCondition,
     NodeOutcome,
@@ -57,20 +61,23 @@ logger = get_logger("classifier_pipeline_editor_qt")
 # ---------------------------------------------------------------------------
 
 _CONDITION_ENTRIES = [
-    ("embedding",          _("Embedding")),
-    ("classifier_rank",    _("Classifier Rank")),
-    ("prototype",          _("Prototype")),
-    ("prompt",             _("Prompt")),
-    ("filename_contains",  _("Filename Contains")),
-    ("lookahead",          _("Lookahead")),
-    ("node_result",        _("Prior Node Result")),
-    ("composite",          _("Composite")),
+    ("embedding",           _("Embedding")),
+    ("classifier_rank",     _("Classifier Rank")),
+    ("prototype",           _("Prototype")),
+    ("prompt",              _("Prompt")),
+    ("filename_contains",   _("Filename Contains")),
+    ("lookahead",           _("Lookahead")),
+    ("node_result",         _("Prior Node Result")),
+    ("group_child_result",  _("Group Child Result")),
+    ("composite",           _("Composite")),
+    ("group",               _("Group")),
 ]
 _CONDITION_TYPES   = [k for k, _ in _CONDITION_ENTRIES]
 _CONDITION_LABELS  = [v for _, v in _CONDITION_ENTRIES]
 
-# Sub-condition types: composites cannot contain composites in the UI
-_SUB_CONDITION_ENTRIES = _CONDITION_ENTRIES[:-1]
+# Sub-condition types: no composite, no group, no group_child_result (need outer context)
+_FLAT_TYPES = {"composite", "group", "group_child_result"}
+_SUB_CONDITION_ENTRIES = [(k, v) for k, v in _CONDITION_ENTRIES if k not in _FLAT_TYPES]
 _SUB_CONDITION_TYPES   = [k for k, _ in _SUB_CONDITION_ENTRIES]
 _SUB_CONDITION_LABELS  = [v for _, v in _SUB_CONDITION_ENTRIES]
 
@@ -78,6 +85,14 @@ _ACTION_OPTIONS = [_("(none)")] + [at.value for at in ClassifierActionType]
 _OUTCOME_OPTIONS = [ot.value for ot in OutcomeType]
 _FG = AppStyle.FG_COLOR
 _BG = AppStyle.BG_COLOR
+
+# Graph layout constants (all in scene pixels)
+_NODE_W         = 260
+_NODE_H         = 64
+_NODE_X         = 10
+_NODE_VSTEP     = 90   # top-of-node to top-of-next-node
+_GOTO_OFFSET_M  = 42   # bezier bulge for on_match GOTO
+_GOTO_OFFSET_NM = 68   # bezier bulge for on_no_match GOTO
 
 
 def _label(text: str, bold: bool = False) -> QLabel:
@@ -93,6 +108,19 @@ def _action_from_text(text: str) -> Optional[ClassifierActionType]:
     if not text or text == _("(none)"):
         return None
     return ClassifierActionType.get_action(text)
+
+
+def _trunc(s: str, n: int = 30) -> str:
+    return s if len(s) <= n else s[: n - 1] + "…"
+
+
+def _arrowhead(scene: "QGraphicsScene", x: float, y: float, angle_rad: float,
+               pen: "QPen", size: int = 8) -> None:
+    """Draw a two-line arrowhead tip at (x, y) pointing in direction angle_rad."""
+    a1 = angle_rad + math.pi - 0.4
+    a2 = angle_rad + math.pi + 0.4
+    scene.addLine(x, y, x + size * math.cos(a1), y + size * math.sin(a1), pen)
+    scene.addLine(x, y, x + size * math.cos(a2), y + size * math.sin(a2), pen)
 
 
 # ---------------------------------------------------------------------------
@@ -515,6 +543,81 @@ class _NodeResultPanel(QWidget):
         )
 
 
+class _GroupChildResultPanel(QWidget):
+    """Check which child inside a prior group node matched."""
+    condition_type = "group_child_result"
+
+    def __init__(self, on_changed: Callable = None, parent=None):
+        super().__init__(parent)
+        self._on_changed = on_changed or (lambda: None)
+        self._group_children: dict[str, list[str]] = {}
+        form = QFormLayout(self)
+        form.setContentsMargins(0, 4, 0, 4)
+        form.setSpacing(4)
+
+        self._group_combo = QComboBox()
+        self._group_combo.currentIndexChanged.connect(self._on_group_changed)
+        form.addRow(_("Group node:"), self._group_combo)
+
+        self._child_combo = QComboBox()
+        self._child_combo.currentIndexChanged.connect(self._on_changed)
+        form.addRow(_("Child node:"), self._child_combo)
+
+        self._expected_cb = QCheckBox(_("Expected result: matched"))
+        self._expected_cb.setChecked(True)
+        self._expected_cb.stateChanged.connect(self._on_changed)
+        form.addRow("", self._expected_cb)
+
+        info = _label(_("Only prior group nodes and their children appear here."))
+        info.setWordWrap(True)
+        form.addRow("", info)
+
+    def _on_group_changed(self, _: int) -> None:
+        self._populate_children()
+        self._on_changed()
+
+    def _populate_children(self) -> None:
+        name = self._group_combo.currentText()
+        children = self._group_children.get(name, [])
+        self._child_combo.blockSignals(True)
+        self._child_combo.clear()
+        self._child_combo.addItems(children if children else [_("(no children)")])
+        self._child_combo.blockSignals(False)
+
+    def set_prior_group_nodes(self, group_children: "dict[str, list[str]]") -> None:
+        """group_children: {group_node_name: [child_node_names]}"""
+        self._group_children = group_children
+        current_group = self._group_combo.currentText()
+        self._group_combo.blockSignals(True)
+        self._group_combo.clear()
+        names = list(group_children.keys())
+        self._group_combo.addItems(names if names else [_("(no prior group nodes)")])
+        if current_group in names:
+            self._group_combo.setCurrentText(current_group)
+        self._group_combo.blockSignals(False)
+        self._populate_children()
+
+    def load(self, condition) -> None:
+        if isinstance(condition, GroupChildResultCondition):
+            idx = self._group_combo.findText(condition.group_node_name)
+            if idx >= 0:
+                self._group_combo.setCurrentIndex(idx)
+                self._populate_children()
+            idx2 = self._child_combo.findText(condition.child_node_name)
+            if idx2 >= 0:
+                self._child_combo.setCurrentIndex(idx2)
+            self._expected_cb.setChecked(condition.expected_result)
+        else:
+            self._expected_cb.setChecked(True)
+
+    def get_condition(self) -> GroupChildResultCondition:
+        return GroupChildResultCondition(
+            group_node_name=self._group_combo.currentText(),
+            child_node_name=self._child_combo.currentText(),
+            expected_result=self._expected_cb.isChecked(),
+        )
+
+
 # ---------------------------------------------------------------------------
 # Composite panel (Phase 4c) — inline list of sub-conditions
 # ---------------------------------------------------------------------------
@@ -696,6 +799,239 @@ class _CompositePanel(QWidget):
             operator=self._op_combo.currentText(),
             sub_conditions=[r.get_condition() for _, r in self._row_data],
         )
+
+
+class _GroupPanel(QWidget):
+    """
+    Editor for a GroupCondition: an ordered list of named child nodes, each
+    with its own condition (no composite/group nesting).  Child outcomes are
+    not edited here — only the condition matters; routing is handled by the
+    outer pipeline node.
+    """
+    condition_type = "group"
+
+    def __init__(self, on_changed: Callable = None, parent=None):
+        super().__init__(parent)
+        self._on_changed = on_changed or (lambda: None)
+        self._children: list[PipelineNode] = []
+        self._current_idx: Optional[int] = None
+        self._suppress = False
+        self._prior_nodes: list = []
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 4, 0, 4)
+        root.setSpacing(6)
+
+        op_row = QHBoxLayout()
+        op_row.addWidget(_label(_("Operator:")))
+        self._op_combo = QComboBox()
+        self._op_combo.addItems(["OR", "AND"])
+        self._op_combo.currentIndexChanged.connect(self._on_changed)
+        op_row.addWidget(self._op_combo)
+        op_row.addStretch()
+        root.addLayout(op_row)
+
+        root.addWidget(_label(
+            _("OR: match if any child matches  ·  AND: match if all children match")
+        ))
+
+        root.addWidget(_label(_("Child nodes:"), bold=True))
+        self._child_list = QListWidget()
+        self._child_list.setStyleSheet(
+            f"color: {_FG}; background: {_BG}; selection-background-color: #444;"
+        )
+        self._child_list.setMaximumHeight(90)
+        self._child_list.currentRowChanged.connect(self._on_child_selected)
+        root.addWidget(self._child_list)
+
+        btn_row = QHBoxLayout()
+        for lbl, slot in [
+            (_("Add"),    self._add_child),
+            (_("Remove"), self._remove_child),
+            (_("↑"),      self._move_up),
+            (_("↓"),      self._move_down),
+        ]:
+            b = QPushButton(lbl)
+            b.clicked.connect(slot)
+            btn_row.addWidget(b)
+        btn_row.addStretch()
+        root.addLayout(btn_row)
+
+        # Per-child editor (name + condition)
+        self._child_editor = QWidget()
+        child_form = QFormLayout(self._child_editor)
+        child_form.setContentsMargins(0, 4, 0, 0)
+        child_form.setSpacing(4)
+
+        self._child_name_edit = QLineEdit()
+        self._child_name_edit.setPlaceholderText(_("unique child name"))
+        self._child_name_edit.textChanged.connect(self._on_child_name_changed)
+        child_form.addRow(_("Child name:"), self._child_name_edit)
+
+        self._child_ctype_combo = QComboBox()
+        self._child_ctype_combo.addItems(_SUB_CONDITION_LABELS)
+        self._child_ctype_combo.currentIndexChanged.connect(self._on_child_ctype_changed)
+        child_form.addRow(_("Condition:"), self._child_ctype_combo)
+        root.addWidget(self._child_editor)
+
+        # Stacked condition panels (flat — no group/composite nesting)
+        changed_cb = self._on_changed
+        self._child_panels = [
+            _EmbeddingPanel(on_changed=changed_cb),
+            _ClassifierRankPanel(on_changed=changed_cb),
+            _PrototypePanel(on_changed=changed_cb),
+            _PromptPanel(on_changed=changed_cb),
+            _FilenameContainsPanel(on_changed=changed_cb),
+            _LookaheadPanel(on_changed=changed_cb),
+            _NodeResultPanel(on_changed=changed_cb),
+        ]
+        self._child_stack = QStackedWidget()
+        for p in self._child_panels:
+            self._child_stack.addWidget(p)
+        root.addWidget(self._child_stack)
+
+        self._child_editor.setEnabled(False)
+        self._child_stack.setEnabled(False)
+
+    # --- prior-node context forwarded to NodeResult panels inside children ---
+
+    def set_prior_nodes(self, names: list) -> None:
+        self._prior_nodes = names
+        for p in self._child_panels:
+            if hasattr(p, "set_prior_nodes"):
+                p.set_prior_nodes(names)
+
+    # --- child list helpers -------------------------------------------------
+
+    def _child_label(self, child: PipelineNode) -> str:
+        ctype = getattr(child.condition, "condition_type", "?")
+        return f"{child.name}  [{ctype}]"
+
+    def _rebuild_child_list(self) -> None:
+        row = self._child_list.currentRow()
+        self._child_list.blockSignals(True)
+        self._child_list.clear()
+        for child in self._children:
+            self._child_list.addItem(self._child_label(child))
+        self._child_list.blockSignals(False)
+        target = row if 0 <= row < len(self._children) else (0 if self._children else -1)
+        if target >= 0:
+            self._child_list.setCurrentRow(target)
+
+    def _flush_child(self) -> None:
+        idx = self._current_idx
+        if idx is None or idx >= len(self._children):
+            return
+        child = self._children[idx]
+        name = self._child_name_edit.text().strip()
+        if name:
+            child.name = name
+        try:
+            child.condition = self._child_panels[self._child_stack.currentIndex()].get_condition()
+        except Exception:
+            pass
+
+    def _on_child_selected(self, row: int) -> None:
+        self._flush_child()
+        if row < 0 or row >= len(self._children):
+            self._current_idx = None
+            self._child_editor.setEnabled(False)
+            self._child_stack.setEnabled(False)
+            return
+        self._current_idx = row
+        self._child_editor.setEnabled(True)
+        self._child_stack.setEnabled(True)
+        self._suppress = True
+        child = self._children[row]
+        self._child_name_edit.setText(child.name)
+        ctype = getattr(child.condition, "condition_type", "embedding")
+        ct_idx = _SUB_CONDITION_TYPES.index(ctype) if ctype in _SUB_CONDITION_TYPES else 0
+        self._child_ctype_combo.setCurrentIndex(ct_idx)
+        self._child_stack.setCurrentIndex(ct_idx)
+        self._child_panels[ct_idx].load(child.condition)
+        self._suppress = False
+        self._on_changed()
+
+    def _on_child_name_changed(self, text: str) -> None:
+        idx = self._current_idx
+        if idx is None or idx >= len(self._children) or self._suppress:
+            return
+        self._children[idx].name = text.strip()
+        item = self._child_list.item(idx)
+        if item:
+            item.setText(self._child_label(self._children[idx]))
+        self._on_changed()
+
+    def _on_child_ctype_changed(self, idx: int) -> None:
+        if self._suppress:
+            return
+        self._child_stack.setCurrentIndex(idx)
+        self._child_panels[idx].load(None)
+        self._on_changed()
+
+    def _add_child(self) -> None:
+        self._flush_child()
+        child = PipelineNode(name=f"child_{len(self._children) + 1}")
+        self._children.append(child)
+        self._rebuild_child_list()
+        self._child_list.setCurrentRow(len(self._children) - 1)
+        self._on_changed()
+
+    def _remove_child(self) -> None:
+        idx = self._child_list.currentRow()
+        if idx < 0 or idx >= len(self._children):
+            return
+        self._current_idx = None
+        del self._children[idx]
+        self._rebuild_child_list()
+        if not self._children:
+            self._child_editor.setEnabled(False)
+            self._child_stack.setEnabled(False)
+        self._on_changed()
+
+    def _move_up(self) -> None:
+        self._flush_child()
+        idx = self._child_list.currentRow()
+        if idx <= 0:
+            return
+        self._children[idx], self._children[idx - 1] = (
+            self._children[idx - 1], self._children[idx]
+        )
+        self._current_idx = idx - 1
+        self._rebuild_child_list()
+        self._child_list.setCurrentRow(idx - 1)
+        self._on_changed()
+
+    def _move_down(self) -> None:
+        self._flush_child()
+        idx = self._child_list.currentRow()
+        if idx < 0 or idx >= len(self._children) - 1:
+            return
+        self._children[idx], self._children[idx + 1] = (
+            self._children[idx + 1], self._children[idx]
+        )
+        self._current_idx = idx + 1
+        self._rebuild_child_list()
+        self._child_list.setCurrentRow(idx + 1)
+        self._on_changed()
+
+    # --- load / get ---------------------------------------------------------
+
+    def load(self, condition) -> None:
+        self._current_idx = None
+        if isinstance(condition, GroupCondition):
+            self._op_combo.setCurrentText(condition.operator)
+            self._children = [copy.deepcopy(c) for c in condition.nodes]
+        else:
+            self._op_combo.setCurrentIndex(0)
+            self._children = []
+        self._rebuild_child_list()
+        self._child_editor.setEnabled(False)
+        self._child_stack.setEnabled(False)
+
+    def get_condition(self) -> GroupCondition:
+        self._flush_child()
+        return GroupCondition(operator=self._op_combo.currentText(), nodes=list(self._children))
 
 
 # ---------------------------------------------------------------------------
@@ -1028,23 +1364,27 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         ctype_form.addRow(_("Condition type:"), self._condition_type_combo)
         ned.addLayout(ctype_form)
 
-        # Condition panels (stacked)
+        # Condition panels (stacked) — order must match _CONDITION_TYPES exactly
         changed_cb = self._on_field_changed
-        self._embedding_panel          = _EmbeddingPanel(on_changed=changed_cb)
-        self._classifier_rank_panel    = _ClassifierRankPanel(on_changed=changed_cb)
-        self._prototype_panel          = _PrototypePanel(on_changed=changed_cb)
-        self._prompt_panel             = _PromptPanel(on_changed=changed_cb)
-        self._filename_contains_panel  = _FilenameContainsPanel(on_changed=changed_cb)
-        self._lookahead_panel          = _LookaheadPanel(on_changed=changed_cb)
-        self._node_result_panel        = _NodeResultPanel(on_changed=changed_cb)
-        self._composite_panel          = _CompositePanel(on_changed=changed_cb)
+        self._embedding_panel           = _EmbeddingPanel(on_changed=changed_cb)
+        self._classifier_rank_panel     = _ClassifierRankPanel(on_changed=changed_cb)
+        self._prototype_panel           = _PrototypePanel(on_changed=changed_cb)
+        self._prompt_panel              = _PromptPanel(on_changed=changed_cb)
+        self._filename_contains_panel   = _FilenameContainsPanel(on_changed=changed_cb)
+        self._lookahead_panel           = _LookaheadPanel(on_changed=changed_cb)
+        self._node_result_panel         = _NodeResultPanel(on_changed=changed_cb)
+        self._group_child_result_panel  = _GroupChildResultPanel(on_changed=changed_cb)
+        self._composite_panel           = _CompositePanel(on_changed=changed_cb)
+        self._group_panel               = _GroupPanel(on_changed=changed_cb)
 
         self._cond_panels = [
             self._embedding_panel, self._classifier_rank_panel,
             self._prototype_panel, self._prompt_panel,
             self._filename_contains_panel,
             self._lookahead_panel, self._node_result_panel,
+            self._group_child_result_panel,
             self._composite_panel,
+            self._group_panel,
         ]
 
         self._condition_stack = QStackedWidget()
@@ -1069,13 +1409,16 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         lay = QVBoxLayout(box)
         lay.setContentsMargins(8, 14, 8, 8)
 
-        self._flow_preview = QPlainTextEdit()
-        self._flow_preview.setReadOnly(True)
-        self._flow_preview.setMaximumHeight(140)
-        self._flow_preview.setStyleSheet(
-            f"color: {_FG}; background: {_BG}; font-family: monospace; font-size: 10pt;"
+        self._flow_scene = QGraphicsScene()
+        self._flow_view = QGraphicsView(self._flow_scene)
+        self._flow_view.setMinimumHeight(160)
+        self._flow_view.setMaximumHeight(220)
+        self._flow_view.setRenderHint(QPainter.Antialiasing)
+        self._flow_view.setStyleSheet(
+            f"QGraphicsView {{ background: #1e1e1e; border: 1px solid {_FG}; }}"
         )
-        lay.addWidget(self._flow_preview)
+        self._flow_view.setDragMode(QGraphicsView.ScrollHandDrag)
+        lay.addWidget(self._flow_view)
         self._refresh_flow_preview()
         return box
 
@@ -1151,6 +1494,14 @@ class ClassifierPipelineEditorDialog(SmartDialog):
 
         self._node_result_panel.set_prior_nodes(prior)
         self._composite_panel.set_prior_nodes(prior)
+        self._group_panel.set_prior_nodes(prior)
+
+        # Build group_children dict: {group_node_name: [child_names]} from prior nodes only
+        group_children: dict[str, list] = {}
+        for n in self._pipeline.nodes[:idx]:
+            if getattr(n.condition, "condition_type", "") == "group":
+                group_children[n.name] = [c.name for c in n.condition.nodes]
+        self._group_child_result_panel.set_prior_group_nodes(group_children)
 
         self._on_match_editor.load(node.on_match, later)
         self._on_no_match_editor.load(node.on_no_match, later)
@@ -1246,6 +1597,12 @@ class ClassifierPipelineEditorDialog(SmartDialog):
             prior = [n.name for n in self._pipeline.nodes[:curr_idx]]
             if hasattr(panel, "set_prior_nodes"):
                 panel.set_prior_nodes(prior)
+            if hasattr(panel, "set_prior_group_nodes"):
+                group_children: dict[str, list] = {}
+                for n in self._pipeline.nodes[:curr_idx]:
+                    if getattr(n.condition, "condition_type", "") == "group":
+                        group_children[n.name] = [c.name for c in n.condition.nodes]
+                panel.set_prior_group_nodes(group_children)
         self._on_field_changed()
 
     # ------------------------------------------------------------------
@@ -1255,12 +1612,159 @@ class ClassifierPipelineEditorDialog(SmartDialog):
     def _refresh_flow_preview(self) -> None:
         if self._suppress_refresh:
             return
-        # Soft-flush so preview reflects current widget state
+        if not hasattr(self, "_flow_scene"):
+            return
         self._flush_node_to_model()
         try:
-            self._flow_preview.setPlainText(self._pipeline.flow_preview())
+            self._render_flow_graph()
         except Exception:
-            self._flow_preview.setPlainText(_("(preview unavailable)"))
+            self._flow_scene.clear()
+            item = self._flow_scene.addText(_("(preview unavailable)"))
+            item.setDefaultTextColor(QColor(_FG))
+
+    def _render_flow_graph(self) -> None:
+        """Rebuild the QGraphicsScene with a node-graph view of the pipeline."""
+        scene = self._flow_scene
+        scene.clear()
+
+        nodes = self._pipeline.nodes
+        if not nodes:
+            item = scene.addText(_("(no nodes)"))
+            item.setDefaultTextColor(QColor(_FG))
+            return
+
+        fg        = QColor(_FG)
+        node_bg   = QColor(46, 46, 46)
+        green     = QColor("#5cb85c")
+        red       = QColor("#d9534f")
+        group_col = QColor("#5b9bd5")
+
+        small_font = QFont()
+        small_font.setPointSize(8)
+        bold_font = QFont()
+        bold_font.setPointSize(9)
+        bold_font.setBold(True)
+
+        NW    = _NODE_W
+        NH    = _NODE_H
+        NX    = _NODE_X
+        GAP   = _NODE_VSTEP - NH  # vertical gap between boxes
+
+        _CHILD_LINE_H = 16  # px per child row inside a group box
+
+        def _node_h(node) -> int:
+            if isinstance(node.condition, GroupCondition):
+                n = len(node.condition.nodes)
+                return max(NH, 42 + n * _CHILD_LINE_H + 20)
+            return NH
+
+        # Compute per-node heights and cumulative top positions
+        heights = {node.name: _node_h(node) for node in nodes}
+        tops: list[int] = []
+        y = 0
+        for node in nodes:
+            tops.append(y)
+            y += heights[node.name] + GAP
+
+        pos = {node.name: (NX, tops[i]) for i, node in enumerate(nodes)}
+
+        # --- Node boxes ---------------------------------------------------
+        box_pen   = QPen(fg, 1)
+        box_brush = QBrush(node_bg)
+        for node in nodes:
+            nx, ny = pos[node.name]
+            nh = heights[node.name]
+            ctype = getattr(node.condition, "condition_type", "?")
+
+            if isinstance(node.condition, GroupCondition):
+                grp_pen = QPen(group_col, 1.5)
+                scene.addRect(QRectF(nx, ny, NW, nh), grp_pen, box_brush)
+
+                name_item = scene.addText(_trunc(node.name, 34))
+                name_item.setFont(bold_font)
+                name_item.setDefaultTextColor(fg)
+                name_item.setPos(nx + 4, ny + 2)
+
+                op = node.condition.operator
+                ct_item = scene.addText(f"[group: {op}]")
+                ct_item.setFont(small_font)
+                ct_item.setDefaultTextColor(group_col)
+                ct_item.setPos(nx + 4, ny + 20)
+
+                for j, child in enumerate(node.condition.nodes):
+                    child_ctype = getattr(child.condition, "condition_type", "?")
+                    child_item = scene.addText(
+                        f"  · {_trunc(child.name, 22)}  [{child_ctype}]"
+                    )
+                    child_item.setFont(small_font)
+                    child_item.setDefaultTextColor(QColor("#cccccc"))
+                    child_item.setPos(nx + 4, ny + 38 + j * _CHILD_LINE_H)
+            else:
+                scene.addRect(QRectF(nx, ny, NW, nh), box_pen, box_brush)
+
+                name_item = scene.addText(_trunc(node.name, 34))
+                name_item.setFont(bold_font)
+                name_item.setDefaultTextColor(fg)
+                name_item.setPos(nx + 4, ny + 2)
+
+                ct_item = scene.addText(f"[{ctype}]")
+                ct_item.setFont(small_font)
+                ct_item.setDefaultTextColor(QColor("#aaaaaa"))
+                ct_item.setPos(nx + 4, ny + 20)
+
+            # Outcome labels sit at the bottom of every node
+            footer_y = ny + nh - 18
+            m_item = scene.addText("✓ " + _trunc(node.on_match.summary(), 28))
+            m_item.setFont(small_font)
+            m_item.setDefaultTextColor(green)
+            m_item.setPos(nx + 4, footer_y)
+
+            nm_item = scene.addText("✗ " + _trunc(node.on_no_match.summary(), 28))
+            nm_item.setFont(small_font)
+            nm_item.setDefaultTextColor(red)
+            nm_item.setPos(nx + NW // 2 + 4, footer_y)
+
+        # --- Flow edges ---------------------------------------------------
+        # CONTINUE: dashed vertical line at two x offsets.
+        # GOTO: solid C-curve on the right, proportional to actual node height.
+        for i, node in enumerate(nodes):
+            nx, ny = pos[node.name]
+            nh = heights[node.name]
+
+            for outcome, is_match in ((node.on_match, True), (node.on_no_match, False)):
+                col    = green if is_match else red
+                band   = nh * 0.35 if is_match else nh * 0.65
+                offset = _GOTO_OFFSET_M if is_match else _GOTO_OFFSET_NM
+
+                if outcome.outcome_type == OutcomeType.CONTINUE:
+                    if i + 1 < len(nodes):
+                        xa = nx + NW * (0.40 if is_match else 0.55)
+                        dash_pen = QPen(col, 1, Qt.DashLine)
+                        y_bot = ny + nh
+                        y_top = tops[i + 1]
+                        scene.addLine(xa, y_bot, xa, y_top, dash_pen)
+                        _arrowhead(scene, xa, y_top, math.pi / 2, dash_pen)
+
+                elif outcome.outcome_type == OutcomeType.GOTO:
+                    tgt = outcome.target_node
+                    if tgt in pos:
+                        _, ty  = pos[tgt]
+                        t_nh   = heights[tgt]
+                        t_band = t_nh * 0.35 if is_match else t_nh * 0.65
+                        pen    = QPen(col, 1.5)
+                        x_edge = nx + NW
+                        y_src  = ny + band
+                        y_dst  = ty + t_band
+                        ctrl_x = x_edge + offset
+                        path = QPainterPath()
+                        path.moveTo(x_edge, y_src)
+                        path.cubicTo(ctrl_x, y_src, ctrl_x, y_dst, x_edge, y_dst)
+                        scene.addPath(path, pen)
+                        _arrowhead(scene, x_edge, y_dst, math.pi, pen)
+
+        scene.setSceneRect(
+            scene.itemsBoundingRect().adjusted(-8, -8, _GOTO_OFFSET_NM + 16, 8)
+        )
 
     # ------------------------------------------------------------------
     # Save

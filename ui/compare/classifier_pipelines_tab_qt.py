@@ -66,6 +66,11 @@ class ClassifierPipelinesTab(QWidget):
         new_btn.clicked.connect(lambda: self._open_editor())
         title_row.addWidget(new_btn)
 
+        demo_btn = QPushButton(_("Load Demo"))
+        demo_btn.setToolTip(_("Insert the built-in demo pipeline"))
+        demo_btn.clicked.connect(self._load_demo)
+        title_row.addWidget(demo_btn)
+
         title_row.addStretch()
         root.addLayout(title_row)
 
@@ -202,6 +207,19 @@ class ClassifierPipelinesTab(QWidget):
     # ------------------------------------------------------------------
     # Toolbar / row actions
     # ------------------------------------------------------------------
+
+    def _load_demo(self) -> None:
+        demo = ClassifierPipelines.build_demo_pipeline()
+        existing = {p.name for p in ClassifierPipelines.get_all_pipelines()}
+        if demo.name in existing:
+            base = demo.name
+            counter = 2
+            while demo.name in existing:
+                demo.name = f"{base} ({counter})"
+                counter += 1
+        ClassifierPipelines.add_pipeline(demo)
+        ClassifierPipelines.store()
+        self._rebuild_rows()
 
     def _toggle_active(self, pipeline: ClassifierPipeline, value: bool) -> None:
         pipeline.is_active = value

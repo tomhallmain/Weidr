@@ -45,6 +45,7 @@ from compare.classifier_pipeline import (
     PrevalidationPipeline,
     PromptCondition,
     PrototypeCondition,
+    RelatedImageCondition,
 )
 from files.directory_profile import DirectoryProfile
 from lib.multi_display_qt import SmartDialog
@@ -67,6 +68,7 @@ _CONDITION_ENTRIES = [
     ("prototype",           _("Prototype")),
     ("prompt",              _("Prompt")),
     ("filename_contains",   _("Filename Contains")),
+    ("related_image",       _("Related Image Exists")),
     ("lookahead",           _("Lookahead")),
     ("node_result",         _("Prior Node Result")),
     ("group_child_result",  _("Group Child Result")),
@@ -455,6 +457,68 @@ class _FilenameContainsPanel(QWidget):
         )
 
 
+class _RelatedImagePanel(QWidget):
+    condition_type = "related_image"
+
+    def __init__(self, on_changed: Callable = None, parent=None):
+        super().__init__(parent)
+        self._on_changed = on_changed or (lambda: None)
+        form = QFormLayout(self)
+        form.setContentsMargins(0, 4, 0, 4)
+        form.setSpacing(4)
+
+        self._edit_suffix = QLineEdit()
+        self._edit_suffix.setPlaceholderText(_("e.g. _edit"))
+        self._edit_suffix.textChanged.connect(self._on_changed)
+        form.addRow(_("Edit suffix:"), self._edit_suffix)
+
+        self._search_dir = QLineEdit()
+        self._search_dir.setPlaceholderText(_("(empty = pipeline base directory)"))
+        self._search_dir.textChanged.connect(self._on_changed)
+        dir_row = QHBoxLayout()
+        dir_row.addWidget(self._search_dir, 1)
+        browse_btn = QPushButton(_("Browse…"))
+        browse_btn.clicked.connect(self._browse)
+        dir_row.addWidget(browse_btn)
+        form.addRow(_("Search directory:"), dir_row)
+
+        self._count_threshold = QSpinBox()
+        self._count_threshold.setRange(1, 999)
+        self._count_threshold.setValue(1)
+        self._count_threshold.valueChanged.connect(self._on_changed)
+        form.addRow(_("Count threshold:"), self._count_threshold)
+
+        note = _label(
+            _("Matches when the downstream file count with this suffix "
+              "is below the threshold (i.e. room to generate more).")
+        )
+        note.setWordWrap(True)
+        form.addRow("", note)
+
+    def _browse(self) -> None:
+        current = self._search_dir.text() or os.path.expanduser("~")
+        d = QFileDialog.getExistingDirectory(self, _("Select search directory"), current)
+        if d:
+            self._search_dir.setText(d)
+
+    def load(self, condition) -> None:
+        if isinstance(condition, RelatedImageCondition):
+            self._edit_suffix.setText(condition.edit_suffix)
+            self._search_dir.setText(condition.search_directory)
+            self._count_threshold.setValue(condition.count_threshold)
+        else:
+            self._edit_suffix.setText("")
+            self._search_dir.setText("")
+            self._count_threshold.setValue(1)
+
+    def get_condition(self) -> RelatedImageCondition:
+        return RelatedImageCondition(
+            edit_suffix=self._edit_suffix.text().strip(),
+            search_directory=self._search_dir.text().strip(),
+            count_threshold=self._count_threshold.value(),
+        )
+
+
 class _LookaheadPanel(QWidget):
     condition_type = "lookahead"
 
@@ -654,6 +718,7 @@ class _SubCondRow(QWidget):
             _PrototypePanel(on_changed=self._on_changed),
             _PromptPanel(on_changed=self._on_changed),
             _FilenameContainsPanel(on_changed=self._on_changed),
+            _RelatedImagePanel(on_changed=self._on_changed),
             _LookaheadPanel(on_changed=self._on_changed),
             _NodeResultPanel(on_changed=self._on_changed),
         ]
@@ -883,6 +948,7 @@ class _GroupPanel(QWidget):
             _PrototypePanel(on_changed=changed_cb),
             _PromptPanel(on_changed=changed_cb),
             _FilenameContainsPanel(on_changed=changed_cb),
+            _RelatedImagePanel(on_changed=changed_cb),
             _LookaheadPanel(on_changed=changed_cb),
             _NodeResultPanel(on_changed=changed_cb),
         ]
@@ -1385,6 +1451,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._prototype_panel           = _PrototypePanel(on_changed=changed_cb)
         self._prompt_panel              = _PromptPanel(on_changed=changed_cb)
         self._filename_contains_panel   = _FilenameContainsPanel(on_changed=changed_cb)
+        self._related_image_panel       = _RelatedImagePanel(on_changed=changed_cb)
         self._lookahead_panel           = _LookaheadPanel(on_changed=changed_cb)
         self._node_result_panel         = _NodeResultPanel(on_changed=changed_cb)
         self._group_child_result_panel  = _GroupChildResultPanel(on_changed=changed_cb)
@@ -1394,7 +1461,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._cond_panels = [
             self._embedding_panel, self._classifier_rank_panel,
             self._prototype_panel, self._prompt_panel,
-            self._filename_contains_panel,
+            self._filename_contains_panel, self._related_image_panel,
             self._lookahead_panel, self._node_result_panel,
             self._group_child_result_panel,
             self._composite_panel,

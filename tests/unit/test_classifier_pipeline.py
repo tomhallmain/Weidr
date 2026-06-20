@@ -219,6 +219,12 @@ class TestConditionSerialization:
         assert c2.edit_suffix == ""
         assert c2.search_directory == ""
         assert c2.count_threshold == 1
+        assert c2.use_configured_search_directories is True
+
+    def test_related_image_use_configured_search_directories_roundtrip(self):
+        c = RelatedImageCondition(edit_suffix="_e", use_configured_search_directories=False)
+        c2 = _condition_from_dict(c.to_dict())
+        assert c2.use_configured_search_directories is False
 
     def test_related_image_missing_keys_default_on_deserialize(self):
         c2 = _condition_from_dict({"condition_type": "related_image", "edit_suffix": "_v2"})
@@ -226,6 +232,8 @@ class TestConditionSerialization:
         assert c2.edit_suffix == "_v2"
         assert c2.search_directory == ""
         assert c2.count_threshold == 1
+        # Old configs without the key should default to True (backward compat).
+        assert c2.use_configured_search_directories is True
 
     def test_group_roundtrip(self):
         child = PipelineNode(

@@ -1066,11 +1066,13 @@ class TestBaseStemMatchConditionRunner:
 # ---------------------------------------------------------------------------
 
 class TestRelatedImageConditionRunner:
-    def _cond(self, edit_suffix="_edit", search_directory="", count_threshold=1):
+    def _cond(self, edit_suffix="_edit", search_directory="", count_threshold=1,
+              use_configured_search_directories=False):
         return RelatedImageCondition(
             edit_suffix=edit_suffix,
             search_directory=search_directory,
             count_threshold=count_threshold,
+            use_configured_search_directories=use_configured_search_directories,
         )
 
     def _patch_gate(self, result):
@@ -1078,13 +1080,13 @@ class TestRelatedImageConditionRunner:
 
     def test_gate_true_returns_true(self):
         with self._patch_gate(True):
-            result, score = _eval_related_image(self._cond(), IMAGE, None)
+            result, score = _eval_related_image(self._cond(), IMAGE, "/base")
         assert result is True
         assert score is None
 
     def test_gate_false_returns_false(self):
         with self._patch_gate(False):
-            result, _ = _eval_related_image(self._cond(), IMAGE, None)
+            result, _ = _eval_related_image(self._cond(), IMAGE, "/base")
         assert result is False
 
     def test_search_directory_on_condition_takes_priority(self):
@@ -1107,7 +1109,7 @@ class TestRelatedImageConditionRunner:
             captured.append(search_dir)
             return True
 
-        cond = self._cond(search_directory="")
+        cond = self._cond(search_directory="", use_configured_search_directories=False)
         with patch("files.related_image.should_run_generate_action", side_effect=fake_gate):
             _eval_related_image(cond, IMAGE, "/base_dir")
 
@@ -1120,7 +1122,7 @@ class TestRelatedImageConditionRunner:
             captured.append(search_dir)
             return True
 
-        cond = self._cond(search_directory="")
+        cond = self._cond(search_directory="", use_configured_search_directories=False)
         with patch("files.related_image.should_run_generate_action", side_effect=fake_gate):
             _eval_related_image(cond, "/dir/source.jpg", None)
 
@@ -1135,7 +1137,7 @@ class TestRelatedImageConditionRunner:
 
         cond = self._cond(count_threshold=5)
         with patch("files.related_image.should_run_generate_action", side_effect=fake_gate):
-            _eval_related_image(cond, IMAGE, None)
+            _eval_related_image(cond, IMAGE, "/base")
 
         assert captured == [5]
 
@@ -1152,7 +1154,11 @@ class TestRelatedImageConditionRunner:
             captured.append(search_dir)
             return False
 
-        cond = RelatedImageCondition(edit_suffix="_edit", search_directory="")
+        cond = RelatedImageCondition(
+            edit_suffix="_edit",
+            search_directory="",
+            use_configured_search_directories=False,
+        )
         p = _pipeline(
             _node("n1", cond,
                   on_match=_execute(ClassifierActionType.GENERATE),
@@ -1162,6 +1168,54 @@ class TestRelatedImageConditionRunner:
             run_pipeline(p, IMAGE, ActionCallbacks(), base_directory="/pipeline_base")
 
         assert captured == ["/pipeline_base"]
+
+    def test_use_configured_dirs_searches_all_config_dirs(self, monkeypatch):
+        captured = []
+
+        def fake_gate(image_path, edit_suffix, search_dir, count_threshold=1):
+            captured.append(search_dir)
+            return True
+
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/cfg1", "/cfg2"])
+        cond = RelatedImageCondition(
+            edit_suffix="_edit",
+            search_directory="",
+            use_configured_search_directories=True,
+        )
+        with patch("files.related_image.should_run_generate_action", side_effect=fake_gate):
+            result, _ = _eval_related_image(cond, IMAGE, "/base_dir")
+
+        assert result is True
+        assert captured == ["/cfg1", "/cfg2"]
+        assert "/base_dir" not in captured
+
+    def test_use_configured_dirs_returns_false_if_any_dir_has_file(self, monkeypatch):
+        """If any configured dir already has the file, generation should be suppressed."""
+        results = {"/cfg1": True, "/cfg2": False}
+
+        def fake_gate(image_path, edit_suffix, search_dir, count_threshold=1):
+            return results[search_dir]
+
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/cfg1", "/cfg2"])
+        cond = RelatedImageCondition(
+            edit_suffix="_edit",
+            use_configured_search_directories=True,
+        )
+        with patch("files.related_image.should_run_generate_action", side_effect=fake_gate):
+            result, _ = _eval_related_image(cond, IMAGE, None)
+
+        assert result is False
+
+    def test_use_configured_dirs_empty_config_returns_false(self, monkeypatch):
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", [])
+        cond = RelatedImageCondition(
+            edit_suffix="_edit",
+            use_configured_search_directories=True,
+        )
+        with patch("files.related_image.should_run_generate_action", return_value=True):
+            result, _ = _eval_related_image(cond, IMAGE, None)
+
+        assert result is False
 
 
 # ---------------------------------------------------------------------------

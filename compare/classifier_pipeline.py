@@ -282,8 +282,11 @@ class RelatedImageCondition:
     condition_type: ClassVar[str] = "related_image"
 
     edit_suffix: str = ""
-    search_directory: str = ""  # empty = use base_directory from pipeline run
+    search_directory: str = ""  # empty = see use_configured_search_directories
     count_threshold: int = 1
+    # When True and search_directory is empty, search all directories from
+    # config.directories_to_search_for_related_images instead of base_directory.
+    use_configured_search_directories: bool = True
 
     def to_dict(self) -> dict:
         return {
@@ -291,10 +294,16 @@ class RelatedImageCondition:
             "edit_suffix": self.edit_suffix,
             "search_directory": self.search_directory,
             "count_threshold": self.count_threshold,
+            "use_configured_search_directories": self.use_configured_search_directories,
         }
 
     def summary(self) -> str:
-        return f"RelatedImage(suffix={self.edit_suffix!r}, threshold={self.count_threshold})"
+        suffix_part = f"RelatedImage(suffix={self.edit_suffix!r}, threshold={self.count_threshold}"
+        if self.search_directory:
+            return suffix_part + f", dir={self.search_directory!r})"
+        if not self.use_configured_search_directories:
+            return suffix_part + ", dir=base)"
+        return suffix_part + ")"
 
 
 @dataclass
@@ -440,6 +449,7 @@ def _condition_from_dict(d: dict):
             edit_suffix=d.get("edit_suffix", ""),
             search_directory=d.get("search_directory", ""),
             count_threshold=d.get("count_threshold", 1),
+            use_configured_search_directories=d.get("use_configured_search_directories", True),
         )
     if ct == "group":
         return GroupCondition(

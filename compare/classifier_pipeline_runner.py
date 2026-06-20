@@ -418,11 +418,20 @@ def _eval_related_image(
     base_directory: Optional[str],
 ) -> tuple[bool, object]:
     from files.related_image import should_run_generate_action
-    search_dir = condition.search_directory or base_directory or os.path.dirname(image_path)
-    result = should_run_generate_action(
-        image_path, condition.edit_suffix, search_dir, condition.count_threshold
-    )
-    return result, None
+    if condition.search_directory:
+        dirs = [condition.search_directory]
+    elif condition.use_configured_search_directories:
+        dirs = list(config.directories_to_search_for_related_images or [])
+    else:
+        dirs = [base_directory or os.path.dirname(image_path)]
+    if not dirs:
+        return False, None
+    for search_dir in dirs:
+        if not should_run_generate_action(
+            image_path, condition.edit_suffix, search_dir, condition.count_threshold
+        ):
+            return False, None
+    return True, None
 
 
 def _eval_group(

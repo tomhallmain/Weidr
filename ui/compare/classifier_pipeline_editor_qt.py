@@ -474,8 +474,15 @@ class _RelatedImagePanel(QWidget):
         self._edit_suffix.textChanged.connect(self._on_changed)
         form.addRow(_("Edit suffix:"), self._edit_suffix)
 
+        self._use_configured_dirs = QCheckBox(
+            _("Search configured related-image directories when no directory is set below")
+        )
+        self._use_configured_dirs.setChecked(True)
+        self._use_configured_dirs.stateChanged.connect(self._on_changed)
+        form.addRow("", self._use_configured_dirs)
+
         self._search_dir = QLineEdit()
-        self._search_dir.setPlaceholderText(_("(empty = pipeline base directory)"))
+        self._search_dir.setPlaceholderText(_("(empty = use configured dirs or pipeline base directory)"))
         self._search_dir.textChanged.connect(self._on_changed)
         dir_row = QHBoxLayout()
         dir_row.addWidget(self._search_dir, 1)
@@ -492,7 +499,10 @@ class _RelatedImagePanel(QWidget):
 
         note = _label(
             _("Matches when the downstream file count with this suffix "
-              "is below the threshold (i.e. room to generate more).")
+              "is below the threshold (i.e. room to generate more). "
+              "When 'Search directory' is empty and the checkbox is checked, "
+              "all configured related-image directories are searched; "
+              "generation is suppressed if the file is found in any of them.")
         )
         note.setWordWrap(True)
         form.addRow("", note)
@@ -508,16 +518,19 @@ class _RelatedImagePanel(QWidget):
             self._edit_suffix.setText(condition.edit_suffix)
             self._search_dir.setText(condition.search_directory)
             self._count_threshold.setValue(condition.count_threshold)
+            self._use_configured_dirs.setChecked(condition.use_configured_search_directories)
         else:
             self._edit_suffix.setText("")
             self._search_dir.setText("")
             self._count_threshold.setValue(1)
+            self._use_configured_dirs.setChecked(True)
 
     def get_condition(self) -> RelatedImageCondition:
         return RelatedImageCondition(
             edit_suffix=self._edit_suffix.text().strip(),
             search_directory=self._search_dir.text().strip(),
             count_threshold=self._count_threshold.value(),
+            use_configured_search_directories=self._use_configured_dirs.isChecked(),
         )
 
 

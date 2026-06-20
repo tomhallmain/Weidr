@@ -20,6 +20,7 @@ from typing import Callable, Optional
 from PySide6.QtCore import Qt, QRectF
 from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog, QFormLayout,
     QGraphicsScene, QGraphicsView,
     QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget,
@@ -1233,12 +1234,12 @@ class ClassifierPipelineEditorDialog(SmartDialog):
 
         root.addWidget(self._build_flow_preview_group())
 
-        # _rebuild_node_list already selected row 0, but _on_node_selected
+        # _rebuild_node_list already selected row 0, but _on_selection_changed
         # returned early because _node_editor_widget didn't exist yet.
         # All widgets (_node_editor_widget, _flow_preview) are now built —
         # call directly to initialize _current_node_idx and load the editor.
         if self._pipeline.nodes:
-            self._on_node_selected(0)
+            self._on_selection_changed()
 
         btn_row = QHBoxLayout()
         save_btn = QPushButton(_("Save"))
@@ -1316,7 +1317,8 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._node_list.setStyleSheet(
             f"color: {_FG}; background: {_BG}; selection-background-color: #444;"
         )
-        self._node_list.currentRowChanged.connect(self._on_node_selected)
+        self._node_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self._node_list.itemSelectionChanged.connect(self._on_selection_changed)
         lay.addWidget(self._node_list, 1)
 
         btn_row = QHBoxLayout()
@@ -1330,6 +1332,18 @@ class ClassifierPipelineEditorDialog(SmartDialog):
             b.clicked.connect(slot)
             btn_row.addWidget(b)
         lay.addLayout(btn_row)
+
+        group_row = QHBoxLayout()
+        self._group_btn = QPushButton(_("Group Selected →"))
+        self._group_btn.setToolTip(
+            _("Convert the selected nodes into children of a new Group node "
+              "(select 2 or more with Ctrl+click)")
+        )
+        self._group_btn.setEnabled(False)
+        self._group_btn.clicked.connect(self._group_selected_nodes)
+        group_row.addWidget(self._group_btn)
+        group_row.addStretch()
+        lay.addLayout(group_row)
 
         self._rebuild_node_list()
         return pane
@@ -1466,17 +1480,79 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         )
         return f"{node.name}  [{ctype}]  ✓{match_summary} / ✗{no_match_summary}"
 
-    def _on_node_selected(self, row: int) -> None:
+    def _on_selection_changed(self) -> None:
         if self._node_editor_widget is None:
             return
-        self._flush_node_to_model()
-        if row < 0 or row >= len(self._pipeline.nodes):
+        selected = sorted(idx.row() for idx in self._node_list.selectedIndexes())
+        n = len(selected)
+        self._group_btn.setEnabled(n >= 2)
+        if n == 1:
+            row = selected[0]
+            if row == self._current_node_idx and self._node_editor_widget.isEnabled():
+                return
+            self._flush_node_to_model()
+            self._current_node_idx = row
+            self._node_editor_widget.setEnabled(True)
+            self._load_node_to_editor(row)
+        else:
+            self._flush_node_to_model()
             self._current_node_idx = None
             self._node_editor_widget.setEnabled(False)
+
+    def _group_selected_nodes(self) -> None:
+        """Convert the currently selected nodes into children of a new GroupCondition node."""
+        self._flush_node_to_model()
+        selected = sorted(idx.row() for idx in self._node_list.selectedIndexes())
+        if len(selected) < 2:
             return
-        self._current_node_idx = row
-        self._node_editor_widget.setEnabled(True)
-        self._load_node_to_editor(row)
+
+        # Collect the nodes being grouped and the names of nodes that will disappear
+        nodes_to_group = [self._pipeline.nodes[i] for i in selected]
+        absorbed_names = {n.name for n in nodes_to_group}
+
+        # Build child PipelineNodes: preserve name + condition; outcomes are ignored by runner
+        children = [
+            PipelineNode(
+                name=node.name,
+                condition=copy.deepcopy(node.condition),
+            )
+            for node in nodes_to_group
+        ]
+
+        # Pick a name for the outer group node
+        base = f"group_{nodes_to_group[0].name}"
+        existing = {n.name for n in self._pipeline.nodes}
+        name = base
+        counter = 2
+        while name in existing:
+            name = f"{base}_{counter}"
+            counter += 1
+
+        # Carry forward the first selected node's outcomes, but clear any GOTO targets
+        # that pointed into the now-absorbed set (they'd become invalid).
+        def _safe_outcome(outcome: NodeOutcome) -> NodeOutcome:
+            if (outcome.outcome_type == OutcomeType.GOTO
+                    and outcome.target_node in absorbed_names):
+                return NodeOutcome(OutcomeType.CONTINUE)
+            return copy.deepcopy(outcome)
+
+        group_node = PipelineNode(
+            name=name,
+            condition=GroupCondition(operator="OR", nodes=children),
+            on_match=_safe_outcome(nodes_to_group[0].on_match),
+            on_no_match=_safe_outcome(nodes_to_group[0].on_no_match),
+        )
+
+        # Replace selected nodes with the single group node (insert at first position)
+        insert_at = selected[0]
+        for i in reversed(selected):
+            del self._pipeline.nodes[i]
+        self._pipeline.nodes.insert(insert_at, group_node)
+
+        self._current_node_idx = None
+        self._rebuild_node_list()
+        self._node_list.setCurrentRow(insert_at)
+        self._refresh_flow_preview()
 
     def _load_node_to_editor(self, idx: int) -> None:
         self._suppress_refresh = True

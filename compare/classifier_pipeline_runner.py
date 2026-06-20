@@ -14,6 +14,7 @@ import os
 from typing import Optional
 
 from compare.action_callbacks import ActionCallbacks
+from compare.debounced_generate_queue import DebouncedGenerateQueue
 from compare.pipeline_run_report import PipelineRunReport
 from compare.classifier_pipeline import (
     ClassifierPipeline,
@@ -74,6 +75,7 @@ def run_pipeline(
     *,
     base_directory: Optional[str] = None,
     report: Optional[PipelineRunReport] = None,
+    generate_queue: Optional[DebouncedGenerateQueue] = None,
 ) -> Optional[ClassifierActionType]:
     """
     Walk the pipeline nodes and return the ClassifierActionType to fire, or
@@ -123,6 +125,7 @@ def run_pipeline(
                 image_path,
                 callbacks,
                 base_directory,
+                generate_queue=generate_queue,
             )
             return outcome.action_type
 
@@ -137,6 +140,7 @@ def run_pipeline(
                 image_path,
                 callbacks,
                 base_directory,
+                generate_queue=generate_queue,
             )
             return pipeline.default_reject_action
 
@@ -154,6 +158,7 @@ def run_pipeline(
         image_path,
         callbacks,
         base_directory,
+        generate_queue=generate_queue,
     )
     return pipeline.default_action
 
@@ -525,6 +530,8 @@ def _dispatch_action(
     image_path: str,
     callbacks: ActionCallbacks,
     base_directory: Optional[str],
+    *,
+    generate_queue: Optional[DebouncedGenerateQueue] = None,
 ) -> None:
     if action_type is None:
         return
@@ -637,4 +644,7 @@ def _dispatch_action(
             base_message=base_message, action_type=ActionType.GENERATE_IMAGE, is_manual=False,
         )
         if generate_callback:
-            generate_callback(image_path, action_modifier or None)
+            if generate_queue is not None:
+                generate_queue.submit(generate_callback, image_path, action_modifier or None)
+            else:
+                generate_callback(image_path, action_modifier or None)

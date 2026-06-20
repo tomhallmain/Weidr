@@ -1154,6 +1154,93 @@ class TestPipelineRunReport:
 
 
 # ---------------------------------------------------------------------------
+# DebouncedGenerateQueue
+# ---------------------------------------------------------------------------
+
+class TestDebouncedGenerateQueue:
+    def test_submit_and_shutdown_calls_fn(self):
+        from compare.debounced_generate_queue import DebouncedGenerateQueue
+        called = []
+        q = DebouncedGenerateQueue(dispatch_interval=0)
+        q.submit(called.append, "a")
+        q.shutdown()
+        assert called == ["a"]
+
+    def test_multiple_submits_all_dispatched_in_order(self):
+        from compare.debounced_generate_queue import DebouncedGenerateQueue
+        called = []
+        q = DebouncedGenerateQueue(dispatch_interval=0)
+        for v in ["x", "y", "z"]:
+            q.submit(called.append, v)
+        q.shutdown()
+        assert called == ["x", "y", "z"]
+
+    def test_shutdown_after_no_submissions(self):
+        from compare.debounced_generate_queue import DebouncedGenerateQueue
+        q = DebouncedGenerateQueue(dispatch_interval=0)
+        q.shutdown()  # must not hang or raise
+        assert not q.is_alive()
+
+    def test_no_sleep_when_interval_zero(self):
+        """With dispatch_interval=0 the queue drains without sleeping."""
+        import time
+        from compare.debounced_generate_queue import DebouncedGenerateQueue
+        called = []
+        q = DebouncedGenerateQueue(dispatch_interval=0)
+        for i in range(5):
+            q.submit(called.append, i)
+        start = time.monotonic()
+        q.shutdown()
+        elapsed = time.monotonic() - start
+        assert called == list(range(5))
+        assert elapsed < 1.0  # should complete well under 1 s with 0 interval
+
+    def test_generate_queue_used_in_dispatch_action(self):
+        """When generate_queue is provided, generate_callback is submitted rather than called directly."""
+        from compare.debounced_generate_queue import DebouncedGenerateQueue
+        from compare.classifier_pipeline_runner import _dispatch_action
+        called_direct = []
+        submitted = []
+
+        class FakeQueue:
+            def submit(self, fn, *args, **kwargs):
+                submitted.append((fn, args))
+
+        callbacks = ActionCallbacks(generate_callback=called_direct.append)
+        _dispatch_action(
+            ClassifierActionType.GENERATE, "_suffix", "pipe", IMAGE,
+            callbacks, None, generate_queue=FakeQueue(),
+        )
+        assert called_direct == []
+        assert len(submitted) == 1
+        assert submitted[0][1][0] == IMAGE  # image_path forwarded
+
+    def test_generate_dispatched_directly_without_queue(self):
+        from compare.classifier_pipeline_runner import _dispatch_action
+        called = []
+        callbacks = ActionCallbacks(generate_callback=lambda path, mod: called.append(path))
+        _dispatch_action(
+            ClassifierActionType.GENERATE, None, "pipe", IMAGE,
+            callbacks, None,
+        )
+        assert called == [IMAGE]
+
+    def test_generate_queue_threaded_through_run_pipeline(self):
+        """run_pipeline forwards generate_queue to _dispatch_action."""
+        submitted = []
+
+        class FakeQueue:
+            def submit(self, fn, *args, **kwargs):
+                submitted.append(args[0])  # image_path
+
+        cond = FilenameContainsCondition(["image"], case_sensitive=False)  # matches IMAGE
+        p = _pipeline(_node("n1", cond, on_match=_execute(ClassifierActionType.GENERATE)))
+        callbacks = ActionCallbacks(generate_callback=lambda path, mod: None)
+        run_pipeline(p, IMAGE, callbacks, generate_queue=FakeQueue())
+        assert IMAGE in submitted
+
+
+# ---------------------------------------------------------------------------
 # RelatedImageCondition
 # ---------------------------------------------------------------------------
 

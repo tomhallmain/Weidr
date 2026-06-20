@@ -1,6 +1,9 @@
 import glob
 import os
 import re
+import time
+from enum import Enum
+from typing import Callable
 
 from image.image_data_extractor import image_data_extractor
 from utils.config import config
@@ -364,4 +367,234 @@ def get_downstream_files_for_sources(
         if m and (m.group(1), ext.lower()) in source_stems:
             results.append(candidate)
     return results
+
+
+# ---------------------------------------------------------------------------
+# Filename base stem matching
+# ---------------------------------------------------------------------------
+
+class _CharCategory(Enum):
+    ALPHA = "alpha"
+    DIGIT = "digit"
+    OTHER = "other"
+
+
+def _get_char_category(char: str) -> _CharCategory:
+    if char.isalpha():
+        return _CharCategory.ALPHA
+    if char.isdigit():
+        return _CharCategory.DIGIT
+    return _CharCategory.OTHER
+
+
+def extract_filename_base_stem(filename: str) -> str | None:
+    """
+    Extract the base stem from filename using common delimiter heuristics.
+
+    Example: "SDWebUI_17602175357792320_0_s.png" -> "SDWebUI_17602175357792320"
+
+    Works for any file type, not just images.
+    """
+    basename = os.path.splitext(os.path.basename(filename))[0]
+
+    delimiter_pattern = r"([_\s\-\.]+)"
+    parts = re.split(delimiter_pattern, basename)
+
+    if len(parts) == 0:
+        return basename
+
+    if len(parts) == 1:
+        single_part = parts[0]
+        if len(single_part) >= 8 and any(c.isalnum() for c in single_part):
+            return single_part
+        return basename
+
+    base_stem = parts[0]
+    first_part_len = len(parts[0])
+
+    if first_part_len >= 30:
+        return base_stem
+
+    if len(parts) < 3:
+        if len(base_stem) >= 3 and any(c.isalnum() for c in base_stem):
+            return base_stem
+        return basename
+
+    delimiter = parts[1]
+    second_part = parts[2]
+
+    if not second_part or len(second_part) <= 4:
+        if len(base_stem) >= 3 and any(c.isalnum() for c in base_stem):
+            return base_stem
+        return basename
+
+    base_stem = base_stem + delimiter + second_part
+
+    if len(base_stem) >= 10:
+        return base_stem
+
+    for i in range(3, len(parts), 2):
+        if i + 1 < len(parts):
+            delim = parts[i]
+            next_part = parts[i + 1]
+
+            if not next_part or len(next_part) <= 4:
+                break
+
+            candidate = base_stem + delim + next_part
+            if len(candidate) >= 3 and any(c.isalnum() for c in candidate):
+                base_stem = candidate
+                if len(base_stem) >= 10:
+                    break
+            else:
+                break
+        else:
+            break
+
+    if len(base_stem) >= 3 and any(c.isalnum() for c in base_stem):
+        return base_stem
+    return basename
+
+
+def _check_base_stem_boundary(
+    filename_no_ext: str, base_stem: str, last_category: _CharCategory
+) -> bool:
+    """Return True if filename_no_ext is a valid base stem match for base_stem."""
+    if not filename_no_ext.startswith(base_stem):
+        return False
+    if len(filename_no_ext) == len(base_stem):
+        return True
+    next_char = filename_no_ext[len(base_stem)]
+    if next_char in ("_", " ", "-", "."):
+        return True
+    return last_category != _get_char_category(next_char)
+
+
+# Per-directory scan cache used by find_files_by_base_stem(use_cache=True).
+# Each entry is (entries, cached_at) where entries is a list of
+# (filepath, stem-without-extension) for every file found via os.walk.
+# Entries expire after _BASE_STEM_CACHE_TTL seconds.
+_BASE_STEM_CACHE_TTL: float = 300.0  # 5 minutes
+_base_stem_dir_cache: dict[str, tuple[list[tuple[str, str]], float]] = {}
+
+
+def clear_base_stem_dir_cache(search_dir: str | None = None) -> None:
+    """Invalidate the base stem directory scan cache.
+
+    Pass a directory path to evict just that entry, or no argument to clear
+    everything. Call this after writing a file into a previously-scanned
+    directory so the next find_files_by_base_stem(use_cache=True) call picks
+    up the new entry.
+    """
+    if search_dir is None:
+        _base_stem_dir_cache.clear()
+    else:
+        _base_stem_dir_cache.pop(search_dir, None)
+
+
+def find_files_by_base_stem(
+    directories: list[str],
+    base_stem: str,
+    threshold: int = 400_000,
+    on_threshold_exceeded: Callable[[str, int], bool] | None = None,
+    use_cache: bool = False,
+) -> list[str]:
+    """
+    Walk each directory in `directories` and return files whose stem starts
+    with `base_stem` (with appropriate delimiter / character-category boundary
+    check). Results are sorted by basename, lower-cased.
+
+    When use_cache=False (default) each call performs a fresh os.walk().
+    If the total file count within a directory exceeds `threshold`,
+    `on_threshold_exceeded(directory, file_count)` is called. Returning True
+    continues the walk; returning False aborts and returns []. If
+    `on_threshold_exceeded` is None and the threshold is exceeded, the walk
+    is aborted and the matches found so far are returned.
+
+    When use_cache=True a per-directory listing of (filepath, stem) pairs is
+    built on the first call and reused on subsequent calls. `threshold` and
+    `on_threshold_exceeded` are ignored in the cached path. Call
+    clear_base_stem_dir_cache() after writing files into cached directories.
+    Intended for batch callers (pipeline, ClassifierAction) that search the
+    same directories many times within a single run.
+
+    Works for any file type, not just images.
+    """
+    last_category = (
+        _get_char_category(base_stem[-1]) if base_stem else _CharCategory.OTHER
+    )
+    matching: list[str] = []
+
+    for directory in directories:
+        if use_cache:
+            cached = _base_stem_dir_cache.get(directory)
+            if cached is None or (time.time() - cached[1]) > _BASE_STEM_CACHE_TTL:
+                # Cache miss or expired: walk the directory to (re)build the listing.
+                # Threshold/callback are honoured during the build so large-directory
+                # confirmation works the same way as the non-cached path.
+                entries: list[tuple[str, str]] = []
+                file_count = 0
+                threshold_cleared = False
+                walk_aborted = False
+                try:
+                    for root_dir, _dirs, files in os.walk(directory):
+                        for fname in files:
+                            file_count += 1
+                            if not threshold_cleared and file_count > threshold:
+                                if on_threshold_exceeded is not None:
+                                    if not on_threshold_exceeded(directory, file_count):
+                                        return []
+                                    threshold_cleared = True
+                                else:
+                                    walk_aborted = True
+                                    break
+                            entries.append((
+                                os.path.join(root_dir, fname),
+                                os.path.splitext(fname)[0],
+                            ))
+                        if walk_aborted:
+                            break
+                except Exception:
+                    logger.exception(
+                        "Error scanning %r for base stem cache", directory
+                    )
+                # Only store a complete listing in the cache.
+                if not walk_aborted:
+                    _base_stem_dir_cache[directory] = (entries, time.time())
+                scan_entries = entries
+            else:
+                # Cache hit: skip the walk entirely.
+                scan_entries = cached[0]
+
+            for filepath, filename_no_ext in scan_entries:
+                if _check_base_stem_boundary(filename_no_ext, base_stem, last_category):
+                    matching.append(filepath)
+        else:
+            file_count = 0
+            threshold_cleared = False
+            try:
+                for root_dir, _dirs, files in os.walk(directory):
+                    for fname in files:
+                        file_count += 1
+
+                        if not threshold_cleared and file_count > threshold:
+                            if on_threshold_exceeded is not None:
+                                if not on_threshold_exceeded(directory, file_count):
+                                    return []
+                                threshold_cleared = True
+                            else:
+                                return matching
+
+                        filename_no_ext = os.path.splitext(fname)[0]
+                        if _check_base_stem_boundary(
+                            filename_no_ext, base_stem, last_category
+                        ):
+                            matching.append(os.path.join(root_dir, fname))
+            except Exception:
+                logger.exception(
+                    "Error searching %r for base stem %r", directory, base_stem
+                )
+
+    matching.sort(key=lambda x: os.path.basename(x).lower())
+    return matching
 

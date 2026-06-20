@@ -16,8 +16,6 @@ All functionality:
 from __future__ import annotations
 
 import os
-import re
-from enum import Enum
 from typing import Optional
 
 from PySide6.QtCore import Qt, QTimer
@@ -28,6 +26,7 @@ from PySide6.QtWidgets import (
     QProgressBar, QPushButton, QVBoxLayout, QWidget,
 )
 
+from files.related_image import extract_filename_base_stem, find_files_by_base_stem
 from ui.files.marked_file_mover_qt import MarkedFiles
 from ui.files.file_actions_window_qt import FileActionsWindow
 from files.file_action import FileAction
@@ -39,16 +38,6 @@ from utils.config import config
 from utils.constants import SortBy
 from utils.translations import _
 from utils.utils import Utils
-
-
-# ------------------------------------------------------------------
-# Trivial enum (ported from original)
-# ------------------------------------------------------------------
-class CharCategory(Enum):
-    """Character category types for base ID matching."""
-    ALPHA = "alpha"
-    DIGIT = "digit"
-    OTHER = "other"
 
 
 class GoToFile(SmartDialog):
@@ -134,94 +123,6 @@ class GoToFile(SmartDialog):
     @staticmethod
     def get_geometry() -> str:
         return "700x500"
-
-    # ------------------------------------------------------------------
-    # Pure helpers (ported from original)
-    # ------------------------------------------------------------------
-    @staticmethod
-    def _get_char_category(char: str) -> CharCategory:
-        """Determine the category of a character: alpha, digit, or other."""
-        if char.isalpha():
-            return CharCategory.ALPHA
-        if char.isdigit():
-            return CharCategory.DIGIT
-        return CharCategory.OTHER
-
-    @staticmethod
-    def extract_base_id(filename: str) -> str | None:
-        """
-        Extract base ID from *filename* using common delimiters.
-
-        Example: ``"SDWebUI_17602175357792320_0_s.png"``
-              -> ``"SDWebUI_17602175357792320"``
-
-        Preserves original delimiters when possible.
-        """
-        basename = os.path.splitext(os.path.basename(filename))[0]
-
-        # Split by common delimiters while preserving them
-        delimiter_pattern = r"([_\s\-\.]+)"
-        parts = re.split(delimiter_pattern, basename)
-
-        if len(parts) == 0:
-            return basename
-
-        # Single part (no delimiters)
-        if len(parts) == 1:
-            single_part = parts[0]
-            if len(single_part) >= 8 and any(c.isalnum() for c in single_part):
-                return single_part
-            return basename
-
-        base_id = parts[0]
-        first_part_len = len(parts[0])
-
-        # Long first part is likely already a complete base ID
-        if first_part_len >= 30:
-            return base_id
-
-        # Need at least [part, delimiter, part]
-        if len(parts) < 3:
-            if len(base_id) >= 3 and any(c.isalnum() for c in base_id):
-                return base_id
-            return basename
-
-        delimiter = parts[1]
-        second_part = parts[2]
-
-        # Short/empty second part -> first part is enough
-        if not second_part or len(second_part) <= 4:
-            if len(base_id) >= 3 and any(c.isalnum() for c in base_id):
-                return base_id
-            return basename
-
-        base_id = base_id + delimiter + second_part
-
-        if len(base_id) >= 10:
-            return base_id
-
-        # Continue adding parts until we have a reasonable length
-        for i in range(3, len(parts), 2):
-            if i + 1 < len(parts):
-                delim = parts[i]
-                next_part = parts[i + 1]
-
-                if not next_part or len(next_part) <= 4:
-                    break
-
-                candidate = base_id + delim + next_part
-                if len(candidate) >= 3 and any(c.isalnum() for c in candidate):
-                    base_id = candidate
-                    if len(base_id) >= 10:
-                        break
-                else:
-                    break
-            else:
-                break
-
-        if len(base_id) >= 3 and any(c.isalnum() for c in base_id):
-            return base_id
-        return basename
 
     # ------------------------------------------------------------------
     # Construction
@@ -348,7 +249,7 @@ class GoToFile(SmartDialog):
         if not initial_base_id:
             text = self._search_entry.text().strip()
             if text:
-                initial_base_id = GoToFile.extract_base_id(text) or ""
+                initial_base_id = extract_filename_base_stem(text) or ""
 
         self._base_id_entry = QLineEdit(initial_base_id)
         self._base_id_entry.setFixedWidth(200)
@@ -393,6 +294,18 @@ class GoToFile(SmartDialog):
         related_btn_row.addWidget(find_btn)
         related_btn_row.addStretch()
         root.addLayout(related_btn_row)
+
+        # Cache scan checkbox (session-only; cache is in-memory so always empty at startup)
+        self._cache_scan_checkbox = QCheckBox(_("Cache directory scan"))
+        self._cache_scan_checkbox.setChecked(True)
+        self._cache_scan_checkbox.setToolTip(
+            _("Keep the directory listing in memory so repeated searches "
+              "with different base IDs are faster. Uncheck to force a fresh "
+              "scan. Cache expires automatically after 5 minutes.")
+        )
+        self._cache_scan_checkbox.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
+        self._cache_scan_checkbox.stateChanged.connect(self._on_cache_scan_toggled)
+        root.addWidget(self._cache_scan_checkbox)
 
         # Loading container
         self._loading_container = QWidget()
@@ -539,13 +452,20 @@ class GoToFile(SmartDialog):
     # ==================================================================
     # Related files actions
     # ==================================================================
+    def _on_cache_scan_toggled(self, state: int) -> None:
+        if not state:
+            target_dir = self._target_dir_entry.text().strip()
+            if target_dir:
+                from files.related_image import clear_base_stem_dir_cache
+                clear_base_stem_dir_cache(target_dir)
+
     def _on_filename_changed(self, text: str) -> None:
         """Auto-extract base ID when the search text changes."""
         text = text.strip()
         if text:
-            base_id = GoToFile.extract_base_id(text)
-            if base_id:
-                self._base_id_entry.setText(base_id)
+            base_stem = extract_filename_base_stem(text)
+            if base_stem:
+                self._base_id_entry.setText(base_stem)
 
     def extract_and_set_base_id(self) -> None:
         search_text = self._search_entry.text().strip()
@@ -553,10 +473,10 @@ class GoToFile(SmartDialog):
             self._app_actions.toast(_("Please enter a filename first."))
             return
 
-        base_id = GoToFile.extract_base_id(search_text)
-        if base_id:
-            self._base_id_entry.setText(base_id)
-            self._update_status(_("Base ID extracted: {}").format(base_id))
+        base_stem = extract_filename_base_stem(search_text)
+        if base_stem:
+            self._base_id_entry.setText(base_stem)
+            self._update_status(_("Base ID extracted: {}").format(base_stem))
         else:
             self._app_actions.warn(
                 _(
@@ -680,77 +600,51 @@ class GoToFile(SmartDialog):
         self.go_to_file()
 
     # ==================================================================
-    # File matching (ported from original)
+    # File matching
     # ==================================================================
     def _find_matching_files(
         self, target_dir: str, base_id: str, threshold: int = 400_000
     ) -> list[str]:
         """Find files in *target_dir* whose name starts with *base_id*."""
-        matching: list[str] = []
         normalized_dir = os.path.normpath(os.path.abspath(target_dir))
-
         needs_confirmation = normalized_dir not in GoToFile.confirmed_directories
-        last_category = (
-            GoToFile._get_char_category(base_id[-1])
-            if base_id
-            else CharCategory.OTHER
-        )
+        aborted = [False]
 
-        try:
-            file_count = 0
-            for root_dir, _dirs, files in os.walk(target_dir):
-                for fname in files:
-                    file_count += 1
-
-                    # Large-directory confirmation
-                    if needs_confirmation and file_count > threshold:
-                        from lib.qt_alert import qt_alert
-
-                        msg = _(
-                            "The directory '{0}' contains many files "
-                            "({1} files found so far). Searching may take "
-                            "a while. Do you want to proceed?"
-                        ).format(target_dir, file_count)
-                        proceed = qt_alert(
-                            self, _("Large Directory"), msg, kind="askyesno"
-                        )
-                        if proceed:
-                            GoToFile._add_confirmed_directory(normalized_dir)
-                            GoToFile.save_persisted_data()
-                            needs_confirmation = False
-                        else:
-                            self._app_actions.toast(
-                                _("Search cancelled by user.")
-                            )
-                            return []
-
-                    filename_no_ext = os.path.splitext(fname)[0]
-
-                    if filename_no_ext.startswith(base_id):
-                        file_path = os.path.join(root_dir, fname)
-                        if len(filename_no_ext) == len(base_id):
-                            # Exact match
-                            matching.append(file_path)
-                        else:
-                            next_char = filename_no_ext[len(base_id)]
-                            if next_char in ("_", " ", "-", "."):
-                                matching.append(file_path)
-                            elif last_category != GoToFile._get_char_category(
-                                next_char
-                            ):
-                                matching.append(file_path)
-
-            # Completed without hitting threshold -> confirm
-            if needs_confirmation:
+        def _on_threshold(directory: str, file_count: int) -> bool:
+            nonlocal needs_confirmation
+            from lib.qt_alert import qt_alert
+            msg = _(
+                "The directory '{0}' contains many files "
+                "({1} files found so far). Searching may take "
+                "a while. Do you want to proceed?"
+            ).format(target_dir, file_count)
+            proceed = qt_alert(self, _("Large Directory"), msg, kind="askyesno")
+            if proceed:
                 GoToFile._add_confirmed_directory(normalized_dir)
                 GoToFile.save_persisted_data()
+                needs_confirmation = False
+                return True
+            self._app_actions.toast(_("Search cancelled by user."))
+            aborted[0] = True
+            return False
 
-            matching.sort(key=lambda x: os.path.basename(x).lower())
-
+        try:
+            matching = find_files_by_base_stem(
+                [target_dir],
+                base_id,
+                threshold=threshold if needs_confirmation else 2 ** 31 - 1,
+                on_threshold_exceeded=_on_threshold if needs_confirmation else None,
+                use_cache=self._cache_scan_checkbox.isChecked(),
+            )
         except Exception as e:
             self._app_actions.warn(
                 _("Error searching directory: {}").format(str(e))
             )
+            return []
+
+        if not aborted[0] and needs_confirmation:
+            GoToFile._add_confirmed_directory(normalized_dir)
+            GoToFile.save_persisted_data()
 
         return matching
 

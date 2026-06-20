@@ -374,6 +374,8 @@ class ClassifierActionsTab(QWidget):
         def _worker():
             from compare.base_compare import gather_files
             from compare.classifier_pipeline_runner import run_pipeline
+            from files.related_image import clear_base_stem_dir_cache
+            clear_base_stem_dir_cache()
             for directory in directories:
                 for image_path in gather_files(directory):
                     try:

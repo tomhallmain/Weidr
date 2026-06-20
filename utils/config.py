@@ -613,6 +613,10 @@ class Config:
         if isinstance(vt, list) and ".m4a" in vt:
             self.dict["video_types"] = [e for e in vt if e != ".m4a"]
             logger.info("Removed '.m4a' from video_types (not a video extension)")
+        v = self.dict.get("directories_to_search_for_related_images")
+        if isinstance(v, str):
+            self.dict["directories_to_search_for_related_images"] = [v] if v else []
+            logger.info("Migrated 'directories_to_search_for_related_images': string → list")
 
     def set_values(self, type, *names):
         for name in names:

@@ -106,6 +106,8 @@ class ClassifierAction:
     use_filename_contains: bool = False
     filename_contains_patterns: Optional[list] = None
     filename_contains_case_sensitive: bool = False
+    use_base_stem_match: bool = False
+    base_stem_match_require_match: bool = True
     applies_to_media_types: Optional[list] = None
     can_run: bool = True
     initialization_error: Optional[str] = None
@@ -253,6 +255,18 @@ class ClassifierAction:
             if p and p in filename:
                 return True
         return False
+
+    def _check_base_stem_match(self, image_path: str) -> bool:
+        from files.related_image import extract_filename_base_stem, find_files_by_base_stem
+        from utils.config import config
+        base_stem = extract_filename_base_stem(image_path)
+        if not base_stem:
+            return False
+        dirs = config.directories_to_search_for_related_images
+        if not dirs:
+            return False
+        found = bool(find_files_by_base_stem(dirs, base_stem, use_cache=True))
+        return found if self.base_stem_match_require_match else not found
 
     def _check_lookaheads(self, image_path, lookahead_eval_cache=None):
         """Check if any lookahead prevalidations are triggered. Returns True if any lookahead passes."""
@@ -552,6 +566,12 @@ class ClassifierAction:
             if self._check_filename_contains(image_path):
                 if _detail_out is not None:
                     _detail_out[0] = TriggerDetail(trigger_type="filename")
+                return True, None
+
+        if self.use_base_stem_match:
+            if self._check_base_stem_match(image_path):
+                if _detail_out is not None:
+                    _detail_out[0] = TriggerDetail(trigger_type="base_stem_match")
                 return True, None
 
         # No validation type passed
@@ -1112,6 +1132,8 @@ class ClassifierAction:
             "use_filename_contains": self.use_filename_contains,
             "filename_contains_patterns": self.filename_contains_patterns,
             "filename_contains_case_sensitive": self.filename_contains_case_sensitive,
+            "use_base_stem_match": self.use_base_stem_match,
+            "base_stem_match_require_match": self.base_stem_match_require_match,
             "applies_to_media_types": (
                 [mt.value for mt in self.applies_to_media_types]
                 if self.applies_to_media_types is not None
@@ -1165,6 +1187,10 @@ class ClassifierAction:
             d['filename_contains_patterns'] = None
         if 'filename_contains_case_sensitive' not in d:
             d['filename_contains_case_sensitive'] = False
+        if 'use_base_stem_match' not in d:
+            d['use_base_stem_match'] = False
+        if 'base_stem_match_require_match' not in d:
+            d['base_stem_match_require_match'] = True
         if 'applies_to_media_types' not in d:
             d['applies_to_media_types'] = None
         if 'related_image_edit_suffix' not in d:

@@ -45,6 +45,7 @@ from compare.classifier_pipeline import (
     PrevalidationPipeline,
     PromptCondition,
     PrototypeCondition,
+    BaseStemMatchCondition,
     RelatedImageCondition,
 )
 from files.directory_profile import DirectoryProfile
@@ -69,6 +70,7 @@ _CONDITION_ENTRIES = [
     ("prompt",              _("Prompt")),
     ("filename_contains",   _("Filename Contains")),
     ("related_image",       _("Related Image Exists")),
+    ("base_stem_match",     _("Base Stem Match")),
     ("lookahead",           _("Lookahead")),
     ("node_result",         _("Prior Node Result")),
     ("group_child_result",  _("Group Child Result")),
@@ -519,6 +521,41 @@ class _RelatedImagePanel(QWidget):
         )
 
 
+class _BaseStemMatchPanel(QWidget):
+    condition_type = "base_stem_match"
+
+    def __init__(self, on_changed: Callable = None, parent=None):
+        super().__init__(parent)
+        self._on_changed = on_changed or (lambda: None)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 4, 0, 4)
+        layout.setSpacing(6)
+
+        self._require_match = QCheckBox(_("Pass when a related file is found (uncheck to pass when not found)"))
+        self._require_match.setChecked(True)
+        self._require_match.stateChanged.connect(self._on_changed)
+        layout.addWidget(self._require_match)
+
+        note = _label(
+            _("Searches the directories configured in Related Images settings "
+              "(config: directories_to_search_for_related_images). "
+              "Uses cached directory scan for pipeline performance.")
+        )
+        note.setWordWrap(True)
+        layout.addWidget(note)
+
+    def load(self, condition) -> None:
+        if isinstance(condition, BaseStemMatchCondition):
+            self._require_match.setChecked(condition.require_match)
+        else:
+            self._require_match.setChecked(True)
+
+    def get_condition(self) -> BaseStemMatchCondition:
+        return BaseStemMatchCondition(
+            require_match=self._require_match.isChecked(),
+        )
+
+
 class _LookaheadPanel(QWidget):
     condition_type = "lookahead"
 
@@ -719,6 +756,7 @@ class _SubCondRow(QWidget):
             _PromptPanel(on_changed=self._on_changed),
             _FilenameContainsPanel(on_changed=self._on_changed),
             _RelatedImagePanel(on_changed=self._on_changed),
+            _BaseStemMatchPanel(on_changed=self._on_changed),
             _LookaheadPanel(on_changed=self._on_changed),
             _NodeResultPanel(on_changed=self._on_changed),
         ]
@@ -949,6 +987,7 @@ class _GroupPanel(QWidget):
             _PromptPanel(on_changed=changed_cb),
             _FilenameContainsPanel(on_changed=changed_cb),
             _RelatedImagePanel(on_changed=changed_cb),
+            _BaseStemMatchPanel(on_changed=changed_cb),
             _LookaheadPanel(on_changed=changed_cb),
             _NodeResultPanel(on_changed=changed_cb),
         ]
@@ -1452,6 +1491,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._prompt_panel              = _PromptPanel(on_changed=changed_cb)
         self._filename_contains_panel   = _FilenameContainsPanel(on_changed=changed_cb)
         self._related_image_panel       = _RelatedImagePanel(on_changed=changed_cb)
+        self._base_stem_match_panel     = _BaseStemMatchPanel(on_changed=changed_cb)
         self._lookahead_panel           = _LookaheadPanel(on_changed=changed_cb)
         self._node_result_panel         = _NodeResultPanel(on_changed=changed_cb)
         self._group_child_result_panel  = _GroupChildResultPanel(on_changed=changed_cb)
@@ -1462,6 +1502,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
             self._embedding_panel, self._classifier_rank_panel,
             self._prototype_panel, self._prompt_panel,
             self._filename_contains_panel, self._related_image_panel,
+            self._base_stem_match_panel,
             self._lookahead_panel, self._node_result_panel,
             self._group_child_result_panel,
             self._composite_panel,

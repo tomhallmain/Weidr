@@ -247,6 +247,24 @@ class CompositeCondition:
 
 
 @dataclass
+class BaseStemMatchCondition:
+    """Matches when a file sharing the same filename base stem exists in the configured search directories."""
+    condition_type: ClassVar[str] = "base_stem_match"
+
+    require_match: bool = True  # False = pass when NO related file is found
+
+    def to_dict(self) -> dict:
+        return {
+            "condition_type": self.condition_type,
+            "require_match": self.require_match,
+        }
+
+    def summary(self) -> str:
+        mode = "found" if self.require_match else "not found"
+        return f"BaseStemMatch(require={mode})"
+
+
+@dataclass
 class RelatedImageCondition:
     """Checks whether a generate action should run based on downstream image state."""
     condition_type: ClassVar[str] = "related_image"
@@ -340,6 +358,7 @@ NodeCondition = (
     | LookaheadCondition
     | NodeResultCondition
     | CompositeCondition
+    | BaseStemMatchCondition
     | RelatedImageCondition
     | GroupCondition
     | GroupChildResultCondition
@@ -393,6 +412,10 @@ def _condition_from_dict(d: dict):
         return CompositeCondition(
             operator=d.get("operator", "AND"),
             sub_conditions=[_condition_from_dict(c) for c in d.get("sub_conditions", [])],
+        )
+    if ct == "base_stem_match":
+        return BaseStemMatchCondition(
+            require_match=d.get("require_match", True),
         )
     if ct == "related_image":
         return RelatedImageCondition(

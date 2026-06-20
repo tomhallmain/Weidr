@@ -29,6 +29,7 @@ from compare.classifier_pipeline import (
     OutcomeType,
     PromptCondition,
     PrototypeCondition,
+    BaseStemMatchCondition,
     RelatedImageCondition,
 )
 from utils.constants import ActionType, ClassifierActionType
@@ -203,6 +204,9 @@ def _evaluate_condition(
             return False, None
         return (prior == condition.expected_result), float(prior)
 
+    if isinstance(condition, BaseStemMatchCondition):
+        return _eval_base_stem_match(condition, image_path)
+
     if isinstance(condition, RelatedImageCondition):
         return _eval_related_image(condition, image_path, base_directory)
 
@@ -362,6 +366,22 @@ def _eval_lookahead(
         image_path, positives, negatives, lookahead.threshold
     )
     return bool(result), None
+
+
+def _eval_base_stem_match(
+    condition: BaseStemMatchCondition,
+    image_path: str,
+) -> tuple[bool, object]:
+    from files.related_image import extract_filename_base_stem, find_files_by_base_stem
+    from utils.config import config
+    base_stem = extract_filename_base_stem(image_path)
+    if not base_stem:
+        return False, None
+    dirs = config.directories_to_search_for_related_images
+    if not dirs:
+        return False, None
+    found = bool(find_files_by_base_stem(dirs, base_stem, use_cache=True))
+    return (found if condition.require_match else not found), None
 
 
 def _eval_related_image(

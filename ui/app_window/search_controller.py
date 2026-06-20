@@ -518,8 +518,10 @@ class SearchController:
                 run_kwargs["edit_suffix"] = edit_suffix
             sd_client.run(_type, media_path, **run_kwargs)
             MediaDetails.previous_image_generation_adapter_path = media_path
-            from files.related_image import clear_generate_gate_cache
-            clear_generate_gate_cache(os.path.dirname(media_path))
+            from files.related_image import clear_generate_gate_cache, clear_base_stem_dir_cache
+            output_dir = os.path.dirname(media_path)
+            clear_generate_gate_cache(output_dir)
+            clear_base_stem_dir_cache(output_dir)
 
         worker = _CompareWorker(_do_run, [])
         if not suppress_toast:

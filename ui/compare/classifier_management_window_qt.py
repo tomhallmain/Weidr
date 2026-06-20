@@ -212,6 +212,20 @@ class ClassifierActionModifyWindow(SmartDialog):
         grid.addWidget(self._filename_case_sensitive_cb, row, 1)
         row += 1
 
+        # -- Base Stem Match ----------------------------------------------
+        self._use_base_stem_match_cb = QCheckBox(_("Match by Base Stem (related file exists)"))
+        self._use_base_stem_match_cb.setChecked(ca.use_base_stem_match)
+        self._use_base_stem_match_cb.stateChanged.connect(self._update_ui_for_validation_types)
+        grid.addWidget(self._use_base_stem_match_cb, row, 1)
+        row += 1
+
+        self._base_stem_require_match_cb = QCheckBox(
+            _("Pass when file found (uncheck to pass when not found)")
+        )
+        self._base_stem_require_match_cb.setChecked(ca.base_stem_match_require_match)
+        grid.addWidget(self._base_stem_require_match_cb, row, 1)
+        row += 1
+
         # -- Text Embedding Threshold -------------------------------------
         self._text_thresh_lbl = self._lbl(_("Text Embedding Threshold"))
         grid.addWidget(self._text_thresh_lbl, row, 0, Qt.AlignLeft)
@@ -411,6 +425,9 @@ class ClassifierActionModifyWindow(SmartDialog):
         self._filename_patterns_edit.setVisible(use_fn)
         self._filename_case_sensitive_cb.setVisible(use_fn)
 
+        use_bsm = self._use_base_stem_match_cb.isChecked()
+        self._base_stem_require_match_cb.setVisible(use_bsm)
+
         self._update_specific_ui_for_validation_types()
 
     # ------------------------------------------------------------------
@@ -521,6 +538,8 @@ class ClassifierActionModifyWindow(SmartDialog):
         raw_patterns = self._filename_patterns_edit.text()
         ca.filename_contains_patterns = [p.strip() for p in raw_patterns.split(",") if p.strip()]
         ca.filename_contains_case_sensitive = self._filename_case_sensitive_cb.isChecked()
+        ca.use_base_stem_match = self._use_base_stem_match_cb.isChecked()
+        ca.base_stem_match_require_match = self._base_stem_require_match_cb.isChecked()
 
         ca.action = ClassifierActionType.get_action(
             self._action_combo.currentText()

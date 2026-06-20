@@ -150,23 +150,40 @@ class TestConditionSerialization:
     def test_base_stem_match_defaults(self):
         c = BaseStemMatchCondition()
         assert c.require_match is True
-        assert c.suffix_filter == ""
+        assert c.suffix_filter == []
+        assert c.search_directory == ""
         c2 = _condition_from_dict(c.to_dict())
         assert c2.require_match is True
-        assert c2.suffix_filter == ""
+        assert c2.suffix_filter == []
+        assert c2.search_directory == ""
 
     def test_base_stem_match_missing_key_defaults_on_deserialize(self):
         c2 = _condition_from_dict({"condition_type": "base_stem_match"})
         assert isinstance(c2, BaseStemMatchCondition)
         assert c2.require_match is True
-        assert c2.suffix_filter == ""
+        assert c2.suffix_filter == []
+        assert c2.search_directory == ""
 
     def test_base_stem_match_suffix_filter_roundtrip(self):
-        c = BaseStemMatchCondition(require_match=True, suffix_filter="_A")
+        c = BaseStemMatchCondition(require_match=True, suffix_filter=["_A", "_ani", "_animal"])
         c2 = _condition_from_dict(c.to_dict())
         assert isinstance(c2, BaseStemMatchCondition)
-        assert c2.suffix_filter == "_A"
+        assert c2.suffix_filter == ["_A", "_ani", "_animal"]
         assert c2.require_match is True
+
+    def test_base_stem_match_suffix_filter_backward_compat_string(self):
+        """Old configs serialised suffix_filter as a plain string; must still deserialise."""
+        c2 = _condition_from_dict({"condition_type": "base_stem_match", "suffix_filter": "_A"})
+        assert c2.suffix_filter == ["_A"]
+
+    def test_base_stem_match_suffix_filter_backward_compat_empty_string(self):
+        c2 = _condition_from_dict({"condition_type": "base_stem_match", "suffix_filter": ""})
+        assert c2.suffix_filter == []
+
+    def test_base_stem_match_search_directory_roundtrip(self):
+        c = BaseStemMatchCondition(search_directory="/some/target/A")
+        c2 = _condition_from_dict(c.to_dict())
+        assert c2.search_directory == "/some/target/A"
 
     def test_base_stem_match_summary_found(self):
         assert "found" in BaseStemMatchCondition(require_match=True).summary()
@@ -175,12 +192,17 @@ class TestConditionSerialization:
         assert "not found" in BaseStemMatchCondition(require_match=False).summary()
 
     def test_base_stem_match_summary_includes_suffix_when_set(self):
-        s = BaseStemMatchCondition(suffix_filter="_A").summary()
+        s = BaseStemMatchCondition(suffix_filter=["_A", "_ani"]).summary()
         assert "_A" in s
+        assert "_ani" in s
 
     def test_base_stem_match_summary_no_suffix_label_when_empty(self):
-        s = BaseStemMatchCondition(suffix_filter="").summary()
+        s = BaseStemMatchCondition(suffix_filter=[]).summary()
         assert "suffix" not in s.lower()
+
+    def test_base_stem_match_summary_shows_dir_when_no_suffix(self):
+        s = BaseStemMatchCondition(search_directory="/target/A").summary()
+        assert "/target/A" in s
 
     def test_related_image_roundtrip(self):
         c = RelatedImageCondition(edit_suffix="_edit", search_directory="/custom", count_threshold=3)
@@ -607,6 +629,25 @@ class TestValidation:
         p = _simple_pipeline(
             _make_node("n1", RelatedImageCondition(edit_suffix="_edit", search_directory=""))
         )
+        errors = [e for e in p.validate() if "search_directory" in e]
+        assert errors == []
+
+    def test_base_stem_match_nonexistent_search_directory_fails(self):
+        p = _simple_pipeline(
+            _make_node("n1", BaseStemMatchCondition(search_directory="/definitely/does/not/exist"))
+        )
+        errors = p.validate()
+        assert any("search_directory" in e for e in errors)
+
+    def test_base_stem_match_valid_search_directory_no_error(self, tmp_path):
+        p = _simple_pipeline(
+            _make_node("n1", BaseStemMatchCondition(search_directory=str(tmp_path)))
+        )
+        errors = [e for e in p.validate() if "search_directory" in e]
+        assert errors == []
+
+    def test_base_stem_match_empty_search_directory_no_error(self):
+        p = _simple_pipeline(_make_node("n1", BaseStemMatchCondition(search_directory="")))
         errors = [e for e in p.validate() if "search_directory" in e]
         assert errors == []
 

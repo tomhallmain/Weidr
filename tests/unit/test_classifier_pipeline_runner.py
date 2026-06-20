@@ -921,7 +921,7 @@ class TestBaseStemMatchConditionRunner:
         monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
         monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
                             lambda dirs, stem, **kw: ["/dir/stem_A.jpg", "/dir/stem_B.jpg"])
-        cond = BaseStemMatchCondition(require_match=True, suffix_filter="_A")
+        cond = BaseStemMatchCondition(require_match=True, suffix_filter=["_A"])
         result, _ = _eval_base_stem_match(cond, IMAGE)
         assert result is True
 
@@ -932,7 +932,7 @@ class TestBaseStemMatchConditionRunner:
         monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
         monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
                             lambda dirs, stem, **kw: ["/dir/stem_0_A.jpg"])
-        cond = BaseStemMatchCondition(require_match=True, suffix_filter="_A")
+        cond = BaseStemMatchCondition(require_match=True, suffix_filter=["_A"])
         result, _ = _eval_base_stem_match(cond, IMAGE)
         assert result is True
 
@@ -941,7 +941,7 @@ class TestBaseStemMatchConditionRunner:
         monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
         monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
                             lambda dirs, stem, **kw: ["/dir/stem_B.jpg"])
-        cond = BaseStemMatchCondition(require_match=True, suffix_filter="_A")
+        cond = BaseStemMatchCondition(require_match=True, suffix_filter=["_A"])
         result, _ = _eval_base_stem_match(cond, IMAGE)
         assert result is False
 
@@ -950,7 +950,7 @@ class TestBaseStemMatchConditionRunner:
         monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
         monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
                             lambda dirs, stem, **kw: ["/dir/stem_B.jpg"])
-        cond = BaseStemMatchCondition(require_match=True, suffix_filter="")
+        cond = BaseStemMatchCondition(require_match=True, suffix_filter=[])
         result, _ = _eval_base_stem_match(cond, IMAGE)
         assert result is True
 
@@ -959,7 +959,7 @@ class TestBaseStemMatchConditionRunner:
         monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
         monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
                             lambda dirs, stem, **kw: ["/dir/stem_A.jpg"])
-        cond = BaseStemMatchCondition(require_match=True, suffix_filter="_a")
+        cond = BaseStemMatchCondition(require_match=True, suffix_filter=["_a"])
         result, _ = _eval_base_stem_match(cond, IMAGE)
         assert result is True
 
@@ -969,9 +969,96 @@ class TestBaseStemMatchConditionRunner:
         monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
         monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
                             lambda dirs, stem, **kw: ["/dir/stem_B.jpg"])
-        cond = BaseStemMatchCondition(require_match=False, suffix_filter="_A")
+        cond = BaseStemMatchCondition(require_match=False, suffix_filter=["_A"])
         result, _ = _eval_base_stem_match(cond, IMAGE)
         assert result is True  # no _A found → passes when require_match=False
+
+    def test_suffix_filter_multi_alias_matches_any(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: ["/dir/stem_animal.jpg"])
+        cond = BaseStemMatchCondition(require_match=True, suffix_filter=["_a", "_ani", "_animal"])
+        result, _ = _eval_base_stem_match(cond, IMAGE)
+        assert result is True
+
+    def test_suffix_filter_multi_alias_no_false_positive(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: ["/dir/stem_B.jpg"])
+        cond = BaseStemMatchCondition(require_match=True, suffix_filter=["_a", "_ani", "_animal"])
+        result, _ = _eval_base_stem_match(cond, IMAGE)
+        assert result is False
+
+    def test_suffix_filter_trailing_digit_matches(self, monkeypatch):
+        # stem_a2 should match suffix _a (trailing digit is a generation counter).
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: ["/dir/stem_a2.jpg"])
+        cond = BaseStemMatchCondition(require_match=True, suffix_filter=["_a"])
+        result, _ = _eval_base_stem_match(cond, IMAGE)
+        assert result is True
+
+    def test_suffix_filter_trailing_digit_long_suffix(self, monkeypatch):
+        # stem_animal3 should match suffix _animal.
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: ["/dir/stem_animal3.jpg"])
+        cond = BaseStemMatchCondition(require_match=True, suffix_filter=["_animal"])
+        result, _ = _eval_base_stem_match(cond, IMAGE)
+        assert result is True
+
+    def test_suffix_filter_trailing_digit_no_false_positive(self, monkeypatch):
+        # stem_b2 must NOT match suffix _a even after digit stripping.
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: ["/dir/stem_b2.jpg"])
+        cond = BaseStemMatchCondition(require_match=True, suffix_filter=["_a"])
+        result, _ = _eval_base_stem_match(cond, IMAGE)
+        assert result is False
+
+    def test_search_directory_overrides_config_dirs(self, monkeypatch):
+        captured_dirs = []
+
+        def fake_find(dirs, stem, **kw):
+            captured_dirs.extend(dirs)
+            return ["/custom/stem_A.jpg"]
+
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/config_dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem", fake_find)
+        cond = BaseStemMatchCondition(require_match=True, search_directory="/custom")
+        result, _ = _eval_base_stem_match(cond, IMAGE)
+        assert result is True
+        assert captured_dirs == ["/custom"]
+        assert "/config_dir" not in captured_dirs
+
+    def test_search_directory_empty_falls_back_to_config(self, monkeypatch):
+        captured_dirs = []
+
+        def fake_find(dirs, stem, **kw):
+            captured_dirs.extend(dirs)
+            return []
+
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/config_dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem", fake_find)
+        cond = BaseStemMatchCondition(require_match=True, search_directory="")
+        _eval_base_stem_match(cond, IMAGE)
+        assert captured_dirs == ["/config_dir"]
+
+    def test_search_directory_set_but_config_empty_still_searches(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", [])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: ["/custom/stem_A.jpg"])
+        cond = BaseStemMatchCondition(require_match=True, search_directory="/custom")
+        result, _ = _eval_base_stem_match(cond, IMAGE)
+        assert result is True
 
 
 # ---------------------------------------------------------------------------

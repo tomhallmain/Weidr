@@ -370,6 +370,22 @@ def _eval_lookahead(
     return bool(result), None
 
 
+def _stem_matches_any_suffix(stem: str, suffixes: list) -> bool:
+    """Return True if stem (lowercased) ends with any entry in suffixes.
+
+    Trailing digits after the suffix are accepted: ``stem_a2`` matches ``_a``.
+    """
+    s = stem.lower()
+    for sf in suffixes:
+        sf_lower = sf.lower()
+        if s.endswith(sf_lower):
+            return True
+        stripped = s.rstrip("0123456789")
+        if stripped != s and stripped.endswith(sf_lower):
+            return True
+    return False
+
+
 def _eval_base_stem_match(
     condition: BaseStemMatchCondition,
     image_path: str,
@@ -377,15 +393,20 @@ def _eval_base_stem_match(
     base_stem = extract_filename_base_stem(image_path)
     if not base_stem:
         return False, None
-    dirs = config.directories_to_search_for_related_images
+    if condition.search_directory:
+        dirs = [condition.search_directory]
+    else:
+        dirs = config.directories_to_search_for_related_images
     if not dirs:
         return False, None
     matches = find_files_by_base_stem(dirs, base_stem, use_cache=True)
     if condition.suffix_filter:
-        suffix_lower = condition.suffix_filter.lower()
         matches = [
             f for f in matches
-            if os.path.splitext(os.path.basename(f))[0].lower().endswith(suffix_lower)
+            if _stem_matches_any_suffix(
+                os.path.splitext(os.path.basename(f))[0],
+                condition.suffix_filter,
+            )
         ]
     found = bool(matches)
     return (found if condition.require_match else not found), None

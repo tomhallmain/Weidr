@@ -251,20 +251,28 @@ class BaseStemMatchCondition:
     """Matches when a file sharing the same filename base stem exists in the configured search directories."""
     condition_type: ClassVar[str] = "base_stem_match"
 
-    require_match: bool = True   # False = pass when NO related file is found
-    suffix_filter: str = ""      # if set, only count files whose stem has this suffix after the base stem
+    require_match: bool = True
+    # One or more accepted suffixes for the category (case-insensitive; trailing digits accepted).
+    # Empty list = match any file with the base stem.
+    suffix_filter: list = field(default_factory=list)
+    # If set, search only this directory instead of config.directories_to_search_for_related_images.
+    search_directory: str = ""
 
     def to_dict(self) -> dict:
         return {
             "condition_type": self.condition_type,
             "require_match": self.require_match,
             "suffix_filter": self.suffix_filter,
+            "search_directory": self.search_directory,
         }
 
     def summary(self) -> str:
         mode = "found" if self.require_match else "not found"
         if self.suffix_filter:
-            return f"BaseStemMatch(suffix={self.suffix_filter!r}, require={mode})"
+            joined = ", ".join(self.suffix_filter)
+            return f"BaseStemMatch(suffix=[{joined}], require={mode})"
+        if self.search_directory:
+            return f"BaseStemMatch(dir={self.search_directory!r}, require={mode})"
         return f"BaseStemMatch(require={mode})"
 
 
@@ -418,9 +426,14 @@ def _condition_from_dict(d: dict):
             sub_conditions=[_condition_from_dict(c) for c in d.get("sub_conditions", [])],
         )
     if ct == "base_stem_match":
+        raw_sf = d.get("suffix_filter", [])
+        # Backward compat: old configs serialised suffix_filter as a plain string.
+        if isinstance(raw_sf, str):
+            raw_sf = [raw_sf] if raw_sf else []
         return BaseStemMatchCondition(
             require_match=d.get("require_match", True),
-            suffix_filter=d.get("suffix_filter", ""),
+            suffix_filter=raw_sf,
+            search_directory=d.get("search_directory", ""),
         )
     if ct == "related_image":
         return RelatedImageCondition(
@@ -711,6 +724,13 @@ class ClassifierPipeline:
                         )
                 except Exception:
                     pass
+
+        elif isinstance(condition, BaseStemMatchCondition):
+            if condition.search_directory and not os.path.isdir(condition.search_directory):
+                errors.append(
+                    f"Node {node_name!r}: BaseStemMatchCondition.search_directory "
+                    f"({condition.search_directory!r}) is not a valid directory."
+                )
 
         elif isinstance(condition, RelatedImageCondition):
             if not condition.edit_suffix:

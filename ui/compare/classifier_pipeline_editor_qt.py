@@ -541,16 +541,26 @@ class _BaseStemMatchPanel(QWidget):
         suffix_layout.setContentsMargins(0, 0, 0, 0)
         suffix_layout.addWidget(_label(_("Suffix filter:")))
         self._suffix_filter = QLineEdit()
-        self._suffix_filter.setPlaceholderText(_("e.g. _A  (empty = match any)"))
-        self._suffix_filter.setFixedWidth(160)
+        self._suffix_filter.setPlaceholderText(_("e.g. _a, _ani, _animal  (comma-separated; empty = any)"))
+        self._suffix_filter.setFixedWidth(260)
         self._suffix_filter.textChanged.connect(self._on_changed)
         suffix_layout.addWidget(self._suffix_filter)
         suffix_layout.addStretch()
         layout.addWidget(suffix_row)
 
+        dir_row = QWidget()
+        dir_layout = QHBoxLayout(dir_row)
+        dir_layout.setContentsMargins(0, 0, 0, 0)
+        dir_layout.addWidget(_label(_("Search directory:")))
+        self._search_directory = QLineEdit()
+        self._search_directory.setPlaceholderText(_("(empty = use configured related-image dirs)"))
+        self._search_directory.textChanged.connect(self._on_changed)
+        dir_layout.addWidget(self._search_directory)
+        layout.addWidget(dir_row)
+
         note = _label(
-            _("Searches the directories configured in Related Images settings "
-              "(config: directories_to_search_for_related_images). "
+            _("When 'Search directory' is empty, searches the directories configured in "
+              "Related Images settings (config: directories_to_search_for_related_images). "
               "Uses cached directory scan for pipeline performance.")
         )
         note.setWordWrap(True)
@@ -559,15 +569,20 @@ class _BaseStemMatchPanel(QWidget):
     def load(self, condition) -> None:
         if isinstance(condition, BaseStemMatchCondition):
             self._require_match.setChecked(condition.require_match)
-            self._suffix_filter.setText(condition.suffix_filter)
+            self._suffix_filter.setText(", ".join(condition.suffix_filter))
+            self._search_directory.setText(condition.search_directory)
         else:
             self._require_match.setChecked(True)
             self._suffix_filter.setText("")
+            self._search_directory.setText("")
 
     def get_condition(self) -> BaseStemMatchCondition:
+        raw = self._suffix_filter.text()
+        suffixes = [s.strip() for s in raw.split(",") if s.strip()]
         return BaseStemMatchCondition(
             require_match=self._require_match.isChecked(),
-            suffix_filter=self._suffix_filter.text().strip(),
+            suffix_filter=suffixes,
+            search_directory=self._search_directory.text().strip(),
         )
 
 

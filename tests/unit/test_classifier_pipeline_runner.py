@@ -33,11 +33,13 @@ from compare.classifier_pipeline import (
     PromptCondition,
     PrototypeCondition,
     RelatedImageCondition,
+    UnknownSuffixCondition,
 )
 from compare.pipeline_run_report import PipelineRunReport
 from compare.classifier_pipeline_runner import (
     _evaluate_condition,
     _eval_base_stem_match,
+    _eval_unknown_suffix,
     _eval_classifier_rank,
     _eval_composite,
     _eval_filename_contains,
@@ -1238,6 +1240,174 @@ class TestDebouncedGenerateQueue:
         callbacks = ActionCallbacks(generate_callback=lambda path, mod: None)
         run_pipeline(p, IMAGE, callbacks, generate_queue=FakeQueue())
         assert IMAGE in submitted
+
+
+# ---------------------------------------------------------------------------
+# UnknownSuffixCondition
+# ---------------------------------------------------------------------------
+
+class TestUnknownSuffixConditionRunner:
+    def setup_method(self):
+        clear_base_stem_dir_cache()
+
+    def teardown_method(self):
+        clear_base_stem_dir_cache()
+
+    def _cond(self, expected_suffixes=None, classifier_name="", inference_threshold=0.85):
+        return UnknownSuffixCondition(
+            expected_suffixes=expected_suffixes or ["_a", "_b", "_c", "_d"],
+            classifier_name=classifier_name,
+            inference_threshold=inference_threshold,
+        )
+
+    def _patch_find(self, files):
+        return patch("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                     return_value=files)
+
+    def _patch_stem(self, stem="stem"):
+        return patch("compare.classifier_pipeline_runner.extract_filename_base_stem",
+                     return_value=stem)
+
+    def test_clean_set_returns_false(self, monkeypatch):
+        """All files have recognised suffixes → no unknown file → returns False."""
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem",
+                            lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda *a, **kw: ["/dir/stem.jpg", "/dir/stem_a.jpg", "/dir/stem_b.jpg"])
+        result, _ = _eval_unknown_suffix(self._cond(), IMAGE)
+        assert result is False
+
+    def test_seed_only_returns_false(self, monkeypatch):
+        """Seed image alone (no suffix) is never flagged."""
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem",
+                            lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda *a, **kw: ["/dir/stem.jpg"])
+        result, _ = _eval_unknown_suffix(self._cond(), "/dir/stem.jpg")
+        assert result is False
+
+    def test_current_image_excluded_from_check(self, monkeypatch):
+        """The image being evaluated is never flagged as unknown even if suffix not in expected."""
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem",
+                            lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda *a, **kw: [IMAGE])
+        result, _ = _eval_unknown_suffix(self._cond(), IMAGE)
+        assert result is False
+
+    def test_unknown_suffix_no_classifier_returns_true(self, monkeypatch):
+        """File with unrecognised suffix and no classifier → unresolvable → True."""
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem",
+                            lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda *a, **kw: ["/dir/stem_x.jpg"])
+        result, _ = _eval_unknown_suffix(self._cond(classifier_name=""), IMAGE)
+        assert result is True
+
+    def test_unknown_suffix_classifier_resolves_returns_false(self, monkeypatch):
+        """Classifier returns high-confidence result → file resolved → False."""
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem",
+                            lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda *a, **kw: ["/dir/stem_x.jpg"])
+
+        fake_classifier = type("C", (), {"predict_image_ranked": lambda self, p: [("animal", 0.92)]})()
+        fake_manager = type("M", (), {"get_classifier": lambda self, n: fake_classifier})()
+
+        with patch("image.image_classifier_manager.image_classifier_manager", fake_manager):
+            result, _ = _eval_unknown_suffix(
+                self._cond(classifier_name="animals", inference_threshold=0.85), IMAGE
+            )
+        assert result is False
+
+    def test_unknown_suffix_classifier_below_threshold_returns_true(self, monkeypatch):
+        """Classifier confidence below threshold → not resolved → True."""
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem",
+                            lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda *a, **kw: ["/dir/stem_x.jpg"])
+
+        fake_classifier = type("C", (), {"predict_image_ranked": lambda self, p: [("animal", 0.60)]})()
+        fake_manager = type("M", (), {"get_classifier": lambda self, n: fake_classifier})()
+
+        with patch("image.image_classifier_manager.image_classifier_manager", fake_manager):
+            result, _ = _eval_unknown_suffix(
+                self._cond(classifier_name="animals", inference_threshold=0.85), IMAGE
+            )
+        assert result is True
+
+    def test_notable_message_emitted_for_unknown_file(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem",
+                            lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda *a, **kw: ["/dir/stem_x.jpg"])
+        report = PipelineRunReport()
+        _eval_unknown_suffix(self._cond(), IMAGE, node_name="guard", report=report)
+        msgs = report.messages()
+        notable = [m for m in msgs if m.severity == "NOTABLE"]
+        assert len(notable) == 1
+        assert "stem_x.jpg" in notable[0].detail
+
+    def test_warning_message_emitted_when_unresolvable(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem",
+                            lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda *a, **kw: ["/dir/stem_x.jpg"])
+        report = PipelineRunReport()
+        _eval_unknown_suffix(self._cond(classifier_name=""), IMAGE, node_name="guard", report=report)
+        warnings = [m for m in report.messages() if m.severity == "WARNING"]
+        assert len(warnings) == 1
+
+    def test_info_message_emitted_when_classifier_resolves(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem",
+                            lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda *a, **kw: ["/dir/stem_x.jpg"])
+
+        fake_classifier = type("C", (), {"predict_image_ranked": lambda self, p: [("animal", 0.91)]})()
+        fake_manager = type("M", (), {"get_classifier": lambda self, n: fake_classifier})()
+
+        report = PipelineRunReport()
+        with patch("image.image_classifier_manager.image_classifier_manager", fake_manager):
+            _eval_unknown_suffix(
+                self._cond(classifier_name="animals", inference_threshold=0.85),
+                IMAGE, node_name="guard", report=report,
+            )
+        info_msgs = [m for m in report.messages() if m.severity == "INFO"]
+        assert len(info_msgs) == 1
+        assert "animal" in info_msgs[0].detail
+
+    def test_no_base_stem_returns_false(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem",
+                            lambda p: None)
+        result, _ = _eval_unknown_suffix(self._cond(), IMAGE)
+        assert result is False
+
+    def test_empty_dirs_returns_false(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem",
+                            lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", [])
+        result, _ = _eval_unknown_suffix(self._cond(), IMAGE)
+        assert result is False
+
+    def test_trailing_digit_variant_is_recognised(self, monkeypatch):
+        """stem_a2 matches expected suffix _a → not flagged as unknown."""
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem",
+                            lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda *a, **kw: ["/dir/stem_a2.jpg"])
+        result, _ = _eval_unknown_suffix(self._cond(), IMAGE)
+        assert result is False
 
 
 # ---------------------------------------------------------------------------

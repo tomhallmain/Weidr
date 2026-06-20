@@ -21,6 +21,7 @@ from compare.classifier_pipeline import (
     NodeResultCondition,
     CompositeCondition,
     BaseStemMatchCondition,
+    UnknownSuffixCondition,
     RelatedImageCondition,
     GroupCondition,
     GroupChildResultCondition,
@@ -656,6 +657,57 @@ class TestValidation:
 
     def test_base_stem_match_empty_search_directory_no_error(self):
         p = _simple_pipeline(_make_node("n1", BaseStemMatchCondition(search_directory="")))
+        errors = [e for e in p.validate() if "search_directory" in e]
+        assert errors == []
+
+    # -- UnknownSuffixCondition --
+
+    def test_unknown_suffix_defaults(self):
+        c = UnknownSuffixCondition()
+        assert c.expected_suffixes == []
+        assert c.search_directory == ""
+        assert c.classifier_name == ""
+        assert c.inference_threshold == 0.85
+
+    def test_unknown_suffix_roundtrip(self):
+        c = UnknownSuffixCondition(
+            expected_suffixes=["_a", "_b"],
+            search_directory="/some/dir",
+            classifier_name="my_model",
+            inference_threshold=0.9,
+        )
+        c2 = _condition_from_dict(c.to_dict())
+        assert isinstance(c2, UnknownSuffixCondition)
+        assert c2.expected_suffixes == ["_a", "_b"]
+        assert c2.search_directory == "/some/dir"
+        assert c2.classifier_name == "my_model"
+        assert c2.inference_threshold == 0.9
+
+    def test_unknown_suffix_missing_keys_defaults(self):
+        c2 = _condition_from_dict({"condition_type": "unknown_suffix"})
+        assert isinstance(c2, UnknownSuffixCondition)
+        assert c2.expected_suffixes == []
+        assert c2.inference_threshold == 0.85
+
+    def test_unknown_suffix_summary_shows_suffixes(self):
+        s = UnknownSuffixCondition(expected_suffixes=["_a", "_b"]).summary()
+        assert "_a" in s and "_b" in s
+
+    def test_unknown_suffix_summary_shows_classifier(self):
+        s = UnknownSuffixCondition(classifier_name="mdl").summary()
+        assert "mdl" in s
+
+    def test_unknown_suffix_nonexistent_search_directory_fails(self):
+        p = _simple_pipeline(
+            _make_node("n1", UnknownSuffixCondition(search_directory="/not/real"))
+        )
+        errors = p.validate()
+        assert any("search_directory" in e for e in errors)
+
+    def test_unknown_suffix_valid_search_directory_no_error(self, tmp_path):
+        p = _simple_pipeline(
+            _make_node("n1", UnknownSuffixCondition(search_directory=str(tmp_path)))
+        )
         errors = [e for e in p.validate() if "search_directory" in e]
         assert errors == []
 

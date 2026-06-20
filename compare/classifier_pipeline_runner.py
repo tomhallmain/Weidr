@@ -32,6 +32,7 @@ from compare.classifier_pipeline import (
     PromptCondition,
     PrototypeCondition,
     BaseStemMatchCondition,
+    UnknownSuffixCondition,
     RelatedImageCondition,
 )
 from files.related_image import extract_filename_base_stem, find_files_by_base_stem
@@ -216,6 +217,9 @@ def _evaluate_condition(
 
     if isinstance(condition, BaseStemMatchCondition):
         return _eval_base_stem_match(condition, image_path, node_name=node_name, report=report)
+
+    if isinstance(condition, UnknownSuffixCondition):
+        return _eval_unknown_suffix(condition, image_path, node_name=node_name, report=report)
 
     if isinstance(condition, RelatedImageCondition):
         return _eval_related_image(condition, image_path, base_directory)
@@ -432,6 +436,106 @@ def _eval_base_stem_match(
         )
     found = bool(matches)
     return (found if condition.require_match else not found), None
+
+
+def _eval_unknown_suffix(
+    condition: UnknownSuffixCondition,
+    image_path: str,
+    *,
+    node_name: str = "",
+    report: Optional[PipelineRunReport] = None,
+) -> tuple[bool, object]:
+    """Return (True, None) if an unresolvable unknown-suffix file exists for this stem.
+
+    The caller is expected to wrap this in CompositeCondition(NOT): the guard blocks
+    generation when the stem group is ambiguous and classifier inference cannot resolve it.
+    """
+    base_stem = extract_filename_base_stem(image_path)
+    if not base_stem:
+        return False, None
+    if condition.search_directory:
+        dirs = [condition.search_directory]
+    else:
+        dirs = config.directories_to_search_for_related_images
+    if not dirs:
+        return False, None
+
+    all_matches = find_files_by_base_stem(dirs, base_stem, use_cache=True)
+    has_unresolvable = False
+
+    for f in all_matches:
+        if os.path.normpath(f) == os.path.normpath(image_path):
+            continue  # skip the image being evaluated
+        stem = os.path.splitext(os.path.basename(f))[0]
+        if stem.lower() == base_stem.lower():
+            continue  # seed image — no suffix, always excluded from the guard
+        if _stem_matches_any_suffix(stem, condition.expected_suffixes):
+            continue  # known suffix — fine
+
+        # Unknown suffix found.
+        if report:
+            report.add(
+                "NOTABLE", node_name, image_path,
+                f"Unrecognised suffix in stem group: {os.path.basename(f)!r}",
+                data={"unknown_file": f, "base_stem": base_stem},
+            )
+
+        resolved = False
+        if condition.classifier_name:
+            resolved = _infer_category_from_file(
+                f, condition.classifier_name, condition.inference_threshold,
+                node_name=node_name, image_path=image_path, report=report,
+            )
+
+        if not resolved:
+            if report:
+                report.add(
+                    "WARNING", node_name, image_path,
+                    f"Cannot determine category of {os.path.basename(f)!r}"
+                    + (" — classifier inconclusive" if condition.classifier_name else ""),
+                    data={"unknown_file": f, "base_stem": base_stem},
+                )
+            has_unresolvable = True
+
+    return has_unresolvable, None
+
+
+def _infer_category_from_file(
+    file_path: str,
+    classifier_name: str,
+    threshold: float,
+    *,
+    node_name: str = "",
+    image_path: str = "",
+    report: Optional[PipelineRunReport] = None,
+) -> bool:
+    """Run the named classifier on file_path and return True if the top result
+    meets the confidence threshold (i.e. the file's category can be inferred)."""
+    try:
+        from image.image_classifier_manager import image_classifier_manager
+        classifier = image_classifier_manager.get_classifier(classifier_name)
+        if classifier is None:
+            logger.warning(
+                "UnknownSuffixCondition: classifier %r not found", classifier_name
+            )
+            return False
+        ranked = classifier.predict_image_ranked(file_path)
+        if ranked and ranked[0][1] >= threshold:
+            category, score = ranked[0]
+            if report:
+                report.add(
+                    "INFO", node_name, image_path,
+                    f"{os.path.basename(file_path)!r} inferred as {category!r} "
+                    f"(confidence {score:.0%}) — treated as resolved",
+                    data={"unknown_file": file_path, "inferred_category": category, "score": score},
+                )
+            return True
+        return False
+    except Exception:
+        logger.exception(
+            "UnknownSuffixCondition: classifier inference failed for %s", file_path
+        )
+        return False
 
 
 def _eval_related_image(

@@ -277,6 +277,45 @@ class BaseStemMatchCondition:
 
 
 @dataclass
+class UnknownSuffixCondition:
+    """Returns True when the stem group contains a file with an unrecognised suffix that
+    cannot be resolved by classifier inference.
+
+    Intended to be wrapped in CompositeCondition(NOT) as a guard node: the NOT passes
+    (CONTINUE) when the stem group is clean, and blocks (REJECT) when an ambiguous file
+    is present and the classifier cannot determine its category.
+
+    The seed image (file whose stem equals the base stem exactly, i.e. no suffix) is
+    always excluded from the unknown-suffix check.
+    """
+    condition_type: ClassVar[str] = "unknown_suffix"
+
+    # Valid suffixes for all expected categories combined (same format as BaseStemMatchCondition.suffix_filter).
+    expected_suffixes: list = field(default_factory=list)
+    # If set, search only this directory; otherwise uses config.directories_to_search_for_related_images.
+    search_directory: str = ""
+    # Classifier to run on unrecognised files to attempt category inference.
+    # Empty = no inference; unrecognised files always trigger the block.
+    classifier_name: str = ""
+    # Minimum top-1 confidence for classifier inference to count as deterministic.
+    inference_threshold: float = 0.85
+
+    def to_dict(self) -> dict:
+        return {
+            "condition_type": self.condition_type,
+            "expected_suffixes": self.expected_suffixes,
+            "search_directory": self.search_directory,
+            "classifier_name": self.classifier_name,
+            "inference_threshold": self.inference_threshold,
+        }
+
+    def summary(self) -> str:
+        suffixes = ", ".join(self.expected_suffixes) if self.expected_suffixes else "(none)"
+        infer = f", infer={self.classifier_name!r}" if self.classifier_name else ""
+        return f"UnknownSuffix(expected=[{suffixes}]{infer})"
+
+
+@dataclass
 class RelatedImageCondition:
     """Checks whether a generate action should run based on downstream image state."""
     condition_type: ClassVar[str] = "related_image"
@@ -380,6 +419,7 @@ NodeCondition = (
     | NodeResultCondition
     | CompositeCondition
     | BaseStemMatchCondition
+    | UnknownSuffixCondition
     | RelatedImageCondition
     | GroupCondition
     | GroupChildResultCondition
@@ -443,6 +483,13 @@ def _condition_from_dict(d: dict):
             require_match=d.get("require_match", True),
             suffix_filter=raw_sf,
             search_directory=d.get("search_directory", ""),
+        )
+    if ct == "unknown_suffix":
+        return UnknownSuffixCondition(
+            expected_suffixes=d.get("expected_suffixes", []),
+            search_directory=d.get("search_directory", ""),
+            classifier_name=d.get("classifier_name", ""),
+            inference_threshold=d.get("inference_threshold", 0.85),
         )
     if ct == "related_image":
         return RelatedImageCondition(
@@ -739,6 +786,13 @@ class ClassifierPipeline:
             if condition.search_directory and not os.path.isdir(condition.search_directory):
                 errors.append(
                     f"Node {node_name!r}: BaseStemMatchCondition.search_directory "
+                    f"({condition.search_directory!r}) is not a valid directory."
+                )
+
+        elif isinstance(condition, UnknownSuffixCondition):
+            if condition.search_directory and not os.path.isdir(condition.search_directory):
+                errors.append(
+                    f"Node {node_name!r}: UnknownSuffixCondition.search_directory "
                     f"({condition.search_directory!r}) is not a valid directory."
                 )
 

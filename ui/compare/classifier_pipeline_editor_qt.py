@@ -46,6 +46,7 @@ from compare.classifier_pipeline import (
     PromptCondition,
     PrototypeCondition,
     BaseStemMatchCondition,
+    UnknownSuffixCondition,
     RelatedImageCondition,
 )
 from files.directory_profile import DirectoryProfile
@@ -71,6 +72,7 @@ _CONDITION_ENTRIES = [
     ("filename_contains",   _("Filename Contains")),
     ("related_image",       _("Related Image Exists")),
     ("base_stem_match",     _("Base Stem Match")),
+    ("unknown_suffix",      _("Unknown Suffix Guard")),
     ("lookahead",           _("Lookahead")),
     ("node_result",         _("Prior Node Result")),
     ("group_child_result",  _("Group Child Result")),
@@ -599,6 +601,82 @@ class _BaseStemMatchPanel(QWidget):
         )
 
 
+class _UnknownSuffixPanel(QWidget):
+    condition_type = "unknown_suffix"
+
+    def __init__(self, on_changed: Callable = None, parent=None):
+        super().__init__(parent)
+        self._on_changed = on_changed or (lambda: None)
+        form = QFormLayout(self)
+        form.setContentsMargins(0, 4, 0, 4)
+        form.setSpacing(4)
+
+        self._expected_suffixes = QLineEdit()
+        self._expected_suffixes.setPlaceholderText(_("e.g. _a, _ani, _animal, _b, _c, _d  (comma-separated)"))
+        self._expected_suffixes.textChanged.connect(self._on_changed)
+        form.addRow(_("Expected suffixes:"), self._expected_suffixes)
+
+        self._search_dir = QLineEdit()
+        self._search_dir.setPlaceholderText(_("(empty = use configured related-image dirs)"))
+        self._search_dir.textChanged.connect(self._on_changed)
+        dir_row = QHBoxLayout()
+        dir_row.addWidget(self._search_dir, 1)
+        browse_btn = QPushButton(_("Browse…"))
+        browse_btn.clicked.connect(self._browse)
+        dir_row.addWidget(browse_btn)
+        form.addRow(_("Search directory:"), dir_row)
+
+        self._classifier_name = QLineEdit()
+        self._classifier_name.setPlaceholderText(_("(empty = no inference; unknown files always block)"))
+        self._classifier_name.textChanged.connect(self._on_changed)
+        form.addRow(_("Classifier (inference):"), self._classifier_name)
+
+        self._inference_threshold = QDoubleSpinBox()
+        self._inference_threshold.setRange(0.0, 1.0)
+        self._inference_threshold.setSingleStep(0.05)
+        self._inference_threshold.setDecimals(2)
+        self._inference_threshold.setValue(0.85)
+        self._inference_threshold.valueChanged.connect(self._on_changed)
+        form.addRow(_("Inference threshold:"), self._inference_threshold)
+
+        note = _label(
+            _("Returns True when an unrecognised-suffix file exists that the classifier "
+              "cannot resolve. Wrap in CompositeCondition(NOT) as a guard node: "
+              "on_match=CONTINUE, on_no_match=REJECT. "
+              "The seed image (no suffix) is never flagged.")
+        )
+        note.setWordWrap(True)
+        form.addRow("", note)
+
+    def _browse(self) -> None:
+        current = self._search_dir.text() or os.path.expanduser("~")
+        d = QFileDialog.getExistingDirectory(self, _("Select search directory"), current)
+        if d:
+            self._search_dir.setText(d)
+
+    def load(self, condition) -> None:
+        if isinstance(condition, UnknownSuffixCondition):
+            self._expected_suffixes.setText(", ".join(condition.expected_suffixes))
+            self._search_dir.setText(condition.search_directory)
+            self._classifier_name.setText(condition.classifier_name)
+            self._inference_threshold.setValue(condition.inference_threshold)
+        else:
+            self._expected_suffixes.setText("")
+            self._search_dir.setText("")
+            self._classifier_name.setText("")
+            self._inference_threshold.setValue(0.85)
+
+    def get_condition(self) -> UnknownSuffixCondition:
+        raw = self._expected_suffixes.text()
+        suffixes = [s.strip() for s in raw.split(",") if s.strip()]
+        return UnknownSuffixCondition(
+            expected_suffixes=suffixes,
+            search_directory=self._search_dir.text().strip(),
+            classifier_name=self._classifier_name.text().strip(),
+            inference_threshold=self._inference_threshold.value(),
+        )
+
+
 class _LookaheadPanel(QWidget):
     condition_type = "lookahead"
 
@@ -800,6 +878,7 @@ class _SubCondRow(QWidget):
             _FilenameContainsPanel(on_changed=self._on_changed),
             _RelatedImagePanel(on_changed=self._on_changed),
             _BaseStemMatchPanel(on_changed=self._on_changed),
+            _UnknownSuffixPanel(on_changed=self._on_changed),
             _LookaheadPanel(on_changed=self._on_changed),
             _NodeResultPanel(on_changed=self._on_changed),
         ]
@@ -1031,6 +1110,7 @@ class _GroupPanel(QWidget):
             _FilenameContainsPanel(on_changed=changed_cb),
             _RelatedImagePanel(on_changed=changed_cb),
             _BaseStemMatchPanel(on_changed=changed_cb),
+            _UnknownSuffixPanel(on_changed=changed_cb),
             _LookaheadPanel(on_changed=changed_cb),
             _NodeResultPanel(on_changed=changed_cb),
         ]
@@ -1535,6 +1615,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._filename_contains_panel   = _FilenameContainsPanel(on_changed=changed_cb)
         self._related_image_panel       = _RelatedImagePanel(on_changed=changed_cb)
         self._base_stem_match_panel     = _BaseStemMatchPanel(on_changed=changed_cb)
+        self._unknown_suffix_panel      = _UnknownSuffixPanel(on_changed=changed_cb)
         self._lookahead_panel           = _LookaheadPanel(on_changed=changed_cb)
         self._node_result_panel         = _NodeResultPanel(on_changed=changed_cb)
         self._group_child_result_panel  = _GroupChildResultPanel(on_changed=changed_cb)
@@ -1546,6 +1627,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
             self._prototype_panel, self._prompt_panel,
             self._filename_contains_panel, self._related_image_panel,
             self._base_stem_match_panel,
+            self._unknown_suffix_panel,
             self._lookahead_panel, self._node_result_panel,
             self._group_child_result_panel,
             self._composite_panel,

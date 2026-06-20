@@ -536,6 +536,18 @@ class _BaseStemMatchPanel(QWidget):
         self._require_match.stateChanged.connect(self._on_changed)
         layout.addWidget(self._require_match)
 
+        suffix_row = QWidget()
+        suffix_layout = QHBoxLayout(suffix_row)
+        suffix_layout.setContentsMargins(0, 0, 0, 0)
+        suffix_layout.addWidget(_label(_("Suffix filter:")))
+        self._suffix_filter = QLineEdit()
+        self._suffix_filter.setPlaceholderText(_("e.g. _A  (empty = match any)"))
+        self._suffix_filter.setFixedWidth(160)
+        self._suffix_filter.textChanged.connect(self._on_changed)
+        suffix_layout.addWidget(self._suffix_filter)
+        suffix_layout.addStretch()
+        layout.addWidget(suffix_row)
+
         note = _label(
             _("Searches the directories configured in Related Images settings "
               "(config: directories_to_search_for_related_images). "
@@ -547,12 +559,15 @@ class _BaseStemMatchPanel(QWidget):
     def load(self, condition) -> None:
         if isinstance(condition, BaseStemMatchCondition):
             self._require_match.setChecked(condition.require_match)
+            self._suffix_filter.setText(condition.suffix_filter)
         else:
             self._require_match.setChecked(True)
+            self._suffix_filter.setText("")
 
     def get_condition(self) -> BaseStemMatchCondition:
         return BaseStemMatchCondition(
             require_match=self._require_match.isChecked(),
+            suffix_filter=self._suffix_filter.text().strip(),
         )
 
 

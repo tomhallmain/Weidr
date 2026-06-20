@@ -150,12 +150,22 @@ class TestConditionSerialization:
     def test_base_stem_match_defaults(self):
         c = BaseStemMatchCondition()
         assert c.require_match is True
+        assert c.suffix_filter == ""
         c2 = _condition_from_dict(c.to_dict())
         assert c2.require_match is True
+        assert c2.suffix_filter == ""
 
     def test_base_stem_match_missing_key_defaults_on_deserialize(self):
         c2 = _condition_from_dict({"condition_type": "base_stem_match"})
         assert isinstance(c2, BaseStemMatchCondition)
+        assert c2.require_match is True
+        assert c2.suffix_filter == ""
+
+    def test_base_stem_match_suffix_filter_roundtrip(self):
+        c = BaseStemMatchCondition(require_match=True, suffix_filter="_A")
+        c2 = _condition_from_dict(c.to_dict())
+        assert isinstance(c2, BaseStemMatchCondition)
+        assert c2.suffix_filter == "_A"
         assert c2.require_match is True
 
     def test_base_stem_match_summary_found(self):
@@ -163,6 +173,14 @@ class TestConditionSerialization:
 
     def test_base_stem_match_summary_not_found(self):
         assert "not found" in BaseStemMatchCondition(require_match=False).summary()
+
+    def test_base_stem_match_summary_includes_suffix_when_set(self):
+        s = BaseStemMatchCondition(suffix_filter="_A").summary()
+        assert "_A" in s
+
+    def test_base_stem_match_summary_no_suffix_label_when_empty(self):
+        s = BaseStemMatchCondition(suffix_filter="").summary()
+        assert "suffix" not in s.lower()
 
     def test_related_image_roundtrip(self):
         c = RelatedImageCondition(edit_suffix="_edit", search_directory="/custom", count_threshold=3)

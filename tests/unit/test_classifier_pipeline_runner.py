@@ -916,6 +916,63 @@ class TestBaseStemMatchConditionRunner:
         _eval_base_stem_match(self._cond(), IMAGE)
         assert captured_kwargs[0].get("use_cache") is True
 
+    def test_suffix_filter_matches_file_with_suffix(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: ["/dir/stem_A.jpg", "/dir/stem_B.jpg"])
+        cond = BaseStemMatchCondition(require_match=True, suffix_filter="_A")
+        result, _ = _eval_base_stem_match(cond, IMAGE)
+        assert result is True
+
+    def test_suffix_filter_matches_with_intermediate_tokens(self, monkeypatch):
+        # The base stem and suffix need not be adjacent; anything may sit between them.
+        # e.g. base="{ID}_{ts}", file="{ID}_{ts}_0_a.jpg", suffix="_a" → match.
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: ["/dir/stem_0_A.jpg"])
+        cond = BaseStemMatchCondition(require_match=True, suffix_filter="_A")
+        result, _ = _eval_base_stem_match(cond, IMAGE)
+        assert result is True
+
+    def test_suffix_filter_excludes_non_matching_file(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: ["/dir/stem_B.jpg"])
+        cond = BaseStemMatchCondition(require_match=True, suffix_filter="_A")
+        result, _ = _eval_base_stem_match(cond, IMAGE)
+        assert result is False
+
+    def test_suffix_filter_empty_matches_all(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: ["/dir/stem_B.jpg"])
+        cond = BaseStemMatchCondition(require_match=True, suffix_filter="")
+        result, _ = _eval_base_stem_match(cond, IMAGE)
+        assert result is True
+
+    def test_suffix_filter_case_insensitive(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: ["/dir/stem_A.jpg"])
+        cond = BaseStemMatchCondition(require_match=True, suffix_filter="_a")
+        result, _ = _eval_base_stem_match(cond, IMAGE)
+        assert result is True
+
+    def test_suffix_filter_inverted_no_match_means_pass(self, monkeypatch):
+        # require_match=False: passes when suffix is NOT found
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: ["/dir/stem_B.jpg"])
+        cond = BaseStemMatchCondition(require_match=False, suffix_filter="_A")
+        result, _ = _eval_base_stem_match(cond, IMAGE)
+        assert result is True  # no _A found → passes when require_match=False
+
 
 # ---------------------------------------------------------------------------
 # RelatedImageCondition

@@ -380,7 +380,14 @@ def _eval_base_stem_match(
     dirs = config.directories_to_search_for_related_images
     if not dirs:
         return False, None
-    found = bool(find_files_by_base_stem(dirs, base_stem, use_cache=True))
+    matches = find_files_by_base_stem(dirs, base_stem, use_cache=True)
+    if condition.suffix_filter:
+        suffix_lower = condition.suffix_filter.lower()
+        matches = [
+            f for f in matches
+            if os.path.splitext(os.path.basename(f))[0].lower().endswith(suffix_lower)
+        ]
+    found = bool(matches)
     return (found if condition.require_match else not found), None
 
 

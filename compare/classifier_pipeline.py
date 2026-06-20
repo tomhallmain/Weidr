@@ -251,16 +251,20 @@ class BaseStemMatchCondition:
     """Matches when a file sharing the same filename base stem exists in the configured search directories."""
     condition_type: ClassVar[str] = "base_stem_match"
 
-    require_match: bool = True  # False = pass when NO related file is found
+    require_match: bool = True   # False = pass when NO related file is found
+    suffix_filter: str = ""      # if set, only count files whose stem has this suffix after the base stem
 
     def to_dict(self) -> dict:
         return {
             "condition_type": self.condition_type,
             "require_match": self.require_match,
+            "suffix_filter": self.suffix_filter,
         }
 
     def summary(self) -> str:
         mode = "found" if self.require_match else "not found"
+        if self.suffix_filter:
+            return f"BaseStemMatch(suffix={self.suffix_filter!r}, require={mode})"
         return f"BaseStemMatch(require={mode})"
 
 
@@ -416,6 +420,7 @@ def _condition_from_dict(d: dict):
     if ct == "base_stem_match":
         return BaseStemMatchCondition(
             require_match=d.get("require_match", True),
+            suffix_filter=d.get("suffix_filter", ""),
         )
     if ct == "related_image":
         return RelatedImageCondition(

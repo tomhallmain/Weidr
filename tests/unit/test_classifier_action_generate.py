@@ -12,6 +12,8 @@ import pytest
 
 from compare.action_callbacks import ActionCallbacks
 from compare.classifier_action import ClassifierAction
+from files.related_image import clear_base_stem_dir_cache
+from utils.config import config
 from utils.constants import ClassifierActionType
 
 IMAGE = "/dir/source.jpg"
@@ -153,3 +155,102 @@ class TestGenerateSearchDirResolution:
     def test_falls_back_to_image_directory_when_both_empty(self):
         ca = _action(related_image_edit_suffix="_edit", action_modifier="")
         assert self._capture_search_dir(ca, base_directory=None) == "/dir"
+
+
+# ---------------------------------------------------------------------------
+# use_base_stem_match field and _check_base_stem_match
+# ---------------------------------------------------------------------------
+
+class TestBaseStemMatchField:
+    def test_default_false(self):
+        assert _action().use_base_stem_match is False
+
+    def test_default_require_match_true(self):
+        assert _action().base_stem_match_require_match is True
+
+    def test_to_dict_includes_both_fields(self):
+        ca = _action(use_base_stem_match=True, base_stem_match_require_match=False)
+        d = ca.to_dict()
+        assert d["use_base_stem_match"] is True
+        assert d["base_stem_match_require_match"] is False
+
+    def test_from_dict_round_trip(self):
+        ca = _action(use_base_stem_match=True, base_stem_match_require_match=False)
+        ca2 = ClassifierAction.from_dict(ca.to_dict())
+        assert ca2.use_base_stem_match is True
+        assert ca2.base_stem_match_require_match is False
+
+    def test_from_dict_backward_compat_missing_keys(self):
+        d = _action().to_dict()
+        d.pop("use_base_stem_match", None)
+        d.pop("base_stem_match_require_match", None)
+        ca = ClassifierAction.from_dict(d)
+        assert ca.use_base_stem_match is False
+        assert ca.base_stem_match_require_match is True
+
+
+class TestCheckBaseStemMatch:
+    # extract_filename_base_stem and find_files_by_base_stem are lazy-imported
+    # inside _check_base_stem_match, so patch the source module they come from.
+    # config is the module-level singleton; patch its attribute directly.
+
+    def setup_method(self):
+        clear_base_stem_dir_cache()
+
+    def teardown_method(self):
+        clear_base_stem_dir_cache()
+
+    def _ca(self, require_match=True):
+        return _action(use_base_stem_match=True, base_stem_match_require_match=require_match)
+
+    def test_returns_true_when_file_found_require_true(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_action.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_action.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: ["/dir/stem_x.jpg"])
+        assert self._ca()._check_base_stem_match(IMAGE) is True
+
+    def test_returns_false_when_file_not_found_require_true(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_action.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_action.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: [])
+        assert self._ca()._check_base_stem_match(IMAGE) is False
+
+    def test_inverted_returns_true_when_not_found(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_action.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_action.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: [])
+        assert self._ca(require_match=False)._check_base_stem_match(IMAGE) is True
+
+    def test_no_base_stem_returns_false(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_action.extract_filename_base_stem", lambda p: None)
+        assert self._ca()._check_base_stem_match(IMAGE) is False
+
+    def test_empty_dirs_returns_false(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_action.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", [])
+        assert self._ca()._check_base_stem_match(IMAGE) is False
+
+    def test_evaluate_image_path_dispatches_base_stem(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_action.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_action.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: ["/dir/stem_x.jpg"])
+        ca = _action(use_base_stem_match=True, use_embedding=False)
+        matched, _ = ca._evaluate_image_path_match(IMAGE)
+        assert matched is True
+
+    def test_use_cache_true_passed_to_find(self, monkeypatch):
+        captured = []
+        monkeypatch.setattr("compare.classifier_action.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+
+        def fake_find(dirs, stem, **kw):
+            captured.append(kw)
+            return []
+
+        monkeypatch.setattr("compare.classifier_action.find_files_by_base_stem", fake_find)
+        self._ca()._check_base_stem_match(IMAGE)
+        assert captured[0].get("use_cache") is True

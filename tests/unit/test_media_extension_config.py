@@ -59,6 +59,35 @@ def test_migrate_removes_m4a_from_video_types():
     assert ".webm" in cfg.dict["video_types"]
 
 
+def test_migrate_directories_string_to_list():
+    cfg = Config.__new__(Config)
+    cfg.dict = {"directories_to_search_for_related_images": "/some/path"}
+    Config._migrate_legacy_keys(cfg)
+    assert cfg.dict["directories_to_search_for_related_images"] == ["/some/path"]
+
+
+def test_migrate_directories_empty_string_to_empty_list():
+    cfg = Config.__new__(Config)
+    cfg.dict = {"directories_to_search_for_related_images": ""}
+    Config._migrate_legacy_keys(cfg)
+    assert cfg.dict["directories_to_search_for_related_images"] == []
+
+
+def test_migrate_directories_list_unchanged():
+    cfg = Config.__new__(Config)
+    existing = ["/a", "/b"]
+    cfg.dict = {"directories_to_search_for_related_images": existing}
+    Config._migrate_legacy_keys(cfg)
+    assert cfg.dict["directories_to_search_for_related_images"] == ["/a", "/b"]
+
+
+def test_migrate_directories_absent_key_unchanged():
+    cfg = Config.__new__(Config)
+    cfg.dict = {}
+    Config._migrate_legacy_keys(cfg)
+    assert "directories_to_search_for_related_images" not in cfg.dict
+
+
 @pytest.mark.parametrize("ext", TIER_A_IMAGE_EXTENSIONS)
 def test_get_media_type_tier_a_extensions_are_image(tmp_path, ext):
     path = str(tmp_path / f"sample{ext}")

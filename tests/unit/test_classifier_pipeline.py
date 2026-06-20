@@ -20,6 +20,7 @@ from compare.classifier_pipeline import (
     LookaheadCondition,
     NodeResultCondition,
     CompositeCondition,
+    BaseStemMatchCondition,
     RelatedImageCondition,
     GroupCondition,
     GroupChildResultCondition,
@@ -139,6 +140,29 @@ class TestConditionSerialization:
         assert c2.operator == "NOT"
         assert isinstance(c2.sub_conditions[0], CompositeCondition)
         assert c2.sub_conditions[0].operator == "OR"
+
+    def test_base_stem_match_roundtrip(self):
+        c = BaseStemMatchCondition(require_match=False)
+        c2 = _condition_from_dict(c.to_dict())
+        assert isinstance(c2, BaseStemMatchCondition)
+        assert c2.require_match is False
+
+    def test_base_stem_match_defaults(self):
+        c = BaseStemMatchCondition()
+        assert c.require_match is True
+        c2 = _condition_from_dict(c.to_dict())
+        assert c2.require_match is True
+
+    def test_base_stem_match_missing_key_defaults_on_deserialize(self):
+        c2 = _condition_from_dict({"condition_type": "base_stem_match"})
+        assert isinstance(c2, BaseStemMatchCondition)
+        assert c2.require_match is True
+
+    def test_base_stem_match_summary_found(self):
+        assert "found" in BaseStemMatchCondition(require_match=True).summary()
+
+    def test_base_stem_match_summary_not_found(self):
+        assert "not found" in BaseStemMatchCondition(require_match=False).summary()
 
     def test_related_image_roundtrip(self):
         c = RelatedImageCondition(edit_suffix="_edit", search_directory="/custom", count_threshold=3)

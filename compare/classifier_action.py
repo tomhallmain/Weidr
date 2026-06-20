@@ -21,6 +21,7 @@ from image.image_classifier_manager import image_classifier_manager
 from image.image_data_extractor import image_data_extractor
 from image.frame_cache import FrameCache
 from image.image_ops import ImageOps
+from files.related_image import extract_filename_base_stem, find_files_by_base_stem
 from utils.config import config
 from utils.media_utils import get_media_type_for_path, is_classifier_dynamic_media_path
 from utils.constants import ActionType, ClassifierActionType, CompareMediaType
@@ -257,8 +258,6 @@ class ClassifierAction:
         return False
 
     def _check_base_stem_match(self, image_path: str) -> bool:
-        from files.related_image import extract_filename_base_stem, find_files_by_base_stem
-        from utils.config import config
         base_stem = extract_filename_base_stem(image_path)
         if not base_stem:
             return False

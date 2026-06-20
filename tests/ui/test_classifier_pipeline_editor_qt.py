@@ -39,6 +39,7 @@ from compare.classifier_pipeline import (
 )
 from ui.compare.classifier_pipeline_editor_qt import (
     ClassifierPipelineEditorDialog,
+    _BaseStemMatchPanel,
     _ClassifierRankPanel,
     _CompositePanel,
     _EmbeddingPanel,
@@ -47,6 +48,7 @@ from ui.compare.classifier_pipeline_editor_qt import (
     _OutcomeEditorWidget,
     _PromptPanel,
     _PrototypePanel,
+    _RelatedImagePanel,
     _StringListEditor,
     _SubCondRow,
 )
@@ -465,6 +467,86 @@ class TestCompositePanel:
 
 
 # ---------------------------------------------------------------------------
+# _RelatedImagePanel
+# ---------------------------------------------------------------------------
+
+class TestRelatedImagePanel:
+    def test_load_and_get_roundtrip(self, qtbot):
+        from compare.classifier_pipeline import RelatedImageCondition
+        panel = _RelatedImagePanel()
+        qtbot.addWidget(panel)
+        cond = RelatedImageCondition(edit_suffix="_edit", search_directory="/custom", count_threshold=3)
+        panel.load(cond)
+        result = panel.get_condition()
+        assert isinstance(result, RelatedImageCondition)
+        assert result.edit_suffix == "_edit"
+        assert result.search_directory == "/custom"
+        assert result.count_threshold == 3
+
+    def test_defaults_on_fresh_panel(self, qtbot):
+        from compare.classifier_pipeline import RelatedImageCondition
+        panel = _RelatedImagePanel()
+        qtbot.addWidget(panel)
+        result = panel.get_condition()
+        assert result.edit_suffix == ""
+        assert result.search_directory == ""
+        assert result.count_threshold == 1
+
+    def test_load_wrong_type_resets_to_defaults(self, qtbot):
+        from compare.classifier_pipeline import RelatedImageCondition, EmbeddingCondition
+        panel = _RelatedImagePanel()
+        qtbot.addWidget(panel)
+        panel.load(EmbeddingCondition())
+        result = panel.get_condition()
+        assert result.edit_suffix == ""
+        assert result.count_threshold == 1
+
+    def test_condition_type_attribute(self):
+        assert _RelatedImagePanel.condition_type == "related_image"
+
+
+# ---------------------------------------------------------------------------
+# _BaseStemMatchPanel
+# ---------------------------------------------------------------------------
+
+class TestBaseStemMatchPanel:
+    def test_load_and_get_roundtrip_require_true(self, qtbot):
+        from compare.classifier_pipeline import BaseStemMatchCondition
+        panel = _BaseStemMatchPanel()
+        qtbot.addWidget(panel)
+        panel.load(BaseStemMatchCondition(require_match=True))
+        result = panel.get_condition()
+        assert isinstance(result, BaseStemMatchCondition)
+        assert result.require_match is True
+
+    def test_load_and_get_roundtrip_require_false(self, qtbot):
+        from compare.classifier_pipeline import BaseStemMatchCondition
+        panel = _BaseStemMatchPanel()
+        qtbot.addWidget(panel)
+        panel.load(BaseStemMatchCondition(require_match=False))
+        result = panel.get_condition()
+        assert result.require_match is False
+
+    def test_defaults_on_fresh_panel(self, qtbot):
+        from compare.classifier_pipeline import BaseStemMatchCondition
+        panel = _BaseStemMatchPanel()
+        qtbot.addWidget(panel)
+        result = panel.get_condition()
+        assert result.require_match is True
+
+    def test_load_wrong_type_resets_to_default(self, qtbot):
+        from compare.classifier_pipeline import BaseStemMatchCondition, EmbeddingCondition
+        panel = _BaseStemMatchPanel()
+        qtbot.addWidget(panel)
+        panel.load(EmbeddingCondition())
+        result = panel.get_condition()
+        assert result.require_match is True
+
+    def test_condition_type_attribute(self):
+        assert _BaseStemMatchPanel.condition_type == "base_stem_match"
+
+
+# ---------------------------------------------------------------------------
 # _OutcomeEditorWidget
 # ---------------------------------------------------------------------------
 
@@ -862,24 +944,30 @@ class TestEditorSave:
 # ClassifierPipelineEditorDialog — flow preview
 # ---------------------------------------------------------------------------
 
+def _scene_text(dlg) -> str:
+    """Collect all text from QGraphicsTextItems in the flow preview scene."""
+    from PySide6.QtWidgets import QGraphicsTextItem
+    return "\n".join(
+        item.toPlainText()
+        for item in dlg._flow_scene.items()
+        if isinstance(item, QGraphicsTextItem)
+    )
+
+
 class TestEditorFlowPreview:
     def test_flow_preview_not_empty_for_pipeline_with_nodes(self, qtbot, isolated_singletons):
         pipeline = _make_pipeline()
         dlg = _open_dialog(qtbot, pipeline)
-        text = dlg._flow_preview.toPlainText()
-        assert len(text) > 0
+        assert len(_scene_text(dlg)) > 0
 
     def test_flow_preview_updates_on_name_change(self, qtbot, isolated_singletons):
         pipeline = _make_pipeline()
         dlg = _open_dialog(qtbot, pipeline)
         dlg._node_list.setCurrentRow(0)
-        before = dlg._flow_preview.toPlainText()
         dlg._node_name_edit.setText("unique_changed_name_xyz")
-        after = dlg._flow_preview.toPlainText()
-        assert "unique_changed_name_xyz" in after
+        assert "unique_changed_name_xyz" in _scene_text(dlg)
 
     def test_flow_preview_empty_pipeline_shows_something(self, qtbot, isolated_singletons):
         dlg = _open_dialog(qtbot)
-        text = dlg._flow_preview.toPlainText()
-        # Empty pipeline preview exists but may be short
-        assert text is not None
+        # Empty pipeline shows a placeholder text item in the scene
+        assert len(dlg._flow_scene.items()) > 0

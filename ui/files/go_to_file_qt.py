@@ -454,10 +454,13 @@ class GoToFile(SmartDialog):
     # ==================================================================
     def _on_cache_scan_toggled(self, state: int) -> None:
         if not state:
+            from files.related_image import clear_base_stem_dir_cache
             target_dir = self._target_dir_entry.text().strip()
             if target_dir:
-                from files.related_image import clear_base_stem_dir_cache
                 clear_base_stem_dir_cache(target_dir)
+            for d in (config.directories_to_search_for_related_images or []):
+                if d:
+                    clear_base_stem_dir_cache(d)
 
     def _on_filename_changed(self, text: str) -> None:
         """Auto-extract base ID when the search text changes."""
@@ -605,24 +608,49 @@ class GoToFile(SmartDialog):
     def _find_matching_files(
         self, target_dir: str, base_id: str, threshold: int = 400_000
     ) -> list[str]:
-        """Find files in *target_dir* whose name starts with *base_id*."""
-        normalized_dir = os.path.normpath(os.path.abspath(target_dir))
-        needs_confirmation = normalized_dir not in GoToFile.confirmed_directories
+        """Find files whose name starts with *base_id* in target_dir and
+        config.directories_to_search_for_related_images."""
+        # Build a deduplicated, validated list of directories to search.
+        search_dirs: list[str] = []
+        seen_norms: set[str] = set()
+        for d in ([target_dir] if target_dir else []) + list(
+            config.directories_to_search_for_related_images or []
+        ):
+            if not d:
+                continue
+            norm = os.path.normpath(os.path.abspath(d))
+            if os.path.isdir(d) and norm not in seen_norms:
+                search_dirs.append(d)
+                seen_norms.add(norm)
+
+        if not search_dirs:
+            return []
+
+        # Per-directory confirmation status for this call.
+        needs_conf: dict[str, bool] = {
+            os.path.normpath(os.path.abspath(d)): (
+                os.path.normpath(os.path.abspath(d)) not in GoToFile.confirmed_directories
+            )
+            for d in search_dirs
+        }
         aborted = [False]
 
         def _on_threshold(directory: str, file_count: int) -> bool:
-            nonlocal needs_confirmation
+            norm = os.path.normpath(os.path.abspath(directory))
+            if not needs_conf.get(norm, False):
+                # Already confirmed — continue without prompting.
+                return True
             from lib.qt_alert import qt_alert
             msg = _(
                 "The directory '{0}' contains many files "
                 "({1} files found so far). Searching may take "
                 "a while. Do you want to proceed?"
-            ).format(target_dir, file_count)
+            ).format(directory, file_count)
             proceed = qt_alert(self, _("Large Directory"), msg, kind="askyesno")
             if proceed:
-                GoToFile._add_confirmed_directory(normalized_dir)
+                GoToFile._add_confirmed_directory(norm)
                 GoToFile.save_persisted_data()
-                needs_confirmation = False
+                needs_conf[norm] = False
                 return True
             self._app_actions.toast(_("Search cancelled by user."))
             aborted[0] = True
@@ -630,10 +658,10 @@ class GoToFile(SmartDialog):
 
         try:
             matching = find_files_by_base_stem(
-                [target_dir],
+                search_dirs,
                 base_id,
-                threshold=threshold if needs_confirmation else 2 ** 31 - 1,
-                on_threshold_exceeded=_on_threshold if needs_confirmation else None,
+                threshold=threshold,
+                on_threshold_exceeded=_on_threshold,
                 use_cache=self._cache_scan_checkbox.isChecked(),
             )
         except Exception as e:
@@ -642,9 +670,16 @@ class GoToFile(SmartDialog):
             )
             return []
 
-        if not aborted[0] and needs_confirmation:
-            GoToFile._add_confirmed_directory(normalized_dir)
-            GoToFile.save_persisted_data()
+        if not aborted[0]:
+            # Auto-confirm any directory that completed without hitting the threshold.
+            changed = False
+            for d in search_dirs:
+                norm = os.path.normpath(os.path.abspath(d))
+                if needs_conf.get(norm, False):
+                    GoToFile._add_confirmed_directory(norm)
+                    changed = True
+            if changed:
+                GoToFile.save_persisted_data()
 
         return matching
 

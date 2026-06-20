@@ -32,6 +32,8 @@ from compare.classifier_pipeline import (
     BaseStemMatchCondition,
     RelatedImageCondition,
 )
+from files.related_image import extract_filename_base_stem, find_files_by_base_stem
+from utils.config import config
 from utils.constants import ActionType, ClassifierActionType
 from utils.logging_setup import get_logger
 from utils.translations import _
@@ -372,8 +374,6 @@ def _eval_base_stem_match(
     condition: BaseStemMatchCondition,
     image_path: str,
 ) -> tuple[bool, object]:
-    from files.related_image import extract_filename_base_stem, find_files_by_base_stem
-    from utils.config import config
     base_stem = extract_filename_base_stem(image_path)
     if not base_stem:
         return False, None

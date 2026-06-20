@@ -34,6 +34,7 @@ from compare.classifier_pipeline import (
     PrototypeCondition,
     RelatedImageCondition,
 )
+from compare.pipeline_run_report import PipelineRunReport
 from compare.classifier_pipeline_runner import (
     _evaluate_condition,
     _eval_base_stem_match,
@@ -1059,6 +1060,97 @@ class TestBaseStemMatchConditionRunner:
         cond = BaseStemMatchCondition(require_match=True, search_directory="/custom")
         result, _ = _eval_base_stem_match(cond, IMAGE)
         assert result is True
+
+    def test_report_notable_when_multiple_matches(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: ["/dir/stem_A.jpg", "/dir/stem_A2.jpg"])
+        report = PipelineRunReport()
+        cond = BaseStemMatchCondition(require_match=True, suffix_filter=["_A"])
+        _eval_base_stem_match(cond, IMAGE, node_name="Generate A", report=report)
+        msgs = report.messages()
+        assert len(msgs) == 1
+        assert msgs[0].severity == "NOTABLE"
+        assert msgs[0].node == "Generate A"
+        assert msgs[0].image_path == IMAGE
+
+    def test_no_report_when_single_match(self, monkeypatch):
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: ["/dir/stem_A.jpg"])
+        report = PipelineRunReport()
+        cond = BaseStemMatchCondition(require_match=True, suffix_filter=["_A"])
+        _eval_base_stem_match(cond, IMAGE, node_name="Generate A", report=report)
+        assert not report.has_messages()
+
+    def test_no_report_when_report_is_none(self, monkeypatch):
+        """No error when report=None (the default) and multiple matches exist."""
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: ["/dir/stem_A.jpg", "/dir/stem_A2.jpg"])
+        cond = BaseStemMatchCondition(require_match=True, suffix_filter=["_A"])
+        result, _ = _eval_base_stem_match(cond, IMAGE)  # must not raise
+        assert result is True
+
+    def test_report_threaded_through_run_pipeline(self, monkeypatch):
+        """report passed to run_pipeline reaches _eval_base_stem_match."""
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: ["/dir/stem_A.jpg", "/dir/stem_A2.jpg"])
+        report = PipelineRunReport()
+        cond = BaseStemMatchCondition(require_match=True, suffix_filter=["_A"])
+        p = _pipeline(_node("Gen A", cond, on_match=NodeOutcome.accept(), on_no_match=NodeOutcome.accept()))
+        run_pipeline(p, IMAGE, ActionCallbacks(), report=report)
+        assert report.has_messages()
+        assert report.messages()[0].node == "Gen A"
+
+
+# ---------------------------------------------------------------------------
+# PipelineRunReport
+# ---------------------------------------------------------------------------
+
+class TestPipelineRunReport:
+    def test_add_and_retrieve(self):
+        r = PipelineRunReport()
+        r.add("INFO", "node1", "/img.jpg", "some detail")
+        msgs = r.messages()
+        assert len(msgs) == 1
+        assert msgs[0].severity == "INFO"
+        assert msgs[0].node == "node1"
+        assert msgs[0].image_path == "/img.jpg"
+        assert msgs[0].detail == "some detail"
+        assert msgs[0].data is None
+
+    def test_add_with_data(self):
+        r = PipelineRunReport()
+        r.add("NOTABLE", "n", "/img.jpg", "d", data={"files": ["a", "b"]})
+        assert r.messages()[0].data == {"files": ["a", "b"]}
+
+    def test_has_messages_empty(self):
+        assert not PipelineRunReport().has_messages()
+
+    def test_has_messages_after_add(self):
+        r = PipelineRunReport()
+        r.add("WARNING", "n", "/img.jpg", "d")
+        assert r.has_messages()
+
+    def test_clear(self):
+        r = PipelineRunReport()
+        r.add("INFO", "n", "/img.jpg", "d")
+        r.clear()
+        assert not r.has_messages()
+        assert r.messages() == []
+
+    def test_messages_returns_copy(self):
+        r = PipelineRunReport()
+        r.add("INFO", "n", "/img.jpg", "d")
+        first = r.messages()
+        r.add("INFO", "n", "/img.jpg", "d2")
+        assert len(first) == 1  # snapshot was not mutated
 
 
 # ---------------------------------------------------------------------------

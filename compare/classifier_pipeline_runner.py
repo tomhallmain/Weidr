@@ -14,6 +14,7 @@ import os
 from typing import Optional
 
 from compare.action_callbacks import ActionCallbacks
+from compare.pipeline_run_report import PipelineRunReport
 from compare.classifier_pipeline import (
     ClassifierPipeline,
     CompositeCondition,
@@ -72,6 +73,7 @@ def run_pipeline(
     callbacks: ActionCallbacks,
     *,
     base_directory: Optional[str] = None,
+    report: Optional[PipelineRunReport] = None,
 ) -> Optional[ClassifierActionType]:
     """
     Walk the pipeline nodes and return the ClassifierActionType to fire, or
@@ -99,7 +101,7 @@ def run_pipeline(
         try:
             result, score = _evaluate_condition(
                 node.condition, image_path, node_results, node_scores, base_directory,
-                node_name=node.name,
+                node_name=node.name, report=report,
             )
         except Exception:
             logger.exception(
@@ -168,6 +170,7 @@ def _evaluate_condition(
     base_directory: Optional[str] = None,
     *,
     node_name: str = "",
+    report: Optional[PipelineRunReport] = None,
 ) -> tuple[bool, object]:
     """Return (matched, score). Score is a raw float where available, else None."""
 
@@ -207,16 +210,18 @@ def _evaluate_condition(
         return (prior == condition.expected_result), float(prior)
 
     if isinstance(condition, BaseStemMatchCondition):
-        return _eval_base_stem_match(condition, image_path)
+        return _eval_base_stem_match(condition, image_path, node_name=node_name, report=report)
 
     if isinstance(condition, RelatedImageCondition):
         return _eval_related_image(condition, image_path, base_directory)
 
     if isinstance(condition, CompositeCondition):
-        return _eval_composite(condition, image_path, node_results, node_scores, base_directory)
+        return _eval_composite(condition, image_path, node_results, node_scores, base_directory,
+                               report=report)
 
     if isinstance(condition, GroupCondition):
-        return _eval_group(condition, node_name, image_path, node_results, node_scores, base_directory)
+        return _eval_group(condition, node_name, image_path, node_results, node_scores,
+                           base_directory, report=report)
 
     if isinstance(condition, GroupChildResultCondition):
         key = f"{condition.group_node_name}/{condition.child_node_name}"
@@ -389,6 +394,9 @@ def _stem_matches_any_suffix(stem: str, suffixes: list) -> bool:
 def _eval_base_stem_match(
     condition: BaseStemMatchCondition,
     image_path: str,
+    *,
+    node_name: str = "",
+    report: Optional[PipelineRunReport] = None,
 ) -> tuple[bool, object]:
     base_stem = extract_filename_base_stem(image_path)
     if not base_stem:
@@ -408,6 +416,15 @@ def _eval_base_stem_match(
                 condition.suffix_filter,
             )
         ]
+    if report and len(matches) > 1:
+        report.add(
+            "NOTABLE",
+            node_name,
+            image_path,
+            f"{len(matches)} files share base stem {base_stem!r} in the search location"
+            + (f" (suffix filter: {condition.suffix_filter})" if condition.suffix_filter else ""),
+            data={"matches": matches, "base_stem": base_stem},
+        )
     found = bool(matches)
     return (found if condition.require_match else not found), None
 
@@ -441,13 +458,16 @@ def _eval_group(
     node_results: dict[str, bool],
     node_scores: dict[str, object],
     base_directory: Optional[str],
+    *,
+    report: Optional[PipelineRunReport] = None,
 ) -> tuple[bool, object]:
     """Evaluate every child node and store results under '<outer>/<child>' keys."""
     for child in condition.nodes:
         key = f"{outer_node_name}/{child.name}"
         try:
             child_result, child_score = _evaluate_condition(
-                child.condition, image_path, node_results, node_scores, base_directory
+                child.condition, image_path, node_results, node_scores, base_directory,
+                node_name=key, report=report,
             )
         except Exception:
             logger.exception(
@@ -473,9 +493,12 @@ def _eval_composite(
     node_results: dict[str, bool],
     node_scores: dict[str, object],
     base_directory: Optional[str] = None,
+    *,
+    report: Optional[PipelineRunReport] = None,
 ) -> tuple[bool, object]:
     sub_results = [
-        _evaluate_condition(sub, image_path, node_results, node_scores, base_directory)[0]
+        _evaluate_condition(sub, image_path, node_results, node_scores, base_directory,
+                            report=report)[0]
         for sub in condition.sub_conditions
     ]
     op = condition.operator

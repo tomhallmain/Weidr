@@ -14,7 +14,7 @@ from typing import Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QCheckBox, QGridLayout, QHBoxLayout, QLabel, QPushButton,
+    QCheckBox, QComboBox, QGridLayout, QHBoxLayout, QLabel, QPushButton,
     QScrollArea, QVBoxLayout, QWidget,
 )
 
@@ -23,6 +23,7 @@ from compare.classifier_pipeline import (
     ClassifierPipelines,
     PrevalidationPipeline,
 )
+from files.directory_profile import DirectoryProfile
 from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle
 from utils.logging_setup import get_logger
@@ -78,6 +79,17 @@ class ClassifierPipelinesTab(QWidget):
 
         title_row.addStretch()
         root.addLayout(title_row)
+
+        # -- Profile selector (for batch run) ---------------------------------
+        profile_row = QHBoxLayout()
+        profile_lbl = QLabel(_("Run on profile:"))
+        profile_lbl.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
+        profile_row.addWidget(profile_lbl)
+        self._profile_combo = QComboBox()
+        self._refresh_profile_combo()
+        profile_row.addWidget(self._profile_combo, 1)
+        profile_row.addStretch()
+        root.addLayout(profile_row)
 
         # -- Scrollable list --------------------------------------------------
         self._scroll = QScrollArea()
@@ -174,8 +186,8 @@ class ClassifierPipelinesTab(QWidget):
             grid.addWidget(flow_lbl, r, self._COL_FLOW)
 
             run_btn = QPushButton(_("Run"))
-            run_btn.setToolTip(_("Run on current image"))
-            run_btn.clicked.connect(lambda _=False, p=pipeline: self._run_on_current(p))
+            run_btn.setToolTip(_("Run on all files in the selected profile's directories"))
+            run_btn.clicked.connect(lambda _=False, p=pipeline: self._run_on_profile(p))
             grid.addWidget(run_btn, r, self._COL_RUN)
 
             edit_btn = QPushButton(_("Edit"))
@@ -207,7 +219,17 @@ class ClassifierPipelinesTab(QWidget):
 
     def refresh(self) -> None:
         ClassifierPipelines.load()
+        self._refresh_profile_combo()
         self._rebuild_rows()
+
+    def _refresh_profile_combo(self) -> None:
+        current = self._profile_combo.currentText() if hasattr(self, "_profile_combo") else ""
+        self._profile_combo.clear()
+        names = [p.name for p in DirectoryProfile.directory_profiles]
+        self._profile_combo.addItems(names or [_("(no profiles)")])
+        if current in names:
+            self._profile_combo.setCurrentText(current)
+        self._profile_combo.setEnabled(bool(names))
 
     # ------------------------------------------------------------------
     # Toolbar / row actions
@@ -287,38 +309,38 @@ class ClassifierPipelinesTab(QWidget):
         ClassifierPipelines.store()
         self._rebuild_rows()
 
-    def _run_on_current(self, pipeline: ClassifierPipeline) -> None:
-        image_path = getattr(self._app_actions, "current_media_path", None)
-        if callable(image_path):
-            image_path = image_path()
-        if not image_path:
-            qt_alert(self, _("Run Pipeline"), _("No image is currently open."))
+    def _run_on_profile(self, pipeline: ClassifierPipeline) -> None:
+        profile_name = self._profile_combo.currentText().strip()
+        profile = DirectoryProfile.get_profile_by_name(profile_name)
+        if profile is None:
+            qt_alert(self, _("Run Pipeline"), _("No profile selected or profile not found."))
             return
 
-        try:
-            from compare.action_callbacks import ActionCallbacks
+        directories = list(profile.directories)
+        msg = _("Run pipeline '{name}' on profile '{profile}'?\n\nDirectories:\n{dirs}").format(
+            name=pipeline.name,
+            profile=profile_name,
+            dirs="\n".join(f"  {d}" for d in directories),
+        )
+        if not qt_alert(self, _("Run Pipeline on Profile"), msg, kind="askokcancel"):
+            return
+
+        callbacks = self._app_actions.prevalidation_callbacks_with_mark
+
+        def _worker():
+            from compare.base_compare import gather_files
             from compare.classifier_pipeline_runner import run_pipeline
+            from files.related_image import clear_base_stem_dir_cache
+            clear_base_stem_dir_cache()
+            for directory in directories:
+                for image_path in gather_files(directory):
+                    try:
+                        run_pipeline(pipeline, image_path, callbacks, base_directory=directory)
+                    except Exception:
+                        logger.exception("Pipeline run error on %s", image_path)
 
-            def _notify(msg, **_kw):
-                try:
-                    self._app_actions.title_notify(msg)
-                except Exception:
-                    pass
-
-            result = run_pipeline(
-                pipeline,
-                image_path,
-                ActionCallbacks(notify_callback=_notify),
-            )
-            msg = (
-                _("Pipeline '{}' result: {}").format(pipeline.name, result)
-                if result is not None
-                else _("Pipeline '{}': no action taken.").format(pipeline.name)
-            )
-            qt_alert(self, _("Pipeline Result"), msg)
-        except Exception as exc:
-            logger.exception("Error running pipeline %r on %s", pipeline.name, image_path)
-            qt_alert(self, _("Run Pipeline"), _("Pipeline error: {}").format(exc))
+        from utils.running_tasks_registry import start_thread
+        start_thread(_worker, use_asyncio=False)
 
     # ------------------------------------------------------------------
     # Editor window helpers

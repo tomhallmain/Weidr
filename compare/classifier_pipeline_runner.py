@@ -35,7 +35,11 @@ from compare.classifier_pipeline import (
     UnknownSuffixCondition,
     RelatedImageCondition,
 )
-from files.related_image import extract_filename_base_stem, find_files_by_base_stem
+from files.related_image import (
+    extract_filename_base_stem,
+    find_files_by_base_stem,
+    get_related_image_path,
+)
 from utils.config import config
 from utils.constants import ActionType, ClassifierActionType
 from utils.logging_setup import get_logger
@@ -66,6 +70,107 @@ def _load_prototype(directory: str, cache: dict) -> object:
 
 
 # ---------------------------------------------------------------------------
+# Stem-group validity helpers (§5.13)
+# ---------------------------------------------------------------------------
+
+def _seed_exists_in_dirs(base_stem: str, dirs: list) -> bool:
+    """Return True if a file whose stem equals base_stem exactly (no suffix) exists in dirs."""
+    for f in find_files_by_base_stem(dirs, base_stem, use_cache=True):
+        if os.path.splitext(os.path.basename(f))[0].lower() == base_stem.lower():
+            return True
+    return False
+
+
+def _resolve_stem_group(
+    image_path: str,
+    base_stem: str,
+    is_seed: bool,
+) -> tuple:
+    """
+    Classify this image's role in its stem group and decide whether to evaluate.
+
+    Returns (should_evaluate: bool, should_mark_done: bool).
+
+    The six cases (see §5.13 in the design document):
+
+    Type 1 — valid
+        Image stem == base_stem (this IS the seed) AND the seed file is found
+        in at least one configured target directory.
+        → (True, True): evaluate; seed marks the group done after its terminal outcome.
+
+    Type 1 — derivative
+        Stem ≠ base_stem AND the seed file IS present in the working directory.
+        The RelatedImageCondition type-3 guard will block generation anyway.
+        → (True, False): evaluate normally; do NOT mark done (seed will do it).
+
+    Type 2 — valid
+        Stem ≠ base_stem, seed NOT in working directory, related-image metadata
+        exists, AND the exact basename named in that metadata is found in a target
+        directory. The first derivative encountered acts as the generation source.
+        → (True, True): evaluate; derivative marks the group done.
+
+    Malformed A
+        Stem ≠ base_stem, seed not in working dir, and no related-image metadata.
+        Cannot determine seed identity.
+        → (False, True): skip; mark done to suppress remaining derivatives.
+
+    Malformed B
+        Related-image metadata is present but the exact-named file is not found
+        in any target directory. Seed is not filed.
+        → (False, True): skip; mark done.
+
+    Malformed C
+        Image IS the seed (stem == base_stem) but no copy of the seed is found
+        in any target directory. Seed is unfiled; generating variants is premature.
+        → (False, True): skip; mark done; derivatives that arrive later hit the
+        early-exit in run_pipeline.
+
+    Note: if config.directories_to_search_for_related_images is empty, the target
+    checks (Type 1 valid, Type 2, Malformed B/C) cannot be performed. In that case
+    the function falls back to (True, is_seed) — seeds mark the group done, derivatives
+    do not — without enforcing the target-presence requirement.
+    """
+    target_dirs = config.directories_to_search_for_related_images
+
+    if not target_dirs:
+        # No target dirs configured: skip validity checks, use seeds-only marking.
+        return True, is_seed
+
+    if is_seed:
+        # Type 1 valid or Malformed C.
+        if _seed_exists_in_dirs(base_stem, target_dirs):
+            return True, True   # Type 1 valid
+        logger.debug(
+            "stem-group %r: Malformed C — seed in working dir but not in any target dir (%s)",
+            base_stem, image_path,
+        )
+        return False, True  # Malformed C
+
+    # Derivative: check if seed is present in the working directory.
+    working_dir = os.path.dirname(os.path.abspath(image_path))
+    if _seed_exists_in_dirs(base_stem, [working_dir]):
+        return True, False  # Type 1 derivative; type-3 guard handles; seed marks done
+
+    # Seed not in working dir: inspect related-image metadata.
+    related_path, found_on_disk = get_related_image_path(image_path)
+    if related_path is None:
+        logger.debug(
+            "stem-group %r: Malformed A — no related-image metadata (%s)",
+            base_stem, image_path,
+        )
+        return False, True  # Malformed A
+
+    if not found_on_disk:
+        logger.debug(
+            "stem-group %r: Malformed B — metadata names %r but file not found in target dirs (%s)",
+            base_stem, os.path.basename(related_path), image_path,
+        )
+        return False, True  # Malformed B
+
+    return True, True  # Type 2 valid; this derivative is the generation source
+
+
+# ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
 
@@ -77,6 +182,7 @@ def run_pipeline(
     base_directory: Optional[str] = None,
     report: Optional[PipelineRunReport] = None,
     generate_queue: Optional[DebouncedGenerateQueue] = None,
+    processed_stems: Optional[set] = None,
 ) -> Optional[ClassifierActionType]:
     """
     Walk the pipeline nodes and return the ClassifierActionType to fire, or
@@ -85,11 +191,41 @@ def run_pipeline(
     Execution halts at the first EXECUTE / ACCEPT / REJECT outcome, or when
     all nodes have been visited (in which case default_action applies).
     GOTO jumps forward; CONTINUE advances sequentially.
+
+    processed_stems
+        Optional batch-level set of base stems already handled. When provided:
+        - Images whose base_stem is already in the set are skipped immediately.
+        - Before entering the evaluation loop, _resolve_stem_group() classifies
+          the image's stem-group role. Malformed cases (A, B, C — see §5.13)
+          are skipped without evaluation and marked done to suppress later
+          derivatives of the same group.
+        - After any terminal outcome, images flagged should_mark_done add
+          their base_stem to the set so subsequent group members are skipped.
+        Pass the same set for every call in a batch run. The parameter is
+        optional so callers that need independent per-variant evaluation can
+        omit it. RELATED_IMAGE ascending sort is strongly recommended when
+        passing processed_stems; it ensures seeds are evaluated before their
+        derivatives for maximum skip efficiency.
     """
     if not pipeline.is_active or not pipeline.nodes:
         return None
     if not pipeline.media_type_allowed(image_path):
         return None
+
+    base_stem: Optional[str] = extract_filename_base_stem(image_path)
+
+    # Stem-group skip and validity gate.
+    should_mark_done = False
+    if processed_stems is not None and base_stem:
+        if base_stem in processed_stems:
+            return None
+
+        image_file_stem = os.path.splitext(os.path.basename(image_path))[0]
+        is_seed = image_file_stem.lower() == base_stem.lower()
+        should_evaluate, should_mark_done = _resolve_stem_group(image_path, base_stem, is_seed)
+        if not should_evaluate:
+            processed_stems.add(base_stem)
+            return None
 
     node_results: dict[str, bool] = {}
     node_scores: dict[str, object] = {}
@@ -128,9 +264,13 @@ def run_pipeline(
                 base_directory,
                 generate_queue=generate_queue,
             )
+            if should_mark_done and base_stem:
+                processed_stems.add(base_stem)
             return outcome.action_type
 
         if outcome.outcome_type == OutcomeType.ACCEPT:
+            if should_mark_done and base_stem:
+                processed_stems.add(base_stem)
             return None
 
         if outcome.outcome_type == OutcomeType.REJECT:
@@ -143,6 +283,8 @@ def run_pipeline(
                 base_directory,
                 generate_queue=generate_queue,
             )
+            if should_mark_done and base_stem:
+                processed_stems.add(base_stem)
             return pipeline.default_reject_action
 
         if outcome.outcome_type == OutcomeType.GOTO:
@@ -161,6 +303,8 @@ def run_pipeline(
         base_directory,
         generate_queue=generate_queue,
     )
+    if should_mark_done and base_stem:
+        processed_stems.add(base_stem)
     return pipeline.default_action
 
 
@@ -219,7 +363,8 @@ def _evaluate_condition(
         return _eval_base_stem_match(condition, image_path, node_name=node_name, report=report)
 
     if isinstance(condition, UnknownSuffixCondition):
-        return _eval_unknown_suffix(condition, image_path, node_name=node_name, report=report)
+        return _eval_unknown_suffix(condition, image_path, base_directory=base_directory,
+                                    node_name=node_name, report=report)
 
     if isinstance(condition, RelatedImageCondition):
         return _eval_related_image(condition, image_path, base_directory)
@@ -442,6 +587,7 @@ def _eval_unknown_suffix(
     condition: UnknownSuffixCondition,
     image_path: str,
     *,
+    base_directory: Optional[str] = None,
     node_name: str = "",
     report: Optional[PipelineRunReport] = None,
 ) -> tuple[bool, object]:
@@ -449,12 +595,19 @@ def _eval_unknown_suffix(
 
     The caller is expected to wrap this in CompositeCondition(NOT): the guard blocks
     generation when the stem group is ambiguous and classifier inference cannot resolve it.
+
+    Search scope (see UnknownSuffixCondition docstring):
+      search_directory set → use it exclusively.
+      use_base_directory=True → use base_directory (or image's own dir as fallback).
+      Otherwise → use config.directories_to_search_for_related_images.
     """
     base_stem = extract_filename_base_stem(image_path)
     if not base_stem:
         return False, None
     if condition.search_directory:
         dirs = [condition.search_directory]
+    elif condition.use_base_directory:
+        dirs = [base_directory or os.path.dirname(os.path.abspath(image_path))]
     else:
         dirs = config.directories_to_search_for_related_images
     if not dirs:

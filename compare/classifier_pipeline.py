@@ -287,6 +287,16 @@ class UnknownSuffixCondition:
 
     The seed image (file whose stem equals the base stem exactly, i.e. no suffix) is
     always excluded from the unknown-suffix check.
+
+    Search scope (in priority order):
+      1. search_directory if non-empty → scan exactly that directory.
+      2. use_base_directory=True → scan the base_directory passed to run_pipeline
+         (i.e. the working directory), falling back to the image's own directory.
+      3. Otherwise → scan config.directories_to_search_for_related_images.
+
+    For the category-fill guard node, use_base_directory=True is the correct choice:
+    the guard only needs to detect ambiguous files in the working directory pool, not
+    in the target directories (files there are categorised by their location, not suffix).
     """
     condition_type: ClassVar[str] = "unknown_suffix"
 
@@ -299,6 +309,9 @@ class UnknownSuffixCondition:
     classifier_name: str = ""
     # Minimum top-1 confidence for classifier inference to count as deterministic.
     inference_threshold: float = 0.85
+    # When True and search_directory is empty, scan base_directory (the working dir
+    # passed to run_pipeline) instead of config.directories_to_search_for_related_images.
+    use_base_directory: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -307,12 +320,19 @@ class UnknownSuffixCondition:
             "search_directory": self.search_directory,
             "classifier_name": self.classifier_name,
             "inference_threshold": self.inference_threshold,
+            "use_base_directory": self.use_base_directory,
         }
 
     def summary(self) -> str:
         suffixes = ", ".join(self.expected_suffixes) if self.expected_suffixes else "(none)"
         infer = f", infer={self.classifier_name!r}" if self.classifier_name else ""
-        return f"UnknownSuffix(expected=[{suffixes}]{infer})"
+        if self.search_directory:
+            scope = f", dir={self.search_directory!r}"
+        elif self.use_base_directory:
+            scope = ", dir=base"
+        else:
+            scope = ""
+        return f"UnknownSuffix(expected=[{suffixes}]{infer}{scope})"
 
 
 @dataclass
@@ -490,6 +510,7 @@ def _condition_from_dict(d: dict):
             search_directory=d.get("search_directory", ""),
             classifier_name=d.get("classifier_name", ""),
             inference_threshold=d.get("inference_threshold", 0.85),
+            use_base_directory=d.get("use_base_directory", False),
         )
     if ct == "related_image":
         return RelatedImageCondition(
@@ -1248,6 +1269,154 @@ class ClassifierPipelines:
                 node_hint_review,
                 node_related,
             ],
+            is_active=False,
+        )
+
+    @staticmethod
+    def build_category_fill_pipeline(
+        target_dir_apple: str = "target/A/",
+        target_dir_banana: str = "target/B/",
+        target_dir_cherry: str = "target/C/",
+    ) -> "ClassifierPipeline":
+        """
+        Demo pipeline for filling a per-category target directory set.
+
+        Illustrates the §4 architecture from docs/generation-pipeline-category-fill.md.
+
+        Categories and suffixes
+        ───────────────────────
+          apple   _apple   → target/A/
+          banana  _banana  → target/B/
+          cherry  _cherry  → target/C/
+
+        Pipeline flow
+        ─────────────
+        1  Unknown-suffix guard   CompositeCondition(NOT, UnknownSuffixCondition)
+             Passes when every file in the stem group has a recognised suffix.
+             Rejects when an unrecognised file is found that cannot be resolved
+             by classifier inference, preventing ambiguous generation.
+
+        2  Generate apple         CompositeCondition(AND)
+        3  Generate banana          [0] RelatedImageCondition — not a local derivative
+        4  Generate cherry              AND no existing variant in working dir
+                                    [1] BaseStemMatchCondition(require_match=False,
+                                            search_directory="target/X/")
+                                        — no file with this base stem in target dir
+             on_match  → EXECUTE GENERATE (dispatch and halt)
+             on_no_match → CONTINUE (check next category)
+
+        Behaviour table (per §4.5)
+        ─────────────────────────────────────────────────────────────────────────
+        Image state                         Guard   Cond[0]  Cond[1]  Action
+        ─────────────────────────────────────────────────────────────────────────
+        Seed, no apple in target            pass    True     True     GENERATE _apple
+        Seed, apple in target               pass    True     False    skip → check banana
+        Seed, apple variant in working dir  pass    False    —        skip → check banana
+        Type-3 derivative (all categories)  pass    False    —        skip all → default
+        Unknown suffix, unresolvable        fail    —        —        REJECT
+        ─────────────────────────────────────────────────────────────────────────
+
+        The pipeline is inactive by default. Replace the placeholder target
+        directory paths with absolute paths before activating.
+
+        Seed guard note (§5.8)
+        ───────────────────────
+        Each category node could optionally include a CompositeCondition(NOT,
+        ClassifierRankCondition(...)) as a third AND sub-condition to skip
+        generation when the seed image is already classified as that category.
+        This is omitted here pending classifier validation.
+
+        processed_stems note (§5.13)
+        ─────────────────────────────
+        Pass a shared set() as processed_stems to run_pipeline() to skip
+        derivative images whose stem group has already been evaluated.
+        Use RELATED_IMAGE ascending sort so seeds are evaluated first.
+        """
+        ALL_SUFFIXES = ["_apple", "_banana", "_cherry"]
+
+        # ------------------------------------------------------------------
+        # Node 1 — Unknown-suffix guard
+        # Guards against stem groups that contain files with unrecognised
+        # suffixes, which could indicate a miscategorised or manually renamed
+        # file that would corrupt the representative set.
+        # ------------------------------------------------------------------
+        node_guard = PipelineNode(
+            name="Unknown-suffix guard",
+            condition=CompositeCondition(
+                operator="NOT",
+                sub_conditions=[
+                    UnknownSuffixCondition(
+                        expected_suffixes=ALL_SUFFIXES,
+                        use_base_directory=True,
+                        # classifier_name: set to a seed classifier to attempt inference
+                        # on unrecognised files before rejecting.
+                    ),
+                ],
+            ),
+            on_match=NodeOutcome(OutcomeType.CONTINUE),   # clean → proceed to category nodes
+            on_no_match=NodeOutcome(OutcomeType.REJECT),  # anomaly → reject without generating
+        )
+
+        # ------------------------------------------------------------------
+        # Category node factory
+        # Each category node is a two-condition AND gate:
+        #   [0] RelatedImageCondition — True when no local variant exists AND
+        #       the current image is not a working-dir derivative (type-3 guard).
+        #   [1] BaseStemMatchCondition(require_match=False) — True when no file
+        #       with this base stem exists in the category's target directory,
+        #       meaning generation is still needed.
+        # Both must be True to dispatch GENERATE. Either being False means the
+        # category is already covered; the node falls through via on_no_match=CONTINUE.
+        # ------------------------------------------------------------------
+        def _make_category_node(name: str, suffix: str, target_dir: str) -> PipelineNode:
+            return PipelineNode(
+                name=name,
+                condition=CompositeCondition(
+                    operator="AND",
+                    sub_conditions=[
+                        # [0] Not a local derivative; no variant in working dir.
+                        # use_configured_search_directories=False → checks base_directory
+                        # (the working dir passed to run_pipeline) only.
+                        RelatedImageCondition(
+                            edit_suffix=suffix,
+                            use_configured_search_directories=False,
+                            count_threshold=1,
+                        ),
+                        # [1] No file with this base stem exists in the target category dir.
+                        # search_directory pins the check to the specific category directory,
+                        # so a file with the wrong suffix in the right directory still
+                        # correctly signals that the category is covered (§5.1).
+                        BaseStemMatchCondition(
+                            require_match=False,
+                            search_directory=target_dir,
+                        ),
+                    ],
+                ),
+                on_match=NodeOutcome(
+                    OutcomeType.EXECUTE,
+                    action_type=ClassifierActionType.GENERATE,
+                    action_modifier=suffix,
+                ),
+                on_no_match=NodeOutcome(OutcomeType.CONTINUE),
+            )
+
+        node_apple  = _make_category_node("Generate apple",  "_apple",  target_dir_apple)
+        node_banana = _make_category_node("Generate banana", "_banana", target_dir_banana)
+        node_cherry = _make_category_node("Generate cherry", "_cherry", target_dir_cherry)
+
+        return ClassifierPipeline(
+            name="Example: Category Fill (apple / banana / cherry)",
+            description=(
+                "Demo category-fill pipeline (inactive). Fills per-category target "
+                "subdirectories from a working directory of seed images. "
+                "Categories: apple → target/A/, banana → target/B/, cherry → target/C/. "
+                "Guard node rejects stem groups with unrecognised suffixes. "
+                "Each category node generates if and only if (a) the image is not a "
+                "local derivative and (b) the target directory does not already contain "
+                "a file with this base stem. See §4 of "
+                "docs/generation-pipeline-category-fill.md."
+            ),
+            nodes=[node_guard, node_apple, node_banana, node_cherry],
             is_active=False,
         )
 

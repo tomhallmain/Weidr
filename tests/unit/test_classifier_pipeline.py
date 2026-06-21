@@ -668,6 +668,7 @@ class TestValidation:
         assert c.search_directory == ""
         assert c.classifier_name == ""
         assert c.inference_threshold == 0.85
+        assert c.use_base_directory is False
 
     def test_unknown_suffix_roundtrip(self):
         c = UnknownSuffixCondition(
@@ -675,6 +676,7 @@ class TestValidation:
             search_directory="/some/dir",
             classifier_name="my_model",
             inference_threshold=0.9,
+            use_base_directory=False,
         )
         c2 = _condition_from_dict(c.to_dict())
         assert isinstance(c2, UnknownSuffixCondition)
@@ -682,12 +684,20 @@ class TestValidation:
         assert c2.search_directory == "/some/dir"
         assert c2.classifier_name == "my_model"
         assert c2.inference_threshold == 0.9
+        assert c2.use_base_directory is False
+
+    def test_unknown_suffix_use_base_directory_roundtrip(self):
+        c = UnknownSuffixCondition(expected_suffixes=["_a"], use_base_directory=True)
+        c2 = _condition_from_dict(c.to_dict())
+        assert isinstance(c2, UnknownSuffixCondition)
+        assert c2.use_base_directory is True
 
     def test_unknown_suffix_missing_keys_defaults(self):
         c2 = _condition_from_dict({"condition_type": "unknown_suffix"})
         assert isinstance(c2, UnknownSuffixCondition)
         assert c2.expected_suffixes == []
         assert c2.inference_threshold == 0.85
+        assert c2.use_base_directory is False
 
     def test_unknown_suffix_summary_shows_suffixes(self):
         s = UnknownSuffixCondition(expected_suffixes=["_a", "_b"]).summary()
@@ -696,6 +706,14 @@ class TestValidation:
     def test_unknown_suffix_summary_shows_classifier(self):
         s = UnknownSuffixCondition(classifier_name="mdl").summary()
         assert "mdl" in s
+
+    def test_unknown_suffix_summary_shows_base_dir_flag(self):
+        s = UnknownSuffixCondition(use_base_directory=True).summary()
+        assert "base" in s
+
+    def test_unknown_suffix_summary_shows_explicit_dir(self):
+        s = UnknownSuffixCondition(search_directory="/foo/bar").summary()
+        assert "/foo/bar" in s
 
     def test_unknown_suffix_nonexistent_search_directory_fails(self):
         p = _simple_pipeline(

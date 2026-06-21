@@ -49,6 +49,8 @@ from compare.classifier_pipeline_runner import (
     _eval_prompt,
     _eval_prototype,
     _eval_related_image,
+    _resolve_stem_group,
+    _seed_exists_in_dirs,
     run_pipeline,
 )
 from utils.constants import ClassifierActionType, CompareMediaType
@@ -1409,6 +1411,62 @@ class TestUnknownSuffixConditionRunner:
         result, _ = _eval_unknown_suffix(self._cond(), IMAGE)
         assert result is False
 
+    def test_use_base_directory_ignores_config_dirs(self, monkeypatch, tmp_path):
+        """use_base_directory=True → guard scans base_directory, not config dirs."""
+        # Place an unknown-suffix file in the "config" dir — guard must not see it.
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+        (config_dir / "stem_x.jpg").touch()
+        # Working dir is empty.
+        working_dir = tmp_path / "working"
+        working_dir.mkdir()
+
+        monkeypatch.setattr(config, "directories_to_search_for_related_images",
+                            [str(config_dir)])
+        cond = UnknownSuffixCondition(
+            expected_suffixes=["_a", "_b", "_c", "_d"],
+            use_base_directory=True,
+        )
+        result, _ = _eval_unknown_suffix(
+            cond, str(working_dir / "stem.jpg"),
+            base_directory=str(working_dir),
+        )
+        assert result is False  # config dir not scanned; working dir is clean
+
+    def test_use_base_directory_detects_unknown_in_base_dir(self, monkeypatch, tmp_path):
+        """use_base_directory=True → unknown file in base_directory is detected."""
+        working_dir = tmp_path / "working"
+        working_dir.mkdir()
+        (working_dir / "stem_zzz.jpg").touch()
+
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", [])
+        cond = UnknownSuffixCondition(
+            expected_suffixes=["_a", "_b", "_c", "_d"],
+            use_base_directory=True,
+        )
+        result, _ = _eval_unknown_suffix(
+            cond, str(working_dir / "stem.jpg"),
+            base_directory=str(working_dir),
+        )
+        assert result is True  # _zzz is unrecognised and unresolvable
+
+    def test_use_base_directory_falls_back_to_image_dir(self, monkeypatch, tmp_path):
+        """use_base_directory=True with no base_directory → uses image's own directory."""
+        img_dir = tmp_path / "imgs"
+        img_dir.mkdir()
+        (img_dir / "stem_zzz.jpg").touch()
+
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", [])
+        cond = UnknownSuffixCondition(
+            expected_suffixes=["_a", "_b"],
+            use_base_directory=True,
+        )
+        result, _ = _eval_unknown_suffix(
+            cond, str(img_dir / "stem.jpg"),
+            base_directory=None,
+        )
+        assert result is True  # fell back to image's dir, found stem_zzz.jpg
+
 
 # ---------------------------------------------------------------------------
 # RelatedImageCondition
@@ -1792,3 +1850,253 @@ class TestRunPipelineMediaTypeGate:
         with _patch_media_type(CompareMediaType.IMAGE):
             result = run_pipeline(p, IMAGE, ActionCallbacks())
         assert result is None
+
+
+# ---------------------------------------------------------------------------
+# Stem-group skip: _seed_exists_in_dirs and _resolve_stem_group (§5.13)
+# ---------------------------------------------------------------------------
+
+class TestSeedExistsInDirs:
+    def setup_method(self):
+        clear_base_stem_dir_cache()
+
+    def teardown_method(self):
+        clear_base_stem_dir_cache()
+
+    def test_exact_stem_match_found(self, tmp_path):
+        (tmp_path / "rose.jpg").touch()
+        (tmp_path / "rose_a.jpg").touch()
+        assert _seed_exists_in_dirs("rose", [str(tmp_path)]) is True
+
+    def test_suffix_variant_not_treated_as_seed(self, tmp_path):
+        (tmp_path / "rose_a.jpg").touch()
+        assert _seed_exists_in_dirs("rose", [str(tmp_path)]) is False
+
+    def test_empty_dirs_returns_false(self):
+        assert _seed_exists_in_dirs("rose", []) is False
+
+    def test_multiple_dirs_found_in_second(self, tmp_path):
+        d1 = tmp_path / "a"
+        d1.mkdir()
+        d2 = tmp_path / "b"
+        d2.mkdir()
+        (d2 / "rose.jpg").touch()
+        assert _seed_exists_in_dirs("rose", [str(d1), str(d2)]) is True
+
+
+class TestResolveStemGroup:
+    def setup_method(self):
+        clear_base_stem_dir_cache()
+
+    def teardown_method(self):
+        clear_base_stem_dir_cache()
+
+    # -- helpers --
+
+    def _patch_seed_exists(self, dirs_with_seed, dirs_without_seed=None):
+        """Patch _seed_exists_in_dirs: returns True if dirs match dirs_with_seed."""
+        def fake(base_stem, dirs):
+            return list(dirs) == list(dirs_with_seed)
+        return patch("compare.classifier_pipeline_runner._seed_exists_in_dirs", side_effect=fake)
+
+    # -- Type 1 valid --
+
+    def test_type1_valid_seed_in_target(self, tmp_path, monkeypatch):
+        seed = tmp_path / "rose.jpg"
+        seed.touch()
+        target = tmp_path / "target"
+        target.mkdir()
+        (target / "rose.jpg").touch()
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", [str(target)])
+        should_eval, should_mark = _resolve_stem_group(str(seed), "rose", is_seed=True)
+        assert should_eval is True
+        assert should_mark is True
+
+    # -- Malformed C --
+
+    def test_malformed_c_seed_not_in_target(self, tmp_path, monkeypatch):
+        seed = tmp_path / "rose.jpg"
+        seed.touch()
+        target = tmp_path / "target"
+        target.mkdir()
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", [str(target)])
+        should_eval, should_mark = _resolve_stem_group(str(seed), "rose", is_seed=True)
+        assert should_eval is False
+        assert should_mark is True
+
+    # -- Type 1 derivative --
+
+    def test_type1_derivative_seed_in_working_dir(self, tmp_path, monkeypatch):
+        working = tmp_path / "work"
+        working.mkdir()
+        (working / "rose.jpg").touch()
+        deriv = working / "rose_a.jpg"
+        deriv.touch()
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", [str(tmp_path)])
+        should_eval, should_mark = _resolve_stem_group(str(deriv), "rose", is_seed=False)
+        assert should_eval is True
+        assert should_mark is False  # seed will mark done
+
+    # -- Type 2 valid --
+
+    def test_type2_valid_metadata_and_seed_in_target(self, tmp_path, monkeypatch):
+        working = tmp_path / "work"
+        working.mkdir()
+        target = tmp_path / "target"
+        target.mkdir()
+        (target / "rose.jpg").touch()
+        deriv = working / "rose_a.jpg"
+        deriv.touch()
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", [str(target)])
+        # No seed in working dir; metadata resolves to the target file
+        with patch("compare.classifier_pipeline_runner.get_related_image_path",
+                   return_value=(str(target / "rose.jpg"), True)):
+            should_eval, should_mark = _resolve_stem_group(str(deriv), "rose", is_seed=False)
+        assert should_eval is True
+        assert should_mark is True  # first derivative acts as source
+
+    # -- Malformed A --
+
+    def test_malformed_a_no_metadata(self, tmp_path, monkeypatch):
+        working = tmp_path / "work"
+        working.mkdir()
+        target = tmp_path / "target"
+        target.mkdir()
+        deriv = working / "rose_a.jpg"
+        deriv.touch()
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", [str(target)])
+        with patch("compare.classifier_pipeline_runner.get_related_image_path",
+                   return_value=(None, False)):
+            should_eval, should_mark = _resolve_stem_group(str(deriv), "rose", is_seed=False)
+        assert should_eval is False
+        assert should_mark is True
+
+    # -- Malformed B --
+
+    def test_malformed_b_metadata_but_not_in_target(self, tmp_path, monkeypatch):
+        working = tmp_path / "work"
+        working.mkdir()
+        target = tmp_path / "target"
+        target.mkdir()
+        deriv = working / "rose_a.jpg"
+        deriv.touch()
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", [str(target)])
+        with patch("compare.classifier_pipeline_runner.get_related_image_path",
+                   return_value=("/some/unfiled/rose.jpg", False)):
+            should_eval, should_mark = _resolve_stem_group(str(deriv), "rose", is_seed=False)
+        assert should_eval is False
+        assert should_mark is True
+
+    # -- No target dirs fallback --
+
+    def test_no_target_dirs_seed_evaluates_and_marks(self, tmp_path, monkeypatch):
+        seed = tmp_path / "rose.jpg"
+        seed.touch()
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", [])
+        should_eval, should_mark = _resolve_stem_group(str(seed), "rose", is_seed=True)
+        assert should_eval is True
+        assert should_mark is True
+
+    def test_no_target_dirs_derivative_evaluates_does_not_mark(self, tmp_path, monkeypatch):
+        deriv = tmp_path / "rose_a.jpg"
+        deriv.touch()
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", [])
+        should_eval, should_mark = _resolve_stem_group(str(deriv), "rose", is_seed=False)
+        assert should_eval is True
+        assert should_mark is False
+
+
+class TestProcessedStemsIntegration:
+    """End-to-end tests for the processed_stems skip in run_pipeline."""
+
+    def _always_match_pipeline(self):
+        return ClassifierPipeline(
+            name="p",
+            nodes=[_node("n1", FilenameContainsCondition(["image"]),
+                          on_match=_execute(ClassifierActionType.NOTIFY))],
+        )
+
+    def test_stem_already_in_set_skips_evaluation(self):
+        p = self._always_match_pipeline()
+        stems = {"image"}  # IMAGE = "/fake/image.jpg", base_stem = "image"
+        with patch("compare.classifier_pipeline_runner._resolve_stem_group",
+                   return_value=(True, True)) as mock_resolve:
+            result = run_pipeline(p, IMAGE, ActionCallbacks(), processed_stems=stems)
+        assert result is None
+        mock_resolve.assert_not_called()  # skipped before resolve
+
+    def test_malformed_group_skipped_and_marked(self):
+        p = self._always_match_pipeline()
+        stems = set()
+        with patch("compare.classifier_pipeline_runner._resolve_stem_group",
+                   return_value=(False, True)):
+            result = run_pipeline(p, IMAGE, ActionCallbacks(), processed_stems=stems)
+        assert result is None
+        assert "image" in stems  # marked done to suppress later derivatives
+
+    def test_type1_derivative_evaluated_but_not_marked(self):
+        p = ClassifierPipeline(
+            name="p",
+            nodes=[_node("n1", FilenameContainsCondition(["image"]),
+                          on_match=NodeOutcome.accept())],
+        )
+        stems = set()
+        with patch("compare.classifier_pipeline_runner._resolve_stem_group",
+                   return_value=(True, False)):  # type-1 derivative
+            run_pipeline(p, IMAGE, ActionCallbacks(), processed_stems=stems)
+        assert "image" not in stems  # seed must mark it, not the derivative
+
+    def test_seed_marked_after_execute(self):
+        p = self._always_match_pipeline()
+        stems = set()
+        with patch("compare.classifier_pipeline_runner._resolve_stem_group",
+                   return_value=(True, True)):
+            run_pipeline(p, IMAGE, ActionCallbacks(), processed_stems=stems)
+        assert "image" in stems
+
+    def test_seed_marked_after_accept(self):
+        p = ClassifierPipeline(
+            name="p",
+            nodes=[_node("n1", FilenameContainsCondition(["image"]),
+                          on_match=NodeOutcome.accept())],
+        )
+        stems = set()
+        with patch("compare.classifier_pipeline_runner._resolve_stem_group",
+                   return_value=(True, True)):
+            run_pipeline(p, IMAGE, ActionCallbacks(), processed_stems=stems)
+        assert "image" in stems
+
+    def test_second_call_same_stem_skipped(self):
+        p = self._always_match_pipeline()
+        stems = set()
+        calls = []
+        original_eval = _evaluate_condition
+
+        def spy(*args, **kwargs):
+            calls.append(args)
+            return original_eval(*args, **kwargs)
+
+        with patch("compare.classifier_pipeline_runner._resolve_stem_group",
+                   return_value=(True, True)):
+            with patch("compare.classifier_pipeline_runner._evaluate_condition",
+                       side_effect=spy):
+                run_pipeline(p, IMAGE, ActionCallbacks(), processed_stems=stems)
+                run_pipeline(p, IMAGE, ActionCallbacks(), processed_stems=stems)
+
+        assert len(calls) == 1  # second call skipped entirely
+
+    def test_no_processed_stems_never_skips(self):
+        p = self._always_match_pipeline()
+        calls = []
+        original_eval = _evaluate_condition
+
+        def spy(*args, **kwargs):
+            calls.append(args)
+            return original_eval(*args, **kwargs)
+
+        with patch("compare.classifier_pipeline_runner._evaluate_condition",
+                   side_effect=spy):
+            run_pipeline(p, IMAGE, ActionCallbacks())
+            run_pipeline(p, IMAGE, ActionCallbacks())
+
+        assert len(calls) == 2  # both calls run fully

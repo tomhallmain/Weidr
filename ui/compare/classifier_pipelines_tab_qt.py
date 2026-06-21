@@ -10,6 +10,7 @@ Phase 4a: list view with active toggle, delete, move-down, duplicate, and
 from __future__ import annotations
 
 import copy
+import os
 from typing import Optional
 
 from PySide6.QtCore import Qt
@@ -329,15 +330,52 @@ class ClassifierPipelinesTab(QWidget):
 
         def _worker():
             from compare.base_compare import gather_files
+            from compare.pipeline_run_report import PipelineRunReport
             from compare.classifier_pipeline_runner import run_pipeline
             from files.related_image import clear_base_stem_dir_cache
+            from utils.constants import ClassifierActionType
+
             clear_base_stem_dir_cache()
+            report = PipelineRunReport()
+            total = 0
+            actions: dict[str, int] = {}
+
             for directory in directories:
-                for image_path in gather_files(directory):
+                files = list(gather_files(directory))
+                logger.info(
+                    "Pipeline %r: scanning %s — %d file(s)", pipeline.name, directory, len(files)
+                )
+                for image_path in files:
                     try:
-                        run_pipeline(pipeline, image_path, callbacks, base_directory=directory)
+                        result = run_pipeline(
+                            pipeline, image_path, callbacks,
+                            base_directory=directory, report=report,
+                        )
+                        total += 1
+                        key = result.value if isinstance(result, ClassifierActionType) else (str(result) if result else "no_action")
+                        actions[key] = actions.get(key, 0) + 1
                     except Exception:
                         logger.exception("Pipeline run error on %s", image_path)
+
+            # Log all report messages at INFO level
+            for msg in report.messages():
+                logger.info(
+                    "[%s] %s | %s | %s",
+                    msg.severity, msg.node, os.path.basename(msg.image_path), msg.detail,
+                )
+
+            # Build a short summary for the notification bar
+            action_summary = ", ".join(f"{v}× {k}" for k, v in sorted(actions.items())) or "none"
+            summary = (
+                f"Pipeline '{pipeline.name}' complete: "
+                f"{total} file(s) evaluated, actions: {action_summary}. "
+                f"{report.message_count()} report message(s)."
+            )
+            logger.info(summary)
+            try:
+                self._app_actions.title_notify(summary)
+            except Exception:
+                pass
 
         from utils.running_tasks_registry import start_thread
         start_thread(_worker, use_asyncio=False)

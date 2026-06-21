@@ -883,7 +883,7 @@ class TestEditorSave:
         ClassifierPipelines.add_pipeline(pipeline)
         dlg = _open_dialog(qtbot, pipeline)
         dlg._name_edit.setText("edit_me")
-        dlg._desc_edit.setText("Updated description")
+        dlg._desc_edit.setPlainText("Updated description")
         dlg._save()
         result = ClassifierPipelines.get_pipeline_by_name("edit_me")
         assert result is not None

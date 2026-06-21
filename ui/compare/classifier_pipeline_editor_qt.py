@@ -17,7 +17,7 @@ import math
 import os
 from typing import Callable, Optional
 
-from PySide6.QtCore import Qt, QRectF
+from PySide6.QtCore import Qt, QEvent, QObject, QRectF
 from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -1532,6 +1532,19 @@ class _OutcomeEditorWidget(QGroupBox):
 
 
 # ---------------------------------------------------------------------------
+# Wheel-scroll guard — prevents accidental value changes on unfocused combos
+# ---------------------------------------------------------------------------
+
+class _WheelGuard(QObject):
+    """Event filter: discards wheel events on QComboBox widgets that lack focus."""
+    def eventFilter(self, watched, event):
+        if event.type() == QEvent.Type.Wheel and not watched.hasFocus():
+            event.ignore()
+            return True
+        return super().eventFilter(watched, event)
+
+
+# ---------------------------------------------------------------------------
 # Main dialog
 # ---------------------------------------------------------------------------
 
@@ -1562,6 +1575,8 @@ class ClassifierPipelineEditorDialog(SmartDialog):
             respect_title_bar=True,
         )
 
+        self._wheel_guard = _WheelGuard(self)
+        self._guarded_combos: set = set()
         self._build_ui()
         QShortcut(QKeySequence(Qt.Key_Escape), self).activated.connect(self.close)
 
@@ -1590,6 +1605,8 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         # call directly to initialize _current_node_idx and load the editor.
         if self._pipeline.nodes:
             self._on_selection_changed()
+
+        self._install_wheel_guard()
 
         btn_row = QHBoxLayout()
         save_btn = QPushButton(_("Save"))
@@ -1959,6 +1976,13 @@ class ClassifierPipelineEditorDialog(SmartDialog):
 
         self._suppress_refresh = False
         self._refresh_flow_preview()
+        self._install_wheel_guard()
+
+    def _install_wheel_guard(self) -> None:
+        for combo in self.findChildren(QComboBox):
+            if combo not in self._guarded_combos:
+                combo.installEventFilter(self._wheel_guard)
+                self._guarded_combos.add(combo)
 
     def _flush_node_to_model(self) -> None:
         idx = self._current_node_idx

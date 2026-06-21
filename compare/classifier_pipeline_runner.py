@@ -11,6 +11,7 @@ No existing modules are modified.
 from __future__ import annotations
 
 import os
+import re
 from typing import Optional
 
 from compare.action_callbacks import ActionCallbacks
@@ -208,22 +209,27 @@ def run_pipeline(
         derivatives for maximum skip efficiency.
     """
     if not pipeline.is_active or not pipeline.nodes:
+        logger.debug("Pipeline %r: skipped (inactive or no nodes) for %s", pipeline.name, image_path)
         return None
     if not pipeline.media_type_allowed(image_path):
+        logger.debug("Pipeline %r: media type not allowed for %s", pipeline.name, image_path)
         return None
 
     base_stem: Optional[str] = extract_filename_base_stem(image_path)
+    logger.debug("Pipeline %r: evaluating %s (base_stem=%r)", pipeline.name, image_path, base_stem)
 
     # Stem-group skip and validity gate.
     should_mark_done = False
     if processed_stems is not None and base_stem:
         if base_stem in processed_stems:
+            logger.debug("Pipeline %r: stem %r already processed, skipping %s", pipeline.name, base_stem, image_path)
             return None
 
         image_file_stem = os.path.splitext(os.path.basename(image_path))[0]
         is_seed = image_file_stem.lower() == base_stem.lower()
         should_evaluate, should_mark_done = _resolve_stem_group(image_path, base_stem, is_seed)
         if not should_evaluate:
+            logger.debug("Pipeline %r: stem group resolve says skip %s", pipeline.name, image_path)
             processed_stems.add(base_stem)
             return None
 
@@ -238,12 +244,9 @@ def run_pipeline(
         node = nodes_by_name[current_name]
 
         if not node.enabled:
+            logger.debug("Pipeline %r: node %r disabled — skipped", pipeline.name, node.name)
             if report:
-                report.add(
-                    node_name=node.name,
-                    image_path=image_path,
-                    message=f"[{pipeline.name}] node {node.name!r} is disabled — skipped",
-                )
+                report.add("INFO", node.name, image_path, f"Node {node.name!r} is disabled — skipped")
             idx = node_order.index(current_name)
             current_name = node_order[idx + 1] if idx + 1 < len(node_order) else None
             continue
@@ -263,8 +266,16 @@ def run_pipeline(
 
         node_results[node.name] = result
         node_scores[node.name] = score
+        logger.debug(
+            "Pipeline %r: node %r → %s (score=%s)",
+            pipeline.name, node.name, "MATCH" if result else "NO-MATCH", score,
+        )
 
         outcome: NodeOutcome = node.on_match if result else node.on_no_match
+        logger.debug(
+            "Pipeline %r: node %r outcome → %s",
+            pipeline.name, node.name, outcome.outcome_type.value,
+        )
 
         if outcome.outcome_type == OutcomeType.EXECUTE:
             _dispatch_action(
@@ -306,6 +317,10 @@ def run_pipeline(
             current_name = node_order[idx + 1] if idx + 1 < len(node_order) else None
 
     # All nodes exhausted without a terminal outcome.
+    logger.debug(
+        "Pipeline %r: all nodes exhausted for %s — default_action=%s",
+        pipeline.name, image_path, pipeline.default_action,
+    )
     _dispatch_action(
         pipeline.default_action,
         None,
@@ -554,18 +569,37 @@ def _eval_lookahead(
 
 
 def _stem_matches_any_suffix(stem: str, suffixes: list) -> bool:
-    """Return True if stem (lowercased) ends with any entry in suffixes.
+    """Return True if *stem* ends with (a truncation of) any entry in *suffixes*.
 
-    Trailing digits after the suffix are accepted: ``stem_a2`` matches ``_a``.
+    Matching rules (all case-insensitive):
+    - Leading separators (``_``, space) in the configured suffix are stripped
+      before comparison, so ``_cherry`` and ``cherry`` are equivalent specs.
+    - A non-alphanumeric character must immediately precede the matched portion
+      in the stem, but the exact form of the separator is unrestricted: ``__cher``
+      matches ``_cherry`` (double-underscore separator, truncated word).
+    - Right-side truncation: ``_cher`` and ``_che`` both match ``_cherry``.
+    - Trailing variant markers are stripped before matching so that
+      ``_cherry_2``, ``_cherry 2``, and ``_cherry2`` all match ``_cherry``.
     """
     s = stem.lower()
+    # Build a variant-stripped copy: remove optional (_, space) then digits at end.
+    s_base = re.sub(r"[_ ]*\d+$", "", s) if s and s[-1].isdigit() else s
+    candidates = (s_base, s) if s_base != s else (s,)
+
     for sf in suffixes:
-        sf_lower = sf.lower()
-        if s.endswith(sf_lower):
-            return True
-        stripped = s.rstrip("0123456789")
-        if stripped != s and stripped.endswith(sf_lower):
-            return True
+        sf_core = sf.lower().lstrip("_ ")
+        if not sf_core:
+            continue
+        # Try prefixes longest-first so the most specific match wins.
+        for k in range(len(sf_core), 0, -1):
+            prefix = sf_core[:k]
+            for candidate in candidates:
+                if candidate.endswith(prefix):
+                    pos = len(candidate) - len(prefix) - 1
+                    # Accept if the preceding character is non-alphanumeric,
+                    # or there is no preceding character (prefix fills the stem).
+                    if pos < 0 or not candidate[pos].isalnum():
+                        return True
     return False
 
 
@@ -579,14 +613,20 @@ def _eval_base_stem_match(
 ) -> tuple[bool, object]:
     base_stem = extract_filename_base_stem(image_path)
     if not base_stem:
+        logger.debug("BaseStemMatch[%s]: no base stem extractable from %s", node_name, image_path)
         return False, None
     if condition.search_directory:
         dirs = [condition.search_directory]
     else:
         dirs = config.directories_to_search_for_related_images
     if not dirs:
+        logger.debug("BaseStemMatch[%s]: no search directories configured", node_name)
         return False, None
     matches = find_files_by_base_stem(dirs, base_stem, use_cache=True)
+    logger.debug(
+        "BaseStemMatch[%s]: base_stem=%r, dirs=%s, raw_matches=%d",
+        node_name, base_stem, dirs, len(matches),
+    )
     if condition.suffix_filter:
         matches = [
             f for f in matches
@@ -595,6 +635,7 @@ def _eval_base_stem_match(
                 condition.suffix_filter,
             )
         ]
+        logger.debug("BaseStemMatch[%s]: after suffix filter %s → %d matches", node_name, condition.suffix_filter, len(matches))
 
     # Overflow-detection mode: active when max_stem_group_size > 0, or when it is 0
     # and the pipeline declares categories (effective limit = len(categories) + 1).
@@ -631,7 +672,12 @@ def _eval_base_stem_match(
             data={"matches": matches, "base_stem": base_stem},
         )
     found = bool(matches)
-    return (found if condition.require_match else not found), None
+    result = found if condition.require_match else not found
+    logger.debug(
+        "BaseStemMatch[%s]: found=%s, require_match=%s → result=%s",
+        node_name, found, condition.require_match, result,
+    )
+    return result, None
 
 
 def _eval_unknown_suffix(

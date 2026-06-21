@@ -46,6 +46,10 @@ class PipelineRunReport:
         with self._lock:
             return bool(self._messages)
 
+    def message_count(self) -> int:
+        with self._lock:
+            return len(self._messages)
+
     def clear(self) -> None:
         with self._lock:
             self._messages.clear()

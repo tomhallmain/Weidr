@@ -992,10 +992,12 @@ class ClassifierAction:
             or self.use_prototype
             or self.use_pseudostatic_dynamic_media
             or self.use_filename_contains
+            or self.use_base_stem_match
         ):
             raise Exception(
                 "At least one validation type (embedding, image classifier, prompts, "
-                "prompts blacklist, prototype, pseudo-static dynamic media, or filename contains) must be enabled."
+                "prompts blacklist, prototype, pseudo-static dynamic media, filename contains, "
+                "or base stem match) must be enabled."
             )
 
         if self.use_filename_contains and not self.filename_contains_patterns:

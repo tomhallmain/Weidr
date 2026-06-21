@@ -68,6 +68,11 @@ class ClassifierRankCondition:
     min_rank: int = 1
     max_rank: int = 1
     min_confidence: float = 0.0
+    # When True and categories is empty, the runner substitutes the pipeline's
+    # category_map values at evaluation time.  Set this instead of listing every
+    # category explicitly when the condition should always match the pipeline's
+    # own category set.
+    inherit_categories: bool = False
 
     def __post_init__(self):
         self.categories = list(self.categories) if self.categories else []
@@ -80,10 +85,14 @@ class ClassifierRankCondition:
             "min_rank": self.min_rank,
             "max_rank": self.max_rank,
             "min_confidence": self.min_confidence,
+            "inherit_categories": self.inherit_categories,
         }
 
     def summary(self) -> str:
-        cats = ", ".join(self.categories) if self.categories else "(none)"
+        if self.inherit_categories and not self.categories:
+            cats = "(pipeline categories)"
+        else:
+            cats = ", ".join(self.categories) if self.categories else "(none)"
         rank = f"rank {self.min_rank}" if self.min_rank == self.max_rank else f"rank {self.min_rank}-{self.max_rank}"
         return f"ClassifierRank({self.classifier_name}, [{cats}], {rank})"
 
@@ -474,6 +483,7 @@ def _condition_from_dict(d: dict):
             min_rank=d.get("min_rank", 1),
             max_rank=d.get("max_rank", 1),
             min_confidence=d.get("min_confidence", 0.0),
+            inherit_categories=d.get("inherit_categories", False),
         )
     if ct == "prototype":
         return PrototypeCondition(
@@ -660,10 +670,12 @@ class ClassifierPipeline:
     default_reject_action: Optional[ClassifierActionType] = None
     is_active: bool = True
     applies_to_media_types: Optional[list] = None   # list[CompareMediaType]; None = all types
-    # Optional list of category identifiers (e.g. suffixes like "_apple", "_banana").
-    # Shared reference for node conditions — e.g. BaseStemMatchCondition infers its
-    # overflow limit as len(categories) + 1 when max_stem_group_size is left at 0.
-    categories: list = field(default_factory=list)
+    # Optional mapping of human-readable category name → filesystem suffix.
+    # e.g. {"Apple": "_apple", "Banana": "_banana"}
+    # The suffix values are the identifiers used by BaseStemMatchCondition / UnknownSuffixCondition.
+    # BaseStemMatchCondition infers its overflow limit as len(category_map) + 1 when
+    # max_stem_group_size is left at 0.
+    category_map: dict = field(default_factory=dict)
 
     def __post_init__(self):
         if self.nodes is None:
@@ -906,6 +918,57 @@ class ClassifierPipeline:
         return errors
 
     # ------------------------------------------------------------------
+    # Category-map suffix warnings (non-blocking)
+    # ------------------------------------------------------------------
+
+    def validate_warnings(self) -> list[str]:
+        """Return non-blocking warning strings for category/suffix mismatches.
+
+        Checks:
+        - BaseStemMatchCondition.suffix_filter and UnknownSuffixCondition.expected_suffixes
+          values that are not present in category_map (only when category_map is non-empty).
+        - ClassifierRankCondition nodes that have inherit_categories=True but the pipeline
+          has no category_map to inherit from.
+        """
+        known = set(self.category_map.values())
+        warnings: list[str] = []
+        for node in self.nodes:
+            self._collect_suffix_warnings(node.condition, node.name, known, warnings)
+        return warnings
+
+    def _collect_suffix_warnings(
+        self, condition, node_name: str, known_suffixes: set, warnings: list
+    ) -> None:
+        if isinstance(condition, ClassifierRankCondition):
+            if condition.inherit_categories and not known_suffixes:
+                warnings.append(
+                    f"Node {node_name!r}: ClassifierRankCondition has inherit_categories=True "
+                    f"but the pipeline has no category map — condition will match nothing."
+                )
+        elif isinstance(condition, BaseStemMatchCondition):
+            if known_suffixes:
+                for sf in condition.suffix_filter:
+                    if sf not in known_suffixes:
+                        warnings.append(
+                            f"Node {node_name!r}: suffix filter {sf!r} is not a value in the pipeline's category map."
+                        )
+        elif isinstance(condition, UnknownSuffixCondition):
+            if known_suffixes:
+                for sf in condition.expected_suffixes:
+                    if sf not in known_suffixes:
+                        warnings.append(
+                            f"Node {node_name!r}: expected suffix {sf!r} is not a value in the pipeline's category map."
+                        )
+        elif isinstance(condition, CompositeCondition):
+            for sub in condition.sub_conditions:
+                self._collect_suffix_warnings(sub, node_name, known_suffixes, warnings)
+        elif isinstance(condition, GroupCondition):
+            for child in condition.nodes:
+                self._collect_suffix_warnings(
+                    child.condition, f"{node_name}/{child.name}", known_suffixes, warnings
+                )
+
+    # ------------------------------------------------------------------
     # Flow preview (plain text, no Qt dependency)
     # ------------------------------------------------------------------
 
@@ -976,8 +1039,8 @@ class ClassifierPipeline:
                 if self.applies_to_media_types is not None else None
             ),
         }
-        if self.categories:
-            d["categories"] = list(self.categories)
+        if self.category_map:
+            d["category_map"] = dict(self.category_map)
         return d
 
     @staticmethod
@@ -987,6 +1050,11 @@ class ClassifierPipeline:
                 return None
             return ClassifierActionType[val] if isinstance(val, str) else val
 
+        raw_map = d.get("category_map")
+        if raw_map is None:
+            # Backward compat: old "categories" list → identity map (name == suffix)
+            raw_map = {s: s for s in d.get("categories", [])}
+
         return ClassifierPipeline(
             name=d.get("name", _("New Pipeline")),
             description=d.get("description", ""),
@@ -995,7 +1063,7 @@ class ClassifierPipeline:
             default_reject_action=_opt_action(d.get("default_reject_action")),
             is_active=d.get("is_active", True),
             applies_to_media_types=d.get("applies_to_media_types"),
-            categories=list(d.get("categories", [])),
+            category_map=raw_map,
         )
 
 
@@ -1042,6 +1110,10 @@ class PrevalidationPipeline(ClassifierPipeline):
                 return None
             return ClassifierActionType[val] if isinstance(val, str) else val
 
+        raw_map = d.get("category_map")
+        if raw_map is None:
+            raw_map = {s: s for s in d.get("categories", [])}
+
         return PrevalidationPipeline(
             profile_name=d.get("profile_name"),
             name=d.get("name", _("New Pipeline")),
@@ -1051,6 +1123,7 @@ class PrevalidationPipeline(ClassifierPipeline):
             default_reject_action=_opt_action(d.get("default_reject_action")),
             is_active=d.get("is_active", True),
             applies_to_media_types=d.get("applies_to_media_types"),
+            category_map=raw_map,
         )
 
 
@@ -1353,7 +1426,8 @@ class ClassifierPipelines:
         derivative images whose stem group has already been evaluated.
         Use RELATED_IMAGE ascending sort so seeds are evaluated first.
         """
-        ALL_SUFFIXES = ["_apple", "_banana", "_cherry"]
+        CATEGORY_MAP = {"Apple": "_apple", "Banana": "_banana", "Cherry": "_cherry"}
+        ALL_SUFFIXES = list(CATEGORY_MAP.values())
 
         # ------------------------------------------------------------------
         # Node 1 — Unknown-suffix guard
@@ -1459,7 +1533,7 @@ class ClassifierPipelines:
             ),
             nodes=[node_guard, node_uniqueness, node_apple, node_banana, node_cherry],
             is_active=False,
-            categories=list(ALL_SUFFIXES),
+            category_map=CATEGORY_MAP,
         )
 
     @staticmethod

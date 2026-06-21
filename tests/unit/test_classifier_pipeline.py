@@ -1176,28 +1176,47 @@ class TestPipelineAppliesToMediaTypes:
 
     # -- categories field --
 
-    def test_categories_defaults_empty(self):
+    def test_category_map_defaults_empty(self):
         p = ClassifierPipeline(name="p")
-        assert p.categories == []
+        assert p.category_map == {}
 
-    def test_categories_roundtrip(self):
-        p = ClassifierPipeline(name="p", categories=["_apple", "_banana", "_cherry"])
+    def test_category_map_roundtrip(self):
+        m = {"Apple": "_apple", "Banana": "_banana", "Cherry": "_cherry"}
+        p = ClassifierPipeline(name="p", category_map=m)
         p2 = ClassifierPipeline.from_dict(p.to_dict())
-        assert p2.categories == ["_apple", "_banana", "_cherry"]
+        assert p2.category_map == m
 
-    def test_categories_omitted_from_dict_when_empty(self):
-        p = ClassifierPipeline(name="p", categories=[])
-        assert "categories" not in p.to_dict()
+    def test_category_map_omitted_from_dict_when_empty(self):
+        p = ClassifierPipeline(name="p", category_map={})
+        d = p.to_dict()
+        assert "category_map" not in d
 
-    def test_categories_present_in_dict_when_set(self):
-        p = ClassifierPipeline(name="p", categories=["_a", "_b"])
-        assert p.to_dict()["categories"] == ["_a", "_b"]
+    def test_category_map_present_in_dict_when_set(self):
+        p = ClassifierPipeline(name="p", category_map={"A": "_a", "B": "_b"})
+        assert p.to_dict()["category_map"] == {"A": "_a", "B": "_b"}
 
-    def test_categories_missing_key_defaults_to_empty(self):
+    def test_category_map_missing_key_defaults_to_empty(self):
         d = ClassifierPipeline(name="p").to_dict()
-        d.pop("categories", None)
+        d.pop("category_map", None)
         p2 = ClassifierPipeline.from_dict(d)
-        assert p2.categories == []
+        assert p2.category_map == {}
+
+    def test_category_map_backward_compat_old_categories_list(self):
+        # Old serialised format used "categories": ["_a", "_b"] with no "category_map".
+        # from_dict should convert it to an identity map.
+        d = {"name": "p", "nodes": [], "categories": ["_apple", "_banana"]}
+        p = ClassifierPipeline.from_dict(d)
+        assert p.category_map == {"_apple": "_apple", "_banana": "_banana"}
+
+    def test_category_map_new_format_takes_precedence_over_old(self):
+        # If both keys are present (shouldn't happen in practice), category_map wins.
+        d = {
+            "name": "p", "nodes": [],
+            "category_map": {"Apple": "_apple"},
+            "categories": ["_old"],
+        }
+        p = ClassifierPipeline.from_dict(d)
+        assert p.category_map == {"Apple": "_apple"}
 
     def test_prevalidation_pipeline_inherits_field(self):
         p = PrevalidationPipeline(name="pv", profile_name="prof",
@@ -1210,3 +1229,188 @@ class TestPipelineAppliesToMediaTypes:
         p2 = PrevalidationPipeline.from_dict(p.to_dict())
         assert p2.applies_to_media_types == [CompareMediaType.IMAGE]
         assert p2.profile_name == "prof"
+
+    def test_prevalidation_pipeline_category_map_round_trips(self):
+        m = {"Dog": "_dog", "Cat": "_cat"}
+        p = PrevalidationPipeline(name="pv", profile_name=None, category_map=m)
+        p2 = PrevalidationPipeline.from_dict(p.to_dict())
+        assert p2.category_map == m
+
+    def test_prevalidation_backward_compat_old_categories_list(self):
+        d = {
+            "name": "pv", "nodes": [], "pipeline_class": "prevalidation",
+            "profile_name": None, "categories": ["_x", "_y"],
+        }
+        p = PrevalidationPipeline.from_dict(d)
+        assert p.category_map == {"_x": "_x", "_y": "_y"}
+
+
+# ---------------------------------------------------------------------------
+# TestCategoryMapWarnings
+# ---------------------------------------------------------------------------
+
+class TestCategoryMapWarnings:
+    """validate_warnings() detects suffix mismatches; does not affect validate()."""
+
+    def _pipeline_with_map(self, nodes, category_map):
+        return ClassifierPipeline(name="p", nodes=nodes, category_map=category_map)
+
+    def test_no_warnings_when_map_empty(self):
+        node = _make_node("n", BaseStemMatchCondition(suffix_filter=["_apple"]))
+        p = self._pipeline_with_map([node], {})
+        assert p.validate_warnings() == []
+
+    def test_no_warnings_when_all_suffixes_match(self):
+        node = _make_node("n", BaseStemMatchCondition(suffix_filter=["_apple", "_banana"]))
+        p = self._pipeline_with_map(
+            [node], {"Apple": "_apple", "Banana": "_banana"}
+        )
+        assert p.validate_warnings() == []
+
+    def test_warning_for_base_stem_match_unknown_suffix(self):
+        node = _make_node("n", BaseStemMatchCondition(suffix_filter=["_apple", "_unknown"]))
+        p = self._pipeline_with_map([node], {"Apple": "_apple"})
+        warnings = p.validate_warnings()
+        assert len(warnings) == 1
+        assert "_unknown" in warnings[0]
+        assert "n" in warnings[0]
+
+    def test_warning_for_unknown_suffix_condition(self):
+        node = _make_node("n", UnknownSuffixCondition(expected_suffixes=["_apple", "_nope"]))
+        p = self._pipeline_with_map([node], {"Apple": "_apple"})
+        warnings = p.validate_warnings()
+        assert len(warnings) == 1
+        assert "_nope" in warnings[0]
+
+    def test_warning_recurses_into_composite(self):
+        inner = UnknownSuffixCondition(expected_suffixes=["_apple", "_missing"])
+        node = _make_node("guard", CompositeCondition(operator="NOT", sub_conditions=[inner]))
+        p = self._pipeline_with_map([node], {"Apple": "_apple"})
+        warnings = p.validate_warnings()
+        assert len(warnings) == 1
+        assert "_missing" in warnings[0]
+
+    def test_warning_recurses_into_group(self):
+        child = PipelineNode(
+            name="child",
+            condition=BaseStemMatchCondition(suffix_filter=["_gone"]),
+        )
+        outer = _make_node("grp", GroupCondition(operator="OR", nodes=[child]))
+        p = self._pipeline_with_map([outer], {"A": "_apple"})
+        warnings = p.validate_warnings()
+        assert len(warnings) == 1
+        assert "_gone" in warnings[0]
+        assert "grp/child" in warnings[0]
+
+    def test_multiple_mismatches_reported_separately(self):
+        node = _make_node("n", BaseStemMatchCondition(suffix_filter=["_a", "_b", "_c"]))
+        p = self._pipeline_with_map([node], {})
+        # Empty map → no warnings (map must be non-empty to trigger checks)
+        assert p.validate_warnings() == []
+
+    def test_multiple_mismatches_with_non_empty_map(self):
+        node = _make_node("n", BaseStemMatchCondition(suffix_filter=["_a", "_b", "_c"]))
+        p = self._pipeline_with_map([node], {"A": "_a"})
+        warnings = p.validate_warnings()
+        assert len(warnings) == 2
+        assert any("_b" in w for w in warnings)
+        assert any("_c" in w for w in warnings)
+
+    def test_warnings_do_not_block_validate(self):
+        # A node with a mismatched suffix should still pass validate()
+        node = _make_node("n", BaseStemMatchCondition(suffix_filter=["_unknown"]))
+        p = self._pipeline_with_map([node], {"Apple": "_apple"})
+        assert p.validate() == []
+        assert len(p.validate_warnings()) == 1
+
+    def test_build_category_fill_pipeline_has_no_warnings(self):
+        # The demo pipeline's suffix_filter / expected_suffixes should all be
+        # values present in its own category_map.
+        p = ClassifierPipelines.build_category_fill_pipeline()
+        assert p.category_map == {"Apple": "_apple", "Banana": "_banana", "Cherry": "_cherry"}
+        assert p.validate_warnings() == []
+
+    def test_pipeline_categories_used_by_runner_are_suffix_values(self):
+        # Smoke-check that list(category_map.values()) gives the suffixes.
+        p = ClassifierPipelines.build_category_fill_pipeline()
+        suffixes = list(p.category_map.values())
+        assert set(suffixes) == {"_apple", "_banana", "_cherry"}
+
+
+# ---------------------------------------------------------------------------
+# TestClassifierRankInheritCategories
+# ---------------------------------------------------------------------------
+
+class TestClassifierRankInheritCategories:
+    """ClassifierRankCondition.inherit_categories serialization and warning behavior."""
+
+    def test_default_is_false(self):
+        c = ClassifierRankCondition(classifier_name="m")
+        assert c.inherit_categories is False
+
+    def test_roundtrip_false(self):
+        c = ClassifierRankCondition(classifier_name="m", inherit_categories=False)
+        c2 = _condition_from_dict(c.to_dict())
+        assert c2.inherit_categories is False
+
+    def test_roundtrip_true(self):
+        c = ClassifierRankCondition(classifier_name="m", inherit_categories=True)
+        c2 = _condition_from_dict(c.to_dict())
+        assert c2.inherit_categories is True
+
+    def test_backward_compat_missing_key_defaults_false(self):
+        d = {"condition_type": "classifier_rank", "classifier_name": "m",
+             "categories": ["_a"], "min_rank": 1, "max_rank": 1, "min_confidence": 0.0}
+        c = _condition_from_dict(d)
+        assert c.inherit_categories is False
+
+    def test_summary_shows_pipeline_categories_when_inherit_and_no_explicit(self):
+        c = ClassifierRankCondition(classifier_name="m", inherit_categories=True)
+        assert "(pipeline categories)" in c.summary()
+
+    def test_summary_shows_explicit_categories_when_inherit_false(self):
+        c = ClassifierRankCondition(classifier_name="m", categories=["_a"], inherit_categories=False)
+        assert "_a" in c.summary()
+        assert "pipeline" not in c.summary()
+
+    def test_summary_shows_explicit_when_both_inherit_and_categories_set(self):
+        # inherit_categories=True is only used by runner when condition.categories is empty.
+        # If both are set the explicit list is used; summary reflects that.
+        c = ClassifierRankCondition(classifier_name="m", categories=["_a"], inherit_categories=True)
+        assert "(pipeline categories)" not in c.summary()
+
+    def test_warning_when_inherit_true_and_no_category_map(self):
+        node = _make_node("n", ClassifierRankCondition(
+            classifier_name="m", inherit_categories=True
+        ))
+        p = ClassifierPipeline(name="p", nodes=[node], category_map={})
+        warnings = p.validate_warnings()
+        assert len(warnings) == 1
+        assert "inherit_categories" in warnings[0]
+        assert "n" in warnings[0]
+
+    def test_no_warning_when_inherit_true_and_category_map_set(self):
+        node = _make_node("n", ClassifierRankCondition(
+            classifier_name="m", inherit_categories=True
+        ))
+        p = ClassifierPipeline(name="p", nodes=[node],
+                               category_map={"Apple": "_apple"})
+        assert p.validate_warnings() == []
+
+    def test_no_warning_when_inherit_false_regardless_of_map(self):
+        node = _make_node("n", ClassifierRankCondition(
+            classifier_name="m", inherit_categories=False
+        ))
+        p = ClassifierPipeline(name="p", nodes=[node], category_map={})
+        assert p.validate_warnings() == []
+
+    def test_inherit_does_not_block_validate(self):
+        # inherit_categories is not a hard error; validate() ignores it.
+        node = _make_node("n", ClassifierRankCondition(
+            classifier_name="my_model", inherit_categories=True
+        ))
+        p = ClassifierPipeline(name="p", nodes=[node], category_map={})
+        # validate() may emit a "classifier not registered" error in a live
+        # environment, but it should NOT emit anything about inherit_categories.
+        errors = p.validate()
+        assert not any("inherit" in e for e in errors)

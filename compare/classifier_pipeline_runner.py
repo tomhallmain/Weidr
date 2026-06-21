@@ -241,7 +241,7 @@ def run_pipeline(
             result, score = _evaluate_condition(
                 node.condition, image_path, node_results, node_scores, base_directory,
                 node_name=node.name, report=report,
-                pipeline_categories=pipeline.categories,
+                pipeline_categories=list(pipeline.category_map.values()),
             )
         except Exception:
             logger.exception(
@@ -334,7 +334,7 @@ def _evaluate_condition(
         return bool(result), None
 
     if isinstance(condition, ClassifierRankCondition):
-        return _eval_classifier_rank(condition, image_path)
+        return _eval_classifier_rank(condition, image_path, pipeline_categories=pipeline_categories)
 
     if isinstance(condition, PrototypeCondition):
         return _eval_prototype(condition, image_path)
@@ -394,7 +394,9 @@ def _evaluate_condition(
 
 
 def _eval_classifier_rank(
-    condition: ClassifierRankCondition, image_path: str
+    condition: ClassifierRankCondition,
+    image_path: str,
+    pipeline_categories: list = [],
 ) -> tuple[bool, object]:
     from image.image_classifier_manager import image_classifier_manager
     classifier = image_classifier_manager.get_classifier(condition.classifier_name)
@@ -404,6 +406,14 @@ def _eval_classifier_rank(
         )
         return False, None
 
+    categories = (
+        pipeline_categories
+        if condition.inherit_categories and not condition.categories
+        else condition.categories
+    )
+    if not categories:
+        return False, None
+
     ranked = classifier.predict_image_ranked(image_path)
 
     for rank_idx, (category, score) in enumerate(ranked, start=1):
@@ -411,7 +421,7 @@ def _eval_classifier_rank(
             break
         if rank_idx < condition.min_rank:
             continue
-        if category in condition.categories and score >= condition.min_confidence:
+        if category in categories and score >= condition.min_confidence:
             return True, score
 
     return False, None

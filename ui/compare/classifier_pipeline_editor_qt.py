@@ -189,6 +189,93 @@ class _StringListEditor(QWidget):
 
 
 # ---------------------------------------------------------------------------
+# _StringPairListEditor — name → value two-column list editor
+# ---------------------------------------------------------------------------
+
+class _StringPairListEditor(QWidget):
+    """QListWidget whose entries each hold a (name, value) pair, displayed as 'Name → value'.
+
+    Used for category_map: the user enters a human-readable category name and its
+    corresponding filesystem suffix (e.g. 'Apple' / '_apple').
+    """
+
+    _SEP = " → "   # " → "
+
+    def __init__(
+        self,
+        name_placeholder: str = "",
+        value_placeholder: str = "",
+        on_changed: Callable = None,
+        parent=None,
+    ):
+        super().__init__(parent)
+        self._on_changed = on_changed or (lambda: None)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+
+        self._list = QListWidget()
+        self._list.setStyleSheet(f"color: {_FG}; background: {_BG};")
+        self._list.setMaximumHeight(90)
+        layout.addWidget(self._list)
+
+        entry_row = QHBoxLayout()
+        self._name_entry = QLineEdit()
+        self._name_entry.setPlaceholderText(name_placeholder)
+        self._name_entry.returnPressed.connect(self._add_item)
+        entry_row.addWidget(self._name_entry, 2)
+
+        entry_row.addWidget(_label(self._SEP.strip()))
+
+        self._value_entry = QLineEdit()
+        self._value_entry.setPlaceholderText(value_placeholder)
+        self._value_entry.returnPressed.connect(self._add_item)
+        entry_row.addWidget(self._value_entry, 2)
+
+        add_btn = QPushButton(_("Add"))
+        add_btn.setFixedWidth(50)
+        add_btn.clicked.connect(self._add_item)
+        entry_row.addWidget(add_btn)
+
+        remove_btn = QPushButton(_("Remove"))
+        remove_btn.setFixedWidth(65)
+        remove_btn.clicked.connect(self._remove_selected)
+        entry_row.addWidget(remove_btn)
+
+        layout.addLayout(entry_row)
+
+    def _add_item(self) -> None:
+        name = self._name_entry.text().strip()
+        value = self._value_entry.text().strip()
+        if name and value:
+            self._list.addItem(f"{name}{self._SEP}{value}")
+            self._name_entry.clear()
+            self._value_entry.clear()
+            self._on_changed()
+
+    def _remove_selected(self) -> None:
+        for item in self._list.selectedItems():
+            self._list.takeItem(self._list.row(item))
+        self._on_changed()
+
+    def set_items(self, d: dict) -> None:
+        self._list.clear()
+        for k, v in d.items():
+            self._list.addItem(f"{k}{self._SEP}{v}")
+
+    def get_items(self) -> dict:
+        result: dict = {}
+        for i in range(self._list.count()):
+            text = self._list.item(i).text()
+            if self._SEP in text:
+                k, v = text.split(self._SEP, 1)
+                k, v = k.strip(), v.strip()
+                if k and v:
+                    result[k] = v
+        return result
+
+
+# ---------------------------------------------------------------------------
 # Condition panels
 # ---------------------------------------------------------------------------
 
@@ -249,8 +336,13 @@ class _ClassifierRankPanel(QWidget):
         self._classifier_combo.currentIndexChanged.connect(self._on_changed)
         form.addRow(_("Classifier:"), self._classifier_combo)
 
+        self._inherit_categories = QCheckBox(_("Inherit from pipeline category map"))
+        self._inherit_categories.setChecked(False)
+        self._inherit_categories.stateChanged.connect(self._on_inherit_toggled)
+        form.addRow(_("Categories:"), self._inherit_categories)
+
         self._categories = _StringListEditor(_("category name"), on_changed=self._on_changed)
-        form.addRow(_("Categories:"), self._categories)
+        form.addRow("", self._categories)
 
         rank_row = QHBoxLayout()
         self._min_rank = QSpinBox()
@@ -277,6 +369,10 @@ class _ClassifierRankPanel(QWidget):
         self._min_confidence.valueChanged.connect(self._on_changed)
         form.addRow(_("Min confidence:"), self._min_confidence)
 
+    def _on_inherit_toggled(self, state: int) -> None:
+        self._categories.setEnabled(not bool(state))
+        self._on_changed()
+
     def _populate_classifiers(self) -> None:
         self._classifier_combo.clear()
         try:
@@ -294,12 +390,16 @@ class _ClassifierRankPanel(QWidget):
             idx = self._classifier_combo.findText(condition.classifier_name)
             if idx >= 0:
                 self._classifier_combo.setCurrentIndex(idx)
+            self._inherit_categories.setChecked(condition.inherit_categories)
             self._categories.set_items(condition.categories)
+            self._categories.setEnabled(not condition.inherit_categories)
             self._min_rank.setValue(condition.min_rank)
             self._max_rank.setValue(condition.max_rank)
             self._min_confidence.setValue(condition.min_confidence)
         else:
+            self._inherit_categories.setChecked(False)
             self._categories.set_items([])
+            self._categories.setEnabled(True)
             self._min_rank.setValue(1)
             self._max_rank.setValue(1)
             self._min_confidence.setValue(0.0)
@@ -307,6 +407,7 @@ class _ClassifierRankPanel(QWidget):
     def get_condition(self) -> ClassifierRankCondition:
         return ClassifierRankCondition(
             classifier_name=self._classifier_combo.currentText(),
+            inherit_categories=self._inherit_categories.isChecked(),
             categories=self._categories.get_items(),
             min_rank=self._min_rank.value(),
             max_rank=self._max_rank.value(),
@@ -1529,6 +1630,14 @@ class ClassifierPipelineEditorDialog(SmartDialog):
             self._default_reject_combo.setCurrentText(p.default_reject_action.value)
         form.addRow(_("Default reject action:"), self._default_reject_combo)
 
+        self._category_map_editor = _StringPairListEditor(
+            name_placeholder=_("category name, e.g. Apple"),
+            value_placeholder=_("suffix, e.g. _apple"),
+            on_changed=self._on_field_changed,
+        )
+        self._category_map_editor.set_items(p.category_map)
+        form.addRow(_("Category map:"), self._category_map_editor)
+
         self._on_type_changed()
         return box
 
@@ -2135,6 +2244,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         final.is_active = self._active_cb.isChecked()
         final.default_action = _action_from_text(self._default_action_combo.currentText())
         final.default_reject_action = _action_from_text(self._default_reject_combo.currentText())
+        final.category_map = self._category_map_editor.get_items()
 
         errors = final.validate()
         if errors:
@@ -2145,6 +2255,15 @@ class ClassifierPipelineEditorDialog(SmartDialog):
                 kind="warning",
             )
             return
+
+        warnings = final.validate_warnings()
+        if warnings:
+            qt_alert(
+                self,
+                _("Category Map Warnings"),
+                "\n".join(f"• {w}" for w in warnings),
+                kind="info",
+            )
 
         if self._is_edit:
             ClassifierPipelines.remove_pipeline(self._original_name)

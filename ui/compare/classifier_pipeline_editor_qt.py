@@ -1466,11 +1466,13 @@ class _OutcomeEditorWidget(QGroupBox):
         self._on_changed()
 
     def _update_dependent_visibility(self, outcome_val: str) -> None:
-        is_goto = outcome_val == OutcomeType.GOTO.value
-        is_exec = outcome_val == OutcomeType.EXECUTE.value
-        self._set_layout_visible(self._goto_row, is_goto)
-        self._set_layout_visible(self._exec_row, is_exec)
-        if is_exec:
+        try:
+            ot = OutcomeType(outcome_val)
+        except ValueError:
+            return
+        self._set_layout_visible(self._goto_row, ot.requires_target_node)
+        self._set_layout_visible(self._exec_row, ot.requires_action)
+        if ot.requires_action:
             self._on_action_changed(0)
 
     @staticmethod
@@ -1502,11 +1504,11 @@ class _OutcomeEditorWidget(QGroupBox):
         idx = self._type_combo.findText(val)
         if idx >= 0:
             self._type_combo.setCurrentIndex(idx)
-        if ot == OutcomeType.GOTO and outcome.target_node:
+        if ot.requires_target_node and outcome.target_node:
             idx2 = self._goto_combo.findText(outcome.target_node)
             if idx2 >= 0:
                 self._goto_combo.setCurrentIndex(idx2)
-        if ot == OutcomeType.EXECUTE:
+        if ot.requires_action:
             if outcome.action_type:
                 idx3 = self._action_combo.findText(outcome.action_type.value)
                 if idx3 >= 0:
@@ -1516,12 +1518,12 @@ class _OutcomeEditorWidget(QGroupBox):
     def get_outcome(self) -> NodeOutcome:
         ot_val = self._type_combo.currentText()
         ot = OutcomeType(ot_val)
-        if ot == OutcomeType.GOTO:
+        if ot.requires_target_node:
             return NodeOutcome(
                 outcome_type=ot,
                 target_node=self._goto_combo.currentText(),
             )
-        if ot == OutcomeType.EXECUTE:
+        if ot.requires_action:
             action_val = self._action_combo.currentText()
             return NodeOutcome(
                 outcome_type=ot,

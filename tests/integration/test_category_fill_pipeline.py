@@ -142,10 +142,11 @@ class TestPipelineMeta:
 # ---------------------------------------------------------------------------
 
 class TestFreshSeed:
-    def test_generates_first_missing_category(self, layout):
+    def test_generates_all_missing_categories(self, layout):
         """
-        State 1/2 seed with no variants in working dir or any target dir.
-        Pipeline should reach Generate apple, fire GENERATE _apple, and halt.
+        Seed with no variants in working dir or any target dir.
+        Pipeline should fire GENERATE for apple, banana, and cherry — all three
+        nodes use EXECUTE_AND_CONTINUE so the run does not halt after the first.
         """
         working, *_ = layout
         seed = working / f"{STEM_A}.jpg"
@@ -156,12 +157,15 @@ class TestFreshSeed:
                               base_directory=str(working))
 
         assert result == ClassifierActionType.GENERATE
-        assert len(generated) == 1
-        assert generated[0][1] == "_apple"
-        assert generated[0][0] == str(seed)
+        assert len(generated) == 3
+        modifiers = [m for _, m in generated]
+        assert "_apple"  in modifiers
+        assert "_banana" in modifiers
+        assert "_cherry" in modifiers
+        assert all(path == str(seed) for path, _ in generated)
 
-    def test_different_stems_each_generate_independently(self, layout):
-        """Two seeds with distinct stems each produce their own GENERATE."""
+    def test_different_stems_each_generate_all_categories(self, layout):
+        """Two seeds with distinct stems each produce three GENERATEs."""
         working, *_ = layout
         seed_a = working / f"{STEM_A}.jpg"
         seed_b = working / f"{STEM_B}.jpg"
@@ -174,7 +178,9 @@ class TestFreshSeed:
         run_pipeline(p, str(seed_b), cb, base_directory=str(working))
 
         modifiers = [m for _, m in generated]
-        assert modifiers.count("_apple") == 2
+        assert modifiers.count("_apple")  == 2
+        assert modifiers.count("_banana") == 2
+        assert modifiers.count("_cherry") == 2
 
 
 # ---------------------------------------------------------------------------
@@ -182,8 +188,8 @@ class TestFreshSeed:
 # ---------------------------------------------------------------------------
 
 class TestPartiallyFilledTarget:
-    def test_apple_covered_generates_banana(self, layout):
-        """Apple variant in target/A/ → skip apple, generate banana."""
+    def test_apple_covered_generates_remaining_categories(self, layout):
+        """Apple variant in target/A/ → skip apple, generate banana AND cherry."""
         working, ta, *_ = layout
         seed = working / f"{STEM_A}.jpg"
         seed.touch()
@@ -192,8 +198,11 @@ class TestPartiallyFilledTarget:
         cb, generated = _callbacks()
         run_pipeline(_pipeline(layout), str(seed), cb, base_directory=str(working))
 
-        assert len(generated) == 1
-        assert generated[0][1] == "_banana"
+        modifiers = [m for _, m in generated]
+        assert "_apple"  not in modifiers
+        assert "_banana" in     modifiers
+        assert "_cherry" in     modifiers
+        assert len(generated) == 2
 
     def test_apple_and_banana_covered_generates_cherry(self, layout):
         working, ta, tb, *_ = layout
@@ -429,4 +438,6 @@ class TestProcessedStemsBatch:
                      processed_stems=stems)
 
         modifiers = [m for _, m in generated]
-        assert modifiers.count("_apple") == 2   # one GENERATE per stem
+        assert modifiers.count("_apple")  == 2   # three GENERATEs per stem
+        assert modifiers.count("_banana") == 2
+        assert modifiers.count("_cherry") == 2

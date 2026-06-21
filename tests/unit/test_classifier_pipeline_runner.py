@@ -73,6 +73,10 @@ def _execute(action_type, modifier=""):
     return NodeOutcome(OutcomeType.EXECUTE, action_type=action_type, action_modifier=modifier)
 
 
+def _execute_and_continue(action_type, modifier=""):
+    return NodeOutcome(OutcomeType.EXECUTE_AND_CONTINUE, action_type=action_type, action_modifier=modifier)
+
+
 def _pipeline(*nodes, name="test", default_action=None):
     return ClassifierPipeline(name=name, nodes=list(nodes), default_action=default_action)
 
@@ -683,6 +687,66 @@ class TestRunPipelineControlFlow:
         result = run_pipeline(p, IMAGE, ActionCallbacks(notify_callback=notify, add_mark_callback=mark))
         assert result == ClassifierActionType.ADD_MARK
         assert IMAGE in calls["mark"]
+
+    def test_execute_and_continue_fires_action_and_advances(self, monkeypatch):
+        """EXECUTE_AND_CONTINUE dispatches the action but does not halt — the next node still runs."""
+        self._patch_embedding(monkeypatch, True)
+        p = _pipeline(
+            _node("n1", EmbeddingCondition(["x"]),
+                  on_match=_execute_and_continue(ClassifierActionType.NOTIFY),
+                  on_no_match=NodeOutcome.accept()),
+            _node("n2", EmbeddingCondition(["y"]),
+                  on_match=_execute(ClassifierActionType.ADD_MARK),
+                  on_no_match=NodeOutcome.accept()),
+        )
+        calls, _, notify, mark, _ = _callbacks()
+        result = run_pipeline(p, IMAGE, ActionCallbacks(notify_callback=notify, add_mark_callback=mark))
+        assert len(calls["notify"]) == 2     # n1 NOTIFY + n2 ADD_MARK both notify
+        assert IMAGE in calls["mark"]        # n2 also ran
+        assert result == ClassifierActionType.ADD_MARK
+
+    def test_execute_halts_pipeline_before_later_nodes(self, monkeypatch):
+        """EXECUTE (non-continuing) halts after the first node — n2 must not run."""
+        self._patch_embedding(monkeypatch, True)
+        p = _pipeline(
+            _node("n1", EmbeddingCondition(["x"]),
+                  on_match=_execute(ClassifierActionType.NOTIFY),
+                  on_no_match=NodeOutcome.accept()),
+            _node("n2", EmbeddingCondition(["y"]),
+                  on_match=_execute(ClassifierActionType.ADD_MARK),
+                  on_no_match=NodeOutcome.accept()),
+        )
+        calls, _, notify, mark, _ = _callbacks()
+        result = run_pipeline(p, IMAGE, ActionCallbacks(notify_callback=notify, add_mark_callback=mark))
+        assert result == ClassifierActionType.NOTIFY
+        assert IMAGE not in calls["mark"]    # n2 never ran
+
+    def test_execute_and_continue_all_categories_fire(self):
+        """Category-fill pattern: every generate node with EXECUTE_AND_CONTINUE fires for a seed image."""
+        generated = []
+
+        def _cat_node(name, suffix):
+            return PipelineNode(
+                name=name,
+                condition=FilenameContainsCondition(["seed"], case_sensitive=False),
+                on_match=_execute_and_continue(ClassifierActionType.GENERATE, suffix),
+                on_no_match=NodeOutcome.continue_(),
+            )
+
+        p = _pipeline(
+            _cat_node("Generate apple",  "_apple"),
+            _cat_node("Generate banana", "_banana"),
+            _cat_node("Generate cherry", "_cherry"),
+        )
+        callbacks = ActionCallbacks(
+            generate_callback=lambda path, suffix=None: generated.append((path, suffix))
+        )
+        run_pipeline(p, "/fake/seed_image.jpg", callbacks)
+
+        assert len(generated) == 3
+        assert generated[0][1] == "_apple"
+        assert generated[1][1] == "_banana"
+        assert generated[2][1] == "_cherry"
 
 
 # ---------------------------------------------------------------------------

@@ -615,6 +615,33 @@ class TestOutcomeEditorWidget:
         assert out.action_type == ClassifierActionType.MOVE
         assert out.action_modifier == "/target/dir"
 
+    def test_load_execute_and_continue(self, qtbot):
+        w = _OutcomeEditorWidget("On match:")
+        qtbot.addWidget(w)
+        w.load(
+            NodeOutcome(
+                OutcomeType.EXECUTE_AND_CONTINUE,
+                action_type=ClassifierActionType.GENERATE,
+                action_modifier="_apple",
+            ),
+            [],
+        )
+        out = w.get_outcome()
+        assert out.outcome_type == OutcomeType.EXECUTE_AND_CONTINUE
+        assert out.action_type == ClassifierActionType.GENERATE
+        assert out.action_modifier == "_apple"
+
+    def test_execute_and_continue_shows_action_combo(self, qtbot):
+        """Action combo must be visible when EXECUTE_AND_CONTINUE is selected."""
+        w = _OutcomeEditorWidget("On match:")
+        qtbot.addWidget(w)
+        w.load(
+            NodeOutcome(OutcomeType.EXECUTE_AND_CONTINUE,
+                        action_type=ClassifierActionType.GENERATE),
+            [],
+        )
+        assert w._action_combo.isVisible()
+
     def test_set_later_nodes_updates_goto_combo(self, qtbot):
         w = _OutcomeEditorWidget("On match:")
         qtbot.addWidget(w)

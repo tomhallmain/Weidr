@@ -561,11 +561,22 @@ def _condition_from_dict(d: dict):
 # ---------------------------------------------------------------------------
 
 class OutcomeType(str, Enum):
-    CONTINUE = "CONTINUE"   # advance to next node in order
-    GOTO     = "GOTO"       # jump to named node (forward only)
-    EXECUTE  = "EXECUTE"    # fire action and halt
-    ACCEPT   = "ACCEPT"     # halt with no action (explicit pass)
-    REJECT   = "REJECT"     # halt with pipeline's default_reject_action
+    CONTINUE             = "CONTINUE"              # advance to next node in order
+    GOTO                 = "GOTO"                  # jump to named node (forward only)
+    EXECUTE              = "EXECUTE"               # fire action and halt
+    EXECUTE_AND_CONTINUE = "EXECUTE_AND_CONTINUE"  # fire action then advance to next node
+    ACCEPT               = "ACCEPT"                # halt with no action (explicit pass)
+    REJECT               = "REJECT"                # halt with pipeline's default_reject_action
+
+    @property
+    def requires_action(self) -> bool:
+        """True for outcome types that require an action_type to be specified."""
+        return self in (OutcomeType.EXECUTE, OutcomeType.EXECUTE_AND_CONTINUE)
+
+    @property
+    def requires_target_node(self) -> bool:
+        """True for outcome types that require a target_node to be specified."""
+        return self is OutcomeType.GOTO
 
 
 @dataclass
@@ -590,12 +601,12 @@ class NodeOutcome:
         }
 
     def summary(self) -> str:
-        if self.outcome_type == OutcomeType.EXECUTE:
-            base = f"EXECUTE: {self.action_type.value if self.action_type else '?'}"
+        if self.outcome_type.requires_action:
+            base = f"{self.outcome_type.value}: {self.action_type.value if self.action_type else '?'}"
             if self.action_modifier:
                 base += f" → {self.action_modifier}"
             return base
-        if self.outcome_type == OutcomeType.GOTO:
+        if self.outcome_type.requires_target_node:
             return f"GOTO: {self.target_node}"
         return self.outcome_type.value
 
@@ -759,8 +770,10 @@ class ClassifierPipeline:
                                 f"Node {node.name!r}: GOTO target {outcome.target_node!r} "
                                 f"must be a later node (cycle prevention)."
                             )
-                if outcome.outcome_type == OutcomeType.EXECUTE and outcome.action_type is None:
-                    errors.append(f"Node {node.name!r}: EXECUTE outcome has no action_type.")
+                if outcome.outcome_type.requires_action and outcome.action_type is None:
+                    errors.append(
+                        f"Node {node.name!r}: {outcome.outcome_type.value} outcome has no action_type."
+                    )
 
             errors.extend(
                 self._validate_condition(node.condition, node.name, defined_before)
@@ -769,7 +782,7 @@ class ClassifierPipeline:
             # RelatedImageCondition/GENERATE outcome consistency
             if isinstance(node.condition, RelatedImageCondition):
                 for outcome in (node.on_match, node.on_no_match):
-                    if (outcome.outcome_type == OutcomeType.EXECUTE
+                    if (outcome.outcome_type.requires_action
                             and outcome.action_type == ClassifierActionType.GENERATE
                             and outcome.action_modifier != node.condition.edit_suffix):
                         errors.append(
@@ -1409,7 +1422,7 @@ class ClassifierPipelines:
                                     [1] BaseStemMatchCondition(require_match=False,
                                             search_directory="target/X/")
                                         — no file with this base stem in target dir
-             on_match  → EXECUTE GENERATE (dispatch and halt)
+             on_match  → EXECUTE_AND_CONTINUE GENERATE (dispatch and advance to next node)
              on_no_match → CONTINUE (check next category)
 
         Behaviour table (per §4.5)
@@ -1501,7 +1514,7 @@ class ClassifierPipelines:
                     ],
                 ),
                 on_match=NodeOutcome(
-                    OutcomeType.EXECUTE,
+                    OutcomeType.EXECUTE_AND_CONTINUE,
                     action_type=ClassifierActionType.GENERATE,
                     action_modifier=suffix,
                 ),

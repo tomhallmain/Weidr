@@ -239,6 +239,7 @@ def run_pipeline(
     nodes_by_name = {n.name: n for n in pipeline.nodes}
 
     current_name: Optional[str] = node_order[0]
+    last_etc_action: Optional[ClassifierActionType] = None  # last EXECUTE_AND_CONTINUE action
 
     while current_name is not None:
         node = nodes_by_name[current_name]
@@ -291,6 +292,22 @@ def run_pipeline(
                 processed_stems.add(base_stem)
             return outcome.action_type
 
+        if outcome.outcome_type == OutcomeType.EXECUTE_AND_CONTINUE:
+            _dispatch_action(
+                outcome.action_type,
+                outcome.action_modifier or None,
+                pipeline.name,
+                image_path,
+                callbacks,
+                base_directory,
+                generate_queue=generate_queue,
+            )
+            last_etc_action = outcome.action_type
+            # Fall through to CONTINUE — advance to the next node.
+            idx = node_order.index(current_name)
+            current_name = node_order[idx + 1] if idx + 1 < len(node_order) else None
+            continue
+
         if outcome.outcome_type == OutcomeType.ACCEPT:
             if should_mark_done and base_stem:
                 processed_stems.add(base_stem)
@@ -332,7 +349,9 @@ def run_pipeline(
     )
     if should_mark_done and base_stem:
         processed_stems.add(base_stem)
-    return pipeline.default_action
+    # If no explicit default action was set but EXECUTE_AND_CONTINUE actions fired,
+    # return the last such action so callers can account for the work done.
+    return pipeline.default_action if pipeline.default_action is not None else last_etc_action
 
 
 # ---------------------------------------------------------------------------

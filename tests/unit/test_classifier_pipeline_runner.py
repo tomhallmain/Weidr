@@ -1042,6 +1042,84 @@ class TestBaseStemMatchConditionRunner:
         assert captured_dirs == ["/custom"]
         assert "/config_dir" not in captured_dirs
 
+    # -- max_stem_group_size (overflow-detection mode) --
+
+    def test_max_stem_group_exceeded_returns_true(self, monkeypatch):
+        """More matches than the limit → overflow → True (wire on_match=REJECT)."""
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda *a, **kw: [f"/dir/stem_{i}.jpg" for i in range(6)])
+        cond = BaseStemMatchCondition(max_stem_group_size=5)
+        result, _ = _eval_base_stem_match(cond, IMAGE)
+        assert result is True
+
+    def test_max_stem_group_at_limit_returns_false(self, monkeypatch):
+        """Exactly at the limit (not exceeded) → False (within bounds)."""
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda *a, **kw: [f"/dir/stem_{i}.jpg" for i in range(5)])
+        cond = BaseStemMatchCondition(max_stem_group_size=5)
+        result, _ = _eval_base_stem_match(cond, IMAGE)
+        assert result is False
+
+    def test_max_stem_group_zero_disables_overflow_check(self, monkeypatch):
+        """max_stem_group_size=0 with no pipeline_categories → overflow disabled; normal require_match applies."""
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda *a, **kw: [f"/dir/stem_{i}.jpg" for i in range(100)])
+        cond = BaseStemMatchCondition(require_match=True, max_stem_group_size=0)
+        result, _ = _eval_base_stem_match(cond, IMAGE)
+        assert result is True  # normal: 100 matches found, require_match=True → True
+
+    def test_pipeline_categories_infers_limit_on_overflow(self, monkeypatch):
+        """max_stem_group_size=0 + pipeline_categories → effective limit = len(categories) + 1."""
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        # 3 categories → effective limit = 4; 5 matches → overflow
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda *a, **kw: [f"/dir/stem_{i}.jpg" for i in range(5)])
+        cond = BaseStemMatchCondition()
+        result, _ = _eval_base_stem_match(cond, IMAGE, pipeline_categories=["_a", "_b", "_c"])
+        assert result is True
+
+    def test_pipeline_categories_at_limit_returns_false(self, monkeypatch):
+        """Exactly at the inferred limit (len(categories) + 1) → not overflowed."""
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        # 3 categories → effective limit = 4; 4 matches → within limit
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda *a, **kw: [f"/dir/stem_{i}.jpg" for i in range(4)])
+        cond = BaseStemMatchCondition()
+        result, _ = _eval_base_stem_match(cond, IMAGE, pipeline_categories=["_a", "_b", "_c"])
+        assert result is False
+
+    def test_explicit_max_stem_group_size_takes_precedence_over_categories(self, monkeypatch):
+        """Explicit max_stem_group_size overrides pipeline_categories inference."""
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        # 3 categories would infer limit=4, but explicit limit=10; 5 matches → no overflow
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda *a, **kw: [f"/dir/stem_{i}.jpg" for i in range(5)])
+        cond = BaseStemMatchCondition(max_stem_group_size=10)
+        result, _ = _eval_base_stem_match(cond, IMAGE, pipeline_categories=["_a", "_b", "_c"])
+        assert result is False
+
+    def test_max_stem_group_warning_in_report(self, monkeypatch):
+        """Exceeding the limit emits a WARNING entry in the report."""
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", ["/dir"])
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda *a, **kw: [f"/dir/stem_{i}.jpg" for i in range(10)])
+        cond = BaseStemMatchCondition(max_stem_group_size=5)
+        report = PipelineRunReport()
+        _eval_base_stem_match(cond, IMAGE, node_name="uniqueness", report=report)
+        warnings = [m for m in report.messages() if m.severity == "WARNING"]
+        assert len(warnings) == 1
+        assert "10" in warnings[0].detail
+
     def test_search_directory_empty_falls_back_to_config(self, monkeypatch):
         captured_dirs = []
 
@@ -1466,6 +1544,7 @@ class TestUnknownSuffixConditionRunner:
             base_directory=None,
         )
         assert result is True  # fell back to image's dir, found stem_zzz.jpg
+
 
 
 # ---------------------------------------------------------------------------

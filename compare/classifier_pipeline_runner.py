@@ -241,6 +241,7 @@ def run_pipeline(
             result, score = _evaluate_condition(
                 node.condition, image_path, node_results, node_scores, base_directory,
                 node_name=node.name, report=report,
+                pipeline_categories=pipeline.categories,
             )
         except Exception:
             logger.exception(
@@ -321,6 +322,7 @@ def _evaluate_condition(
     *,
     node_name: str = "",
     report: Optional[PipelineRunReport] = None,
+    pipeline_categories: list = [],
 ) -> tuple[bool, object]:
     """Return (matched, score). Score is a raw float where available, else None."""
 
@@ -360,7 +362,8 @@ def _evaluate_condition(
         return (prior == condition.expected_result), float(prior)
 
     if isinstance(condition, BaseStemMatchCondition):
-        return _eval_base_stem_match(condition, image_path, node_name=node_name, report=report)
+        return _eval_base_stem_match(condition, image_path, node_name=node_name, report=report,
+                                     pipeline_categories=pipeline_categories)
 
     if isinstance(condition, UnknownSuffixCondition):
         return _eval_unknown_suffix(condition, image_path, base_directory=base_directory,
@@ -371,11 +374,11 @@ def _evaluate_condition(
 
     if isinstance(condition, CompositeCondition):
         return _eval_composite(condition, image_path, node_results, node_scores, base_directory,
-                               report=report)
+                               report=report, pipeline_categories=pipeline_categories)
 
     if isinstance(condition, GroupCondition):
         return _eval_group(condition, node_name, image_path, node_results, node_scores,
-                           base_directory, report=report)
+                           base_directory, report=report, pipeline_categories=pipeline_categories)
 
     if isinstance(condition, GroupChildResultCondition):
         key = f"{condition.group_node_name}/{condition.child_node_name}"
@@ -551,6 +554,7 @@ def _eval_base_stem_match(
     *,
     node_name: str = "",
     report: Optional[PipelineRunReport] = None,
+    pipeline_categories: list = [],
 ) -> tuple[bool, object]:
     base_stem = extract_filename_base_stem(image_path)
     if not base_stem:
@@ -570,6 +574,32 @@ def _eval_base_stem_match(
                 condition.suffix_filter,
             )
         ]
+
+    # Overflow-detection mode: active when max_stem_group_size > 0, or when it is 0
+    # and the pipeline declares categories (effective limit = len(categories) + 1).
+    # The inference only applies when search_directory is unset — nodes scoped to a
+    # specific directory are doing targeted presence/absence checks, not broad scans
+    # where stem uniqueness matters.
+    effective_limit = condition.max_stem_group_size
+    if effective_limit == 0 and pipeline_categories and not condition.search_directory:
+        effective_limit = len(pipeline_categories) + 1
+
+    if effective_limit > 0:
+        overflow = len(matches) > effective_limit
+        if overflow:
+            logger.debug(
+                "BaseStemMatchCondition: stem %r has %d matches (limit %d) — not unique",
+                base_stem, len(matches), effective_limit,
+            )
+            if report:
+                report.add(
+                    "WARNING", node_name, image_path,
+                    f"Stem {base_stem!r} matches {len(matches)} files "
+                    f"(limit {effective_limit}) — base stem is not unique enough",
+                    data={"base_stem": base_stem, "match_count": len(matches)},
+                )
+        return overflow, None
+
     if report and len(matches) > 1:
         report.add(
             "NOTABLE",
@@ -614,6 +644,7 @@ def _eval_unknown_suffix(
         return False, None
 
     all_matches = find_files_by_base_stem(dirs, base_stem, use_cache=True)
+
     has_unresolvable = False
 
     for f in all_matches:
@@ -722,6 +753,7 @@ def _eval_group(
     base_directory: Optional[str],
     *,
     report: Optional[PipelineRunReport] = None,
+    pipeline_categories: list = [],
 ) -> tuple[bool, object]:
     """Evaluate every child node and store results under '<outer>/<child>' keys."""
     for child in condition.nodes:
@@ -729,7 +761,7 @@ def _eval_group(
         try:
             child_result, child_score = _evaluate_condition(
                 child.condition, image_path, node_results, node_scores, base_directory,
-                node_name=key, report=report,
+                node_name=key, report=report, pipeline_categories=pipeline_categories,
             )
         except Exception:
             logger.exception(
@@ -757,10 +789,11 @@ def _eval_composite(
     base_directory: Optional[str] = None,
     *,
     report: Optional[PipelineRunReport] = None,
+    pipeline_categories: list = [],
 ) -> tuple[bool, object]:
     sub_results = [
         _evaluate_condition(sub, image_path, node_results, node_scores, base_directory,
-                            report=report)[0]
+                            report=report, pipeline_categories=pipeline_categories)[0]
         for sub in condition.sub_conditions
     ]
     op = condition.operator

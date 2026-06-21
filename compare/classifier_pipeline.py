@@ -257,6 +257,14 @@ class BaseStemMatchCondition:
     suffix_filter: list = field(default_factory=list)
     # If set, search only this directory instead of config.directories_to_search_for_related_images.
     search_directory: str = ""
+    # When > 0, the condition switches to overflow-detection mode: returns True when the
+    # total number of files found for this base stem exceeds this limit (non-unique stem),
+    # False otherwise. require_match is ignored in this mode. Wire on_match=REJECT and
+    # on_no_match=CONTINUE on the node to reject non-unique stems.
+    # When 0 and suffix_filter is non-empty, the runner auto-computes the limit as
+    # len(suffix_filter) + 1, providing a healthy default without an explicit value.
+    # When 0 and suffix_filter is empty, overflow detection is disabled entirely.
+    max_stem_group_size: int = 0
 
     def to_dict(self) -> dict:
         return {
@@ -264,10 +272,14 @@ class BaseStemMatchCondition:
             "require_match": self.require_match,
             "suffix_filter": self.suffix_filter,
             "search_directory": self.search_directory,
+            "max_stem_group_size": self.max_stem_group_size,
         }
 
     def summary(self) -> str:
         mode = "found" if self.require_match else "not found"
+        if self.max_stem_group_size > 0:
+            scope = f"dir={self.search_directory!r}, " if self.search_directory else ""
+            return f"BaseStemMatch({scope}max={self.max_stem_group_size})"
         if self.suffix_filter:
             joined = ", ".join(self.suffix_filter)
             return f"BaseStemMatch(suffix=[{joined}], require={mode})"
@@ -503,6 +515,7 @@ def _condition_from_dict(d: dict):
             require_match=d.get("require_match", True),
             suffix_filter=raw_sf,
             search_directory=d.get("search_directory", ""),
+            max_stem_group_size=d.get("max_stem_group_size", 0),
         )
     if ct == "unknown_suffix":
         return UnknownSuffixCondition(
@@ -647,6 +660,10 @@ class ClassifierPipeline:
     default_reject_action: Optional[ClassifierActionType] = None
     is_active: bool = True
     applies_to_media_types: Optional[list] = None   # list[CompareMediaType]; None = all types
+    # Optional list of category identifiers (e.g. suffixes like "_apple", "_banana").
+    # Shared reference for node conditions — e.g. BaseStemMatchCondition infers its
+    # overflow limit as len(categories) + 1 when max_stem_group_size is left at 0.
+    categories: list = field(default_factory=list)
 
     def __post_init__(self):
         if self.nodes is None:
@@ -945,7 +962,7 @@ class ClassifierPipeline:
     # ------------------------------------------------------------------
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "name": self.name,
             "description": self.description,
             "nodes": [n.to_dict() for n in self.nodes],
@@ -959,6 +976,9 @@ class ClassifierPipeline:
                 if self.applies_to_media_types is not None else None
             ),
         }
+        if self.categories:
+            d["categories"] = list(self.categories)
+        return d
 
     @staticmethod
     def from_dict(d: dict) -> "ClassifierPipeline":
@@ -975,6 +995,7 @@ class ClassifierPipeline:
             default_reject_action=_opt_action(d.get("default_reject_action")),
             is_active=d.get("is_active", True),
             applies_to_media_types=d.get("applies_to_media_types"),
+            categories=list(d.get("categories", [])),
         )
 
 
@@ -1404,20 +1425,41 @@ class ClassifierPipelines:
         node_banana = _make_category_node("Generate banana", "_banana", target_dir_banana)
         node_cherry = _make_category_node("Generate cherry", "_cherry", target_dir_cherry)
 
+        # ------------------------------------------------------------------
+        # Node 2 — Stem uniqueness check
+        # Rejects when the base stem matches more than max_stem_group_size files
+        # across the configured target directories, indicating the stem is not
+        # unique enough for reliable per-image generation (e.g. a bare label
+        # like "photo" that collides with thousands of existing files).
+        # search_directory: empty → uses config.directories_to_search_for_related_images
+        # (all target dirs combined).
+        # on_match=REJECT: overflow detected → stem not unique.
+        # on_no_match=CONTINUE: within limit → proceed to category nodes.
+        # ------------------------------------------------------------------
+        node_uniqueness = PipelineNode(
+            name="Stem uniqueness check",
+            condition=BaseStemMatchCondition(),
+            on_match=NodeOutcome(OutcomeType.REJECT),
+            on_no_match=NodeOutcome(OutcomeType.CONTINUE),
+        )
+
         return ClassifierPipeline(
-            name="Example: Category Fill (apple / banana / cherry)",
+            name="Example: Representation Set Generator (apple / banana / cherry)",
             description=(
                 "Demo category-fill pipeline (inactive). Fills per-category target "
                 "subdirectories from a working directory of seed images. "
                 "Categories: apple → target/A/, banana → target/B/, cherry → target/C/. "
                 "Guard node rejects stem groups with unrecognised suffixes. "
+                "Uniqueness node rejects stems with too many existing matches in the "
+                "target dirs (non-unique base stem). "
                 "Each category node generates if and only if (a) the image is not a "
                 "local derivative and (b) the target directory does not already contain "
                 "a file with this base stem. See §4 of "
                 "docs/generation-pipeline-category-fill.md."
             ),
-            nodes=[node_guard, node_apple, node_banana, node_cherry],
+            nodes=[node_guard, node_uniqueness, node_apple, node_banana, node_cherry],
             is_active=False,
+            categories=list(ALL_SUFFIXES),
         )
 
     @staticmethod

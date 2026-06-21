@@ -71,6 +71,11 @@ class ClassifierPipelinesTab(QWidget):
         demo_btn.clicked.connect(self._load_demo)
         title_row.addWidget(demo_btn)
 
+        cat_fill_btn = QPushButton(_("Load Rep. Set Gen."))
+        cat_fill_btn.setToolTip(_("Insert the representation set generator demo pipeline"))
+        cat_fill_btn.clicked.connect(self._load_category_fill_demo)
+        title_row.addWidget(cat_fill_btn)
+
         title_row.addStretch()
         root.addLayout(title_row)
 
@@ -210,6 +215,13 @@ class ClassifierPipelinesTab(QWidget):
 
     def _load_demo(self) -> None:
         demo = ClassifierPipelines.build_demo_pipeline()
+        self._insert_demo(demo)
+
+    def _load_category_fill_demo(self) -> None:
+        demo = ClassifierPipelines.build_category_fill_pipeline()
+        self._insert_demo(demo)
+
+    def _insert_demo(self, demo: ClassifierPipeline) -> None:
         existing = {p.name for p in ClassifierPipelines.get_all_pipelines()}
         if demo.name in existing:
             base = demo.name

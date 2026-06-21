@@ -153,10 +153,12 @@ class TestConditionSerialization:
         assert c.require_match is True
         assert c.suffix_filter == []
         assert c.search_directory == ""
+        assert c.max_stem_group_size == 0
         c2 = _condition_from_dict(c.to_dict())
         assert c2.require_match is True
         assert c2.suffix_filter == []
         assert c2.search_directory == ""
+        assert c2.max_stem_group_size == 0
 
     def test_base_stem_match_missing_key_defaults_on_deserialize(self):
         c2 = _condition_from_dict({"condition_type": "base_stem_match"})
@@ -164,6 +166,7 @@ class TestConditionSerialization:
         assert c2.require_match is True
         assert c2.suffix_filter == []
         assert c2.search_directory == ""
+        assert c2.max_stem_group_size == 0
 
     def test_base_stem_match_suffix_filter_roundtrip(self):
         c = BaseStemMatchCondition(require_match=True, suffix_filter=["_A", "_ani", "_animal"])
@@ -204,6 +207,19 @@ class TestConditionSerialization:
     def test_base_stem_match_summary_shows_dir_when_no_suffix(self):
         s = BaseStemMatchCondition(search_directory="/target/A").summary()
         assert "/target/A" in s
+
+    def test_base_stem_match_max_stem_group_size_roundtrip(self):
+        c = BaseStemMatchCondition(max_stem_group_size=2)
+        c2 = _condition_from_dict(c.to_dict())
+        assert c2.max_stem_group_size == 2
+
+    def test_base_stem_match_summary_shows_max_when_set(self):
+        s = BaseStemMatchCondition(max_stem_group_size=2).summary()
+        assert "max=2" in s
+
+    def test_base_stem_match_summary_no_max_when_zero(self):
+        s = BaseStemMatchCondition(max_stem_group_size=0).summary()
+        assert "max" not in s
 
     def test_related_image_roundtrip(self):
         c = RelatedImageCondition(edit_suffix="_edit", search_directory="/custom", count_threshold=3)
@@ -715,6 +731,7 @@ class TestValidation:
         s = UnknownSuffixCondition(search_directory="/foo/bar").summary()
         assert "/foo/bar" in s
 
+
     def test_unknown_suffix_nonexistent_search_directory_fails(self):
         p = _simple_pipeline(
             _make_node("n1", UnknownSuffixCondition(search_directory="/not/real"))
@@ -1156,6 +1173,31 @@ class TestPipelineAppliesToMediaTypes:
         with patch("utils.media_utils.get_media_type_for_path",
                    return_value=CompareMediaType.VIDEO):
             assert p.media_type_allowed("/vid/clip.mp4") is False
+
+    # -- categories field --
+
+    def test_categories_defaults_empty(self):
+        p = ClassifierPipeline(name="p")
+        assert p.categories == []
+
+    def test_categories_roundtrip(self):
+        p = ClassifierPipeline(name="p", categories=["_apple", "_banana", "_cherry"])
+        p2 = ClassifierPipeline.from_dict(p.to_dict())
+        assert p2.categories == ["_apple", "_banana", "_cherry"]
+
+    def test_categories_omitted_from_dict_when_empty(self):
+        p = ClassifierPipeline(name="p", categories=[])
+        assert "categories" not in p.to_dict()
+
+    def test_categories_present_in_dict_when_set(self):
+        p = ClassifierPipeline(name="p", categories=["_a", "_b"])
+        assert p.to_dict()["categories"] == ["_a", "_b"]
+
+    def test_categories_missing_key_defaults_to_empty(self):
+        d = ClassifierPipeline(name="p").to_dict()
+        d.pop("categories", None)
+        p2 = ClassifierPipeline.from_dict(d)
+        assert p2.categories == []
 
     def test_prevalidation_pipeline_inherits_field(self):
         p = PrevalidationPipeline(name="pv", profile_name="prof",

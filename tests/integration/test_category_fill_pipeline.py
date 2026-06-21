@@ -130,10 +130,11 @@ class TestPipelineMeta:
     def test_node_names_present(self, layout):
         p = _pipeline(layout)
         names = [n.name for n in p.nodes]
-        assert "Unknown-suffix guard" in names
-        assert "Generate apple"  in names
-        assert "Generate banana" in names
-        assert "Generate cherry" in names
+        assert "Unknown-suffix guard"   in names
+        assert "Stem uniqueness check"  in names
+        assert "Generate apple"         in names
+        assert "Generate banana"        in names
+        assert "Generate cherry"        in names
 
 
 # ---------------------------------------------------------------------------

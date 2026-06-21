@@ -240,6 +240,35 @@ class SDRunnerClient:
         
         return result_container['result']
 
+    def run_batch(self, _type, requests: list[dict]) -> int:
+        """Send all requests as a single blob; the server enqueues and acks immediately.
+
+        *requests* is a list of args dicts (must include at least ``image``).
+        All requests share the same generation type.
+        Returns the number of items the server confirmed as queued.
+        """
+        if not requests:
+            return 0
+        if not isinstance(_type, ImageGenerationType):
+            raise TypeError(f'{_type} is not a valid ImageGenerationType')
+        self.start()
+        try:
+            self.validate_connection()
+            batch = [
+                {'type': _type.value, 'args': args}
+                for args in requests
+            ]
+            resp = self.send({'command': 'run_batch', 'requests': batch})
+            if 'error' in resp:
+                raise Exception(
+                    f'SD Runner batch error: {resp["error"]}: {resp.get("data")}'
+                )
+            count = resp.get('count', len(requests))
+            logger.info("SD Runner queued %d batch generation request(s)", count)
+            return count
+        finally:
+            self.close()
+
     def stop(self):
         """Stop the worker thread and close the connection."""
         self._shutdown = True

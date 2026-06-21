@@ -95,7 +95,7 @@ class SearchController:
             callback=self._fire_pending_compare,
         )
         self._worker: Optional[_CompareWorker] = None
-        self._img_gen_worker: Optional[_CompareWorker] = None
+        self._img_gen_workers: list[_CompareWorker] = []
 
     def _fire_pending_compare(self) -> None:
         """Callback for the debouncer — invokes whatever compare was last scheduled."""
@@ -262,11 +262,12 @@ class SearchController:
                 _("{0}: {1}% complete").format(context, percent)
             )
 
-    def _on_img_gen_finished(self) -> None:
-        worker = self._img_gen_worker
-        self._img_gen_worker = None
-        if worker is not None:
-            worker.deleteLater()
+    def _on_img_gen_finished(self, worker: "_CompareWorker") -> None:
+        try:
+            self._img_gen_workers.remove(worker)
+        except ValueError:
+            pass
+        worker.deleteLater()
 
     def _run_compare(self, args: CompareArgs = CompareArgs()) -> None:
         """Execute the comparison logic."""
@@ -533,8 +534,8 @@ class SearchController:
                 _("Error running image generation:") + "\n" + msg, title=_("Warning")
             )
         )
-        worker.signals.finished.connect(lambda: self._on_img_gen_finished())
-        self._img_gen_worker = worker
+        worker.signals.finished.connect(lambda w=worker: self._on_img_gen_finished(w))
+        self._img_gen_workers.append(worker)
         worker.start()
 
     @require_password(ProtectedActions.RUN_IMAGE_GENERATION)
@@ -572,8 +573,8 @@ class SearchController:
                 _("Error running image generation:") + "\n" + msg, title=_("Warning")
             )
         )
-        worker.signals.finished.connect(lambda: self._on_img_gen_finished())
-        self._img_gen_worker = worker
+        worker.signals.finished.connect(lambda w=worker: self._on_img_gen_finished(w))
+        self._img_gen_workers.append(worker)
         worker.start()
 
     # ==================================================================

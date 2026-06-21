@@ -53,7 +53,7 @@ from files.directory_profile import DirectoryProfile
 from lib.multi_display_qt import SmartDialog
 from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle
-from utils.constants import ClassifierActionType
+from utils.constants import ClassifierActionType, ImageGenerationType
 from utils.logging_setup import get_logger
 from utils.translations import _
 
@@ -1670,6 +1670,18 @@ class ClassifierPipelineEditorDialog(SmartDialog):
             self._default_reject_combo.setCurrentText(p.default_reject_action.value)
         form.addRow(_("Default reject action:"), self._default_reject_combo)
 
+        self._gen_type_combo = QComboBox()
+        self._gen_type_combo.addItem(_("(Use global setting)"), None)
+        _excluded = {ImageGenerationType.CANCEL, ImageGenerationType.REVERT_TO_SIMPLE_GEN}
+        for gt in ImageGenerationType:
+            if gt not in _excluded:
+                self._gen_type_combo.addItem(gt.get_text(), gt)
+        if p.generation_type is not None:
+            idx = self._gen_type_combo.findData(p.generation_type)
+            if idx >= 0:
+                self._gen_type_combo.setCurrentIndex(idx)
+        form.addRow(_("Generation type:"), self._gen_type_combo)
+
         self._category_map_editor = _StringPairListEditor(
             name_placeholder=_("category name, e.g. Apple"),
             value_placeholder=_("suffix, e.g. _apple"),
@@ -2334,6 +2346,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         final.is_active = self._active_cb.isChecked()
         final.default_action = _action_from_text(self._default_action_combo.currentText())
         final.default_reject_action = _action_from_text(self._default_reject_combo.currentText())
+        final.generation_type = self._gen_type_combo.currentData()
         final.category_map = self._category_map_editor.get_items()
 
         errors = final.validate()

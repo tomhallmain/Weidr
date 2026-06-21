@@ -34,7 +34,7 @@ class TestSearchControllerImageGen:
         assert path == media_path
         assert gen_type == ImageGenerationType.LAST_SETTINGS
         assert kwargs.get("append") is False
-        qtbot.waitUntil(lambda: win.search_ctrl._img_gen_worker is None, timeout=5000)
+        qtbot.waitUntil(lambda: win.search_ctrl._img_gen_workers == [], timeout=5000)
 
     def test_run_image_generation_no_op_without_media_path(
         self, window_with_dir, bypass_password, monkeypatch
@@ -44,4 +44,4 @@ class TestSearchControllerImageGen:
 
         win.search_ctrl.run_image_generation()
 
-        assert win.search_ctrl._img_gen_worker is None
+        assert win.search_ctrl._img_gen_workers == []

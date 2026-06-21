@@ -21,7 +21,7 @@ from enum import Enum
 from typing import ClassVar, Optional
 
 from utils.app_info_cache import app_info_cache
-from utils.constants import ClassifierActionType, CompareMediaType
+from utils.constants import ClassifierActionType, CompareMediaType, ImageGenerationType
 from utils.logging_setup import get_logger
 from utils.translations import _
 
@@ -675,6 +675,9 @@ class ClassifierPipeline:
     default_reject_action: Optional[ClassifierActionType] = None
     is_active: bool = True
     applies_to_media_types: Optional[list] = None   # list[CompareMediaType]; None = all types
+    # ImageGenerationType to use for GENERATE actions; None inherits the application's
+    # current global generation mode at run time.
+    generation_type: Optional[ImageGenerationType] = None
     # Optional mapping of human-readable category name → filesystem suffix.
     # e.g. {"Apple": "_apple", "Banana": "_banana"}
     # The suffix values are the identifiers used by BaseStemMatchCondition / UnknownSuffixCondition.
@@ -1043,6 +1046,7 @@ class ClassifierPipeline:
                 [mt.value for mt in self.applies_to_media_types]
                 if self.applies_to_media_types is not None else None
             ),
+            "generation_type": self.generation_type.value if self.generation_type else None,
         }
         if self.category_map:
             d["category_map"] = dict(self.category_map)
@@ -1068,6 +1072,10 @@ class ClassifierPipeline:
             default_reject_action=_opt_action(d.get("default_reject_action")),
             is_active=d.get("is_active", True),
             applies_to_media_types=d.get("applies_to_media_types"),
+            generation_type=(
+                ImageGenerationType.get(d["generation_type"])
+                if d.get("generation_type") else None
+            ),
             category_map=raw_map,
         )
 

@@ -403,6 +403,26 @@ class TestClassifierPipelineSerialization:
         p2 = ClassifierPipeline.from_dict(d)
         assert p2.default_action is None
 
+    def test_generation_type_roundtrip(self):
+        from utils.constants import ImageGenerationType
+        p = ClassifierPipeline(name="gen_type", generation_type=ImageGenerationType.CONTROL_NET)
+        d = p.to_dict()
+        assert d["generation_type"] == "control_net"
+        p2 = ClassifierPipeline.from_dict(d)
+        assert p2.generation_type == ImageGenerationType.CONTROL_NET
+
+    def test_generation_type_defaults_to_none(self):
+        p = ClassifierPipeline(name="no_gen_type")
+        assert p.generation_type is None
+        p2 = ClassifierPipeline.from_dict(p.to_dict())
+        assert p2.generation_type is None
+
+    def test_generation_type_backward_compat(self):
+        # Dicts without the key (older saves) should deserialise without error.
+        d = {"name": "old", "nodes": []}
+        p = ClassifierPipeline.from_dict(d)
+        assert p.generation_type is None
+
 
 # ---------------------------------------------------------------------------
 # PrevalidationPipeline

@@ -93,7 +93,7 @@ class TestImageGenerationOnDirectory:
         gen_type, directory_path = dir_calls[0]
         assert gen_type == ImageGenerationType.LAST_SETTINGS
         assert os.path.normcase(directory_path) == os.path.normcase(media_dir)
-        qtbot.waitUntil(lambda: win.search_ctrl._img_gen_worker is None, timeout=5000)
+        qtbot.waitUntil(lambda: win.search_ctrl._img_gen_workers == [], timeout=5000)
 
 
 class TestCompareRefreshPaths:

@@ -326,7 +326,29 @@ class ClassifierPipelinesTab(QWidget):
         if not qt_alert(self, _("Run Pipeline on Profile"), msg, kind="askokcancel"):
             return
 
-        callbacks = self._app_actions.prevalidation_callbacks_with_mark
+        # Capture the generation type on the main thread before the worker starts.
+        # Pipeline-level setting takes priority; fall back to the application's global mode.
+        if pipeline.generation_type is not None:
+            generation_type = pipeline.generation_type
+        else:
+            from ui.image.media_details import MediaDetails
+            generation_type = MediaDetails.get_image_specific_generation_mode()
+
+        # Collect generate actions during the run; dispatch them via a single
+        # SD runner connection at the end so no QThread is created off-thread.
+        pending_generates: list[tuple[str, str | None]] = []
+
+        from compare.action_callbacks import ActionCallbacks
+        from files.marked_files import MarkedFiles
+        callbacks = ActionCallbacks(
+            hide_callback=self._app_actions.hide_current_media,
+            notify_callback=self._app_actions.title_notify,
+            add_mark_callback=MarkedFiles.add_mark_if_not_present,
+            blur_callback=self._app_actions.request_media_blur,
+            generate_callback=lambda path, edit_suffix=None: pending_generates.append(
+                (path, edit_suffix)
+            ),
+        )
 
         def _worker():
             from compare.base_compare import gather_files
@@ -376,6 +398,22 @@ class ClassifierPipelinesTab(QWidget):
                 self._app_actions.title_notify(summary)
             except Exception:
                 pass
+
+            # Dispatch all queued generates in a single SD runner connection.
+            if pending_generates:
+                from extensions.sd_runner_client import SDRunnerClient
+                batch_args = [
+                    {
+                        'image': path,
+                        'append': False,
+                        **({'edit_suffix': suffix} if suffix else {}),
+                    }
+                    for path, suffix in pending_generates
+                ]
+                try:
+                    SDRunnerClient().run_batch(generation_type, batch_args)
+                except Exception:
+                    logger.exception("Batch SD runner generation failed")
 
         from utils.running_tasks_registry import start_thread
         start_thread(_worker, use_asyncio=False)

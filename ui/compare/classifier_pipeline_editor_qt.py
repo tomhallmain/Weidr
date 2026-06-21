@@ -23,8 +23,8 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog, QFormLayout,
     QGraphicsScene, QGraphicsView,
-    QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget,
-    QPushButton, QScrollArea, QSpinBox, QSplitter,
+    QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
+    QPlainTextEdit, QPushButton, QScrollArea, QSizePolicy, QSpinBox, QSplitter,
     QStackedWidget, QVBoxLayout, QWidget,
 )
 
@@ -94,8 +94,8 @@ _FG = AppStyle.FG_COLOR
 _BG = AppStyle.BG_COLOR
 
 # Graph layout constants (all in scene pixels)
-_NODE_W         = 260
-_NODE_H         = 64
+_NODE_W         = 320
+_NODE_H         = 80
 _NODE_X         = 10
 _NODE_VSTEP     = 90   # top-of-node to top-of-next-node
 _GOTO_OFFSET_M  = 42   # bezier bulge for on_match GOTO
@@ -156,12 +156,10 @@ class _StringListEditor(QWidget):
         entry_row.addWidget(self._entry, 1)
 
         add_btn = QPushButton(_("Add"))
-        add_btn.setFixedWidth(50)
         add_btn.clicked.connect(self._add_item)
         entry_row.addWidget(add_btn)
 
         remove_btn = QPushButton(_("Remove"))
-        remove_btn.setFixedWidth(65)
         remove_btn.clicked.connect(self._remove_selected)
         entry_row.addWidget(remove_btn)
 
@@ -233,12 +231,10 @@ class _StringPairListEditor(QWidget):
         entry_row.addWidget(self._value_entry, 2)
 
         add_btn = QPushButton(_("Add"))
-        add_btn.setFixedWidth(50)
         add_btn.clicked.connect(self._add_item)
         entry_row.addWidget(add_btn)
 
         remove_btn = QPushButton(_("Remove"))
-        remove_btn.setFixedWidth(65)
         remove_btn.clicked.connect(self._remove_selected)
         entry_row.addWidget(remove_btn)
 
@@ -273,6 +269,21 @@ class _StringPairListEditor(QWidget):
                 if k and v:
                     result[k] = v
         return result
+
+
+# ---------------------------------------------------------------------------
+# _AdaptiveStack — QStackedWidget that reports the *current* page's size hint
+# so the surrounding layout doesn't reserve space for the tallest hidden page.
+# ---------------------------------------------------------------------------
+
+class _AdaptiveStack(QStackedWidget):
+    def sizeHint(self):
+        w = self.currentWidget()
+        return w.sizeHint() if w else super().sizeHint()
+
+    def minimumSizeHint(self):
+        w = self.currentWidget()
+        return w.minimumSizeHint() if w else super().minimumSizeHint()
 
 
 # ---------------------------------------------------------------------------
@@ -643,54 +654,62 @@ class _BaseStemMatchPanel(QWidget):
     def __init__(self, on_changed: Callable = None, parent=None):
         super().__init__(parent)
         self._on_changed = on_changed or (lambda: None)
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 4, 0, 4)
-        layout.setSpacing(6)
+        form = QFormLayout(self)
+        form.setContentsMargins(0, 4, 0, 4)
+        form.setSpacing(6)
 
-        self._require_match = QCheckBox(_("Pass when a related file is found (uncheck to pass when not found)"))
+        self._require_match = QCheckBox(_("Pass when found (uncheck to pass when not found)"))
         self._require_match.setChecked(True)
         self._require_match.stateChanged.connect(self._on_changed)
-        layout.addWidget(self._require_match)
+        form.addRow(_("Match mode:"), self._require_match)
 
-        suffix_row = QWidget()
-        suffix_layout = QHBoxLayout(suffix_row)
-        suffix_layout.setContentsMargins(0, 0, 0, 0)
-        suffix_layout.addWidget(_label(_("Suffix filter:")))
         self._suffix_filter = QLineEdit()
-        self._suffix_filter.setPlaceholderText(_("e.g. _a, _ani, _animal  (comma-separated; empty = any)"))
-        self._suffix_filter.setFixedWidth(260)
+        self._suffix_filter.setPlaceholderText(_("e.g. _a, _b  (comma-separated; empty = any)"))
         self._suffix_filter.textChanged.connect(self._on_changed)
-        suffix_layout.addWidget(self._suffix_filter)
-        suffix_layout.addStretch()
-        layout.addWidget(suffix_row)
+        form.addRow(_("Suffix filter:"), self._suffix_filter)
 
-        dir_row = QWidget()
-        dir_layout = QHBoxLayout(dir_row)
-        dir_layout.setContentsMargins(0, 0, 0, 0)
-        dir_layout.addWidget(_label(_("Search directory:")))
+        dir_row = QHBoxLayout()
         self._search_directory = QLineEdit()
         self._search_directory.setPlaceholderText(_("(empty = use configured related-image dirs)"))
-        self._search_directory.textChanged.connect(self._on_changed)
-        dir_layout.addWidget(self._search_directory)
-        layout.addWidget(dir_row)
-
-        note = _label(
-            _("When 'Search directory' is empty, searches the directories configured in "
-              "Related Images settings (config: directories_to_search_for_related_images). "
-              "Uses cached directory scan for pipeline performance.")
+        self._search_directory.setToolTip(
+            _("When empty, searches config: directories_to_search_for_related_images. "
+              "Uses cached scan for pipeline performance.")
         )
-        note.setWordWrap(True)
-        layout.addWidget(note)
+        self._search_directory.textChanged.connect(self._on_changed)
+        dir_row.addWidget(self._search_directory)
+        browse_btn = QPushButton(_("Browse…"))
+        browse_btn.clicked.connect(self._browse_dir)
+        dir_row.addWidget(browse_btn)
+        form.addRow(_("Search directory:"), dir_row)
+
+        self._max_stem_group_size = QSpinBox()
+        self._max_stem_group_size.setRange(0, 9999)
+        self._max_stem_group_size.setValue(0)
+        self._max_stem_group_size.setToolTip(
+            _("Overflow detection: pass when stem group exceeds this many files. "
+              "0 = disabled (or auto-computed from suffix filter length + 1). "
+              "When > 0, match mode is ignored.")
+        )
+        self._max_stem_group_size.valueChanged.connect(self._on_changed)
+        form.addRow(_("Max stem group size:"), self._max_stem_group_size)
+
+    def _browse_dir(self) -> None:
+        current = self._search_directory.text() or os.path.expanduser("~")
+        d = QFileDialog.getExistingDirectory(self, _("Select search directory"), current)
+        if d:
+            self._search_directory.setText(d)
 
     def load(self, condition) -> None:
         if isinstance(condition, BaseStemMatchCondition):
             self._require_match.setChecked(condition.require_match)
             self._suffix_filter.setText(", ".join(condition.suffix_filter))
             self._search_directory.setText(condition.search_directory)
+            self._max_stem_group_size.setValue(condition.max_stem_group_size)
         else:
             self._require_match.setChecked(True)
             self._suffix_filter.setText("")
             self._search_directory.setText("")
+            self._max_stem_group_size.setValue(0)
 
     def get_condition(self) -> BaseStemMatchCondition:
         raw = self._suffix_filter.text()
@@ -699,6 +718,7 @@ class _BaseStemMatchPanel(QWidget):
             require_match=self._require_match.isChecked(),
             suffix_filter=suffixes,
             search_directory=self._search_directory.text().strip(),
+            max_stem_group_size=self._max_stem_group_size.value(),
         )
 
 
@@ -1538,7 +1558,8 @@ class ClassifierPipelineEditorDialog(SmartDialog):
             parent=parent,
             position_parent=parent,
             title=_("Edit Pipeline") if self._is_edit else _("New Pipeline"),
-            geometry="1100x820",
+            geometry="1280x1050",
+            respect_title_bar=True,
         )
 
         self._build_ui()
@@ -1593,7 +1614,9 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._name_edit.textChanged.connect(self._on_field_changed)
         form.addRow(_("Name:"), self._name_edit)
 
-        self._desc_edit = QLineEdit(getattr(p, "description", "") or "")
+        self._desc_edit = QPlainTextEdit(getattr(p, "description", "") or "")
+        self._desc_edit.setFixedHeight(60)
+        self._desc_edit.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
         form.addRow(_("Description:"), self._desc_edit)
 
         self._active_cb = QCheckBox()
@@ -1697,13 +1720,18 @@ class ClassifierPipelineEditorDialog(SmartDialog):
 
         ned.addWidget(_label(_("Node Editor"), bold=True))
 
-        # Node name
+        # Node name + enabled toggle
         name_form = QFormLayout()
         name_form.setSpacing(4)
         self._node_name_edit = QLineEdit()
         self._node_name_edit.setPlaceholderText(_("unique node name"))
         self._node_name_edit.textChanged.connect(self._on_node_name_changed)
         name_form.addRow(_("Node name:"), self._node_name_edit)
+
+        self._node_enabled_cb = QCheckBox()
+        self._node_enabled_cb.setChecked(True)
+        self._node_enabled_cb.stateChanged.connect(self._on_node_enabled_changed)
+        name_form.addRow(_("Enabled:"), self._node_enabled_cb)
         ned.addLayout(name_form)
 
         # Condition type
@@ -1743,7 +1771,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
             self._group_panel,
         ]
 
-        self._condition_stack = QStackedWidget()
+        self._condition_stack = _AdaptiveStack()
         for p in self._cond_panels:
             self._condition_stack.addWidget(p)
         ned.addWidget(self._condition_stack)
@@ -1800,7 +1828,10 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._node_list.blockSignals(True)
         self._node_list.clear()
         for node in self._pipeline.nodes:
-            self._node_list.addItem(self._node_label(node))
+            item = QListWidgetItem(self._node_label(node))
+            if not node.enabled:
+                item.setForeground(QColor("#888888"))
+            self._node_list.addItem(item)
         self._node_list.blockSignals(False)
         target = row if 0 <= row < len(self._pipeline.nodes) else (
             0 if self._pipeline.nodes else -1
@@ -1820,7 +1851,8 @@ class ClassifierPipelineEditorDialog(SmartDialog):
             if isinstance(node.on_no_match.outcome_type, OutcomeType)
             else str(node.on_no_match.outcome_type)
         )
-        return f"{node.name}  [{ctype}]  ✓{match_summary} / ✗{no_match_summary}"
+        label = f"{node.name}  [{ctype}]  ✓{match_summary} / ✗{no_match_summary}"
+        return f"[disabled]  {label}" if not node.enabled else label
 
     def _on_selection_changed(self) -> None:
         if self._node_editor_widget is None:
@@ -1903,6 +1935,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         later = [n.name for n in self._pipeline.nodes[idx + 1:]]
 
         self._node_name_edit.setText(node.name)
+        self._node_enabled_cb.setChecked(node.enabled)
 
         ctype = getattr(node.condition, "condition_type", "embedding")
         ct_idx = _CONDITION_TYPES.index(ctype) if ctype in _CONDITION_TYPES else 0
@@ -1935,6 +1968,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         name = self._node_name_edit.text().strip()
         if name:
             node.name = name
+        node.enabled = self._node_enabled_cb.isChecked()
         try:
             node.condition = self._cond_panels[self._condition_stack.currentIndex()].get_condition()
         except Exception:
@@ -2000,13 +2034,28 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         if idx is None or idx >= len(self._pipeline.nodes):
             return
         self._pipeline.nodes[idx].name = text.strip()
-        item = self._node_list.item(idx)
-        if item:
-            item.setText(self._node_label(self._pipeline.nodes[idx]))
+        self._update_node_list_item(idx)
         self._refresh_flow_preview()
+
+    def _on_node_enabled_changed(self, state: int) -> None:
+        idx = self._current_node_idx
+        if idx is None or idx >= len(self._pipeline.nodes):
+            return
+        self._pipeline.nodes[idx].enabled = bool(state)
+        self._update_node_list_item(idx)
+        self._refresh_flow_preview()
+
+    def _update_node_list_item(self, idx: int) -> None:
+        item = self._node_list.item(idx)
+        if item is None:
+            return
+        node = self._pipeline.nodes[idx]
+        item.setText(self._node_label(node))
+        item.setForeground(QColor(_FG) if node.enabled else QColor("#888888"))
 
     def _on_condition_type_changed(self, idx: int) -> None:
         self._condition_stack.setCurrentIndex(idx)
+        self._condition_stack.updateGeometry()
         panel = self._cond_panels[idx]
         panel.load(None)
         # Forward prior nodes context to NodeResult and Composite
@@ -2073,7 +2122,8 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         def _node_h(node) -> int:
             if isinstance(node.condition, GroupCondition):
                 n = len(node.condition.nodes)
-                return max(NH, 42 + n * _CHILD_LINE_H + 20)
+                # 38px for header rows + child rows + 40px footer for two outcome lines
+                return max(NH, 38 + n * _CHILD_LINE_H + 40)
             return NH
 
         # Compute per-node heights and cumulative top positions
@@ -2087,60 +2137,76 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         pos = {node.name: (NX, tops[i]) for i, node in enumerate(nodes)}
 
         # --- Node boxes ---------------------------------------------------
-        box_pen   = QPen(fg, 1)
-        box_brush = QBrush(node_bg)
+        box_pen      = QPen(fg, 1)
+        box_brush    = QBrush(node_bg)
+        dim_bg       = QColor(32, 32, 32)
+        dim_pen      = QPen(QColor("#666666"), 1, Qt.DashLine)
+        dim_fg       = QColor("#666666")
         for node in nodes:
             nx, ny = pos[node.name]
             nh = heights[node.name]
             ctype = getattr(node.condition, "condition_type", "?")
+            disabled   = not node.enabled
+            node_brush = QBrush(dim_bg)   if disabled else box_brush
+            node_pen   = dim_pen          if disabled else box_pen
+            text_col   = dim_fg           if disabled else fg
 
             if isinstance(node.condition, GroupCondition):
-                grp_pen = QPen(group_col, 1.5)
-                scene.addRect(QRectF(nx, ny, NW, nh), grp_pen, box_brush)
+                grp_pen = QPen(QColor("#3a5a7a") if disabled else group_col,
+                               1.5, Qt.DashLine if disabled else Qt.SolidLine)
+                scene.addRect(QRectF(nx, ny, NW, nh), grp_pen, node_brush)
 
-                name_item = scene.addText(_trunc(node.name, 34))
+                name_text = _trunc(node.name, 34)
+                if disabled:
+                    name_text = f"[disabled]  {name_text}"
+                name_item = scene.addText(name_text)
                 name_item.setFont(bold_font)
-                name_item.setDefaultTextColor(fg)
+                name_item.setDefaultTextColor(text_col)
                 name_item.setPos(nx + 4, ny + 2)
 
                 op = node.condition.operator
                 ct_item = scene.addText(f"[group: {op}]")
                 ct_item.setFont(small_font)
-                ct_item.setDefaultTextColor(group_col)
+                ct_item.setDefaultTextColor(QColor("#3a5a7a") if disabled else group_col)
                 ct_item.setPos(nx + 4, ny + 20)
 
+                child_col = QColor("#555555") if disabled else QColor("#cccccc")
                 for j, child in enumerate(node.condition.nodes):
                     child_ctype = getattr(child.condition, "condition_type", "?")
                     child_item = scene.addText(
                         f"  · {_trunc(child.name, 22)}  [{child_ctype}]"
                     )
                     child_item.setFont(small_font)
-                    child_item.setDefaultTextColor(QColor("#cccccc"))
+                    child_item.setDefaultTextColor(child_col)
                     child_item.setPos(nx + 4, ny + 38 + j * _CHILD_LINE_H)
             else:
-                scene.addRect(QRectF(nx, ny, NW, nh), box_pen, box_brush)
+                scene.addRect(QRectF(nx, ny, NW, nh), node_pen, node_brush)
 
-                name_item = scene.addText(_trunc(node.name, 34))
+                name_text = _trunc(node.name, 34)
+                if disabled:
+                    name_text = f"[disabled]  {name_text}"
+                name_item = scene.addText(name_text)
                 name_item.setFont(bold_font)
-                name_item.setDefaultTextColor(fg)
+                name_item.setDefaultTextColor(text_col)
                 name_item.setPos(nx + 4, ny + 2)
 
                 ct_item = scene.addText(f"[{ctype}]")
                 ct_item.setFont(small_font)
-                ct_item.setDefaultTextColor(QColor("#aaaaaa"))
+                ct_item.setDefaultTextColor(QColor("#555555") if disabled else QColor("#aaaaaa"))
                 ct_item.setPos(nx + 4, ny + 20)
 
-            # Outcome labels sit at the bottom of every node
-            footer_y = ny + nh - 18
-            m_item = scene.addText("✓ " + _trunc(node.on_match.summary(), 28))
+            # Outcome labels stacked at the bottom of every node (full width each)
+            m_col  = QColor("#3a6e3a") if disabled else green
+            nm_col = QColor("#7a3a3a") if disabled else red
+            m_item = scene.addText("✓ " + _trunc(node.on_match.summary(), 44))
             m_item.setFont(small_font)
-            m_item.setDefaultTextColor(green)
-            m_item.setPos(nx + 4, footer_y)
+            m_item.setDefaultTextColor(m_col)
+            m_item.setPos(nx + 4, ny + nh - 36)
 
-            nm_item = scene.addText("✗ " + _trunc(node.on_no_match.summary(), 28))
+            nm_item = scene.addText("✗ " + _trunc(node.on_no_match.summary(), 44))
             nm_item.setFont(small_font)
-            nm_item.setDefaultTextColor(red)
-            nm_item.setPos(nx + NW // 2 + 4, footer_y)
+            nm_item.setDefaultTextColor(nm_col)
+            nm_item.setPos(nx + 4, ny + nh - 18)
 
         # --- Flow edges ---------------------------------------------------
         # CONTINUE: dashed vertical line at two x offsets.
@@ -2240,7 +2306,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
                 final = self._pipeline
 
         final.name = name
-        final.description = self._desc_edit.text().strip()
+        final.description = self._desc_edit.toPlainText().strip()
         final.is_active = self._active_cb.isChecked()
         final.default_action = _action_from_text(self._default_action_combo.currentText())
         final.default_reject_action = _action_from_text(self._default_reject_combo.currentText())

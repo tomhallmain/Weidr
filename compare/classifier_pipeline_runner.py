@@ -237,6 +237,17 @@ def run_pipeline(
     while current_name is not None:
         node = nodes_by_name[current_name]
 
+        if not node.enabled:
+            if report:
+                report.add(
+                    node_name=node.name,
+                    image_path=image_path,
+                    message=f"[{pipeline.name}] node {node.name!r} is disabled — skipped",
+                )
+            idx = node_order.index(current_name)
+            current_name = node_order[idx + 1] if idx + 1 < len(node_order) else None
+            continue
+
         try:
             result, score = _evaluate_condition(
                 node.condition, image_path, node_results, node_scores, base_directory,

@@ -627,6 +627,7 @@ class PipelineNode:
     condition: object = None          # NodeCondition; defaulted in __post_init__
     on_match: Optional[NodeOutcome] = None
     on_no_match: Optional[NodeOutcome] = None
+    enabled: bool = True              # False → runner skips this node (no-op CONTINUE)
 
     def __post_init__(self):
         if self.condition is None:
@@ -637,12 +638,15 @@ class PipelineNode:
             self.on_no_match = NodeOutcome.accept()
 
     def to_dict(self) -> dict:
-        return {
+        d: dict = {
             "name": self.name,
             "condition": self.condition.to_dict(),
             "on_match": self.on_match.to_dict(),
             "on_no_match": self.on_no_match.to_dict(),
         }
+        if not self.enabled:
+            d["enabled"] = False
+        return d
 
     @staticmethod
     def from_dict(d: dict) -> "PipelineNode":
@@ -651,6 +655,7 @@ class PipelineNode:
             condition=_condition_from_dict(d.get("condition", {"condition_type": "embedding"})),
             on_match=NodeOutcome.from_dict(d.get("on_match", {})),
             on_no_match=NodeOutcome.from_dict(d.get("on_no_match", {})),
+            enabled=d.get("enabled", True),
         )
 
     def condition_summary(self) -> str:

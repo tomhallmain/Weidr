@@ -169,6 +169,44 @@ class TestShouldRunGenerateActionSuffixCount:
                 result = should_run_generate_action(IMAGE, "_edit", SEARCH_DIR, count_threshold=2)
         assert result is False
 
+    def test_suffix_followed_by_separator_and_integer_is_counted(self):
+        """'suffix_N' format (separator before index) is counted toward threshold.
+
+        Some generators produce names like source_edit_2.jpg rather than
+        source_edit2.jpg.  Both formats must be recognised.
+        """
+        entries = [("/base/source_edit_2.jpg", IMAGE)]
+        with _patch_related(None):
+            with _patch_scan_dir(entries):
+                result = should_run_generate_action(IMAGE, "_edit", SEARCH_DIR)
+        assert result is False
+
+    def test_suffix_followed_by_separator_and_multi_digit_integer_is_counted(self):
+        entries = [("/base/source_edit_12.jpg", IMAGE)]
+        with _patch_related(None):
+            with _patch_scan_dir(entries):
+                result = should_run_generate_action(IMAGE, "_edit", SEARCH_DIR)
+        assert result is False
+
+    def test_separator_index_and_direct_index_both_count_toward_threshold(self):
+        """Mixed naming styles are additive."""
+        entries = [
+            ("/base/source_edit.jpg", None),    # bare suffix, stem-prefix
+            ("/base/source_edit_2.jpg", IMAGE), # separator-index, metadata
+        ]
+        with _patch_related(None):
+            with _patch_scan_dir(entries):
+                result = should_run_generate_action(IMAGE, "_edit", SEARCH_DIR, count_threshold=2)
+        assert result is False
+
+    def test_suffix_extra_text_after_separator_not_counted(self):
+        """A stem of the form suffix_extra must NOT be counted — only suffix_<int> counts."""
+        entries = [("/base/source_edit_extra.jpg", IMAGE)]
+        with _patch_related(None):
+            with _patch_scan_dir(entries):
+                result = should_run_generate_action(IMAGE, "_edit", SEARCH_DIR)
+        assert result is True
+
 
 # ---------------------------------------------------------------------------
 # Custom threshold

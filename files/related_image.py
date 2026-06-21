@@ -288,8 +288,9 @@ def should_run_generate_action(
     that is present in search_dir. A related-image pointer to a source outside search_dir
     does not block generation -- only downstream-ness relative to the current directory
     matters. Otherwise counts how many downstream images of image_path in search_dir have
-    a stem ending with edit_suffix or edit_suffix followed by an integer (e.g. "_edit",
-    "_edit1", "_edit2"). Returns True if that count is below count_threshold (including
+    a stem ending with edit_suffix, edit_suffix followed directly by an integer, or
+    edit_suffix followed by an underscore separator and an integer (e.g. "_edit",
+    "_edit1", "_edit2", "_edit_2"). Returns True if that count is below count_threshold (including
     zero), False if it meets or exceeds the threshold.
 
     Directory listings and related-image metadata are cached per search_dir to avoid
@@ -325,7 +326,7 @@ def should_run_generate_action(
         if m and m.group(1) == source_stem and fp_ext.lower() == source_ext.lower():
             downstream_stems.append(fp_stem)
 
-    suffix_re = re.compile(re.escape(edit_suffix) + r'\d*$')
+    suffix_re = re.compile(re.escape(edit_suffix) + r'(?:_\d+|\d*)$')
     suffix_count = sum(1 for stem in downstream_stems if suffix_re.search(stem))
     return suffix_count < count_threshold
 

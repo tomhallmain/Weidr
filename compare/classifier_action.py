@@ -875,7 +875,7 @@ class ClassifierAction:
         elif self.action == ClassifierActionType.ADD_MARK:
             add_mark_callback(image_path)
             notify_callback("\n" + base_message + _(" - marked"), base_message=base_message, action_type=ActionType.SYSTEM, is_manual=False)
-        elif self.action == ClassifierActionType.MOVE or self.action == ClassifierActionType.COPY:
+        elif self.action.requires_target_directory():
             target_directory = self._resolve_action_target_directory(
                 image_path,
                 base_directory=base_directory,
@@ -1069,7 +1069,7 @@ class ClassifierAction:
                 logger.warning(error)
 
     def is_move_action(self):
-        return self.action == ClassifierActionType.MOVE or self.action == ClassifierActionType.COPY
+        return self.action is not None and self.action.requires_target_directory()
 
     def move_index(self, idx, direction_count=1):
         """Move a classifier action in the list by the specified number of positions.

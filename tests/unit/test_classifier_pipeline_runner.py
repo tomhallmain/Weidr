@@ -35,7 +35,7 @@ from compare.classifier_pipeline import (
     RelatedImageCondition,
     UnknownSuffixCondition,
 )
-from compare.pipeline_run_report import PipelineRunReport
+from compare.pipeline_run_report import PipelineRunReport, PipelineRunStats
 from compare.classifier_pipeline_runner import (
     _evaluate_condition,
     _eval_base_stem_match,
@@ -1297,6 +1297,50 @@ class TestPipelineRunReport:
         first = r.messages()
         r.add("INFO", "n", "/img.jpg", "d2")
         assert len(first) == 1  # snapshot was not mutated
+
+    def test_format_completion_report_minimal(self):
+        r = PipelineRunReport()
+        text = r.format_completion_report(
+            PipelineRunStats(
+                pipeline_name="test pipe",
+                profile_name="my profile",
+                directories=["/work"],
+                files_by_directory={"/work": 3},
+                files_evaluated=3,
+                action_counts={"Generate": 1, "(no action)": 2},
+            )
+        )
+        assert "test pipe" in text
+        assert "my profile" in text
+        assert "/work" in text
+        assert "3" in text
+        assert "Generate" in text
+        assert "\n" in text
+
+    def test_format_completion_report_includes_message_sections(self):
+        r = PipelineRunReport()
+        r.add("WARNING", "uniqueness", "/dir/stem.png", "Stem not unique")
+        r.add(
+            "NOTABLE", "Generate apple", "/dir/seed.png",
+            "2 files share base stem",
+            data={"matches": ["/dir/seed_apple.png", "/dir/seed_apple2.png"]},
+        )
+        text = r.format_completion_report(
+            PipelineRunStats(pipeline_name="p", files_evaluated=1)
+        )
+        assert "Warnings" in text
+        assert "Notable" in text
+        assert "uniqueness" in text
+        assert "seed_apple.png" in text
+        assert "seed_apple2.png" in text
+
+    def test_format_completion_report_omits_empty_sections(self):
+        r = PipelineRunReport()
+        text = r.format_completion_report(
+            PipelineRunStats(pipeline_name="p", files_evaluated=0)
+        )
+        assert "Warnings" not in text
+        assert "Notable" not in text
 
 
 # ---------------------------------------------------------------------------

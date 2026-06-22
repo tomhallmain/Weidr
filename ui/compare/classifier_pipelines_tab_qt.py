@@ -352,7 +352,7 @@ class ClassifierPipelinesTab(QWidget):
 
         def _worker():
             from compare.base_compare import gather_files
-            from compare.pipeline_run_report import PipelineRunReport
+            from compare.pipeline_run_report import PipelineRunReport, PipelineRunStats
             from compare.classifier_pipeline_runner import run_pipeline
             from files.related_image import clear_base_stem_dir_cache
             from utils.constants import ClassifierActionType
@@ -360,10 +360,13 @@ class ClassifierPipelinesTab(QWidget):
             clear_base_stem_dir_cache()
             report = PipelineRunReport()
             total = 0
+            errors = 0
             actions: dict[str, int] = {}
+            files_by_directory: dict[str, int] = {}
 
             for directory in directories:
                 files = list(gather_files(directory))
+                files_by_directory[directory] = len(files)
                 logger.info(
                     "Pipeline %r: scanning %s — %d file(s)", pipeline.name, directory, len(files)
                 )
@@ -374,26 +377,35 @@ class ClassifierPipelinesTab(QWidget):
                             base_directory=directory, report=report,
                         )
                         total += 1
-                        key = result.value if isinstance(result, ClassifierActionType) else (str(result) if result else "no_action")
+                        key = (
+                            result.get_translation()
+                            if isinstance(result, ClassifierActionType)
+                            else (str(result) if result else _("(no action)"))
+                        )
                         actions[key] = actions.get(key, 0) + 1
                     except Exception:
+                        errors += 1
                         logger.exception("Pipeline run error on %s", image_path)
 
-            # Log all report messages at INFO level
-            for msg in report.messages():
-                logger.info(
-                    "[%s] %s | %s | %s",
-                    msg.severity, msg.node, os.path.basename(msg.image_path), msg.detail,
-                )
-
-            # Build a short summary for the notification bar
-            action_summary = ", ".join(f"{v}× {k}" for k, v in sorted(actions.items())) or "none"
-            summary = (
-                f"Pipeline '{pipeline.name}' complete: "
-                f"{total} file(s) evaluated, actions: {action_summary}. "
-                f"{report.message_count()} report message(s)."
+            gen_label = (
+                generation_type.get_text()
+                if generation_type is not None
+                else None
             )
-            logger.info(summary)
+            stats = PipelineRunStats(
+                pipeline_name=pipeline.name,
+                profile_name=profile_name,
+                directories=directories,
+                files_by_directory=files_by_directory,
+                files_evaluated=total,
+                errors=errors,
+                action_counts=actions,
+                generates_queued=len(pending_generates),
+                generation_type_label=gen_label,
+                category_map=dict(pipeline.category_map or {}),
+            )
+            summary = report.format_completion_report(stats)
+            logger.info("\n%s", summary)
             try:
                 self._app_actions.title_notify(summary)
             except Exception:

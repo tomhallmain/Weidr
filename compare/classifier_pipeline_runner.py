@@ -248,7 +248,12 @@ def run_pipeline(
         if not node.enabled:
             logger.debug("Pipeline %r: node %r disabled — skipped", pipeline.name, node.name)
             if report:
-                report.add("INFO", node.name, image_path, f"Node {node.name!r} is disabled — skipped")
+                report.add(
+                    "INFO",
+                    node.name,
+                    image_path,
+                    _("Node {0} is disabled — skipped").format(node.name),
+                )
             idx = node_order.index(current_name)
             current_name = node_order[idx + 1] if idx + 1 < len(node_order) else None
             continue
@@ -642,19 +647,31 @@ def _eval_base_stem_match(
             if report:
                 report.add(
                     "WARNING", node_name, image_path,
-                    f"Stem {base_stem!r} matches {len(matches)} files "
-                    f"(limit {effective_limit}) — base stem is not unique enough",
+                    _(
+                        "Stem {0!r} matches {1} files "
+                        "(limit {2}) — base stem is not unique enough"
+                    ).format(
+                        base_stem,
+                        len(matches),
+                        effective_limit,
+                    ),
                     data={"base_stem": base_stem, "match_count": len(matches)},
                 )
         return overflow, None
 
     if report and len(matches) > 1:
+        detail = _(
+            "{0} files share base stem {1!r} in the search location"
+        ).format(len(matches), base_stem)
+        if condition.suffix_filter:
+            detail += _(" (suffix filter: {0})").format(
+                condition.suffix_filter
+            )
         report.add(
             "NOTABLE",
             node_name,
             image_path,
-            f"{len(matches)} files share base stem {base_stem!r} in the search location"
-            + (f" (suffix filter: {condition.suffix_filter})" if condition.suffix_filter else ""),
+            detail,
             data={"matches": matches, "base_stem": base_stem},
         )
     found = bool(matches)
@@ -713,7 +730,9 @@ def _eval_unknown_suffix(
         if report:
             report.add(
                 "NOTABLE", node_name, image_path,
-                f"Unrecognised suffix in stem group: {os.path.basename(f)!r}",
+                _("Unrecognised suffix in stem group: {0!r}").format(
+                    os.path.basename(f)
+                ),
                 data={"unknown_file": f, "base_stem": base_stem},
             )
 
@@ -726,10 +745,17 @@ def _eval_unknown_suffix(
 
         if not resolved:
             if report:
+                suffix = (
+                    _(" — classifier inconclusive")
+                    if condition.classifier_name
+                    else ""
+                )
                 report.add(
                     "WARNING", node_name, image_path,
-                    f"Cannot determine category of {os.path.basename(f)!r}"
-                    + (" — classifier inconclusive" if condition.classifier_name else ""),
+                    _("Cannot determine category of {0!r}{1}").format(
+                        os.path.basename(f),
+                        suffix,
+                    ),
                     data={"unknown_file": f, "base_stem": base_stem},
                 )
             has_unresolvable = True
@@ -762,8 +788,14 @@ def _infer_category_from_file(
             if report:
                 report.add(
                     "INFO", node_name, image_path,
-                    f"{os.path.basename(file_path)!r} inferred as {category!r} "
-                    f"(confidence {score:.0%}) — treated as resolved",
+                    _(
+                        "{0!r} inferred as {1} "
+                        "(confidence {2}) — treated as resolved"
+                    ).format(
+                        os.path.basename(file_path),
+                        category,
+                        f"{score:.0%}",
+                    ),
                     data={"unknown_file": file_path, "inferred_category": category, "score": score},
                 )
             return True
@@ -915,7 +947,7 @@ def _dispatch_action(
             base_message=base_message, action_type=ActionType.SYSTEM, is_manual=False,
         )
 
-    elif action_type in (ClassifierActionType.MOVE, ClassifierActionType.COPY):
+    elif action_type.requires_target_directory():
         target_directory = action_modifier or base_directory
         if not target_directory:
             logger.error(

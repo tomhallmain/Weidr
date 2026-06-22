@@ -342,6 +342,32 @@ class TestNodeOutcome:
         o = NodeOutcome(OutcomeType.GOTO, target_node="node_b")
         assert "node_b" in o.summary()
 
+    def test_display_summary_uses_translations(self):
+        o = NodeOutcome(
+            OutcomeType.EXECUTE_AND_CONTINUE,
+            action_type=ClassifierActionType.GENERATE,
+            action_modifier="_apple",
+        )
+        text = o.display_summary()
+        assert OutcomeType.EXECUTE_AND_CONTINUE.display() in text
+        assert ClassifierActionType.GENERATE.get_translation() in text
+        assert "_apple" in text
+        assert "EXECUTE_AND_CONTINUE" not in text
+        assert "GENERATE" not in text
+
+
+class TestOutcomeTypeDisplay:
+    def test_display_values_are_translated_strings(self):
+        displays = OutcomeType.display_values()
+        assert len(displays) == len(OutcomeType)
+        assert "EXECUTE_AND_CONTINUE" not in displays
+
+    def test_get_by_value_name_or_display(self):
+        ot = OutcomeType.EXECUTE_AND_CONTINUE
+        assert OutcomeType.get(ot.value) is ot
+        assert OutcomeType.get(ot.name) is ot
+        assert OutcomeType.get(ot.display()) is ot
+
 
 # ---------------------------------------------------------------------------
 # PipelineNode round-trip
@@ -989,7 +1015,7 @@ class TestFlowPreview:
                                             action_modifier="/out")),
         )
         preview = p.flow_preview()
-        assert "MOVE" in preview
+        assert ClassifierActionType.MOVE.get_translation() in preview
         assert "/out" in preview
 
     def test_preview_shows_default_action(self):
@@ -999,7 +1025,7 @@ class TestFlowPreview:
             default_action=ClassifierActionType.NOTIFY,
         )
         preview = p.flow_preview()
-        assert "NOTIFY" in preview
+        assert ClassifierActionType.NOTIFY.get_translation() in preview
 
 
 # ---------------------------------------------------------------------------

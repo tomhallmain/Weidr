@@ -202,6 +202,12 @@ class TestClassifierActionType:
         assert ClassifierActionType.COPY.is_cache_type() is False
         assert ClassifierActionType.DELETE.is_cache_type() is False
 
+    def test_requires_target_directory(self):
+        assert ClassifierActionType.MOVE.requires_target_directory() is True
+        assert ClassifierActionType.COPY.requires_target_directory() is True
+        assert ClassifierActionType.GENERATE.requires_target_directory() is False
+        assert ClassifierActionType.HIDE.requires_target_directory() is False
+
     def test_get_translation_non_empty_for_all(self):
         for action in ClassifierActionType:
             t = action.get_translation()

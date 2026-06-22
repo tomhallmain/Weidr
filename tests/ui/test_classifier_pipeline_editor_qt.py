@@ -849,8 +849,8 @@ class TestEditorFlush:
         pipeline.nodes[0].on_no_match = NodeOutcome(OutcomeType.REJECT)
         dlg = _open_dialog(qtbot, pipeline)
         dlg._node_list.setCurrentRow(0)
-        assert dlg._on_match_editor._type_combo.currentText() == OutcomeType.EXECUTE.value
-        assert dlg._on_no_match_editor._type_combo.currentText() == OutcomeType.REJECT.value
+        assert dlg._on_match_editor._type_combo.currentData() == OutcomeType.EXECUTE
+        assert dlg._on_no_match_editor._type_combo.currentData() == OutcomeType.REJECT
 
 
 # ---------------------------------------------------------------------------
@@ -952,7 +952,7 @@ class TestEditorSave:
     def test_save_default_action_persisted(self, qtbot, isolated_singletons):
         dlg = _open_dialog(qtbot)
         dlg._name_edit.setText("action_test")
-        dlg._default_action_combo.setCurrentText(ClassifierActionType.NOTIFY.value)
+        dlg._default_action_combo.setCurrentText(ClassifierActionType.NOTIFY.get_translation())
         dlg._save()
         result = ClassifierPipelines.get_pipeline_by_name("action_test")
         assert result.default_action == ClassifierActionType.NOTIFY

@@ -553,6 +553,10 @@ class ClassifierActionType(Enum):
             or self == ClassifierActionType.SKIP or self == ClassifierActionType.ADD_MARK
             or self == ClassifierActionType.BLUR or self == ClassifierActionType.GENERATE)
 
+    def requires_target_directory(self) -> bool:
+        """True for MOVE and COPY — actions that need a target directory modifier."""
+        return self in (ClassifierActionType.MOVE, ClassifierActionType.COPY)
+
     def get_translation(self):
         if self == ClassifierActionType.HIDE:
             return _("Hide")

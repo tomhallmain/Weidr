@@ -88,8 +88,6 @@ _SUB_CONDITION_ENTRIES = [(k, v) for k, v in _CONDITION_ENTRIES if k not in _FLA
 _SUB_CONDITION_TYPES   = [k for k, _ in _SUB_CONDITION_ENTRIES]
 _SUB_CONDITION_LABELS  = [v for _, v in _SUB_CONDITION_ENTRIES]
 
-_ACTION_OPTIONS = [_("(none)")] + [at.value for at in ClassifierActionType]
-_OUTCOME_OPTIONS = [ot.value for ot in OutcomeType]
 _FG = AppStyle.FG_COLOR
 _BG = AppStyle.BG_COLOR
 
@@ -115,6 +113,45 @@ def _action_from_text(text: str) -> Optional[ClassifierActionType]:
     if not text or text == _("(none)"):
         return None
     return ClassifierActionType.get_action(text)
+
+
+def _fill_outcome_combo(combo: QComboBox) -> None:
+    combo.clear()
+    for ot in OutcomeType:
+        combo.addItem(ot.display(), ot)
+
+
+def _fill_action_combo(combo: QComboBox) -> None:
+    combo.clear()
+    for at in ClassifierActionType:
+        combo.addItem(at.get_translation(), at)
+
+
+def _fill_default_action_combo(combo: QComboBox) -> None:
+    combo.clear()
+    combo.addItem(_("(none)"), None)
+    for at in ClassifierActionType:
+        combo.addItem(at.get_translation(), at)
+
+
+def _combo_set_data(combo: QComboBox, value) -> None:
+    idx = combo.findData(value)
+    if idx >= 0:
+        combo.setCurrentIndex(idx)
+
+
+def _outcome_from_combo(combo: QComboBox) -> OutcomeType:
+    data = combo.currentData()
+    if isinstance(data, OutcomeType):
+        return data
+    return OutcomeType.get(combo.currentText())
+
+
+def _action_from_combo(combo: QComboBox) -> ClassifierActionType:
+    data = combo.currentData()
+    if isinstance(data, ClassifierActionType):
+        return data
+    return ClassifierActionType.get_action(combo.currentText())
 
 
 def _trunc(s: str, n: int = 30) -> str:
@@ -1409,7 +1446,7 @@ class _OutcomeEditorWidget(QGroupBox):
         type_row = QHBoxLayout()
         type_row.addWidget(_label(_("Outcome:")))
         self._type_combo = QComboBox()
-        self._type_combo.addItems(_OUTCOME_OPTIONS)
+        _fill_outcome_combo(self._type_combo)
         self._type_combo.currentIndexChanged.connect(self._on_type_changed)
         type_row.addWidget(self._type_combo, 1)
         layout.addLayout(type_row)
@@ -1427,7 +1464,7 @@ class _OutcomeEditorWidget(QGroupBox):
         action_row = QHBoxLayout()
         action_row.addWidget(_label(_("Action:")))
         self._action_combo = QComboBox()
-        self._action_combo.addItems([at.value for at in ClassifierActionType])
+        _fill_action_combo(self._action_combo)
         self._action_combo.currentIndexChanged.connect(self._on_action_changed)
         action_row.addWidget(self._action_combo, 1)
         self._exec_row.addLayout(action_row)
@@ -1457,8 +1494,8 @@ class _OutcomeEditorWidget(QGroupBox):
         self._on_changed()
 
     def _on_action_changed(self, _: int) -> None:
-        action_val = self._action_combo.currentText()
-        needs_dir = action_val in (ClassifierActionType.MOVE.value, ClassifierActionType.COPY.value)
+        action = self._action_combo.currentData()
+        needs_dir = isinstance(action, ClassifierActionType) and action.requires_target_directory()
         for i in range(self._modifier_row.count()):
             item = self._modifier_row.itemAt(i)
             if item and item.widget():
@@ -1467,9 +1504,12 @@ class _OutcomeEditorWidget(QGroupBox):
 
     def _update_dependent_visibility(self, outcome_val: str) -> None:
         try:
-            ot = OutcomeType(outcome_val)
+            ot = _outcome_from_combo(self._type_combo)
         except ValueError:
-            return
+            try:
+                ot = OutcomeType(outcome_val)
+            except ValueError:
+                return
         self._set_layout_visible(self._goto_row, ot.requires_target_node)
         self._set_layout_visible(self._exec_row, ot.requires_action)
         if ot.requires_action:
@@ -1500,34 +1540,30 @@ class _OutcomeEditorWidget(QGroupBox):
     def load(self, outcome: NodeOutcome, later_nodes: list) -> None:
         self.set_later_nodes(later_nodes)
         ot = outcome.outcome_type
-        val = ot.value if isinstance(ot, OutcomeType) else str(ot)
-        idx = self._type_combo.findText(val)
-        if idx >= 0:
-            self._type_combo.setCurrentIndex(idx)
+        if not isinstance(ot, OutcomeType):
+            ot = OutcomeType(ot)
+        _combo_set_data(self._type_combo, ot)
         if ot.requires_target_node and outcome.target_node:
             idx2 = self._goto_combo.findText(outcome.target_node)
             if idx2 >= 0:
                 self._goto_combo.setCurrentIndex(idx2)
         if ot.requires_action:
             if outcome.action_type:
-                idx3 = self._action_combo.findText(outcome.action_type.value)
-                if idx3 >= 0:
-                    self._action_combo.setCurrentIndex(idx3)
+                _combo_set_data(self._action_combo, outcome.action_type)
             self._modifier_edit.setText(outcome.action_modifier or "")
+        self._update_dependent_visibility(self._type_combo.currentText())
 
     def get_outcome(self) -> NodeOutcome:
-        ot_val = self._type_combo.currentText()
-        ot = OutcomeType(ot_val)
+        ot = _outcome_from_combo(self._type_combo)
         if ot.requires_target_node:
             return NodeOutcome(
                 outcome_type=ot,
                 target_node=self._goto_combo.currentText(),
             )
         if ot.requires_action:
-            action_val = self._action_combo.currentText()
             return NodeOutcome(
                 outcome_type=ot,
-                action_type=ClassifierActionType.get_action(action_val),
+                action_type=_action_from_combo(self._action_combo),
                 action_modifier=self._modifier_edit.text().strip() or None,
             )
         return NodeOutcome(outcome_type=ot)
@@ -1661,15 +1697,15 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         form.addRow(self._profile_lbl, self._profile_combo)
 
         self._default_action_combo = QComboBox()
-        self._default_action_combo.addItems(_ACTION_OPTIONS)
+        _fill_default_action_combo(self._default_action_combo)
         if p.default_action:
-            self._default_action_combo.setCurrentText(p.default_action.value)
+            _combo_set_data(self._default_action_combo, p.default_action)
         form.addRow(_("Default action:"), self._default_action_combo)
 
         self._default_reject_combo = QComboBox()
-        self._default_reject_combo.addItems(_ACTION_OPTIONS)
+        _fill_default_action_combo(self._default_reject_combo)
         if p.default_reject_action:
-            self._default_reject_combo.setCurrentText(p.default_reject_action.value)
+            _combo_set_data(self._default_reject_combo, p.default_reject_action)
         form.addRow(_("Default reject action:"), self._default_reject_combo)
 
         self._gen_type_combo = QComboBox()
@@ -1872,18 +1908,10 @@ class ClassifierPipelineEditorDialog(SmartDialog):
 
     def _node_label(self, node: PipelineNode) -> str:
         ctype = getattr(node.condition, "condition_type", "?")
-        match_summary = (
-            node.on_match.outcome_type.value
-            if isinstance(node.on_match.outcome_type, OutcomeType)
-            else str(node.on_match.outcome_type)
-        )
-        no_match_summary = (
-            node.on_no_match.outcome_type.value
-            if isinstance(node.on_no_match.outcome_type, OutcomeType)
-            else str(node.on_no_match.outcome_type)
-        )
+        match_summary = node.on_match.display_summary()
+        no_match_summary = node.on_no_match.display_summary()
         label = f"{node.name}  [{ctype}]  ✓{match_summary} / ✗{no_match_summary}"
-        return f"[disabled]  {label}" if not node.enabled else label
+        return f"[{_('disabled')}]  {label}" if not node.enabled else label
 
     def _on_selection_changed(self) -> None:
         if self._node_editor_widget is None:
@@ -2196,7 +2224,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
 
                 name_text = _trunc(node.name, 34)
                 if disabled:
-                    name_text = f"[disabled]  {name_text}"
+                    name_text = f"[{_('disabled')}]  {name_text}"
                 name_item = scene.addText(name_text)
                 name_item.setFont(bold_font)
                 name_item.setDefaultTextColor(text_col)
@@ -2222,7 +2250,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
 
                 name_text = _trunc(node.name, 34)
                 if disabled:
-                    name_text = f"[disabled]  {name_text}"
+                    name_text = f"[{_('disabled')}]  {name_text}"
                 name_item = scene.addText(name_text)
                 name_item.setFont(bold_font)
                 name_item.setDefaultTextColor(text_col)
@@ -2236,12 +2264,12 @@ class ClassifierPipelineEditorDialog(SmartDialog):
             # Outcome labels stacked at the bottom of every node (full width each)
             m_col  = QColor("#3a6e3a") if disabled else green
             nm_col = QColor("#7a3a3a") if disabled else red
-            m_item = scene.addText("✓ " + _trunc(node.on_match.summary(), 44))
+            m_item = scene.addText("✓ " + _trunc(node.on_match.display_summary(), 44))
             m_item.setFont(small_font)
             m_item.setDefaultTextColor(m_col)
             m_item.setPos(nx + 4, ny + nh - 36)
 
-            nm_item = scene.addText("✗ " + _trunc(node.on_no_match.summary(), 44))
+            nm_item = scene.addText("✗ " + _trunc(node.on_no_match.display_summary(), 44))
             nm_item.setFont(small_font)
             nm_item.setDefaultTextColor(nm_col)
             nm_item.setPos(nx + 4, ny + nh - 18)
@@ -2346,8 +2374,8 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         final.name = name
         final.description = self._desc_edit.toPlainText().strip()
         final.is_active = self._active_cb.isChecked()
-        final.default_action = _action_from_text(self._default_action_combo.currentText())
-        final.default_reject_action = _action_from_text(self._default_reject_combo.currentText())
+        final.default_action = self._default_action_combo.currentData()
+        final.default_reject_action = self._default_reject_combo.currentData()
         final.generation_type = self._gen_type_combo.currentData()
         final.category_map = self._category_map_editor.get_items()
 

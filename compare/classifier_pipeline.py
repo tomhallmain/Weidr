@@ -568,6 +568,33 @@ class OutcomeType(str, Enum):
     ACCEPT               = "ACCEPT"                # halt with no action (explicit pass)
     REJECT               = "REJECT"                # halt with pipeline's default_reject_action
 
+    def display(self) -> str:
+        return {
+            OutcomeType.CONTINUE: _("Continue"),
+            OutcomeType.GOTO: _("Go to node"),
+            OutcomeType.EXECUTE: _("Execute action"),
+            OutcomeType.EXECUTE_AND_CONTINUE: _("Execute and continue"),
+            OutcomeType.ACCEPT: _("Accept"),
+            OutcomeType.REJECT: _("Reject"),
+        }[self]
+
+    @classmethod
+    def display_values(cls) -> list[str]:
+        return [item.display() for item in cls]
+
+    @staticmethod
+    def get(name) -> "OutcomeType":
+        if isinstance(name, OutcomeType):
+            return name
+        for member in OutcomeType:
+            if (
+                name == member.name
+                or name == member.value
+                or name == member.display()
+            ):
+                return member
+        raise ValueError(f"Not a valid outcome type: {name!r}")
+
     @property
     def requires_action(self) -> bool:
         """True for outcome types that require an action_type to be specified."""
@@ -609,6 +636,18 @@ class NodeOutcome:
         if self.outcome_type.requires_target_node:
             return f"GOTO: {self.target_node}"
         return self.outcome_type.value
+
+    def display_summary(self) -> str:
+        """User-facing outcome label for UI previews and list cells."""
+        if self.outcome_type.requires_action:
+            action = self.action_type.get_translation() if self.action_type else "?"
+            base = f"{self.outcome_type.display()}: {action}"
+            if self.action_modifier:
+                base += f" → {self.action_modifier}"
+            return base
+        if self.outcome_type.requires_target_node:
+            return f"{self.outcome_type.display()}: {self.target_node}"
+        return self.outcome_type.display()
 
     @staticmethod
     def from_dict(d: dict) -> "NodeOutcome":
@@ -1018,9 +1057,11 @@ class ClassifierPipeline:
             else:
                 cond_label = _ABBREV.get(cond_type, cond_type)
             lines.append(f"{node.name} [{cond_label}]")
-            lines.append(f"  ✓ {node.on_match.summary()}  ✗ {node.on_no_match.summary()}")
+            lines.append(
+                f"  ✓ {node.on_match.display_summary()}  ✗ {node.on_no_match.display_summary()}"
+            )
         if self.default_action:
-            lines.append(f"(end) → {self.default_action.value}")
+            lines.append(f"(end) → {self.default_action.get_translation()}")
         return "\n".join(lines)
 
     def flow_preview(self) -> str:
@@ -1034,11 +1075,11 @@ class ClassifierPipeline:
                 for child in node.condition.nodes:
                     lines.append(f"  {'·'} {child.name}: {child.condition_summary()}")
                 lines.append(f"  ({op} of {len(node.condition.nodes)} children)")
-            lines.append(f"  ✓ → {node.on_match.summary()}")
-            lines.append(f"  ✗ → {node.on_no_match.summary()}")
+            lines.append(f"  ✓ → {node.on_match.display_summary()}")
+            lines.append(f"  ✗ → {node.on_no_match.display_summary()}")
             lines.append("")
         if self.default_action:
-            lines.append(f"(end) → {self.default_action.value}")
+            lines.append(f"(end) → {self.default_action.get_translation()}")
         return "\n".join(lines).rstrip()
 
     # ------------------------------------------------------------------

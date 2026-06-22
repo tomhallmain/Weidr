@@ -1307,7 +1307,7 @@ class TestPipelineRunReport:
                 directories=["/work"],
                 files_by_directory={"/work": 3},
                 files_evaluated=3,
-                action_counts={"Generate": 1, "(no action)": 2},
+                action_counts={"GENERATE": 1, "(no action)": 2},
             )
         )
         assert "test pipe" in text

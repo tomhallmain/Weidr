@@ -989,8 +989,9 @@ class TestDemoPipeline:
 
 class TestFlowPreview:
     def test_empty_pipeline(self):
+        from utils.translations import _
         p = ClassifierPipeline(name="empty")
-        assert "(no nodes)" in p.flow_preview()
+        assert _("(no nodes)") in p.flow_preview()
 
     def test_preview_contains_node_names(self):
         p = _simple_pipeline(
@@ -1078,6 +1079,76 @@ class TestSummaries:
     def test_pipeline_node_condition_summary(self):
         node = _make_node("n", EmbeddingCondition(["test"]))
         assert "Embedding" in node.condition_summary()
+
+    def test_condition_display_summaries_dont_crash(self):
+        from utils.constants import CompareMediaType
+        conditions = [
+            EmbeddingCondition(["x"], ["y"], 0.3),
+            ClassifierRankCondition("m", ["c"], 2, 3, 0.1),
+            PrototypeCondition("/a", "/b", 0.25),
+            PromptCondition(use_blacklist=True),
+            FilenameContainsCondition(["pat"], case_sensitive=True),
+            LookaheadCondition("lk"),
+            NodeResultCondition("prev", False),
+            CompositeCondition("OR", [EmbeddingCondition(), PromptCondition()]),
+            MediaTypeCondition([CompareMediaType.IMAGE, CompareMediaType.GIF]),
+            BaseStemMatchCondition(require_match=True, suffix_filter=["_apple"]),
+            UnknownSuffixCondition(expected_suffixes=["_apple"], use_base_directory=True),
+            RelatedImageCondition(edit_suffix="_edit", count_threshold=2),
+            GroupCondition(operator="AND", nodes=[
+                PipelineNode("c1", FilenameContainsCondition(["x"])),
+                PipelineNode("c2", EmbeddingCondition(["y"])),
+            ]),
+            GroupChildResultCondition(
+                group_node_name="grp", child_node_name="c1", expected_result=True
+            ),
+        ]
+        for c in conditions:
+            result = c.display_summary()
+            assert isinstance(result, str) and len(result) > 0
+
+    def test_display_summary_translates_pipeline_categories_token(self):
+        from utils.translations import _
+        c = ClassifierRankCondition(classifier_name="m", inherit_categories=True)
+        assert _("(pipeline categories)") in c.display_summary()
+        assert "(pipeline categories)" in c.summary()  # summary() keeps English literal
+
+    def test_display_summary_blacklist(self):
+        from utils.translations import _
+        c = PromptCondition(use_blacklist=True)
+        assert c.display_summary() == _("Blacklist")
+
+    def test_display_summary_case_sensitivity(self):
+        from utils.translations import _
+        cs = FilenameContainsCondition(["x"], case_sensitive=True)
+        ci = FilenameContainsCondition(["x"], case_sensitive=False)
+        assert _("case-sensitive") in cs.display_summary()
+        assert _("case-insensitive") in ci.display_summary()
+
+    def test_display_summary_composite_recurses(self):
+        c = CompositeCondition("AND", [EmbeddingCondition(["cat"]), PromptCondition()])
+        s = c.display_summary()
+        assert "AND" in s
+        # sub-conditions' display_summary() output should appear
+        assert "Embedding" in s or "cat" in s
+
+    def test_display_summary_base_stem_match_translates_mode(self):
+        from utils.translations import _
+        found = BaseStemMatchCondition(require_match=True)
+        not_found = BaseStemMatchCondition(require_match=False)
+        assert _("found") in found.display_summary()
+        assert _("not found") in not_found.display_summary()
+
+    def test_condition_summary_uses_display_summary(self):
+        from utils.translations import _
+        node = _make_node("n", EmbeddingCondition(["test"]))
+        assert _("Embedding") in node.condition_summary()
+
+    def test_condition_summary_no_condition(self):
+        from utils.translations import _
+        node = PipelineNode(name="n")
+        node.condition = None
+        assert node.condition_summary() == _("(no condition)")
 
 
 # ---------------------------------------------------------------------------

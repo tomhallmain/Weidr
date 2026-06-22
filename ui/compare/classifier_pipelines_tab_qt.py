@@ -377,11 +377,7 @@ class ClassifierPipelinesTab(QWidget):
                             base_directory=directory, report=report,
                         )
                         total += 1
-                        key = (
-                            result.get_translation()
-                            if isinstance(result, ClassifierActionType)
-                            else (str(result) if result else _("(no action)"))
-                        )
+                        key = result.value if isinstance(result, ClassifierActionType) else "(no action)"
                         actions[key] = actions.get(key, 0) + 1
                     except Exception:
                         errors += 1

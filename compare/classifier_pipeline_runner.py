@@ -648,7 +648,7 @@ def _eval_base_stem_match(
                 report.add(
                     "WARNING", node_name, image_path,
                     _(
-                        "Stem {0!r} matches {1} files "
+                        "Stem {0} matches {1} files "
                         "(limit {2}) — base stem is not unique enough"
                     ).format(
                         base_stem,
@@ -661,7 +661,7 @@ def _eval_base_stem_match(
 
     if report and len(matches) > 1:
         detail = _(
-            "{0} files share base stem {1!r} in the search location"
+            "{0} files share base stem {1} in the search location"
         ).format(len(matches), base_stem)
         if condition.suffix_filter:
             detail += _(" (suffix filter: {0})").format(
@@ -730,7 +730,7 @@ def _eval_unknown_suffix(
         if report:
             report.add(
                 "NOTABLE", node_name, image_path,
-                _("Unrecognised suffix in stem group: {0!r}").format(
+                _("Unrecognised suffix in stem group: {0}").format(
                     os.path.basename(f)
                 ),
                 data={"unknown_file": f, "base_stem": base_stem},
@@ -752,7 +752,7 @@ def _eval_unknown_suffix(
                 )
                 report.add(
                     "WARNING", node_name, image_path,
-                    _("Cannot determine category of {0!r}{1}").format(
+                    _("Cannot determine category of {0}{1}").format(
                         os.path.basename(f),
                         suffix,
                     ),
@@ -789,7 +789,7 @@ def _infer_category_from_file(
                 report.add(
                     "INFO", node_name, image_path,
                     _(
-                        "{0!r} inferred as {1} "
+                        "{0} inferred as {1} "
                         "(confidence {2}) — treated as resolved"
                     ).format(
                         os.path.basename(file_path),

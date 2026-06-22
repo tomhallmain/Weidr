@@ -116,7 +116,7 @@ class TestFlowSummary:
         )
         p.nodes = [node]
         summary = p.flow_summary()
-        assert "NOTIFY" in summary or "Notify" in summary or "notify" in summary.lower()
+        assert ClassifierActionType.NOTIFY.get_translation() in summary
 
 
 # ---------------------------------------------------------------------------

@@ -640,7 +640,7 @@ class TestOutcomeEditorWidget:
                         action_type=ClassifierActionType.GENERATE),
             [],
         )
-        assert w._action_combo.isVisible()
+        assert not w._action_combo.isHidden()
 
     def test_set_later_nodes_updates_goto_combo(self, qtbot):
         w = _OutcomeEditorWidget("On match:")

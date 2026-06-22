@@ -57,6 +57,10 @@ class EmbeddingCondition:
         pos = ", ".join(self.positives) if self.positives else "(none)"
         return f"Embedding(+[{pos}], thresh={self.threshold})"
 
+    def display_summary(self) -> str:
+        pos = ", ".join(self.positives) if self.positives else _("(none)")
+        return _("Embedding") + f"(+[{pos}], thresh={self.threshold})"
+
 
 @dataclass
 class ClassifierRankCondition:
@@ -96,6 +100,18 @@ class ClassifierRankCondition:
         rank = f"rank {self.min_rank}" if self.min_rank == self.max_rank else f"rank {self.min_rank}-{self.max_rank}"
         return f"ClassifierRank({self.classifier_name}, [{cats}], {rank})"
 
+    def display_summary(self) -> str:
+        if self.inherit_categories and not self.categories:
+            cats = _("(pipeline categories)")
+        else:
+            cats = ", ".join(self.categories) if self.categories else _("(none)")
+        rank = (
+            _("rank {0}").format(self.min_rank)
+            if self.min_rank == self.max_rank
+            else _("rank {0}-{1}").format(self.min_rank, self.max_rank)
+        )
+        return _("ClsRank") + f"({self.classifier_name}, [{cats}], {rank})"
+
 
 @dataclass
 class PrototypeCondition:
@@ -118,6 +134,9 @@ class PrototypeCondition:
 
     def summary(self) -> str:
         return f"Prototype(thresh={self.threshold})"
+
+    def display_summary(self) -> str:
+        return _("Prototype") + f"(thresh={self.threshold})"
 
 
 @dataclass
@@ -144,6 +163,12 @@ class PromptCondition:
         terms = ", ".join(self.prompts) if self.prompts else "(none)"
         return f"Prompts([{terms}])"
 
+    def display_summary(self) -> str:
+        if self.use_blacklist:
+            return _("Blacklist")
+        terms = ", ".join(self.prompts) if self.prompts else _("(none)")
+        return _("Prompts") + f"([{terms}])"
+
 
 @dataclass
 class FilenameContainsCondition:
@@ -167,6 +192,11 @@ class FilenameContainsCondition:
         terms = ", ".join(self.patterns) if self.patterns else "(none)"
         cs = "cs" if self.case_sensitive else "ci"
         return f"FilenameContains([{terms}], {cs})"
+
+    def display_summary(self) -> str:
+        terms = ", ".join(self.patterns) if self.patterns else _("(none)")
+        cs = _("case-sensitive") if self.case_sensitive else _("case-insensitive")
+        return _("FilenameContains") + f"([{terms}], {cs})"
 
 
 @dataclass
@@ -193,6 +223,10 @@ class MediaTypeCondition:
         names = ", ".join(mt.value for mt in self.media_types) if self.media_types else "(none)"
         return f"MediaType([{names}])"
 
+    def display_summary(self) -> str:
+        names = ", ".join(mt.get_translation() for mt in self.media_types) if self.media_types else _("(none)")
+        return _("MediaType") + f"([{names}])"
+
 
 @dataclass
 class LookaheadCondition:
@@ -209,6 +243,9 @@ class LookaheadCondition:
 
     def summary(self) -> str:
         return f"Lookahead({self.lookahead_name})"
+
+    def display_summary(self) -> str:
+        return _("Lookahead: {0}").format(self.lookahead_name)
 
 
 @dataclass
@@ -229,6 +266,10 @@ class NodeResultCondition:
     def summary(self) -> str:
         val = "True" if self.expected_result else "False"
         return f"NodeResult({self.node_name}={val})"
+
+    def display_summary(self) -> str:
+        val = _("yes") if self.expected_result else _("no")
+        return _("NodeResult") + f"({self.node_name}={val})"
 
 
 @dataclass
@@ -253,6 +294,10 @@ class CompositeCondition:
     def summary(self) -> str:
         parts = " | ".join(c.summary() for c in self.sub_conditions)
         return f"Composite({self.operator}: {parts})"
+
+    def display_summary(self) -> str:
+        parts = " | ".join(c.display_summary() for c in self.sub_conditions)
+        return _("Composite") + f"({self.operator}: {parts})"
 
 
 @dataclass
@@ -295,6 +340,18 @@ class BaseStemMatchCondition:
         if self.search_directory:
             return f"BaseStemMatch(dir={self.search_directory!r}, require={mode})"
         return f"BaseStemMatch(require={mode})"
+
+    def display_summary(self) -> str:
+        if self.max_stem_group_size > 0:
+            scope = f"dir={self.search_directory}, " if self.search_directory else ""
+            return _("BaseStemMatch") + f"({scope}max={self.max_stem_group_size})"
+        mode = _("found") if self.require_match else _("not found")
+        if self.suffix_filter:
+            joined = ", ".join(self.suffix_filter)
+            return _("BaseStemMatch") + f"(suffix=[{joined}], require={mode})"
+        if self.search_directory:
+            return _("BaseStemMatch") + f"(dir={self.search_directory}, require={mode})"
+        return _("BaseStemMatch") + f"(require={mode})"
 
 
 @dataclass
@@ -355,6 +412,17 @@ class UnknownSuffixCondition:
             scope = ""
         return f"UnknownSuffix(expected=[{suffixes}]{infer}{scope})"
 
+    def display_summary(self) -> str:
+        suffixes = ", ".join(self.expected_suffixes) if self.expected_suffixes else _("(none)")
+        parts = [f"expected=[{suffixes}]"]
+        if self.classifier_name:
+            parts.append(f"infer={self.classifier_name}")
+        if self.search_directory:
+            parts.append(f"dir={self.search_directory}")
+        elif self.use_base_directory:
+            parts.append("dir=base")
+        return _("UnknownSuffix") + "(" + ", ".join(parts) + ")"
+
 
 @dataclass
 class RelatedImageCondition:
@@ -384,6 +452,14 @@ class RelatedImageCondition:
         if not self.use_configured_search_directories:
             return suffix_part + ", dir=base)"
         return suffix_part + ")"
+
+    def display_summary(self) -> str:
+        parts = [f"suffix={self.edit_suffix}", f"threshold={self.count_threshold}"]
+        if self.search_directory:
+            parts.append(f"dir={self.search_directory}")
+        elif not self.use_configured_search_directories:
+            parts.append("dir=base")
+        return _("RelatedImage") + "(" + ", ".join(parts) + ")"
 
 
 @dataclass
@@ -420,6 +496,12 @@ class GroupCondition:
         suffix = f", +{n - 3}" if n > 3 else ""
         return f"Group({self.operator}: {names}{suffix})"
 
+    def display_summary(self) -> str:
+        n = len(self.nodes)
+        names = ", ".join(c.name for c in self.nodes[:3])
+        extra = _(" +{0}").format(n - 3) if n > 3 else ""
+        return _("Group({0}: {1}{2})").format(self.operator, names, extra)
+
 
 @dataclass
 class GroupChildResultCondition:
@@ -446,6 +528,10 @@ class GroupChildResultCondition:
     def summary(self) -> str:
         val = "True" if self.expected_result else "False"
         return f"GroupChild({self.group_node_name}/{self.child_node_name}={val})"
+
+    def display_summary(self) -> str:
+        val = _("yes") if self.expected_result else _("no")
+        return _("GroupChild") + f"({self.group_node_name}/{self.child_node_name}={val})"
 
 
 # Union type alias (informational only — Python does not enforce it at runtime)
@@ -640,13 +726,13 @@ class NodeOutcome:
     def display_summary(self) -> str:
         """User-facing outcome label for UI previews and list cells."""
         if self.outcome_type.requires_action:
-            action = self.action_type.get_translation() if self.action_type else "?"
-            base = f"{self.outcome_type.display()}: {action}"
+            action = self.action_type.get_translation() if self.action_type else _("(unknown)")
+            base = _("{0}: {1}").format(self.outcome_type.display(), action)
             if self.action_modifier:
-                base += f" → {self.action_modifier}"
+                base += _(" → {0}").format(self.action_modifier)
             return base
         if self.outcome_type.requires_target_node:
-            return f"{self.outcome_type.display()}: {self.target_node}"
+            return _("{0}: {1}").format(self.outcome_type.display(), self.target_node)
         return self.outcome_type.display()
 
     @staticmethod
@@ -709,7 +795,9 @@ class PipelineNode:
         )
 
     def condition_summary(self) -> str:
-        return self.condition.summary() if self.condition else "(no condition)"
+        if not self.condition:
+            return _("(no condition)")
+        return self.condition.display_summary()
 
 
 # ---------------------------------------------------------------------------
@@ -776,15 +864,15 @@ class ClassifierPipeline:
         """
         errors: list[str] = []
         if not self.name.strip():
-            errors.append("Pipeline name is empty.")
+            errors.append(_("Pipeline name is empty."))
 
         node_names: list[str] = []
         seen_names: set[str] = set()
         for node in self.nodes:
             if not node.name.strip():
-                errors.append("A node has an empty name.")
+                errors.append(_("A node has an empty name."))
             elif node.name in seen_names:
-                errors.append(f"Duplicate node name: {node.name!r}.")
+                errors.append(_("Duplicate node name: {0}.").format(node.name))
             else:
                 seen_names.add(node.name)
             node_names.append(node.name)
@@ -797,21 +885,26 @@ class ClassifierPipeline:
             for outcome in (node.on_match, node.on_no_match):
                 if outcome.outcome_type == OutcomeType.GOTO:
                     if not outcome.target_node:
-                        errors.append(f"Node {node.name!r}: GOTO has no target.")
+                        errors.append(_("Node {0}: GOTO has no target.").format(node.name))
                     elif outcome.target_node not in all_names:
                         errors.append(
-                            f"Node {node.name!r}: GOTO target {outcome.target_node!r} does not exist."
+                            _("Node {0}: GOTO target {1} does not exist.").format(
+                                node.name, outcome.target_node
+                            )
                         )
                     else:
                         target_idx = node_names.index(outcome.target_node)
                         if target_idx <= i:
                             errors.append(
-                                f"Node {node.name!r}: GOTO target {outcome.target_node!r} "
-                                f"must be a later node (cycle prevention)."
+                                _("Node {0}: GOTO target {1} must be a later node (cycle prevention).").format(
+                                    node.name, outcome.target_node
+                                )
                             )
                 if outcome.outcome_type.requires_action and outcome.action_type is None:
                     errors.append(
-                        f"Node {node.name!r}: {outcome.outcome_type.value} outcome has no action_type."
+                        _("Node {0}: {1} outcome has no action_type.").format(
+                            node.name, outcome.outcome_type.display()
+                        )
                     )
 
             errors.extend(
@@ -825,9 +918,9 @@ class ClassifierPipeline:
                             and outcome.action_type == ClassifierActionType.GENERATE
                             and outcome.action_modifier != node.condition.edit_suffix):
                         errors.append(
-                            f"Node {node.name!r}: RelatedImageCondition.edit_suffix "
-                            f"({node.condition.edit_suffix!r}) must match the GENERATE "
-                            f"outcome's action_modifier ({outcome.action_modifier!r})."
+                            _("Node {0}: RelatedImageCondition.edit_suffix ({1}) must match the GENERATE outcome's action_modifier ({2}).").format(
+                                node.name, node.condition.edit_suffix, outcome.action_modifier
+                            )
                         )
 
         return errors
@@ -838,17 +931,18 @@ class ClassifierPipeline:
 
         if isinstance(condition, NodeResultCondition):
             if not condition.node_name:
-                errors.append(f"Node {node_name!r}: NodeResultCondition has no node_name.")
+                errors.append(_("Node {0}: NodeResultCondition has no node_name.").format(node_name))
             elif condition.node_name not in defined_before:
                 errors.append(
-                    f"Node {node_name!r}: NodeResultCondition references "
-                    f"{condition.node_name!r} which is not a prior node."
+                    _("Node {0}: NodeResultCondition references {1} which is not a prior node.").format(
+                        node_name, condition.node_name
+                    )
                 )
 
         elif isinstance(condition, ClassifierRankCondition):
             if not condition.classifier_name:
                 errors.append(
-                    f"Node {node_name!r}: ClassifierRankCondition has no classifier_name."
+                    _("Node {0}: ClassifierRankCondition has no classifier_name.").format(node_name)
                 )
             else:
                 try:
@@ -856,38 +950,40 @@ class ClassifierPipeline:
                     names = image_classifier_manager.get_model_names()
                     if names and condition.classifier_name not in names:
                         errors.append(
-                            f"Node {node_name!r}: classifier {condition.classifier_name!r} "
-                            f"is not registered."
+                            _("Node {0}: classifier {1} is not registered.").format(
+                                node_name, condition.classifier_name
+                            )
                         )
                 except Exception:
                     pass  # manager not available during unit tests — skip
             if condition.min_rank < 1:
-                errors.append(f"Node {node_name!r}: min_rank must be ≥ 1.")
+                errors.append(_("Node {0}: min_rank must be ≥ 1.").format(node_name))
             if condition.max_rank < condition.min_rank:
-                errors.append(f"Node {node_name!r}: max_rank must be ≥ min_rank.")
+                errors.append(_("Node {0}: max_rank must be ≥ min_rank.").format(node_name))
 
         elif isinstance(condition, FilenameContainsCondition):
             if not condition.patterns:
                 errors.append(
-                    f"Node {node_name!r}: FilenameContainsCondition has no patterns."
+                    _("Node {0}: FilenameContainsCondition has no patterns.").format(node_name)
                 )
 
         elif isinstance(condition, MediaTypeCondition):
             if not condition.media_types:
                 errors.append(
-                    f"Node {node_name!r}: MediaTypeCondition has no media_types."
+                    _("Node {0}: MediaTypeCondition has no media_types.").format(node_name)
                 )
 
         elif isinstance(condition, LookaheadCondition):
             if not condition.lookahead_name:
-                errors.append(f"Node {node_name!r}: LookaheadCondition has no lookahead_name.")
+                errors.append(_("Node {0}: LookaheadCondition has no lookahead_name.").format(node_name))
             else:
                 try:
                     from compare.lookahead import Lookahead
                     if Lookahead.get_lookahead_by_name(condition.lookahead_name) is None:
                         errors.append(
-                            f"Node {node_name!r}: lookahead {condition.lookahead_name!r} "
-                            f"is not defined."
+                            _("Node {0}: lookahead {1} is not defined.").format(
+                                node_name, condition.lookahead_name
+                            )
                         )
                 except Exception:
                     pass
@@ -895,43 +991,48 @@ class ClassifierPipeline:
         elif isinstance(condition, BaseStemMatchCondition):
             if condition.search_directory and not os.path.isdir(condition.search_directory):
                 errors.append(
-                    f"Node {node_name!r}: BaseStemMatchCondition.search_directory "
-                    f"({condition.search_directory!r}) is not a valid directory."
+                    _("Node {0}: BaseStemMatchCondition.search_directory ({1}) is not a valid directory.").format(
+                        node_name, condition.search_directory
+                    )
                 )
 
         elif isinstance(condition, UnknownSuffixCondition):
             if condition.search_directory and not os.path.isdir(condition.search_directory):
                 errors.append(
-                    f"Node {node_name!r}: UnknownSuffixCondition.search_directory "
-                    f"({condition.search_directory!r}) is not a valid directory."
+                    _("Node {0}: UnknownSuffixCondition.search_directory ({1}) is not a valid directory.").format(
+                        node_name, condition.search_directory
+                    )
                 )
 
         elif isinstance(condition, RelatedImageCondition):
             if not condition.edit_suffix:
-                errors.append(f"Node {node_name!r}: RelatedImageCondition has no edit_suffix.")
+                errors.append(_("Node {0}: RelatedImageCondition has no edit_suffix.").format(node_name))
             if condition.search_directory and not os.path.isdir(condition.search_directory):
                 errors.append(
-                    f"Node {node_name!r}: RelatedImageCondition.search_directory "
-                    f"({condition.search_directory!r}) is not a valid directory."
+                    _("Node {0}: RelatedImageCondition.search_directory ({1}) is not a valid directory.").format(
+                        node_name, condition.search_directory
+                    )
                 )
 
         elif isinstance(condition, CompositeCondition):
             if condition.operator not in CompositeCondition.VALID_OPERATORS:
                 errors.append(
-                    f"Node {node_name!r}: unknown composite operator {condition.operator!r}."
+                    _("Node {0}: unknown composite operator {1}.").format(node_name, condition.operator)
                 )
             n = len(condition.sub_conditions)
             if condition.operator == "NOT" and n != 1:
                 errors.append(
-                    f"Node {node_name!r}: NOT requires exactly 1 sub-condition, got {n}."
+                    _("Node {0}: NOT requires exactly 1 sub-condition, got {1}.").format(node_name, n)
                 )
             if condition.operator == "XOR" and n != 2:
                 errors.append(
-                    f"Node {node_name!r}: XOR requires exactly 2 sub-conditions, got {n}."
+                    _("Node {0}: XOR requires exactly 2 sub-conditions, got {1}.").format(node_name, n)
                 )
             if condition.operator in ("AND", "OR") and n < 2:
                 errors.append(
-                    f"Node {node_name!r}: {condition.operator} requires ≥ 2 sub-conditions, got {n}."
+                    _("Node {0}: {1} requires ≥ 2 sub-conditions, got {2}.").format(
+                        node_name, condition.operator, n
+                    )
                 )
             for sub in condition.sub_conditions:
                 errors.extend(self._validate_condition(sub, node_name, defined_before))
@@ -939,20 +1040,24 @@ class ClassifierPipeline:
         elif isinstance(condition, GroupCondition):
             if condition.operator not in GroupCondition.VALID_OPERATORS:
                 errors.append(
-                    f"Node {node_name!r}: GroupCondition has unknown operator {condition.operator!r}."
+                    _("Node {0}: GroupCondition has unknown operator {1}.").format(
+                        node_name, condition.operator
+                    )
                 )
             if not condition.nodes:
-                errors.append(f"Node {node_name!r}: GroupCondition has no child nodes.")
+                errors.append(_("Node {0}: GroupCondition has no child nodes.").format(node_name))
             else:
                 seen_children: set[str] = set()
                 for child in condition.nodes:
                     if not child.name.strip():
                         errors.append(
-                            f"Node {node_name!r}: GroupCondition child has an empty name."
+                            _("Node {0}: GroupCondition child has an empty name.").format(node_name)
                         )
                     elif child.name in seen_children:
                         errors.append(
-                            f"Node {node_name!r}: GroupCondition duplicate child name {child.name!r}."
+                            _("Node {0}: GroupCondition duplicate child name {1}.").format(
+                                node_name, child.name
+                            )
                         )
                     else:
                         seen_children.add(child.name)
@@ -963,16 +1068,17 @@ class ClassifierPipeline:
         elif isinstance(condition, GroupChildResultCondition):
             if not condition.group_node_name:
                 errors.append(
-                    f"Node {node_name!r}: GroupChildResultCondition has no group_node_name."
+                    _("Node {0}: GroupChildResultCondition has no group_node_name.").format(node_name)
                 )
             if not condition.child_node_name:
                 errors.append(
-                    f"Node {node_name!r}: GroupChildResultCondition has no child_node_name."
+                    _("Node {0}: GroupChildResultCondition has no child_node_name.").format(node_name)
                 )
             if condition.group_node_name and condition.group_node_name not in defined_before:
                 errors.append(
-                    f"Node {node_name!r}: GroupChildResultCondition references group "
-                    f"{condition.group_node_name!r} which is not a prior node."
+                    _("Node {0}: GroupChildResultCondition references group {1} which is not a prior node.").format(
+                        node_name, condition.group_node_name
+                    )
                 )
 
         return errors
@@ -1002,22 +1108,21 @@ class ClassifierPipeline:
         if isinstance(condition, ClassifierRankCondition):
             if condition.inherit_categories and not known_suffixes:
                 warnings.append(
-                    f"Node {node_name!r}: ClassifierRankCondition has inherit_categories=True "
-                    f"but the pipeline has no category map — condition will match nothing."
+                    _("Node {0}: ClassifierRankCondition has inherit_categories=True but the pipeline has no category map — condition will match nothing.").format(node_name)
                 )
         elif isinstance(condition, BaseStemMatchCondition):
             if known_suffixes:
                 for sf in condition.suffix_filter:
                     if sf not in known_suffixes:
                         warnings.append(
-                            f"Node {node_name!r}: suffix filter {sf!r} is not a value in the pipeline's category map."
+                            _("Node {0}: suffix filter {1} is not in the pipeline's category map.").format(node_name, sf)
                         )
         elif isinstance(condition, UnknownSuffixCondition):
             if known_suffixes:
                 for sf in condition.expected_suffixes:
                     if sf not in known_suffixes:
                         warnings.append(
-                            f"Node {node_name!r}: expected suffix {sf!r} is not a value in the pipeline's category map."
+                            _("Node {0}: expected suffix {1} is not in the pipeline's category map.").format(node_name, sf)
                         )
         elif isinstance(condition, CompositeCondition):
             for sub in condition.sub_conditions:
@@ -1036,16 +1141,16 @@ class ClassifierPipeline:
         """Multi-line summary: one node per two lines, suitable for a scrollable list cell."""
         if not self.nodes:
             return _("(empty)")
-        _ABBREV = {
-            "embedding": "Embedding",
-            "classifier_rank": "ClsRank",
-            "prototype": "Prototype",
-            "prompt": "Prompt",
-            "lookahead": "Lookahead",
-            "node_result": "NodeResult",
-            "composite": "Composite",
-            "group": "Group",
-            "group_child_result": "GroupChild",
+        _LABELS = {
+            "embedding": _("Embedding"),
+            "classifier_rank": _("ClsRank"),
+            "prototype": _("Prototype"),
+            "prompt": _("Prompt"),
+            "lookahead": _("Lookahead"),
+            "node_result": _("NodeResult"),
+            "composite": _("Composite"),
+            "group": _("Group"),
+            "group_child_result": _("GroupChild"),
         }
         lines = []
         for node in self.nodes:
@@ -1053,20 +1158,20 @@ class ClassifierPipeline:
             if cond_type == "group":
                 op = getattr(node.condition, "operator", "OR")
                 n = len(getattr(node.condition, "nodes", []))
-                cond_label = f"Group({op},{n})"
+                cond_label = _("Group ({0}, {1} children)").format(op, n)
             else:
-                cond_label = _ABBREV.get(cond_type, cond_type)
+                cond_label = _LABELS.get(cond_type, cond_type)
             lines.append(f"{node.name} [{cond_label}]")
             lines.append(
                 f"  ✓ {node.on_match.display_summary()}  ✗ {node.on_no_match.display_summary()}"
             )
         if self.default_action:
-            lines.append(f"(end) → {self.default_action.get_translation()}")
+            lines.append(_("(end) → {0}").format(self.default_action.get_translation()))
         return "\n".join(lines)
 
     def flow_preview(self) -> str:
         if not self.nodes:
-            return "(no nodes)"
+            return _("(no nodes)")
         lines: list[str] = []
         for node in self.nodes:
             lines.append(f"[{node.name}: {node.condition_summary()}]")
@@ -1074,12 +1179,12 @@ class ClassifierPipeline:
                 op = node.condition.operator
                 for child in node.condition.nodes:
                     lines.append(f"  {'·'} {child.name}: {child.condition_summary()}")
-                lines.append(f"  ({op} of {len(node.condition.nodes)} children)")
+                lines.append(_("  ({0} of {1} children)").format(op, len(node.condition.nodes)))
             lines.append(f"  ✓ → {node.on_match.display_summary()}")
             lines.append(f"  ✗ → {node.on_no_match.display_summary()}")
             lines.append("")
         if self.default_action:
-            lines.append(f"(end) → {self.default_action.get_translation()}")
+            lines.append(_("(end) → {0}").format(self.default_action.get_translation()))
         return "\n".join(lines).rstrip()
 
     # ------------------------------------------------------------------

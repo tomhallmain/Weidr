@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass, field
 from threading import Lock
 from typing import Any, Optional
 
+from utils.constants import ClassifierActionType
 from utils.translations import _
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -46,6 +50,14 @@ class PipelineRunReport:
         self._messages: list[PipelineMessage] = []
         self._lock = Lock()
 
+    @staticmethod
+    def _severity_heading(severity: str) -> str:
+        return {
+            "WARNING": _("Warnings"),
+            "NOTABLE": _("Notable events"),
+            "INFO": _("Information"),
+        }.get(severity, severity)
+
     def add(
         self,
         severity: str,
@@ -54,6 +66,8 @@ class PipelineRunReport:
         detail: str,
         data: Optional[Any] = None,
     ) -> None:
+        if severity not in self.SEVERITIES:
+            logger.warning("PipelineRunReport.add: unknown severity %r", severity)
         with self._lock:
             self._messages.append(PipelineMessage(severity, node, image_path, detail, data))
 
@@ -82,7 +96,7 @@ class PipelineRunReport:
         lines: list[str] = []
 
         lines.append(
-            _("Pipeline {0!r} — run complete").format(stats.pipeline_name)
+            _("Pipeline {0} — run complete").format(stats.pipeline_name)
         )
         lines.append("─" * 48)
 
@@ -120,7 +134,11 @@ class PipelineRunReport:
         lines.append("")
         lines.append(_("Actions taken:"))
         if stats.action_counts:
-            for label, count in sorted(stats.action_counts.items(), key=lambda kv: (-kv[1], kv[0])):
+            for key, count in sorted(stats.action_counts.items(), key=lambda kv: (-kv[1], kv[0])):
+                try:
+                    label = ClassifierActionType(key).get_translation()
+                except ValueError:
+                    label = _(key)
                 lines.append(
                     _("  {0}× {1}").format(count, label)
                 )
@@ -139,12 +157,8 @@ class PipelineRunReport:
             lines.append("")
             lines.append(gen_line)
 
-        for severity, heading in (
-            ("WARNING", _("Warnings")),
-            ("NOTABLE", _("Notable events")),
-            ("INFO", _("Information")),
-        ):
-            section = self._format_message_section(severity, heading)
+        for severity in self.SEVERITIES:
+            section = self._format_message_section(severity, self._severity_heading(severity))
             if section:
                 lines.append("")
                 lines.extend(section)
@@ -157,7 +171,7 @@ class PipelineRunReport:
         msgs = self.messages_by_severity(severity)
         if not msgs:
             return []
-        lines = [_("── {0} ({1}) ──").format(heading, len(msgs))]
+        lines = [f"── {heading} ({len(msgs)}) ──"]
         for msg in msgs:
             lines.extend(self._format_message_lines(msg))
         return lines

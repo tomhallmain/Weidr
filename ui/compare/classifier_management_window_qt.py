@@ -38,6 +38,7 @@ from image.image_classifier_manager import image_classifier_manager
 from lib.fast_directory_picker_qt import get_existing_directory
 from lib.multi_display_qt import SmartDialog
 from ui.app_style import AppStyle
+from utils.app_info_cache import app_info_cache
 from utils.config import config
 from utils.constants import ClassifierActionType
 from utils.translations import _
@@ -610,6 +611,8 @@ class ClassifierManagementWindow(SmartDialog):
         # Lazy imports to avoid circulars
         from ui.compare.classifier_actions_tab_qt import ClassifierActionsTab
         from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+        from ui.compare.directory_profiles_tab_qt import DirectoryProfilesTab
+        from ui.compare.lookaheads_tab_qt import LookaheadsTab
         from ui.compare.prevalidations_tab_qt import PrevalidationsTab
         from ui.compare.seek_to_trigger_tab_qt import SeekToTriggerTab
 
@@ -619,6 +622,12 @@ class ClassifierManagementWindow(SmartDialog):
         self._prevalidations_tab = PrevalidationsTab(
             self._tabs, app_actions
         )
+        self._lookaheads_tab = LookaheadsTab(
+            self._tabs, app_actions
+        )
+        self._directory_profiles_tab = DirectoryProfilesTab(
+            self._tabs, app_actions
+        )
         self._classifier_pipelines_tab = ClassifierPipelinesTab(
             self._tabs, app_actions
         )
@@ -626,23 +635,30 @@ class ClassifierManagementWindow(SmartDialog):
             self._tabs, app_actions
         )
 
-        self._tabs.addTab(
-            self._classifier_actions_tab, _("Classifier Actions")
-        )
+        # Tab indices: 0=Classifier Actions, 1=Prevalidations,
+        #              2=Lookaheads, 3=Directory Profiles,
+        #              4=Pipelines, 5=Seek to Trigger
+        self._tabs.addTab(self._classifier_actions_tab, _("Classifier Actions"))
         self._tabs.addTab(self._prevalidations_tab, _("Prevalidations"))
-        self._tabs.addTab(
-            self._classifier_pipelines_tab, _("Pipelines")
-        )
-        self._tabs.addTab(
-            self._seek_to_trigger_tab, _("Seek to Trigger")
-        )
+        self._tabs.addTab(self._lookaheads_tab, _("Lookaheads"))
+        self._tabs.addTab(self._directory_profiles_tab, _("Directory Profiles"))
+        self._tabs.addTab(self._classifier_pipelines_tab, _("Pipelines"))
+        self._tabs.addTab(self._seek_to_trigger_tab, _("Seek to Trigger"))
 
         if not config.enable_prevalidations:
-            self._tabs.setTabEnabled(1, False)
-            self._tabs.setTabToolTip(
-                1,
-                _("Prevalidations are disabled. Enable them in the Prevalidations tab settings."),
-            )
+            _pv_tip = _("Prevalidations are disabled. Enable them in the Prevalidations tab settings.")
+            for idx in (1, 2, 3):  # Prevalidations, Lookaheads, Directory Profiles
+                self._tabs.setTabEnabled(idx, False)
+                self._tabs.setTabToolTip(idx, _pv_tip)
+
+        # Restore last-selected tab, then persist any future changes.
+        _CACHE_KEY = "classifier_management_tab"
+        saved_tab = app_info_cache.get_meta(_CACHE_KEY, 0)
+        if isinstance(saved_tab, int) and 0 <= saved_tab < self._tabs.count():
+            self._tabs.setCurrentIndex(saved_tab)
+        self._tabs.currentChanged.connect(
+            lambda idx: app_info_cache.set_meta(_CACHE_KEY, idx)
+        )
 
         QShortcut(QKeySequence(Qt.Key_Escape), self).activated.connect(
             self.close

@@ -1,21 +1,17 @@
 """
-PySide6 port of compare/prevalidations_tab.py.
+PrevalidationModifyWindow and PrevalidationsTab for classifier management.
 
-Contains two classes:
-  - PrevalidationModifyWindow  -- subclass of ClassifierActionModifyWindow
-    adding lookahead and directory-profile fields.
-  - PrevalidationsTab          -- tab-page QWidget listing prevalidations
-    with add / modify / delete / copy / run controls, plus lookahead and
-    directory-profile management sections.
+PrevalidationModifyWindow extends ClassifierActionModifyWindow with
+lookahead and directory-profile selector fields for Prevalidation objects.
 
-Non-UI imports:
-  - Prevalidation from compare.classifier_action
-  - ClassifierActionsManager from compare.classifier_actions_manager
-  - Lookahead from compare.lookahead (reuse policy)
-  - DirectoryProfile from compare.directory_profile (reuse policy)
+PrevalidationsTab lists active prevalidations with add / modify / delete /
+copy / move controls and manages the prevalidation result cache.
+
+Lookahead and DirectoryProfile management live in their own dedicated tabs
+(LookaheadsTab, DirectoryProfilesTab).
 
 Cache-invalidation policy
--------------------------
+--------------------------
 Every mutating operation must evict stale prevalidation results from both
 the session cache (ClassifierActionsManager.prevalidated_cache) and the
 persistent per-file bucket store (lib.file_invalidation_cache).
@@ -25,11 +21,11 @@ ClassifierActionsManager.clear_prevalidation_result_cache().  For
 interactive edits during a session, targeted eviction is preferred so that
 expensive dynamic-media results for unaffected directories are preserved.
 
-The helpers ``_pv_dirs`` and ``_profile_linked_dirs`` compute the set of
-filesystem directories that a prevalidation or profile touches.  A return
-value of ``None`` from ``_pv_dirs`` means the prevalidation is global-scoped
-(no profile), which forces a full eviction via the ``_invalidate_for_dir_sets``
-dispatcher.
+The helpers ``_pv_dirs`` (here) and ``_profile_linked_dirs``
+(DirectoryProfilesTab) compute the set of filesystem directories that a
+prevalidation or profile touches.  A return value of ``None`` from
+``_pv_dirs`` means the prevalidation is global-scoped (no profile), which
+forces a full eviction via the ``_invalidate_for_dir_sets`` dispatcher.
 
 Per-operation rules
 ~~~~~~~~~~~~~~~~~~~
@@ -60,22 +56,8 @@ Prevalidation *reordered*:
 All prevalidations *cleared*:
     Full eviction.
 
-Profile *added* or *copied*:
-    No eviction — a brand-new profile has no prevalidations linked to it so
-    no files were ever cached under its scope.
-
-Profile *edited* (directories changed):
-    Evict the union of the profile's directory set **before** the edit
-    (snapshot taken in ``_edit_profile``) and **after** the edit (read from
-    the now-modified profile object in the callback), but **only** if at
-    least one prevalidation currently references this profile.  If no
-    prevalidations reference it, no files were cached under its scope.
-
-Profile *removed*:
-    If prevalidations referenced it their scope expands to global (the
-    profile filter no longer applies), meaning cached ``None`` results in
-    previously unscoped directories may now be wrong → **full eviction**.
-    If no prevalidations referenced the profile, no eviction is needed.
+Profile operations (add / edit / remove) are documented in
+directory_profiles_tab_qt.py.
 """
 
 from __future__ import annotations
@@ -212,18 +194,9 @@ class PrevalidationModifyWindow(ClassifierActionModifyWindow):
 # PrevalidationsTab
 # ======================================================================
 class PrevalidationsTab(QWidget):
-    """
-    Tab content widget for managing prevalidations.
-
-    Sections (top-to-bottom):
-      1. Lookahead management (QListWidget + Add/Edit/Remove)
-      2. Directory profile management (QListWidget + Add/Edit/Remove)
-      3. Prevalidation list (scrollable rows with action buttons)
-    """
+    """Tab content widget for managing prevalidations."""
 
     _modify_window: Optional[PrevalidationModifyWindow] = None
-    _lookahead_window = None
-    _profile_window = None
 
     @staticmethod
     def _is_modify_window_valid() -> bool:
@@ -238,12 +211,6 @@ class PrevalidationsTab(QWidget):
 
     @staticmethod
     def clear_prevalidated_cache() -> None:
-        """
-        Clear in-memory prevalidation results for the current run.
-
-        Note: we intentionally do not bump the prevalidation policy epoch here.
-        Manual keybind runs can bypass stale results via the `force=` flag.
-        """
         ClassifierActionsManager.prevalidated_cache.clear()
         ClassifierActionsManager.directories_to_exclude.clear()
 
@@ -285,66 +252,14 @@ class PrevalidationsTab(QWidget):
         root.setContentsMargins(10, 10, 10, 10)
         root.setSpacing(6)
 
-        # ---- Lookahead management section --------------------------------
-        root.addWidget(self._section_label(_("Lookaheads")))
-        lh_area = QHBoxLayout()
-
-        self._lh_listbox = QListWidget()
-        self._lh_listbox.setMaximumHeight(100)
-        self._lh_listbox.setStyleSheet(
-            f"QListWidget {{ background: {AppStyle.BG_COLOR}; color: {AppStyle.FG_COLOR}; }}"
+        # ---- Title + toolbar --------------------------------------------
+        title_lbl = QLabel(_("Prevalidations"))
+        title_lbl.setStyleSheet(
+            f"color: {AppStyle.FG_COLOR}; font-weight: bold; font-size: 13pt;"
         )
-        self._lh_listbox.doubleClicked.connect(self._edit_lookahead)
-        lh_area.addWidget(self._lh_listbox, 1)
+        root.addWidget(title_lbl)
 
-        lh_btns = QVBoxLayout()
-        lh_btns.setSpacing(2)
-        add_lh = QPushButton(_("Add Lookahead"))
-        add_lh.clicked.connect(self._add_lookahead)
-        lh_btns.addWidget(add_lh)
-        edit_lh = QPushButton(_("Edit Lookahead"))
-        edit_lh.clicked.connect(self._edit_lookahead)
-        lh_btns.addWidget(edit_lh)
-        rm_lh = QPushButton(_("Remove Lookahead"))
-        rm_lh.clicked.connect(self._remove_lookahead)
-        lh_btns.addWidget(rm_lh)
-        lh_btns.addStretch()
-        lh_area.addLayout(lh_btns)
-        root.addLayout(lh_area)
-
-        # ---- Directory profile management section ------------------------
-        root.addWidget(self._section_label(_("Directory Profiles")))
-        prof_area = QHBoxLayout()
-
-        self._prof_listbox = QListWidget()
-        self._prof_listbox.setMaximumHeight(100)
-        self._prof_listbox.setStyleSheet(
-            f"QListWidget {{ background: {AppStyle.BG_COLOR}; color: {AppStyle.FG_COLOR}; }}"
-        )
-        self._prof_listbox.doubleClicked.connect(self._edit_profile)
-        prof_area.addWidget(self._prof_listbox, 1)
-
-        prof_btns = QVBoxLayout()
-        prof_btns.setSpacing(2)
-        add_prof = QPushButton(_("Add Profile"))
-        add_prof.clicked.connect(self._add_profile)
-        prof_btns.addWidget(add_prof)
-        edit_prof = QPushButton(_("Edit Profile"))
-        edit_prof.clicked.connect(self._edit_profile)
-        prof_btns.addWidget(edit_prof)
-        copy_prof = QPushButton(_("Copy Profile"))
-        copy_prof.clicked.connect(self._copy_profile)
-        prof_btns.addWidget(copy_prof)
-        rm_prof = QPushButton(_("Remove Profile"))
-        rm_prof.clicked.connect(self._remove_profile)
-        prof_btns.addWidget(rm_prof)
-        prof_btns.addStretch()
-        prof_area.addLayout(prof_btns)
-        root.addLayout(prof_area)
-
-        # ---- Prevalidations title + buttons ------------------------------
         pv_title_row = QHBoxLayout()
-        pv_title_row.addWidget(self._section_label(_("Prevalidations")))
         add_pv = QPushButton(_("Add prevalidation"))
         add_pv.clicked.connect(lambda: self._open_modify_window())
         pv_title_row.addWidget(add_pv)
@@ -395,200 +310,8 @@ class PrevalidationsTab(QWidget):
         self._scroll.setWidget(self._scroll_content)
         root.addWidget(self._scroll, 1)
 
-        # Populate
-        self._refresh_lh_listbox()
-        self._refresh_prof_listbox()
         self._rebuild_pv_rows()
         self._update_prevalidation_cache_stats_label()
-
-    # ------------------------------------------------------------------
-    # Lookahead management
-    # ------------------------------------------------------------------
-    def _refresh_lh_listbox(self) -> None:
-        self._lh_listbox.clear()
-        for lh in Lookahead.lookaheads:
-            text = _("{name} ({name_or_text}, threshold: {threshold:.2f})").format(
-                name=lh.name,
-                name_or_text=lh.name_or_text,
-                threshold=lh.threshold,
-            )
-            self._lh_listbox.addItem(text)
-
-    def _add_lookahead(self) -> None:
-        from ui.compare.lookahead_window_qt import LookaheadWindow
-
-        if PrevalidationsTab._lookahead_window is not None:
-            try:
-                PrevalidationsTab._lookahead_window.close()
-            except Exception:
-                pass
-        PrevalidationsTab._lookahead_window = LookaheadWindow(
-            self.window(), self._app_actions, self._refresh_lh_listbox
-        )
-        PrevalidationsTab._lookahead_window.show()
-
-    def _edit_lookahead(self) -> None:
-        from ui.compare.lookahead_window_qt import LookaheadWindow
-
-        idx = self._lh_listbox.currentRow()
-        if idx < 0 or idx >= len(Lookahead.lookaheads):
-            return
-        if PrevalidationsTab._lookahead_window is not None:
-            try:
-                PrevalidationsTab._lookahead_window.close()
-            except Exception:
-                pass
-        PrevalidationsTab._lookahead_window = LookaheadWindow(
-            self.window(),
-            self._app_actions,
-            self._refresh_lh_listbox,
-            Lookahead.lookaheads[idx],
-        )
-        PrevalidationsTab._lookahead_window.show()
-
-    def _remove_lookahead(self) -> None:
-        idx = self._lh_listbox.currentRow()
-        if idx < 0 or idx >= len(Lookahead.lookaheads):
-            return
-        lh = Lookahead.lookaheads[idx]
-        used_by = [
-            pv.name
-            for pv in ClassifierActionsManager.prevalidations
-            if lh.name in pv.lookahead_names
-        ]
-        if used_by:
-            logger.warning(
-                f"Lookahead {lh.name} is used by prevalidations: "
-                f"{', '.join(used_by)}"
-            )
-        del Lookahead.lookaheads[idx]
-        self._refresh_lh_listbox()
-        if self._is_modify_window_valid():
-            try:
-                PrevalidationsTab._modify_window.refresh_lookahead_options()
-            except Exception:
-                PrevalidationsTab._modify_window = None
-
-    # ------------------------------------------------------------------
-    # Profile management
-    # ------------------------------------------------------------------
-    def _refresh_prof_listbox(self) -> None:
-        self._prof_listbox.clear()
-        for profile in DirectoryProfile.directory_profiles:
-            n = len(profile.directories)
-            word = _("directory") if n == 1 else _("directories")
-            self._prof_listbox.addItem(f"{profile.name} ({n} {word})")
-
-        if self._is_modify_window_valid():
-            try:
-                PrevalidationsTab._modify_window.refresh_profile_options()
-            except Exception:
-                PrevalidationsTab._modify_window = None
-
-    def _add_profile(self) -> None:
-        from ui.compare.directory_profile_window_qt import DirectoryProfileWindow
-
-        if PrevalidationsTab._profile_window is not None:
-            try:
-                PrevalidationsTab._profile_window.close()
-            except Exception:
-                pass
-        # New profile has no prevalidations linked → no cache eviction needed.
-        PrevalidationsTab._profile_window = DirectoryProfileWindow(
-            self.window(),
-            self._app_actions,
-            self._on_profile_added,
-        )
-        PrevalidationsTab._profile_window.show()
-
-    def _edit_profile(self) -> None:
-        from ui.compare.directory_profile_window_qt import DirectoryProfileWindow
-
-        idx = self._prof_listbox.currentRow()
-        if idx < 0 or idx >= len(DirectoryProfile.directory_profiles):
-            return
-        if PrevalidationsTab._profile_window is not None:
-            try:
-                PrevalidationsTab._profile_window.close()
-            except Exception:
-                pass
-        profile = DirectoryProfile.directory_profiles[idx]
-        # Snapshot the profile's linked directories *before* the window edits
-        # the profile object in-place.
-        old_dirs = self._profile_linked_dirs(profile)
-
-        def _on_edited(*_args) -> None:
-            # profile.directories now reflects the post-edit state.
-            new_dirs = self._profile_linked_dirs(profile)
-            self._invalidate_for_dir_sets(
-                old_dirs, new_dirs,
-                reason=f"profile '{profile.name}' edited",
-            )
-            self._rebuild_supporting_state()
-            self._refresh_prof_listbox()
-
-        PrevalidationsTab._profile_window = DirectoryProfileWindow(
-            self.window(),
-            self._app_actions,
-            _on_edited,
-            profile,
-        )
-        PrevalidationsTab._profile_window.show()
-
-    def _remove_profile(self) -> None:
-        idx = self._prof_listbox.currentRow()
-        if idx < 0 or idx >= len(DirectoryProfile.directory_profiles):
-            return
-        profile = DirectoryProfile.directory_profiles[idx]
-        # Check linkage *before* removal while prevalidations still reference it.
-        linked = self._profile_linked_dirs(profile)
-        DirectoryProfile.remove_profile(profile.name)
-        if linked:
-            # Linked prevalidations lose their profile scope and become global;
-            # cached None results in previously unscoped dirs are now stale.
-            logger.info(
-                "Prevalidation cache: full eviction — profile '%s' removed,"
-                " linked prevalidations become global-scoped",
-                profile.name,
-            )
-            ClassifierActionsManager.clear_prevalidation_result_cache()
-        else:
-            logger.info(
-                "Prevalidation cache: no eviction — profile '%s' removed"
-                " but no prevalidations were linked to it",
-                profile.name,
-            )
-        self._rebuild_supporting_state()
-        if self._is_modify_window_valid():
-            try:
-                PrevalidationsTab._modify_window.refresh_profile_options()
-            except Exception:
-                PrevalidationsTab._modify_window = None
-
-    def _copy_profile(self) -> None:
-        from ui.compare.directory_profile_window_qt import DirectoryProfileWindow
-
-        idx = self._prof_listbox.currentRow()
-        if idx < 0 or idx >= len(DirectoryProfile.directory_profiles):
-            return
-        if PrevalidationsTab._profile_window is not None:
-            try:
-                PrevalidationsTab._profile_window.close()
-            except Exception:
-                pass
-        # Copied profile is new → no prevalidations linked → no eviction needed.
-        PrevalidationsTab._profile_window = DirectoryProfileWindow(
-            self.window(),
-            self._app_actions,
-            self._on_profile_added,
-            copy_from_profile=DirectoryProfile.directory_profiles[idx],
-        )
-        PrevalidationsTab._profile_window.show()
-
-    def _on_profile_added(self, *_args) -> None:
-        """Callback for profile add/copy — no eviction, just rebuild the UI."""
-        self._rebuild_supporting_state()
-        self._refresh_prof_listbox()
 
     # ------------------------------------------------------------------
     # Prevalidation rows
@@ -619,7 +342,6 @@ class PrevalidationsTab(QWidget):
             action_lbl.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
             row.addWidget(action_lbl)
 
-            # Profile column
             if pv.profile_name:
                 prof_text = pv.profile_name
             elif pv.profile:
@@ -706,7 +428,7 @@ class PrevalidationsTab(QWidget):
     # Cache-eviction helpers
     # ------------------------------------------------------------------
     @staticmethod
-    def _pv_dirs(pv: "Prevalidation") -> "set[str] | None":
+    def _pv_dirs(pv: Prevalidation) -> "set[str] | None":
         """
         Return the set of directories this prevalidation is scoped to, or
         ``None`` if it is global (no profile).
@@ -722,18 +444,6 @@ class PrevalidationsTab(QWidget):
             if prof:
                 return set(prof.directories)
         return None
-
-    @staticmethod
-    def _profile_linked_dirs(profile: "DirectoryProfile") -> set[str]:
-        """
-        Return the profile's directory set if at least one prevalidation
-        currently references it, otherwise an empty set (nothing to evict).
-        """
-        used = any(
-            pv.profile_name == profile.name or pv.profile is profile
-            for pv in ClassifierActionsManager.prevalidations
-        )
-        return set(profile.directories) if used else set()
 
     def _invalidate_for_dir_sets(
         self, *dir_sets: "set[str] | None", reason: str = ""
@@ -766,7 +476,7 @@ class PrevalidationsTab(QWidget):
             )
 
     def _rebuild_supporting_state(self) -> None:
-        """Rebuild directories_to_exclude and repaint the UI rows."""
+        """Rebuild directories_to_exclude and repaint the prevalidation rows."""
         self._filtered = ClassifierActionsManager.prevalidations[:]
         ClassifierActionsManager.directories_to_exclude.clear()
         for pv in ClassifierActionsManager.prevalidations:
@@ -777,7 +487,7 @@ class PrevalidationsTab(QWidget):
         self.refresh()
 
     # ------------------------------------------------------------------
-    # Prevalidation actions
+    # Prevalidation mutation callbacks
     # ------------------------------------------------------------------
     def refresh_prevalidations(self, prevalidation=None) -> None:
         if (
@@ -854,15 +564,16 @@ class PrevalidationsTab(QWidget):
         prevalidation.move_index(idx, 1)
         self.refresh()
 
+    # ------------------------------------------------------------------
+    # Clear / scope controls
+    # ------------------------------------------------------------------
     def _update_clear_dir_label(self) -> None:
-        """Refresh the scope checkbox text to reflect the current base directory."""
         base_dir = self._app_actions.get_base_dir()
         if base_dir:
             short = Utils.get_relative_dirpath(base_dir, levels=2)
         else:
             short = _("current dir")
         self._clear_current_dir_cb.setText(_("Only: {0}").format(short))
-        # Keep button text in sync if scope is already set to dir-only
         if self._clear_current_dir_cb.isChecked():
             self._clear_pv_btn.setText(_("Clear results ({0})").format(short))
 
@@ -915,14 +626,12 @@ class PrevalidationsTab(QWidget):
 
     def refresh(self) -> None:
         self._filtered = ClassifierActionsManager.prevalidations[:]
-        self._refresh_lh_listbox()
-        self._refresh_prof_listbox()
         self._rebuild_pv_rows()
         self._update_clear_dir_label()
         self._update_prevalidation_cache_stats_label()
 
     # ------------------------------------------------------------------
-    # Helpers
+    # Cache stats label
     # ------------------------------------------------------------------
     @staticmethod
     def _format_approx_bytes(num_bytes: int) -> str:
@@ -943,14 +652,6 @@ class PrevalidationsTab(QWidget):
                 directories=n_dirs,
             )
         )
-
-    @staticmethod
-    def _section_label(text: str) -> QLabel:
-        lbl = QLabel(text)
-        lbl.setStyleSheet(
-            f"color: {AppStyle.FG_COLOR}; font-weight: bold; font-size: 13pt;"
-        )
-        return lbl
 
 
 # ======================================================================

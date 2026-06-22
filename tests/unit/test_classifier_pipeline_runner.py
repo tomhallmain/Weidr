@@ -1334,6 +1334,34 @@ class TestPipelineRunReport:
         assert "seed_apple.png" in text
         assert "seed_apple2.png" in text
 
+    def test_format_completion_report_groups_duplicate_messages(self):
+        r = PipelineRunReport()
+        shared_data = {"matches": ["/dir/stem__cher.png"], "base_stem": "stem"}
+        r.add("NOTABLE", "Stem uniqueness check", "/dir/stem__appl.png",
+              "3 files share base stem", data=shared_data)
+        r.add("NOTABLE", "Stem uniqueness check", "/dir/stem__banan.png",
+              "3 files share base stem", data=shared_data)
+        text = r.format_completion_report(
+            PipelineRunStats(pipeline_name="p", files_evaluated=2)
+        )
+        assert "stem__appl.png" in text
+        assert "stem__banan.png" in text
+        assert text.count("3 files share base stem") == 1  # detail appears once
+        assert text.count("stem__cher.png") == 1           # match appears once
+        assert "2 files" in text                           # grouped header
+
+    def test_format_completion_report_does_not_group_distinct_messages(self):
+        r = PipelineRunReport()
+        r.add("NOTABLE", "node", "/dir/a.png", "same detail")
+        r.add("NOTABLE", "node", "/dir/b.png", "different detail")
+        text = r.format_completion_report(
+            PipelineRunStats(pipeline_name="p", files_evaluated=2)
+        )
+        assert text.count("same detail") == 1
+        assert text.count("different detail") == 1
+        assert "a.png" in text
+        assert "b.png" in text
+
     def test_format_completion_report_omits_empty_sections(self):
         r = PipelineRunReport()
         text = r.format_completion_report(

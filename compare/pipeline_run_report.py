@@ -172,8 +172,28 @@ class PipelineRunReport:
         if not msgs:
             return []
         lines = [f"── {heading} ({len(msgs)}) ──"]
+        # Group messages with identical (node, detail, data) — e.g. the same
+        # stem-uniqueness finding repeated for every file in a stem group.
+        groups: dict[tuple, list[PipelineMessage]] = {}
         for msg in msgs:
-            lines.extend(self._format_message_lines(msg))
+            key = (msg.node, msg.detail, repr(msg.data))
+            groups.setdefault(key, []).append(msg)
+        for group in groups.values():
+            if len(group) == 1:
+                lines.extend(self._format_message_lines(group[0]))
+            else:
+                lines.extend(self._format_grouped_message_lines(group))
+        return lines
+
+    @staticmethod
+    def _format_grouped_message_lines(msgs: list[PipelineMessage]) -> list[str]:
+        node = msgs[0].node
+        lines = [_("  [{0}] — {1} files").format(node, len(msgs))]
+        for msg in msgs:
+            image_name = os.path.basename(msg.image_path) if msg.image_path else _("(unknown)")
+            lines.append(f"    · {image_name}")
+        lines.append(f"    {msgs[0].detail}")
+        lines.extend(PipelineRunReport._format_data_lines(msgs[0].data))
         return lines
 
     @staticmethod
@@ -183,10 +203,14 @@ class PipelineRunReport:
             f"  [{msg.node}] {image_name}",
             f"    {msg.detail}",
         ]
-        data = msg.data
-        if not isinstance(data, dict):
-            return lines
+        lines.extend(PipelineRunReport._format_data_lines(msg.data))
+        return lines
 
+    @staticmethod
+    def _format_data_lines(data: Optional[Any]) -> list[str]:
+        if not isinstance(data, dict):
+            return []
+        lines = []
         matches = data.get("matches")
         if matches:
             shown = matches[:8]
@@ -197,9 +221,7 @@ class PipelineRunReport:
                 lines.append(
                     _("      · … and {0} more").format(remaining)
                 )
-
         unknown_file = data.get("unknown_file")
         if unknown_file and not matches:
             lines.append(f"      · {os.path.basename(unknown_file)}")
-
         return lines

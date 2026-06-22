@@ -2315,3 +2315,163 @@ class TestProcessedStemsIntegration:
             run_pipeline(p, IMAGE, ActionCallbacks())
 
         assert len(calls) == 2  # both calls run fully
+
+
+# ---------------------------------------------------------------------------
+# Seed-category guard
+# ---------------------------------------------------------------------------
+
+class TestSeedCategoryGuard:
+    """Tests for the pipeline-level seed_category guard in run_pipeline.
+
+    IMAGE = "/fake/image.jpg" is a seed: its file stem ("image") equals the
+    base stem extracted by extract_filename_base_stem ("image").
+    "/fake/image_apple.jpg" is NOT a seed: file stem "image_apple" ≠ "image".
+    """
+
+    _CAT_MAP = {"Apple": "_apple", "Banana": "_banana"}
+
+    # A GENERATE-apple node whose condition would always match IMAGE.
+    def _gen_apple_node(self, outcome_type=OutcomeType.EXECUTE, on_no_match=None):
+        return PipelineNode(
+            name="gen_apple",
+            condition=FilenameContainsCondition(["image"]),
+            on_match=NodeOutcome(
+                outcome_type,
+                action_type=ClassifierActionType.GENERATE,
+                action_modifier="_apple",
+            ),
+            on_no_match=on_no_match or NodeOutcome.accept(),
+        )
+
+    def _pipeline_with_seed_category(self, *nodes):
+        return ClassifierPipeline(
+            name="p",
+            category_map=self._CAT_MAP,
+            seed_category="Apple",
+            nodes=list(nodes),
+        )
+
+    def test_generate_skipped_for_seed_image(self):
+        """Guard fires: GENERATE not dispatched and on_no_match (accept) applies."""
+        p = self._pipeline_with_seed_category(self._gen_apple_node())
+        dispatched = []
+        with patch("compare.classifier_pipeline_runner._dispatch_action",
+                   side_effect=lambda *a, **kw: dispatched.append(a[0])):
+            result = run_pipeline(p, IMAGE, ActionCallbacks())
+        assert result is None          # on_no_match = accept
+        assert not dispatched
+
+    def test_evaluate_condition_not_called_for_guarded_node(self):
+        """Guard bypasses _evaluate_condition entirely — no wasted evaluation."""
+        p = self._pipeline_with_seed_category(self._gen_apple_node())
+        calls = []
+        with patch("compare.classifier_pipeline_runner._evaluate_condition",
+                   side_effect=lambda *a, **kw: calls.append(True) or (False, None)):
+            run_pipeline(p, IMAGE, ActionCallbacks())
+        assert not calls
+
+    def test_guard_does_not_fire_for_non_seed_image(self):
+        """Non-seed: condition evaluated and GENERATE dispatched normally.
+
+        Uses a long-stem path so extract_filename_base_stem strips the _apple
+        suffix (stem prefix must be ≥10 chars for suffix stripping to trigger).
+        """
+        p = self._pipeline_with_seed_category(self._gen_apple_node())
+        dispatched = []
+        # image_17820172251234 is 21 chars → _apple suffix is stripped →
+        # base_stem="image_17820172251234", file_stem="image_17820172251234_apple" → is_seed=False
+        # The prefix also contains "image" so FilenameContainsCondition(["image"]) matches.
+        non_seed = "/fake/image_17820172251234_apple.jpg"
+        with patch("compare.classifier_pipeline_runner._dispatch_action",
+                   side_effect=lambda *a, **kw: dispatched.append(a[0])):
+            run_pipeline(p, non_seed, ActionCallbacks())
+        assert ClassifierActionType.GENERATE in dispatched
+
+    def test_guard_does_not_fire_for_different_category_node(self):
+        """Seed image but the node generates Banana, not Apple: condition evaluated."""
+        gen_banana = PipelineNode(
+            name="gen_banana",
+            condition=FilenameContainsCondition(["image"]),
+            on_match=NodeOutcome(
+                OutcomeType.EXECUTE,
+                action_type=ClassifierActionType.GENERATE,
+                action_modifier="_banana",
+            ),
+            on_no_match=NodeOutcome.accept(),
+        )
+        p = self._pipeline_with_seed_category(gen_banana)
+        dispatched = []
+        with patch("compare.classifier_pipeline_runner._dispatch_action",
+                   side_effect=lambda *a, **kw: dispatched.append(a[0])):
+            run_pipeline(p, IMAGE, ActionCallbacks())
+        assert ClassifierActionType.GENERATE in dispatched
+
+    def test_guard_does_not_fire_when_seed_category_unset(self):
+        """No seed_category: GENERATE dispatched normally even for a seed image."""
+        p = ClassifierPipeline(
+            name="p",
+            category_map=self._CAT_MAP,
+            nodes=[self._gen_apple_node()],
+        )
+        dispatched = []
+        with patch("compare.classifier_pipeline_runner._dispatch_action",
+                   side_effect=lambda *a, **kw: dispatched.append(a[0])):
+            run_pipeline(p, IMAGE, ActionCallbacks())
+        assert ClassifierActionType.GENERATE in dispatched
+
+    def test_guard_adds_info_to_report(self):
+        """Guard emits an INFO PipelineMessage when it fires."""
+        from compare.pipeline_run_report import PipelineRunReport
+        p = self._pipeline_with_seed_category(self._gen_apple_node())
+        report = PipelineRunReport()
+        with patch("compare.classifier_pipeline_runner._dispatch_action"):
+            run_pipeline(p, IMAGE, ActionCallbacks(), report=report)
+        infos = [m for m in report.messages()
+                 if m.severity == "INFO" and m.node == "gen_apple"]
+        assert infos, "Expected an INFO message for the guarded node"
+        assert "Apple" in infos[0].detail
+
+    def test_guard_fires_for_execute_and_continue_outcome(self):
+        """Guard also applies when on_match is EXECUTE_AND_CONTINUE."""
+        p = self._pipeline_with_seed_category(
+            self._gen_apple_node(outcome_type=OutcomeType.EXECUTE_AND_CONTINUE)
+        )
+        dispatched = []
+        with patch("compare.classifier_pipeline_runner._dispatch_action",
+                   side_effect=lambda *a, **kw: dispatched.append(a[0])):
+            run_pipeline(p, IMAGE, ActionCallbacks())
+        assert not dispatched
+
+    def test_only_matching_category_guarded_in_multi_node_pipeline(self):
+        """Apple node is guarded; Banana node is evaluated and fires normally."""
+        gen_banana = PipelineNode(
+            name="gen_banana",
+            condition=FilenameContainsCondition(["image"]),
+            on_match=NodeOutcome(
+                OutcomeType.EXECUTE,
+                action_type=ClassifierActionType.GENERATE,
+                action_modifier="_banana",
+            ),
+            on_no_match=NodeOutcome.accept(),
+        )
+        p = self._pipeline_with_seed_category(
+            self._gen_apple_node(on_no_match=NodeOutcome.continue_()), gen_banana
+        )
+        dispatched = []
+        with patch("compare.classifier_pipeline_runner._dispatch_action",
+                   side_effect=lambda *a, **kw: dispatched.append(a[0])):
+            run_pipeline(p, IMAGE, ActionCallbacks())
+        # Apple guarded → on_no_match (CONTINUE) → Banana evaluated and matches
+        assert dispatched == [ClassifierActionType.GENERATE]
+        # Verify it was the banana node that fired, not apple
+        # (apple was guarded; banana condition matched)
+
+    def test_guard_works_without_processed_stems(self):
+        """Guard is independent of the processed_stems path."""
+        p = self._pipeline_with_seed_category(self._gen_apple_node())
+        dispatched = []
+        with patch("compare.classifier_pipeline_runner._dispatch_action",
+                   side_effect=lambda *a, **kw: dispatched.append(a[0])):
+            run_pipeline(p, IMAGE, ActionCallbacks(), processed_stems=None)
+        assert not dispatched

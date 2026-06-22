@@ -1531,3 +1531,59 @@ class TestClassifierRankInheritCategories:
         # environment, but it should NOT emit anything about inherit_categories.
         errors = p.validate()
         assert not any("inherit" in e for e in errors)
+
+
+# ---------------------------------------------------------------------------
+# TestSeedCategory
+# ---------------------------------------------------------------------------
+
+class TestSeedCategory:
+    """Tests for the seed_category pipeline-level field."""
+
+    _CAT_MAP = {"Apple": "_apple", "Banana": "_banana"}
+
+    # -- defaults / serialization --
+
+    def test_defaults_to_empty_string(self):
+        p = ClassifierPipeline(name="p")
+        assert p.seed_category == ""
+
+    def test_roundtrip_with_value(self):
+        p = ClassifierPipeline(name="p", category_map=self._CAT_MAP, seed_category="Apple")
+        p2 = ClassifierPipeline.from_dict(p.to_dict())
+        assert p2.seed_category == "Apple"
+
+    def test_omitted_from_dict_when_empty(self):
+        p = ClassifierPipeline(name="p", category_map=self._CAT_MAP)
+        assert "seed_category" not in p.to_dict()
+
+    def test_present_in_dict_when_set(self):
+        p = ClassifierPipeline(name="p", category_map=self._CAT_MAP, seed_category="Banana")
+        assert p.to_dict()["seed_category"] == "Banana"
+
+    def test_missing_key_in_dict_defaults_to_empty(self):
+        d = {"name": "p", "nodes": [], "category_map": self._CAT_MAP}
+        p = ClassifierPipeline.from_dict(d)
+        assert p.seed_category == ""
+
+    # -- validate() --
+
+    def test_validate_passes_when_key_in_category_map(self):
+        p = ClassifierPipeline(name="p", category_map=self._CAT_MAP, seed_category="Apple")
+        errors = p.validate()
+        assert not any("seed_category" in e for e in errors)
+
+    def test_validate_errors_when_category_map_empty(self):
+        p = ClassifierPipeline(name="p", category_map={}, seed_category="Apple")
+        errors = p.validate()
+        assert any("seed_category" in e and "empty" in e for e in errors)
+
+    def test_validate_errors_when_key_not_in_category_map(self):
+        p = ClassifierPipeline(name="p", category_map=self._CAT_MAP, seed_category="Cherry")
+        errors = p.validate()
+        assert any("seed_category" in e and "Cherry" in e for e in errors)
+
+    def test_validate_no_error_when_seed_category_empty(self):
+        # Empty seed_category is valid regardless of category_map state.
+        p = ClassifierPipeline(name="p", category_map={})
+        assert p.validate() == []

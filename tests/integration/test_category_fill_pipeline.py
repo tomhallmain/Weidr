@@ -515,3 +515,131 @@ class TestProcessedStemsBatch:
         assert modifiers.count("_apple")  == 2   # three GENERATEs per stem
         assert modifiers.count("_banana") == 2
         assert modifiers.count("_cherry") == 2
+
+
+# ---------------------------------------------------------------------------
+# seed_category guard — integration tests
+# ---------------------------------------------------------------------------
+
+def _pipeline_with_seed_category(layout):
+    """Demo pipeline with seed_category='Apple' added for seed-guard tests."""
+    p = _pipeline(layout)
+    p.seed_category = "Apple"
+    return p
+
+
+class TestSeedCategoryGuardIntegration:
+    """
+    Integration tests for the seed_category guard using a modified form of the
+    category-fill demo pipeline.  seed_category='Apple' is added to the demo
+    pipeline so the runner skips 'Generate apple' for seed images without
+    evaluating its conditions.
+
+    The original demo pipeline (no seed_category) is used as a control in
+    test_without_seed_category_generates_all_three to prove that apple IS
+    generated when the guard is absent.
+    """
+
+    def test_seed_category_suppresses_apple_for_fresh_seed(self, layout):
+        """
+        Fresh seed, no variants anywhere, seed_category='Apple'.
+        The runner skips the apple node via the guard; banana and cherry are
+        still generated normally.
+        """
+        working, *_ = layout
+        seed = working / f"{STEM_A}.jpg"
+        seed.touch()
+
+        p = _pipeline_with_seed_category(layout)
+        cb, generated = _callbacks()
+        run_pipeline(p, str(seed), cb, base_directory=str(working))
+
+        modifiers = [m for _, m in generated]
+        assert "_apple"  not in modifiers
+        assert "_banana" in     modifiers
+        assert "_cherry" in     modifiers
+        assert len(generated) == 2
+
+    def test_without_seed_category_generates_all_three(self, layout):
+        """
+        Control: same fresh-seed setup but pipeline has no seed_category.
+        Apple IS generated because the guard is disabled.
+        """
+        working, *_ = layout
+        seed = working / f"{STEM_A}.jpg"
+        seed.touch()
+
+        p = _pipeline(layout)   # no seed_category
+        cb, generated = _callbacks()
+        run_pipeline(p, str(seed), cb, base_directory=str(working))
+
+        modifiers = [m for _, m in generated]
+        assert "_apple"  in modifiers
+        assert "_banana" in modifiers
+        assert "_cherry" in modifiers
+        assert len(generated) == 3
+
+    def test_seed_category_and_apple_in_target_both_suppress_apple(self, layout):
+        """
+        Apple already covered in target/A/ AND seed_category='Apple'.
+        Result is the same as without the guard: only banana+cherry generated.
+        The guard fires first (bypasses condition evaluation) but the outcome
+        is identical.
+        """
+        working, ta, *_ = layout
+        seed = working / f"{STEM_A}.jpg"
+        seed.touch()
+        (ta / f"{STEM_A}_apple.jpg").touch()
+
+        p = _pipeline_with_seed_category(layout)
+        cb, generated = _callbacks()
+        run_pipeline(p, str(seed), cb, base_directory=str(working))
+
+        modifiers = [m for _, m in generated]
+        assert "_apple"  not in modifiers
+        assert "_banana" in     modifiers
+        assert "_cherry" in     modifiers
+
+    def test_seed_category_does_not_affect_non_seed_images(self, layout):
+        """
+        A file that is not a seed (its stem ≠ base stem) is not affected by
+        seed_category.  The apple node evaluates its condition normally.
+
+        The derivative has no metadata and no apple variant in target/A/, so
+        RelatedImageCondition and BaseStemMatchCondition both return True →
+        apple IS generated.  This proves the seed guard did not suppress it
+        (contrast with test_seed_category_suppresses_apple_for_fresh_seed where
+        the seed has apple suppressed by the guard).
+        """
+        working, *_ = layout
+        deriv = working / f"{STEM_A}_apple.jpg"
+        deriv.touch()
+
+        p = _pipeline_with_seed_category(layout)
+        cb, generated = _callbacks()
+        run_pipeline(p, str(deriv), cb, base_directory=str(working))
+
+        modifiers = [m for _, m in generated]
+        # Derivative → is_seed=False → guard does not fire → apple generated.
+        assert "_apple" in modifiers
+
+    def test_seed_category_with_multiple_stems(self, layout):
+        """
+        Two distinct fresh seeds with seed_category='Apple': each generates
+        banana and cherry, never apple.
+        """
+        working, *_ = layout
+        seed_a = working / f"{STEM_A}.jpg"
+        seed_b = working / f"{STEM_B}.jpg"
+        seed_a.touch()
+        seed_b.touch()
+
+        p = _pipeline_with_seed_category(layout)
+        cb, generated = _callbacks()
+        run_pipeline(p, str(seed_a), cb, base_directory=str(working))
+        run_pipeline(p, str(seed_b), cb, base_directory=str(working))
+
+        modifiers = [m for _, m in generated]
+        assert modifiers.count("_apple")  == 0
+        assert modifiers.count("_banana") == 2
+        assert modifiers.count("_cherry") == 2

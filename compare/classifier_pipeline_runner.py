@@ -217,7 +217,9 @@ def run_pipeline(
         return None
 
     base_stem: Optional[str] = extract_filename_base_stem(image_path)
-    logger.debug("Pipeline %r: evaluating %s (base_stem=%r)", pipeline.name, image_path, base_stem)
+    image_file_stem = os.path.splitext(os.path.basename(image_path))[0]
+    is_seed = base_stem is not None and image_file_stem.lower() == base_stem.lower()
+    logger.debug("Pipeline %r: evaluating %s (base_stem=%r, is_seed=%s)", pipeline.name, image_path, base_stem, is_seed)
 
     # Stem-group skip and validity gate.
     should_mark_done = False
@@ -226,8 +228,6 @@ def run_pipeline(
             logger.debug("Pipeline %r: stem %r already processed, skipping %s", pipeline.name, base_stem, image_path)
             return None
 
-        image_file_stem = os.path.splitext(os.path.basename(image_path))[0]
-        is_seed = image_file_stem.lower() == base_stem.lower()
         should_evaluate, should_mark_done = _resolve_stem_group(image_path, base_stem, is_seed)
         if not should_evaluate:
             logger.debug("Pipeline %r: stem group resolve says skip %s", pipeline.name, image_path)
@@ -238,6 +238,13 @@ def run_pipeline(
     node_scores: dict[str, object] = {}
     node_order = [n.name for n in pipeline.nodes]
     nodes_by_name = {n.name: n for n in pipeline.nodes}
+
+    # Suffix that seeds cover, derived from pipeline.seed_category + category_map.
+    # Empty string means the seed-category guard is disabled for this run.
+    seed_suffix = (
+        pipeline.category_map.get(pipeline.seed_category, "")
+        if pipeline.seed_category else ""
+    )
 
     current_name: Optional[str] = node_order[0]
     last_etc_action: Optional[ClassifierActionType] = None  # last EXECUTE_AND_CONTINUE action
@@ -258,18 +265,41 @@ def run_pipeline(
             current_name = node_order[idx + 1] if idx + 1 < len(node_order) else None
             continue
 
-        try:
-            result, score = _evaluate_condition(
-                node.condition, image_path, node_results, node_scores, base_directory,
-                node_name=node.name, report=report,
-                pipeline_categories=list(pipeline.category_map.values()),
-            )
-        except Exception:
-            logger.exception(
-                "Pipeline %r: error in node %r on %s — treating as no-match",
-                pipeline.name, node.name, image_path,
-            )
+        # Seed-category guard: when the image is a seed and the pipeline declares
+        # which category seeds belong to, skip GENERATE for that category without
+        # running the node condition.
+        if (
+            is_seed and seed_suffix
+            and node.on_match.action_type == ClassifierActionType.GENERATE
+            and node.on_match.action_modifier == seed_suffix
+        ):
             result, score = False, None
+            logger.debug(
+                "Pipeline %r: node %r — seed is category %r, GENERATE skipped",
+                pipeline.name, node.name, pipeline.seed_category,
+            )
+            if report:
+                report.add(
+                    "INFO",
+                    node.name,
+                    image_path,
+                    _("Seed image is assigned to category '{0}'; GENERATE skipped.").format(
+                        pipeline.seed_category
+                    ),
+                )
+        else:
+            try:
+                result, score = _evaluate_condition(
+                    node.condition, image_path, node_results, node_scores, base_directory,
+                    node_name=node.name, report=report,
+                    pipeline_categories=list(pipeline.category_map.values()),
+                )
+            except Exception:
+                logger.exception(
+                    "Pipeline %r: error in node %r on %s — treating as no-match",
+                    pipeline.name, node.name, image_path,
+                )
+                result, score = False, None
 
         node_results[node.name] = result
         node_scores[node.name] = score

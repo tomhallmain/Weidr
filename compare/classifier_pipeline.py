@@ -822,6 +822,12 @@ class ClassifierPipeline:
     # BaseStemMatchCondition infers its overflow limit as len(category_map) + 1 when
     # max_stem_group_size is left at 0.
     category_map: dict = field(default_factory=dict)
+    # The category that seed images (images whose file stem equals the base stem,
+    # i.e. no suffix) belong to by default.  When set, the runner skips GENERATE
+    # for this category when the image under evaluation is a seed, without needing
+    # a ClassifierRankCondition seed guard in the node.  Must be a key present in
+    # category_map (validated by validate()).  Empty string = feature disabled.
+    seed_category: str = ""
 
     def __post_init__(self):
         if self.nodes is None:
@@ -861,10 +867,25 @@ class ClassifierPipeline:
         - ClassifierRankCondition classifier names are registered (lazy — skipped if
           image_classifier_manager is not yet loaded)
         - LookaheadCondition names resolve
+        - seed_category, when set, must be a key in category_map
         """
         errors: list[str] = []
         if not self.name.strip():
             errors.append(_("Pipeline name is empty."))
+
+        if self.seed_category:
+            if not self.category_map:
+                errors.append(
+                    _("seed_category '{0}' is set but category_map is empty.").format(
+                        self.seed_category
+                    )
+                )
+            elif self.seed_category not in self.category_map:
+                errors.append(
+                    _("seed_category '{0}' is not a key in category_map.").format(
+                        self.seed_category
+                    )
+                )
 
         node_names: list[str] = []
         seen_names: set[str] = set()
@@ -1209,6 +1230,8 @@ class ClassifierPipeline:
         }
         if self.category_map:
             d["category_map"] = dict(self.category_map)
+        if self.seed_category:
+            d["seed_category"] = self.seed_category
         return d
 
     @staticmethod
@@ -1236,6 +1259,7 @@ class ClassifierPipeline:
                 if d.get("generation_type") else None
             ),
             category_map=raw_map,
+            seed_category=d.get("seed_category", ""),
         )
 
 

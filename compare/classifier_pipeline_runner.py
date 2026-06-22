@@ -37,6 +37,7 @@ from compare.classifier_pipeline import (
     RelatedImageCondition,
 )
 from files.related_image import (
+    _stem_matches_any_suffix,
     extract_filename_base_stem,
     find_files_by_base_stem,
     get_related_image_path,
@@ -586,40 +587,6 @@ def _eval_lookahead(
     )
     return bool(result), None
 
-
-def _stem_matches_any_suffix(stem: str, suffixes: list) -> bool:
-    """Return True if *stem* ends with (a truncation of) any entry in *suffixes*.
-
-    Matching rules (all case-insensitive):
-    - Leading separators (``_``, space) in the configured suffix are stripped
-      before comparison, so ``_cherry`` and ``cherry`` are equivalent specs.
-    - A non-alphanumeric character must immediately precede the matched portion
-      in the stem, but the exact form of the separator is unrestricted: ``__cher``
-      matches ``_cherry`` (double-underscore separator, truncated word).
-    - Right-side truncation: ``_cher`` and ``_che`` both match ``_cherry``.
-    - Trailing variant markers are stripped before matching so that
-      ``_cherry_2``, ``_cherry 2``, and ``_cherry2`` all match ``_cherry``.
-    """
-    s = stem.lower()
-    # Build a variant-stripped copy: remove optional (_, space) then digits at end.
-    s_base = re.sub(r"[_ ]*\d+$", "", s) if s and s[-1].isdigit() else s
-    candidates = (s_base, s) if s_base != s else (s,)
-
-    for sf in suffixes:
-        sf_core = sf.lower().lstrip("_ ")
-        if not sf_core:
-            continue
-        # Try prefixes longest-first so the most specific match wins.
-        for k in range(len(sf_core), 0, -1):
-            prefix = sf_core[:k]
-            for candidate in candidates:
-                if candidate.endswith(prefix):
-                    pos = len(candidate) - len(prefix) - 1
-                    # Accept if the preceding character is non-alphanumeric,
-                    # or there is no preceding character (prefix fills the stem).
-                    if pos < 0 or not candidate[pos].isalnum():
-                        return True
-    return False
 
 
 def _eval_base_stem_match(

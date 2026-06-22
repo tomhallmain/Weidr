@@ -280,6 +280,80 @@ class TestVariantInWorkingDir:
         assert "_apple"  not in modifiers
         assert "_banana" in     modifiers
 
+    def test_double_underscore_truncated_suffix_skips_apple(self, layout):
+        """
+        SD-runner style names use a double-underscore separator and a truncated
+        category word (e.g. __appl for _apple) with no related-image metadata.
+        RelatedImageCondition must still treat the working dir as covered.
+        """
+        working, *_ = layout
+        seed  = working / f"{STEM_A}.jpg"
+        local = working / f"{STEM_A}__appl.jpg"
+        seed.touch()
+        local.touch()
+
+        cb, generated = _callbacks()
+        run_pipeline(_pipeline(layout), str(seed), cb, base_directory=str(working))
+
+        modifiers = [m for _, m in generated]
+        assert "_apple"  not in modifiers
+        assert "_banana" in     modifiers
+        assert "_cherry" in     modifiers
+
+    def test_double_underscore_variant_index_skips_cherry(self, layout):
+        """Truncated suffix plus variant index (__cher_2) still covers cherry."""
+        working, *_ = layout
+        seed  = working / f"{STEM_A}.jpg"
+        local = working / f"{STEM_A}__cher_2.jpg"
+        seed.touch()
+        local.touch()
+
+        cb, generated = _callbacks()
+        run_pipeline(_pipeline(layout), str(seed), cb, base_directory=str(working))
+
+        modifiers = [m for _, m in generated]
+        assert "_cherry" not in modifiers
+        assert "_apple"  in     modifiers
+        assert "_banana" in     modifiers
+
+    def test_sd_runner_variants_in_working_dir_generate_only_missing(self, layout):
+        """
+        Manual test layout (operations5): seed with __appl, __cher, and __cher_2
+        in the working dir should generate banana only.
+        """
+        working, *_ = layout
+        seed = working / f"{STEM_A}.jpg"
+        seed.touch()
+        (working / f"{STEM_A}__appl.jpg").touch()
+        (working / f"{STEM_A}__cher.jpg").touch()
+        (working / f"{STEM_A}__cher_2.jpg").touch()
+
+        cb, generated = _callbacks()
+        run_pipeline(_pipeline(layout), str(seed), cb, base_directory=str(working))
+
+        assert len(generated) == 1
+        assert generated[0][1] == "_banana"
+
+    def test_intermediate_token_before_double_underscore_suffix_skips_apple(self, layout):
+        """
+        Generator may insert a label between the base stem and the category
+        suffix (e.g. stem_upscaled_2x__appl). RelatedImageCondition must still
+        recognise this as an apple variant in the working dir.
+        """
+        working, *_ = layout
+        seed = working / f"{STEM_A}.jpg"
+        local = working / f"{STEM_A}_upscaled_2x__appl.jpg"
+        seed.touch()
+        local.touch()
+
+        cb, generated = _callbacks()
+        run_pipeline(_pipeline(layout), str(seed), cb, base_directory=str(working))
+
+        modifiers = [m for _, m in generated]
+        assert "_apple"  not in modifiers
+        assert "_banana" in     modifiers
+        assert "_cherry" in     modifiers
+
 
 # ---------------------------------------------------------------------------
 # §4.5 row 5 — Type-3 derivative (upstream in working dir) → no generation

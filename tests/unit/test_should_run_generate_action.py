@@ -86,8 +86,8 @@ class TestShouldRunGenerateActionSuffixCount:
         """Downstream files exist but none end with the suffix → still needed.
 
         source_v.jpg and source_extra.jpg are caught by the stem-prefix heuristic
-        (_VARIANT_SUFFIX_RE_STRICT matches alpha-only suffix) but their stems do
-        not match the suffix regex '_edit\\d*$'.
+        (source stem + non-alphanumeric separator) but their stems do not match
+        the configured edit suffix.
         """
         entries = [
             ("/base/source_v.jpg", None),
@@ -100,7 +100,7 @@ class TestShouldRunGenerateActionSuffixCount:
 
     def test_downstream_with_suffix_via_stem_prefix(self):
         """Downstream detected by stem-prefix heuristic counts toward threshold."""
-        # source_edit.jpg: _VARIANT_SUFFIX_RE_STRICT matches, group(1)="source"
+        # source_edit.jpg: stem-prefix heuristic matches; suffix ends with _edit
         entries = [("/base/source_edit.jpg", None)]
         with _patch_related(None):
             with _patch_scan_dir(entries):
@@ -206,6 +206,30 @@ class TestShouldRunGenerateActionSuffixCount:
             with _patch_scan_dir(entries):
                 result = should_run_generate_action(IMAGE, "_edit", SEARCH_DIR)
         assert result is True
+
+    def test_double_underscore_truncated_suffix_counts(self):
+        """SD-runner style names (double underscore + truncated word) block generation."""
+        entries = [
+            ("/base/CUI_17820535380315060.png", None),
+            ("/base/CUI_17820535380315060__appl.png", None),
+        ]
+        image = "/base/CUI_17820535380315060.png"
+        with _patch_related(None):
+            with _patch_scan_dir(entries):
+                result = should_run_generate_action(image, "_apple", SEARCH_DIR)
+        assert result is False
+
+    def test_double_underscore_truncated_suffix_with_variant_index_counts(self):
+        """Variant index after truncated suffix (e.g. __cher_2) still blocks generation."""
+        entries = [
+            ("/base/CUI_17820535380315060.png", None),
+            ("/base/CUI_17820535380315060__cher_2.png", None),
+        ]
+        image = "/base/CUI_17820535380315060.png"
+        with _patch_related(None):
+            with _patch_scan_dir(entries):
+                result = should_run_generate_action(image, "_cherry", SEARCH_DIR)
+        assert result is False
 
 
 # ---------------------------------------------------------------------------

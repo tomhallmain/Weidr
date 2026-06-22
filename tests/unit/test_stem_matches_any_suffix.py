@@ -1,5 +1,5 @@
 """
-Unit tests for compare.classifier_pipeline_runner._stem_matches_any_suffix.
+Unit tests for files.related_image._stem_matches_any_suffix.
 
 Covers the flexible matching rules introduced to support:
 - Extra or double underscores/spaces as separators between base stem and suffix
@@ -9,7 +9,7 @@ Covers the flexible matching rules introduced to support:
 
 import pytest
 
-from compare.classifier_pipeline_runner import _stem_matches_any_suffix
+from files.related_image import _stem_matches_any_suffix
 
 
 FRUIT_SUFFIXES = ["_apple", "_banana", "_cherry"]

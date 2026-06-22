@@ -31,6 +31,40 @@ _VARIANT_SUFFIX_RE = re.compile(r'^(.+)_[A-Za-z0-9]{1,8}$')
 _VARIANT_SUFFIX_RE_STRICT = re.compile(r'^(.+)_[A-Za-z]{1,8}$')
 
 
+def _stem_matches_any_suffix(stem: str, suffixes: list) -> bool:
+    """Return True if *stem* ends with (a truncation of) any entry in *suffixes*.
+
+    Matching rules (all case-insensitive):
+    - Leading separators (``_``, space) in the configured suffix are stripped
+      before comparison, so ``_cherry`` and ``cherry`` are equivalent specs.
+    - A non-alphanumeric character must immediately precede the matched portion
+      in the stem, but the exact form of the separator is unrestricted: ``__cher``
+      matches ``_cherry`` (double-underscore separator, truncated word).
+    - Right-side truncation: ``_cher`` and ``_che`` both match ``_cherry``.
+    - Trailing variant markers are stripped before matching so that
+      ``_cherry_2``, ``_cherry 2``, and ``_cherry2`` all match ``_cherry``.
+    """
+    s = stem.lower()
+    # Build a variant-stripped copy: remove optional (_, space) then digits at end.
+    s_base = re.sub(r"[_ ]*\d+$", "", s) if s and s[-1].isdigit() else s
+    candidates = (s_base, s) if s_base != s else (s,)
+
+    for sf in suffixes:
+        sf_core = sf.lower().lstrip("_ ")
+        if not sf_core:
+            continue
+        for k in range(len(sf_core), 0, -1):
+            prefix = sf_core[:k]
+            for candidate in candidates:
+                if candidate.endswith(prefix):
+                    pos = len(candidate) - len(prefix) - 1
+                    # Accept if the preceding character is non-alphanumeric,
+                    # or there is no preceding character (prefix fills the stem).
+                    if pos < 0 or not candidate[pos].isalnum():
+                        return True
+    return False
+
+
 def _ensure_related_path(entry) -> str:
     """Return the resolved related_image_path for entry (empty string if none)."""
     if entry.related_image_path is None:
@@ -322,12 +356,19 @@ def should_run_generate_action(
                 downstream_stems.append(os.path.splitext(os.path.basename(fp))[0])
                 continue
         fp_stem, fp_ext = os.path.splitext(os.path.basename(fp))
-        m = _VARIANT_SUFFIX_RE_STRICT.match(fp_stem)
-        if m and m.group(1) == source_stem and fp_ext.lower() == source_ext.lower():
+        # Filename-pattern fallback when metadata is absent.  Use a direct prefix
+        # break (not _VARIANT_SUFFIX_RE_STRICT) so double-underscore / truncated
+        # generator suffixes (e.g. __appl, __cher_2) are collected; edit_suffix
+        # filtering happens below via _stem_matches_any_suffix.
+        if (
+            fp_ext.lower() == source_ext.lower()
+            and len(fp_stem) > len(source_stem)
+            and fp_stem[: len(source_stem)].lower() == source_stem.lower()
+            and not fp_stem[len(source_stem)].isalnum()
+        ):
             downstream_stems.append(fp_stem)
 
-    suffix_re = re.compile(re.escape(edit_suffix) + r'(?:_\d+|\d*)$')
-    suffix_count = sum(1 for stem in downstream_stems if suffix_re.search(stem))
+    suffix_count = sum(1 for stem in downstream_stems if _stem_matches_any_suffix(stem, [edit_suffix]))
     return suffix_count < count_threshold
 
 

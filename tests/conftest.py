@@ -96,6 +96,12 @@ def isolated_singletons(tmp_path, monkeypatch):
     except Exception:
         pass
 
+    try:
+        import ui.compare.classifier_management_window_qt as _cmw
+        monkeypatch.setattr(_cmw, "app_info_cache", new_cache)
+    except Exception:
+        pass
+
     # Silence startup log spam; patch before instantiation so __init__ skips the print.
     monkeypatch.setattr(cfg.Config, "print_config_settings", lambda self: None)
     monkeypatch.setattr(cfg, "config", cfg.Config())
@@ -152,6 +158,27 @@ def reset_app_globals():
         try:
             from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
             ClassifierPipelinesTab._editor_window = None
+        except Exception:
+            pass
+
+        # ClassifierManagementWindow — singleton dialog reference
+        try:
+            from ui.compare.classifier_management_window_qt import ClassifierManagementWindow
+            ClassifierManagementWindow._instance = None
+        except Exception:
+            pass
+
+        # Lookahead — shared list of lookahead definitions
+        try:
+            from compare.lookahead import Lookahead
+            Lookahead.lookaheads = []
+        except Exception:
+            pass
+
+        # DirectoryProfile — shared list of directory profiles
+        try:
+            from files.directory_profile import DirectoryProfile
+            DirectoryProfile.directory_profiles = []
         except Exception:
             pass
 

@@ -191,7 +191,7 @@ class DirectoryProfilesTab(QWidget):
         profile = DirectoryProfile.directory_profiles[idx]
         # Check linkage *before* removal while prevalidations still reference it.
         linked = self._profile_linked_dirs(profile)
-        DirectoryProfile.remove_profile(profile.name)
+        ClassifierActionsManager.remove_profile(profile.name)
         if linked:
             # Linked prevalidations lose their profile scope and become global;
             # cached None results in previously unscoped dirs are now stale.

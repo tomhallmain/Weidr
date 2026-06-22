@@ -225,54 +225,54 @@ class TestToggleActive:
 
 
 # ---------------------------------------------------------------------------
-# _duplicate
+# _copy
 # ---------------------------------------------------------------------------
 
-class TestDuplicate:
-    def test_duplicate_adds_pipeline(self, qtbot, isolated_singletons):
+class TestCopy:
+    def test_copy_adds_pipeline(self, qtbot, isolated_singletons):
         p = _make_pipeline("original")
         ClassifierPipelines.add_pipeline(p)
         ClassifierPipelines.store()
         tab = _make_tab(qtbot)
-        tab._duplicate(p)
+        tab._copy(p)
         assert len(ClassifierPipelines.get_all_pipelines()) == 2
 
-    def test_duplicate_name_contains_copy(self, qtbot, isolated_singletons):
+    def test_copy_name_contains_copy(self, qtbot, isolated_singletons):
         p = _make_pipeline("source")
         ClassifierPipelines.add_pipeline(p)
         ClassifierPipelines.store()
         tab = _make_tab(qtbot)
-        tab._duplicate(p)
+        tab._copy(p)
         names = [pip.name for pip in ClassifierPipelines.get_all_pipelines()]
         copies = [n for n in names if n != "source"]
         assert len(copies) == 1
         assert "copy" in copies[0].lower() or "source" in copies[0]
 
-    def test_duplicate_avoids_name_collision(self, qtbot, isolated_singletons):
+    def test_copy_avoids_name_collision(self, qtbot, isolated_singletons):
         p = _make_pipeline("base")
         ClassifierPipelines.add_pipeline(p)
         tab = _make_tab(qtbot)
-        tab._duplicate(p)
-        tab._duplicate(p)
+        tab._copy(p)
+        tab._copy(p)
         names = [pip.name for pip in ClassifierPipelines.get_all_pipelines()]
         # All names must be unique
         assert len(names) == len(set(names))
 
-    def test_duplicate_rebuilds_rows(self, qtbot, isolated_singletons):
+    def test_copy_rebuilds_rows(self, qtbot, isolated_singletons):
         p = _make_pipeline("rebuild_test")
         ClassifierPipelines.add_pipeline(p)
         ClassifierPipelines.store()
         tab = _make_tab(qtbot)
         assert _row_count(tab) == 1
-        tab._duplicate(p)
+        tab._copy(p)
         assert _row_count(tab) == 2
 
-    def test_duplicate_stores_to_cache(self, qtbot, isolated_singletons):
+    def test_copy_stores_to_cache(self, qtbot, isolated_singletons):
         p = _make_pipeline("dup_store")
         ClassifierPipelines.add_pipeline(p)
         ClassifierPipelines.store()
         tab = _make_tab(qtbot)
-        tab._duplicate(p)
+        tab._copy(p)
         ClassifierPipelines.pipelines = []
         ClassifierPipelines.load()
         assert len(ClassifierPipelines.get_all_pipelines()) == 2

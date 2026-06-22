@@ -204,8 +204,8 @@ class ClassifierPipelinesTab(QWidget):
             edit_btn.clicked.connect(lambda _=False, p=pipeline: self._open_editor(p))
             grid.addWidget(edit_btn, r, self._COL_EDIT)
 
-            dup_btn = QPushButton(_("Duplicate"))
-            dup_btn.clicked.connect(lambda _=False, p=pipeline: self._duplicate(p))
+            dup_btn = QPushButton(_("Copy"))
+            dup_btn.clicked.connect(lambda _=False, p=pipeline: self._copy(p))
             grid.addWidget(dup_btn, r, self._COL_DUP)
 
             del_btn = QPushButton(_("Delete"))
@@ -292,7 +292,7 @@ class ClassifierPipelinesTab(QWidget):
         )
         ClassifierPipelinesTab._editor_window.show()
 
-    def _duplicate(self, pipeline: ClassifierPipeline) -> None:
+    def _copy(self, pipeline: ClassifierPipeline) -> None:
         new_pipeline = copy.deepcopy(pipeline)
         base = pipeline.name
         existing_names = {p.name for p in ClassifierPipelines.get_all_pipelines()}

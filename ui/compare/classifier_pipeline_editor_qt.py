@@ -633,7 +633,7 @@ class _RelatedImagePanel(QWidget):
         form.addRow("", self._use_configured_dirs)
 
         self._search_dir = QLineEdit()
-        self._search_dir.setPlaceholderText(_("(empty = use configured dirs or pipeline base directory)"))
+        self._search_dir.setPlaceholderText(_("(empty = use configured dirs or pipeline working directory)"))
         self._search_dir.textChanged.connect(self._on_changed)
         dir_row = QHBoxLayout()
         dir_row.addWidget(self._search_dir, 1)
@@ -705,12 +705,20 @@ class _BaseStemMatchPanel(QWidget):
         self._suffix_filter.textChanged.connect(self._on_changed)
         form.addRow(_("Suffix filter:"), self._suffix_filter)
 
+        self._use_working_directory = QCheckBox(
+            _("Search pipeline working directory when no directory is set below")
+        )
+        self._use_working_directory.setChecked(False)
+        self._use_working_directory.stateChanged.connect(self._on_changed)
+        form.addRow("", self._use_working_directory)
+
         dir_row = QHBoxLayout()
         self._search_directory = QLineEdit()
-        self._search_directory.setPlaceholderText(_("(empty = use configured related-image dirs)"))
+        self._search_directory.setPlaceholderText(
+            _("(empty = use configured related-image dirs or pipeline working directory; see checkbox)"))
         self._search_directory.setToolTip(
-            _("When empty, searches config: directories_to_search_for_related_images. "
-              "Uses cached scan for pipeline performance.")
+            _("When empty, searches config: directories_to_search_for_related_images, "
+              "or the pipeline working directory if the checkbox above is checked.")
         )
         self._search_directory.textChanged.connect(self._on_changed)
         dir_row.addWidget(self._search_directory)
@@ -740,11 +748,13 @@ class _BaseStemMatchPanel(QWidget):
         if isinstance(condition, BaseStemMatchCondition):
             self._require_match.setChecked(condition.require_match)
             self._suffix_filter.setText(", ".join(condition.suffix_filter))
+            self._use_working_directory.setChecked(condition.use_working_directory)
             self._search_directory.setText(condition.search_directory)
             self._max_stem_group_size.setValue(condition.max_stem_group_size)
         else:
             self._require_match.setChecked(True)
             self._suffix_filter.setText("")
+            self._use_working_directory.setChecked(False)
             self._search_directory.setText("")
             self._max_stem_group_size.setValue(0)
 
@@ -754,6 +764,7 @@ class _BaseStemMatchPanel(QWidget):
         return BaseStemMatchCondition(
             require_match=self._require_match.isChecked(),
             suffix_filter=suffixes,
+            use_working_directory=self._use_working_directory.isChecked(),
             search_directory=self._search_directory.text().strip(),
             max_stem_group_size=self._max_stem_group_size.value(),
         )
@@ -774,8 +785,16 @@ class _UnknownSuffixPanel(QWidget):
         self._expected_suffixes.textChanged.connect(self._on_changed)
         form.addRow(_("Expected suffixes:"), self._expected_suffixes)
 
+        self._use_working_directory = QCheckBox(
+            _("Search pipeline working directory when no directory is set below")
+        )
+        self._use_working_directory.setChecked(False)
+        self._use_working_directory.stateChanged.connect(self._on_changed)
+        form.addRow("", self._use_working_directory)
+
         self._search_dir = QLineEdit()
-        self._search_dir.setPlaceholderText(_("(empty = use configured related-image dirs)"))
+        self._search_dir.setPlaceholderText(
+            _("(empty = use configured related-image dirs or pipeline working directory; see checkbox)"))
         self._search_dir.textChanged.connect(self._on_changed)
         dir_row = QHBoxLayout()
         dir_row.addWidget(self._search_dir, 1)
@@ -815,11 +834,13 @@ class _UnknownSuffixPanel(QWidget):
     def load(self, condition) -> None:
         if isinstance(condition, UnknownSuffixCondition):
             self._expected_suffixes.setText(", ".join(condition.expected_suffixes))
+            self._use_working_directory.setChecked(condition.use_base_directory)
             self._search_dir.setText(condition.search_directory)
             self._classifier_name.setText(condition.classifier_name)
             self._inference_threshold.setValue(condition.inference_threshold)
         else:
             self._expected_suffixes.setText("")
+            self._use_working_directory.setChecked(False)
             self._search_dir.setText("")
             self._classifier_name.setText("")
             self._inference_threshold.setValue(0.85)
@@ -829,6 +850,7 @@ class _UnknownSuffixPanel(QWidget):
         suffixes = [s.strip() for s in raw.split(",") if s.strip()]
         return UnknownSuffixCondition(
             expected_suffixes=suffixes,
+            use_base_directory=self._use_working_directory.isChecked(),
             search_directory=self._search_dir.text().strip(),
             classifier_name=self._classifier_name.text().strip(),
             inference_threshold=self._inference_threshold.value(),
@@ -1769,6 +1791,17 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._group_btn.setEnabled(False)
         self._group_btn.clicked.connect(self._group_selected_nodes)
         group_row.addWidget(self._group_btn)
+
+        fill_btn = QPushButton(_("Fill from Map"))
+        fill_btn.setToolTip(
+            _("Append one Generate node per category-map entry. "
+              "Each node checks that no derivative exists yet and that the target "
+              "directory lacks this stem, then generates with the category suffix. "
+              "Set the target directory per node after generating.")
+        )
+        fill_btn.clicked.connect(self._fill_nodes_from_category_map)
+        group_row.addWidget(fill_btn)
+
         group_row.addStretch()
         lay.addLayout(group_row)
 
@@ -1986,6 +2019,71 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._rebuild_node_list()
         self._node_list.setCurrentRow(insert_at)
         self._refresh_flow_preview()
+
+    def _fill_nodes_from_category_map(self) -> None:
+        category_map = self._category_map_editor.get_items()
+        if not category_map:
+            qt_alert(self, _("Fill from Map"),
+                     _("The category map is empty. Add categories before generating nodes."))
+            return
+
+        covered = {
+            category
+            for category, suffix in category_map.items()
+            if any(n.is_category_generate_node(suffix) for n in self._pipeline.nodes)
+        }
+        if covered:
+            cats_str = ", ".join(f"'{c}'" for c in covered)
+            if not qt_alert(
+                self, _("Fill from Map"),
+                _("The following categories already have a matching Generate node and will be "
+                  "skipped: {cats}.\n\nAppend nodes for the remaining categories?").format(
+                    cats=cats_str),
+                kind="askokcancel",
+            ):
+                return
+
+        self._flush_node_to_model()
+
+        added = 0
+        for category, suffix in category_map.items():
+            if category in covered:
+                continue
+            node = PipelineNode(
+                name=f"Generate {category}",
+                condition=CompositeCondition(
+                    operator="AND",
+                    sub_conditions=[
+                        RelatedImageCondition(
+                            edit_suffix=suffix,
+                            use_configured_search_directories=False,
+                        ),
+                        BaseStemMatchCondition(
+                            require_match=False,
+                            use_working_directory=True,
+                        ),
+                    ],
+                ),
+                on_match=NodeOutcome(
+                    outcome_type=OutcomeType.EXECUTE_AND_CONTINUE,
+                    action_type=ClassifierActionType.GENERATE,
+                    action_modifier=suffix,
+                ),
+                on_no_match=NodeOutcome(outcome_type=OutcomeType.CONTINUE),
+            )
+            self._pipeline.nodes.append(node)
+            added += 1
+
+        self._rebuild_node_list()
+        self._refresh_flow_preview()
+
+        if added:
+            qt_alert(
+                self, _("Fill from Map"),
+                _("{count} node(s) added. Set the target directory on each "
+                  "BaseStemMatch sub-condition to the per-category output folder.").format(
+                    count=added),
+            )
 
     def _load_node_to_editor(self, idx: int) -> None:
         self._suppress_refresh = True

@@ -36,6 +36,8 @@ from compare.classifier_pipeline import (
     UnknownSuffixCondition,
     RelatedImageCondition,
 )
+
+
 from files.related_image import (
     _stem_matches_any_suffix,
     extract_filename_base_stem,
@@ -443,7 +445,8 @@ def _evaluate_condition(
         return (prior == condition.expected_result), float(prior)
 
     if isinstance(condition, BaseStemMatchCondition):
-        return _eval_base_stem_match(condition, image_path, node_name=node_name, report=report,
+        return _eval_base_stem_match(condition, image_path, base_directory=base_directory,
+                                     node_name=node_name, report=report,
                                      pipeline_categories=pipeline_categories)
 
     if isinstance(condition, UnknownSuffixCondition):
@@ -628,6 +631,7 @@ def _eval_base_stem_match(
     condition: BaseStemMatchCondition,
     image_path: str,
     *,
+    base_directory: Optional[str] = None,
     node_name: str = "",
     report: Optional[PipelineRunReport] = None,
     pipeline_categories: list = [],
@@ -638,6 +642,8 @@ def _eval_base_stem_match(
         return False, None
     if condition.search_directory:
         dirs = [condition.search_directory]
+    elif condition.use_working_directory:
+        dirs = [base_directory or os.path.dirname(os.path.abspath(image_path))]
     else:
         dirs = config.directories_to_search_for_related_images
     if not dirs:

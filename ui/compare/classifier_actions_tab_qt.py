@@ -29,10 +29,13 @@ from compare.classifier_actions_manager import ClassifierActionsManager
 from files.directory_profile import DirectoryProfile
 from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle
+from utils.app_info_cache import app_info_cache
 from utils.config import config
 from utils.logging_setup import get_logger
 from utils.translations import _
 logger = get_logger("classifier_actions_tab_qt")
+
+_PROFILE_CACHE_KEY = "classifier_actions_profile"
 
 
 class ClassifierActionsTab(QWidget):
@@ -119,6 +122,12 @@ class ClassifierActionsTab(QWidget):
 
         self._profile_combo = QComboBox()
         self._refresh_profile_combo()
+        saved_profile = app_info_cache.get_meta(_PROFILE_CACHE_KEY, "")
+        if saved_profile and self._profile_combo.findText(saved_profile) >= 0:
+            self._profile_combo.setCurrentText(saved_profile)
+        self._profile_combo.currentTextChanged.connect(
+            lambda text: app_info_cache.set_meta(_PROFILE_CACHE_KEY, text)
+        )
         prof_row.addWidget(self._profile_combo, 1)
         prof_row.addStretch()
         root.addLayout(prof_row)

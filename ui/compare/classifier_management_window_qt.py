@@ -635,21 +635,20 @@ class ClassifierManagementWindow(SmartDialog):
             self._tabs, app_actions
         )
 
-        # Tab indices: 0=Classifier Actions, 1=Prevalidations,
-        #              2=Lookaheads, 3=Directory Profiles,
-        #              4=Pipelines, 5=Seek to Trigger
+        # Tab indices: 0=Classifier Actions, 1=Pipelines,
+        #              2=Prevalidations, 3=Seek to Trigger,
+        #              4=Lookaheads, 5=Directory Profiles
         self._tabs.addTab(self._classifier_actions_tab, _("Classifier Actions"))
+        self._tabs.addTab(self._classifier_pipelines_tab, _("Pipelines"))
         self._tabs.addTab(self._prevalidations_tab, _("Prevalidations"))
+        self._tabs.addTab(self._seek_to_trigger_tab, _("Seek to Trigger"))
         self._tabs.addTab(self._lookaheads_tab, _("Lookaheads"))
         self._tabs.addTab(self._directory_profiles_tab, _("Directory Profiles"))
-        self._tabs.addTab(self._classifier_pipelines_tab, _("Pipelines"))
-        self._tabs.addTab(self._seek_to_trigger_tab, _("Seek to Trigger"))
 
         if not config.enable_prevalidations:
             _pv_tip = _("Prevalidations are disabled. Enable them in the Prevalidations tab settings.")
-            for idx in (1, 2, 3):  # Prevalidations, Lookaheads, Directory Profiles
-                self._tabs.setTabEnabled(idx, False)
-                self._tabs.setTabToolTip(idx, _pv_tip)
+            self._tabs.setTabEnabled(2, False)
+            self._tabs.setTabToolTip(2, _pv_tip)
 
         # Restore last-selected tab, then persist any future changes.
         _CACHE_KEY = "classifier_management_tab"

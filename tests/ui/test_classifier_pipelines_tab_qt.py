@@ -411,3 +411,193 @@ class TestLoadDemo:
         assert demo.is_active is False
 
 
+# ---------------------------------------------------------------------------
+# Profile dropdown persistence
+# ---------------------------------------------------------------------------
+
+class TestProfileDropdownPersistence:
+    def _add_profiles(self, names):
+        from files.directory_profile import DirectoryProfile
+        for name in names:
+            DirectoryProfile.directory_profiles.append(
+                DirectoryProfile(name=name, directories=[])
+            )
+
+    def test_profile_combo_populated_from_profiles(self, qtbot, isolated_singletons):
+        self._add_profiles(["Alpha", "Beta"])
+        tab = _make_tab(qtbot)
+        items = [tab._profile_combo.itemText(i) for i in range(tab._profile_combo.count())]
+        assert "Alpha" in items
+        assert "Beta" in items
+
+    def test_initial_selection_restored_from_cache(self, qtbot, isolated_singletons):
+        from ui.compare.classifier_pipelines_tab_qt import _PROFILE_CACHE_KEY
+        self._add_profiles(["X", "Y", "Z"])
+        isolated_singletons.set_meta(_PROFILE_CACHE_KEY, "Y")
+        tab = _make_tab(qtbot)
+        assert tab._profile_combo.currentText() == "Y"
+
+    def test_missing_cached_profile_falls_back_to_first(self, qtbot, isolated_singletons):
+        from ui.compare.classifier_pipelines_tab_qt import _PROFILE_CACHE_KEY
+        self._add_profiles(["P1", "P2"])
+        isolated_singletons.set_meta(_PROFILE_CACHE_KEY, "DoesNotExist")
+        tab = _make_tab(qtbot)
+        assert tab._profile_combo.currentText() == "P1"
+
+    def test_selection_change_updates_cache(self, qtbot, isolated_singletons):
+        from ui.compare.classifier_pipelines_tab_qt import _PROFILE_CACHE_KEY
+        self._add_profiles(["A", "B", "C"])
+        tab = _make_tab(qtbot)
+        tab._profile_combo.setCurrentText("C")
+        assert isolated_singletons.get_meta(_PROFILE_CACHE_KEY) == "C"
+
+    def test_empty_cache_does_not_change_selection(self, qtbot, isolated_singletons):
+        self._add_profiles(["First", "Second"])
+        tab = _make_tab(qtbot)
+        assert tab._profile_combo.currentIndex() == 0
+
+
+# ---------------------------------------------------------------------------
+# _run_on_profile — confirmation message content
+# ---------------------------------------------------------------------------
+
+class TestRunOnProfile:
+    """Tests for the confirmation dialog content in _run_on_profile.
+
+    qt_alert is patched to capture the message without showing a real dialog.
+    The worker (_run_pipeline_worker / QThread) is never started because we
+    either patch qt_alert to return False (cancel) or intercept before it
+    reaches the worker.
+    """
+
+    def _setup(self, qtbot, monkeypatch, isolated_singletons, profile_name="TestProfile",
+               directories=None, seed_category="", category_map=None):
+        """Create a tab with one profile and return (tab, pipeline, captured_msgs)."""
+        from files.directory_profile import DirectoryProfile
+        profile = DirectoryProfile(
+            name=profile_name,
+            directories=directories or ["/some/dir"],
+        )
+        DirectoryProfile.directory_profiles.append(profile)
+
+        pipeline = _make_pipeline("MyPipeline")
+        pipeline.seed_category = seed_category
+        if category_map is not None:
+            pipeline.category_map = category_map
+        ClassifierPipelines.add_pipeline(pipeline)
+        ClassifierPipelines.store()
+
+        captured: list[str] = []
+
+        import ui.compare.classifier_pipelines_tab_qt as _mod
+        def _fake_alert(_parent, _title, msg, kind="info"):
+            captured.append(msg)
+            return False  # always cancel — prevents worker from starting
+        monkeypatch.setattr(_mod, "qt_alert", _fake_alert)
+
+        tab = _make_tab(qtbot)
+        tab._profile_combo.setCurrentText(profile_name)
+        return tab, pipeline, captured
+
+    def test_confirmation_contains_pipeline_name(self, qtbot, monkeypatch, isolated_singletons):
+        tab, pipeline, captured = self._setup(qtbot, monkeypatch, isolated_singletons)
+        tab._run_on_profile(pipeline)
+        assert len(captured) == 1
+        assert "MyPipeline" in captured[0]
+
+    def test_confirmation_contains_profile_name(self, qtbot, monkeypatch, isolated_singletons):
+        tab, pipeline, captured = self._setup(qtbot, monkeypatch, isolated_singletons)
+        tab._run_on_profile(pipeline)
+        assert "TestProfile" in captured[0]
+
+    def test_confirmation_contains_directories(self, qtbot, monkeypatch, isolated_singletons):
+        tab, pipeline, captured = self._setup(
+            qtbot, monkeypatch, isolated_singletons, directories=["/dir/a", "/dir/b"]
+        )
+        tab._run_on_profile(pipeline)
+        assert "/dir/a" in captured[0]
+        assert "/dir/b" in captured[0]
+
+    def test_seed_category_shown_when_set(self, qtbot, monkeypatch, isolated_singletons):
+        tab, pipeline, captured = self._setup(
+            qtbot, monkeypatch, isolated_singletons,
+            seed_category="Apple",
+            category_map={"Apple": "_apple", "Banana": "_banana"},
+        )
+        tab._run_on_profile(pipeline)
+        assert "Apple" in captured[0]
+        assert "_apple" in captured[0]
+
+    def test_seed_category_not_shown_when_empty(self, qtbot, monkeypatch, isolated_singletons):
+        tab, pipeline, captured = self._setup(qtbot, monkeypatch, isolated_singletons)
+        tab._run_on_profile(pipeline)
+        assert "Seed category" not in captured[0]
+
+    def test_seed_category_suffix_omitted_when_not_in_category_map(
+        self, qtbot, monkeypatch, isolated_singletons
+    ):
+        tab, pipeline, captured = self._setup(
+            qtbot, monkeypatch, isolated_singletons,
+            seed_category="Unknown",
+            category_map={},
+        )
+        tab._run_on_profile(pipeline)
+        assert "Unknown" in captured[0]
+        assert "()" not in captured[0]  # no empty-suffix parentheses
+
+    def test_no_last_run_line_on_first_run(self, qtbot, monkeypatch, isolated_singletons):
+        tab, pipeline, captured = self._setup(qtbot, monkeypatch, isolated_singletons)
+        tab._run_on_profile(pipeline)
+        assert "Last run on" not in captured[0]
+
+    def test_last_run_shown_when_same_profile(self, qtbot, monkeypatch, isolated_singletons):
+        isolated_singletons.set_meta("pipeline_last_profile:MyPipeline", "TestProfile")
+        tab, pipeline, captured = self._setup(qtbot, monkeypatch, isolated_singletons)
+        tab._run_on_profile(pipeline)
+        assert "Last run on" in captured[0]
+        assert "TestProfile" in captured[0]
+        assert "switching" not in captured[0]
+
+    def test_last_run_flags_profile_switch(self, qtbot, monkeypatch, isolated_singletons):
+        isolated_singletons.set_meta("pipeline_last_profile:MyPipeline", "OldProfile")
+        tab, pipeline, captured = self._setup(qtbot, monkeypatch, isolated_singletons)
+        tab._run_on_profile(pipeline)
+        assert "OldProfile" in captured[0]
+        assert "switching" in captured[0]
+        assert "TestProfile" in captured[0]
+
+    def test_cancel_does_not_write_last_run_cache(self, qtbot, monkeypatch, isolated_singletons):
+        tab, pipeline, captured = self._setup(qtbot, monkeypatch, isolated_singletons)
+        tab._run_on_profile(pipeline)  # qt_alert returns False → cancelled
+        assert isolated_singletons.get_meta("pipeline_last_profile:MyPipeline") is None
+
+    def test_confirm_writes_last_run_cache(self, qtbot, monkeypatch, isolated_singletons):
+        from files.directory_profile import DirectoryProfile
+        from utils.constants import ImageGenerationType
+
+        profile = DirectoryProfile(name="SaveProfile", directories=["/d"])
+        DirectoryProfile.directory_profiles.append(profile)
+
+        pipeline = _make_pipeline("SavePipe")
+        # Set generation_type so the method doesn't need to import MediaDetails
+        pipeline.generation_type = ImageGenerationType.IMG2IMG
+        ClassifierPipelines.add_pipeline(pipeline)
+        ClassifierPipelines.store()
+
+        import ui.compare.classifier_pipelines_tab_qt as _mod
+        monkeypatch.setattr(_mod, "qt_alert", lambda *a, kind="info", **kw: True)
+        # Prevent the background thread from starting
+        monkeypatch.setattr("utils.running_tasks_registry.start_thread", lambda fn, **kw: None)
+
+        class _FullFakeActions:
+            def __getattr__(self, name):
+                return lambda *args, **kwargs: None
+
+        tab = ClassifierPipelinesTab(None, _FullFakeActions())
+        qtbot.addWidget(tab)
+        tab._profile_combo.setCurrentText("SaveProfile")
+
+        tab._run_on_profile(pipeline)
+
+        assert isolated_singletons.get_meta("pipeline_last_profile:SavePipe") == "SaveProfile"
+

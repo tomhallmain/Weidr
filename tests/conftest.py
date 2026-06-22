@@ -102,9 +102,23 @@ def isolated_singletons(tmp_path, monkeypatch):
     except Exception:
         pass
 
+    try:
+        import ui.compare.classifier_actions_tab_qt as _cat
+        monkeypatch.setattr(_cat, "app_info_cache", new_cache)
+    except Exception:
+        pass
+
+    try:
+        import ui.compare.classifier_pipelines_tab_qt as _cpt
+        monkeypatch.setattr(_cpt, "app_info_cache", new_cache)
+    except Exception:
+        pass
+
     # Silence startup log spam; patch before instantiation so __init__ skips the print.
     monkeypatch.setattr(cfg.Config, "print_config_settings", lambda self: None)
     monkeypatch.setattr(cfg, "config", cfg.Config())
+
+    yield new_cache
 
 
 @pytest.fixture(autouse=True)

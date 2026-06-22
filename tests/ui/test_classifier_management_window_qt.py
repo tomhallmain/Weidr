@@ -55,11 +55,11 @@ class TestTabLayout:
         win = _make_window(qtbot)
         labels = [win._tabs.tabText(i) for i in range(win._tabs.count())]
         assert labels[0] == _("Classifier Actions")
-        assert labels[1] == _("Prevalidations")
-        assert labels[2] == _("Lookaheads")
-        assert labels[3] == _("Directory Profiles")
-        assert labels[4] == _("Pipelines")
-        assert labels[5] == _("Seek to Trigger")
+        assert labels[1] == _("Pipelines")
+        assert labels[2] == _("Prevalidations")
+        assert labels[3] == _("Seek to Trigger")
+        assert labels[4] == _("Lookaheads")
+        assert labels[5] == _("Directory Profiles")
 
     def test_classifier_actions_tab_is_enabled(self, qtbot):
         win = _make_window(qtbot)
@@ -67,11 +67,11 @@ class TestTabLayout:
 
     def test_pipelines_tab_is_enabled(self, qtbot):
         win = _make_window(qtbot)
-        assert win._tabs.isTabEnabled(4)
+        assert win._tabs.isTabEnabled(1)
 
     def test_seek_to_trigger_tab_is_enabled(self, qtbot):
         win = _make_window(qtbot)
-        assert win._tabs.isTabEnabled(5)
+        assert win._tabs.isTabEnabled(3)
 
 
 # ---------------------------------------------------------------------------
@@ -79,19 +79,16 @@ class TestTabLayout:
 # ---------------------------------------------------------------------------
 
 class TestDisabledTabs:
-    def test_prevalidations_off_disables_tabs_1_2_3(self, qtbot, monkeypatch):
+    def test_prevalidations_off_disables_prevalidations_tab(self, qtbot, monkeypatch):
         monkeypatch.setattr(config, "enable_prevalidations", False)
         win = _make_window(qtbot)
-        assert not win._tabs.isTabEnabled(1), "Prevalidations tab should be disabled"
-        assert not win._tabs.isTabEnabled(2), "Lookaheads tab should be disabled"
-        assert not win._tabs.isTabEnabled(3), "Directory Profiles tab should be disabled"
+        assert not win._tabs.isTabEnabled(2), "Prevalidations tab should be disabled"
 
-    def test_prevalidations_off_leaves_other_tabs_enabled(self, qtbot, monkeypatch):
+    def test_prevalidations_off_leaves_all_other_tabs_enabled(self, qtbot, monkeypatch):
         monkeypatch.setattr(config, "enable_prevalidations", False)
         win = _make_window(qtbot)
-        assert win._tabs.isTabEnabled(0)
-        assert win._tabs.isTabEnabled(4)
-        assert win._tabs.isTabEnabled(5)
+        for i in (0, 1, 3, 4, 5):
+            assert win._tabs.isTabEnabled(i), f"Tab {i} should be enabled"
 
     def test_prevalidations_on_all_tabs_enabled(self, qtbot, monkeypatch):
         monkeypatch.setattr(config, "enable_prevalidations", True)

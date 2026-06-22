@@ -27,10 +27,13 @@ from compare.classifier_pipeline import (
 from files.directory_profile import DirectoryProfile
 from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle
+from utils.app_info_cache import app_info_cache
 from utils.logging_setup import get_logger
 from utils.translations import _
 
 logger = get_logger("classifier_pipelines_tab_qt")
+
+_PROFILE_CACHE_KEY = "classifier_pipelines_profile"
 
 
 class ClassifierPipelinesTab(QWidget):
@@ -88,6 +91,12 @@ class ClassifierPipelinesTab(QWidget):
         profile_row.addWidget(profile_lbl)
         self._profile_combo = QComboBox()
         self._refresh_profile_combo()
+        saved_profile = app_info_cache.get_meta(_PROFILE_CACHE_KEY, "")
+        if saved_profile and self._profile_combo.findText(saved_profile) >= 0:
+            self._profile_combo.setCurrentText(saved_profile)
+        self._profile_combo.currentTextChanged.connect(
+            lambda text: app_info_cache.set_meta(_PROFILE_CACHE_KEY, text)
+        )
         profile_row.addWidget(self._profile_combo, 1)
         profile_row.addStretch()
         root.addLayout(profile_row)
@@ -318,13 +327,33 @@ class ClassifierPipelinesTab(QWidget):
             return
 
         directories = list(profile.directories)
-        msg = _("Run pipeline '{name}' on profile '{profile}'?\n\nDirectories:\n{dirs}").format(
+
+        details: list[str] = []
+        if pipeline.seed_category:
+            seed_suffix = pipeline.category_map.get(pipeline.seed_category, "")
+            suffix_note = f" ({seed_suffix})" if seed_suffix else ""
+            details.append(_("Seed category: {cat}{suffix}").format(
+                cat=pipeline.seed_category, suffix=suffix_note))
+
+        _last_profile_key = f"pipeline_last_profile:{pipeline.name}"
+        last_profile = app_info_cache.get_meta(_last_profile_key, "")
+        if last_profile and last_profile != profile_name:
+            details.append(_("Last run on: {profile} (now switching to: {current})").format(
+                profile=last_profile, current=profile_name))
+        elif last_profile:
+            details.append(_("Last run on: {profile}").format(profile=last_profile))
+
+        details_block = ("\n" + "\n".join(details) + "\n") if details else ""
+        msg = _("Run pipeline '{name}' on profile '{profile}'?{details}\n\nDirectories:\n{dirs}").format(
             name=pipeline.name,
             profile=profile_name,
+            details=details_block,
             dirs="\n".join(f"  {d}" for d in directories),
         )
         if not qt_alert(self, _("Run Pipeline on Profile"), msg, kind="askokcancel"):
             return
+
+        app_info_cache.set_meta(_last_profile_key, profile_name)
 
         # Capture the generation type on the main thread before the worker starts.
         # Pipeline-level setting takes priority; fall back to the application's global mode.

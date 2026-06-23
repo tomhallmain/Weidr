@@ -65,6 +65,40 @@ def _stem_matches_any_suffix(stem: str, suffixes: list) -> bool:
     return False
 
 
+def suffix_is_numeric(suffix: str) -> bool:
+    """Return True if *suffix* is purely numeric after stripping leading separators.
+
+    Applies to raw suffix strings (e.g. ``"_1280"``, ``"001"``).  A numeric
+    suffix is never a meaningful category marker.
+    """
+    core = suffix.lstrip("_ ")
+    return bool(core) and core.isdigit()
+
+
+def _stem_suffix_is_numeric(stem: str) -> bool:
+    """Return True if the entire suffix portion of *stem* is only digits (and separators).
+
+    Uses ``extract_filename_base_stem`` to find where the base ends, then
+    delegates to ``suffix_is_numeric``.  ``_apple_1`` returns False (contains
+    alpha); ``_1280`` returns True.
+    """
+    base = extract_filename_base_stem(stem)
+    if not base or len(base) >= len(stem):
+        return False
+    return suffix_is_numeric(stem[len(base):])
+
+
+def _matches_any_valid_suffix(stem: str, suffixes: list) -> bool:
+    """Return True if *stem* ends with a known suffix OR has a numeric-only tail.
+
+    A purely numeric tail (e.g. ``_1280``) is never a meaningful suffix and
+    should not be flagged as unrecognised.  Use this instead of
+    ``_stem_matches_any_suffix`` wherever returning False would cause the stem
+    to be reported as having an unknown suffix.
+    """
+    return _stem_matches_any_suffix(stem, suffixes) or _stem_suffix_is_numeric(stem)
+
+
 def _ensure_related_path(entry) -> str:
     """Return the resolved related_image_path for entry (empty string if none)."""
     if entry.related_image_path is None:
@@ -359,7 +393,7 @@ def should_run_generate_action(
         # Filename-pattern fallback when metadata is absent.  Use a direct prefix
         # break (not _VARIANT_SUFFIX_RE_STRICT) so double-underscore / truncated
         # generator suffixes (e.g. __appl, __cher_2) are collected; edit_suffix
-        # filtering happens below via _stem_matches_any_suffix.
+        # filtering happens below via _matches_any_valid_suffix.
         if (
             fp_ext.lower() == source_ext.lower()
             and len(fp_stem) > len(source_stem)
@@ -368,7 +402,7 @@ def should_run_generate_action(
         ):
             downstream_stems.append(fp_stem)
 
-    suffix_count = sum(1 for stem in downstream_stems if _stem_matches_any_suffix(stem, [edit_suffix]))
+    suffix_count = sum(1 for stem in downstream_stems if _matches_any_valid_suffix(stem, [edit_suffix]))
     return suffix_count < count_threshold
 
 
@@ -577,11 +611,12 @@ def find_files_by_base_stem(
     for directory in directories:
         if use_cache:
             results_key = (directory, base_stem)
-            if results_key in _base_stem_results_cache:
+            cached = _base_stem_dir_cache.get(directory)
+            dir_expired = cached is None or (time.time() - cached[1]) > _BASE_STEM_CACHE_TTL
+            if not dir_expired and results_key in _base_stem_results_cache:
                 matching.extend(_base_stem_results_cache[results_key])
                 continue
-            cached = _base_stem_dir_cache.get(directory)
-            if cached is None or (time.time() - cached[1]) > _BASE_STEM_CACHE_TTL:
+            if dir_expired:
                 # Cache miss or expired: walk the directory to (re)build the listing.
                 # Threshold/callback are honoured during the build so large-directory
                 # confirmation works the same way as the non-cached path.

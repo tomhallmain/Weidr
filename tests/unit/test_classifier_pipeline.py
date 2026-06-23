@@ -1587,3 +1587,29 @@ class TestSeedCategory:
         # Empty seed_category is valid regardless of category_map state.
         p = ClassifierPipeline(name="p", category_map={})
         assert p.validate() == []
+
+
+class TestCategoryMapNumericSuffixValidation:
+    def test_numeric_suffix_rejected(self):
+        p = ClassifierPipeline(name="p", category_map={"Size": "_1280"})
+        errors = p.validate()
+        assert any("1280" in e and "numeric" in e for e in errors)
+
+    def test_numeric_suffix_without_separator_rejected(self):
+        p = ClassifierPipeline(name="p", category_map={"Index": "001"})
+        errors = p.validate()
+        assert any("001" in e and "numeric" in e for e in errors)
+
+    def test_alpha_suffix_accepted(self):
+        p = ClassifierPipeline(name="p", category_map={"Apple": "_apple"})
+        assert p.validate() == []
+
+    def test_alpha_suffix_with_numeric_variant_accepted(self):
+        p = ClassifierPipeline(name="p", category_map={"Apple": "_apple_1"})
+        assert p.validate() == []
+
+    def test_multiple_entries_one_numeric_reports_that_entry(self):
+        p = ClassifierPipeline(name="p", category_map={"Apple": "_apple", "Bad": "_999"})
+        errors = p.validate()
+        assert any("Bad" in e and "numeric" in e for e in errors)
+        assert not any("Apple" in e for e in errors)

@@ -9,7 +9,7 @@ Covers the flexible matching rules introduced to support:
 
 import pytest
 
-from files.related_image import _stem_matches_any_suffix
+from files.related_image import _matches_any_valid_suffix, _stem_matches_any_suffix
 
 
 FRUIT_SUFFIXES = ["_apple", "_banana", "_cherry"]
@@ -154,3 +154,25 @@ class TestSuffixSpecNormalisation:
 
     def test_spec_with_double_leading_underscore(self):
         assert _stem_matches_any_suffix("TEST_123_cherry", ["__cherry"])
+
+
+# ---------------------------------------------------------------------------
+# _matches_any_valid_suffix — numeric-tail handling
+# ---------------------------------------------------------------------------
+
+class TestMatchesAnyValidSuffix:
+    def test_numeric_only_suffix_accepted(self):
+        # tumblr-style size indicator: the suffix is purely numeric, not a
+        # user-defined marker, so it should never be flagged as unrecognised.
+        assert _matches_any_valid_suffix("tumblr_o8ztc16hkz1tttyh3o1_1280", FRUIT_SUFFIXES)
+
+    def test_alpha_suffix_with_numeric_variant_accepted(self):
+        # _apple_1 is a valid suffix with a variant marker — still accepted.
+        assert _matches_any_valid_suffix("tumblr_o8ztc16hkz1tttyh3o1_apple_1", FRUIT_SUFFIXES)
+
+    def test_unknown_alpha_suffix_rejected(self):
+        # An unrecognised alpha suffix should still return False.
+        assert not _matches_any_valid_suffix("tumblr_o8ztc16hkz1tttyh3o1_mango", FRUIT_SUFFIXES)
+
+    def test_known_suffix_accepted(self):
+        assert _matches_any_valid_suffix("tumblr_o8ztc16hkz1tttyh3o1_cherry", FRUIT_SUFFIXES)

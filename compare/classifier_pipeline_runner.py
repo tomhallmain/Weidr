@@ -39,7 +39,7 @@ from compare.classifier_pipeline import (
 
 
 from files.related_image import (
-    _stem_matches_any_suffix,
+    _matches_any_valid_suffix,
     extract_filename_base_stem,
     find_files_by_base_stem,
     get_related_image_path,
@@ -673,7 +673,7 @@ def _eval_base_stem_match(
     if condition.suffix_filter:
         matches = [
             f for f in matches
-            if _stem_matches_any_suffix(
+            if _matches_any_valid_suffix(
                 os.path.splitext(os.path.basename(f))[0],
                 condition.suffix_filter,
             )
@@ -779,7 +779,7 @@ def _eval_unknown_suffix(
         stem = os.path.splitext(os.path.basename(f))[0]
         if stem.lower() == base_stem.lower():
             continue  # seed image — no suffix, always excluded from the guard
-        if _stem_matches_any_suffix(stem, condition.expected_suffixes):
+        if _matches_any_valid_suffix(stem, condition.expected_suffixes):
             continue  # known suffix — fine
 
         # Unknown suffix found.

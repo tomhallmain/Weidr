@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import ClassVar, Optional
 
+from files.related_image import suffix_is_numeric
 from utils.app_info_cache import app_info_cache
 from utils.constants import ClassifierActionType, CompareMediaType, ImageGenerationType
 from utils.logging_setup import get_logger
@@ -911,6 +912,14 @@ class ClassifierPipeline:
                 errors.append(
                     _("seed_category '{0}' is not a key in category_map.").format(
                         self.seed_category
+                    )
+                )
+
+        for category, suffix in self.category_map.items():
+            if suffix_is_numeric(suffix):
+                errors.append(
+                    _("category_map entry '{0}': suffix '{1}' is purely numeric and cannot be used as a suffix.").format(
+                        category, suffix
                     )
                 )
 

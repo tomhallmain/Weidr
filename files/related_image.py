@@ -589,14 +589,14 @@ def find_files_by_base_stem(
 
     When use_cache=False (default) each call performs a fresh os.walk().
     If the total file count within a directory exceeds `threshold`,
-    `on_threshold_exceeded(directory, file_count)` is called. Returning True
-    continues the walk; returning False aborts and returns []. If
-    `on_threshold_exceeded` is None and the threshold is exceeded, the walk
-    is aborted and the matches found so far are returned.
+    `on_threshold_exceeded(directory, file_count)` is called. Returning False
+    aborts and returns []. If `on_threshold_exceeded` is None the threshold is
+    silently passed and the walk continues.
 
     When use_cache=True a per-directory listing of (filepath, stem) pairs is
-    built on the first call and reused on subsequent calls. `threshold` and
-    `on_threshold_exceeded` are ignored in the cached path. Call
+    built on the first cold walk and reused on subsequent calls. The threshold
+    is still honoured for user-confirmation callbacks; when no callback is
+    provided the walk always completes so the cache is fully populated. Call
     clear_base_stem_dir_cache() after writing files into cached directories.
     Intended for batch callers (pipeline, ClassifierAction) that search the
     same directories many times within a single run.
@@ -617,13 +617,9 @@ def find_files_by_base_stem(
                 matching.extend(_base_stem_results_cache[results_key])
                 continue
             if dir_expired:
-                # Cache miss or expired: walk the directory to (re)build the listing.
-                # Threshold/callback are honoured during the build so large-directory
-                # confirmation works the same way as the non-cached path.
                 entries: list[tuple[str, str]] = []
                 file_count = 0
                 threshold_cleared = False
-                walk_aborted = False
                 try:
                     for root_dir, _dirs, files in os.walk(directory):
                         for fname in files:
@@ -632,26 +628,18 @@ def find_files_by_base_stem(
                                 if on_threshold_exceeded is not None:
                                     if not on_threshold_exceeded(directory, file_count):
                                         return []
-                                    threshold_cleared = True
-                                else:
-                                    walk_aborted = True
-                                    break
+                                threshold_cleared = True
                             entries.append((
                                 os.path.join(root_dir, fname),
                                 os.path.splitext(fname)[0],
                             ))
-                        if walk_aborted:
-                            break
                 except Exception:
                     logger.exception(
                         "Error scanning %r for base stem cache", directory
                     )
-                # Only store a complete listing in the cache.
-                if not walk_aborted:
-                    _base_stem_dir_cache[directory] = (entries, time.time())
+                _base_stem_dir_cache[directory] = (entries, time.time())
                 scan_entries = entries
             else:
-                # Cache hit: skip the walk entirely.
                 scan_entries = cached[0]
 
             dir_matches: list[str] = []

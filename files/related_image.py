@@ -518,6 +518,9 @@ def _check_base_stem_boundary(
 # Entries expire after _BASE_STEM_CACHE_TTL seconds.
 _BASE_STEM_CACHE_TTL: float = 300.0  # 5 minutes
 _base_stem_dir_cache: dict[str, tuple[list[tuple[str, str]], float]] = {}
+# Results cache: (directory, base_stem) → matching file paths. Keyed the same
+# way as _base_stem_dir_cache so it can be invalidated in lockstep.
+_base_stem_results_cache: dict[tuple[str, str], list[str]] = {}
 
 
 def clear_base_stem_dir_cache(search_dir: str | None = None) -> None:
@@ -530,8 +533,12 @@ def clear_base_stem_dir_cache(search_dir: str | None = None) -> None:
     """
     if search_dir is None:
         _base_stem_dir_cache.clear()
+        _base_stem_results_cache.clear()
     else:
         _base_stem_dir_cache.pop(search_dir, None)
+        # Evict all results entries for this directory.
+        for key in [k for k in _base_stem_results_cache if k[0] == search_dir]:
+            del _base_stem_results_cache[key]
 
 
 def find_files_by_base_stem(
@@ -569,6 +576,10 @@ def find_files_by_base_stem(
 
     for directory in directories:
         if use_cache:
+            results_key = (directory, base_stem)
+            if results_key in _base_stem_results_cache:
+                matching.extend(_base_stem_results_cache[results_key])
+                continue
             cached = _base_stem_dir_cache.get(directory)
             if cached is None or (time.time() - cached[1]) > _BASE_STEM_CACHE_TTL:
                 # Cache miss or expired: walk the directory to (re)build the listing.
@@ -608,9 +619,12 @@ def find_files_by_base_stem(
                 # Cache hit: skip the walk entirely.
                 scan_entries = cached[0]
 
+            dir_matches: list[str] = []
             for filepath, filename_no_ext in scan_entries:
                 if _check_base_stem_boundary(filename_no_ext, base_stem, last_category):
-                    matching.append(filepath)
+                    dir_matches.append(filepath)
+            _base_stem_results_cache[results_key] = dir_matches
+            matching.extend(dir_matches)
         else:
             file_count = 0
             threshold_cleared = False

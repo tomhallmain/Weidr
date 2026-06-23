@@ -264,7 +264,18 @@ class SDRunnerClient:
                     f'SD Runner batch error: {resp["error"]}: {resp.get("data")}'
                 )
             count = resp.get('count', len(requests))
-            logger.info("SD Runner queued %d batch generation request(s)", count)
+            if config.debug:
+                from collections import defaultdict
+                by_image = defaultdict(list)
+                for args in requests:
+                    by_image[args.get('image', '?')].append(args.get('edit_suffix', ''))
+                lines = "\n".join(
+                    f"  {img}  [{', '.join(s for s in suffixes if s)}]"
+                    for img, suffixes in by_image.items()
+                )
+                logger.info("SD Runner queued %d %s request(s):\n%s", count, _type.value, lines)
+            else:
+                logger.info("SD Runner queued %d batch generation request(s)", count)
             return count
         finally:
             self.close()

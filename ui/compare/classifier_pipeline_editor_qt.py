@@ -728,12 +728,14 @@ class _BaseStemMatchPanel(QWidget):
         form.addRow(_("Search directory:"), dir_row)
 
         self._max_stem_group_size = QSpinBox()
-        self._max_stem_group_size.setRange(0, 9999)
+        self._max_stem_group_size.setRange(-1, 9999)
         self._max_stem_group_size.setValue(0)
         self._max_stem_group_size.setToolTip(
             _("Overflow detection: pass when stem group exceeds this many files. "
-              "0 = disabled (or auto-computed from suffix filter length + 1). "
-              "When > 0, match mode is ignored.")
+              "-1 = auto-compute from pipeline category count (len(categories) + 1), "
+              "works regardless of search directory. "
+              "0 = disabled (or auto-computed when no search directory is set). "
+              "When non-zero, match mode is ignored.")
         )
         self._max_stem_group_size.valueChanged.connect(self._on_changed)
         form.addRow(_("Max stem group size:"), self._max_stem_group_size)
@@ -2522,8 +2524,19 @@ class ClassifierPipelineEditorDialog(SmartDialog):
             )
 
         if self._is_edit:
+            all_pipelines = ClassifierPipelines.get_all_pipelines()
+            original_index = next(
+                (i for i, p in enumerate(all_pipelines) if p.name == self._original_name),
+                None,
+            )
             ClassifierPipelines.remove_pipeline(self._original_name)
-        ClassifierPipelines.add_pipeline(final)
+            if original_index is not None:
+                ClassifierPipelines.pipelines.insert(original_index, final)
+                ClassifierPipelines._rebuild_type_cache()
+            else:
+                ClassifierPipelines.add_pipeline(final)
+        else:
+            ClassifierPipelines.add_pipeline(final)
         ClassifierPipelines.store()
         self.close()
         self._refresh_callback()

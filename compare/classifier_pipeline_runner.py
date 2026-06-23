@@ -664,13 +664,14 @@ def _eval_base_stem_match(
         ]
         logger.debug("BaseStemMatch[%s]: after suffix filter %s → %d matches", node_name, condition.suffix_filter, len(matches))
 
-    # Overflow-detection mode: active when max_stem_group_size > 0, or when it is 0
-    # and the pipeline declares categories (effective limit = len(categories) + 1).
-    # The inference only applies when search_directory is unset — nodes scoped to a
-    # specific directory are doing targeted presence/absence checks, not broad scans
-    # where stem uniqueness matters.
+    # Overflow-detection mode: active when max_stem_group_size > 0, or when < 0
+    # (explicit auto-compute sentinel), or when 0 with no search_directory set
+    # (implicit auto-compute for unscoped nodes). Auto-compute resolves to
+    # len(pipeline_categories) + 1 at runtime.
     effective_limit = condition.max_stem_group_size
-    if effective_limit == 0 and pipeline_categories and not condition.search_directory:
+    if effective_limit < 0 and pipeline_categories:
+        effective_limit = len(pipeline_categories) + 1
+    elif effective_limit == 0 and pipeline_categories and not condition.search_directory:
         effective_limit = len(pipeline_categories) + 1
 
     if effective_limit > 0:

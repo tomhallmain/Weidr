@@ -319,9 +319,11 @@ class BaseStemMatchCondition:
     # total number of files found for this base stem exceeds this limit (non-unique stem),
     # False otherwise. require_match is ignored in this mode. Wire on_match=REJECT and
     # on_no_match=CONTINUE on the node to reject non-unique stems.
-    # When 0 and suffix_filter is non-empty, the runner auto-computes the limit as
-    # len(suffix_filter) + 1, providing a healthy default without an explicit value.
-    # When 0 and suffix_filter is empty, overflow detection is disabled entirely.
+    # When < 0 (sentinel), auto-computes the limit as len(pipeline_categories) + 1 at
+    # runtime regardless of search_directory. Useful when the search covers a directory
+    # that contains all category subdirs and the exact count is not known at edit time.
+    # When 0 and search_directory is unset, also auto-computes from pipeline_categories.
+    # When 0 and search_directory is set, overflow detection is disabled entirely.
     max_stem_group_size: int = 0
 
     def to_dict(self) -> dict:
@@ -1733,7 +1735,9 @@ class ClassifierPipelines:
         # ------------------------------------------------------------------
         node_uniqueness = PipelineNode(
             name="Stem uniqueness check",
-            condition=BaseStemMatchCondition(),
+            condition=BaseStemMatchCondition(
+                max_stem_group_size=-1,
+            ),
             on_match=NodeOutcome(OutcomeType.REJECT),
             on_no_match=NodeOutcome(OutcomeType.CONTINUE),
         )

@@ -1745,10 +1745,19 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._category_map_editor = _StringPairListEditor(
             name_placeholder=_("category name, e.g. Apple"),
             value_placeholder=_("suffix, e.g. _apple"),
-            on_changed=self._on_field_changed,
+            on_changed=self._on_category_map_changed,
         )
         self._category_map_editor.set_items(p.category_map)
         form.addRow(_("Category map:"), self._category_map_editor)
+
+        self._seed_category_combo = QComboBox()
+        self._seed_category_combo.setToolTip(
+            _("The category this pipeline generates from seed images. "
+              "Used in the run confirmation dialog to label the operation.")
+        )
+        self._seed_category_combo.currentTextChanged.connect(self._on_field_changed)
+        form.addRow(_("Seed category:"), self._seed_category_combo)
+        self._refresh_seed_category_combo(p.seed_category)
 
         self._on_type_changed()
         return box
@@ -1918,6 +1927,21 @@ class ClassifierPipelineEditorDialog(SmartDialog):
     def _on_field_changed(self) -> None:
         if not self._suppress_refresh:
             self._refresh_flow_preview()
+
+    def _on_category_map_changed(self) -> None:
+        current = self._seed_category_combo.currentText()
+        self._refresh_seed_category_combo(current)
+        self._on_field_changed()
+
+    def _refresh_seed_category_combo(self, select: str = "") -> None:
+        self._seed_category_combo.blockSignals(True)
+        self._seed_category_combo.clear()
+        self._seed_category_combo.addItem(_("(none)"), "")
+        for category in self._category_map_editor.get_items():
+            self._seed_category_combo.addItem(category, category)
+        idx = self._seed_category_combo.findData(select)
+        self._seed_category_combo.setCurrentIndex(idx if idx >= 0 else 0)
+        self._seed_category_combo.blockSignals(False)
 
     # ------------------------------------------------------------------
     # Node list
@@ -2476,6 +2500,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         final.default_reject_action = self._default_reject_combo.currentData()
         final.generation_type = self._gen_type_combo.currentData()
         final.category_map = self._category_map_editor.get_items()
+        final.seed_category = self._seed_category_combo.currentData() or ""
 
         errors = final.validate()
         if errors:

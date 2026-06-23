@@ -643,3 +643,78 @@ class TestSeedCategoryGuardIntegration:
         assert modifiers.count("_apple")  == 0
         assert modifiers.count("_banana") == 2
         assert modifiers.count("_cherry") == 2
+
+
+# ---------------------------------------------------------------------------
+# Generate-gate cache clearing between pipeline runs
+# ---------------------------------------------------------------------------
+
+class TestGenerateGateCacheClearing:
+    """
+    Validates that the generate-gate cache is cleared between pipeline runs so
+    that RelatedImageCondition correctly detects variants written to the working
+    directory after the first run and skips generation on subsequent runs.
+
+    Without clearing _generate_gate_dir_cache, the second run sees the stale
+    pre-generation directory scan and fires GENERATE again even though the
+    variant files now exist.
+    """
+
+    def test_stale_cache_causes_duplicate_generate(self, layout):
+        """
+        Demonstrates the bug: if the gate cache is NOT cleared between runs,
+        the second run generates even though the variant files are already present.
+        """
+        working, *_ = layout
+        seed = working / f"{STEM_A}.jpg"
+        seed.touch()
+
+        p = _pipeline(layout)
+
+        # First run — variants not yet present, all three generated.
+        cb, generated = _callbacks()
+        run_pipeline(p, str(seed), cb, base_directory=str(working))
+        assert len(generated) == 3
+
+        # Simulate generation: place variant files in the working directory.
+        for modifier in ("_apple", "_banana", "_cherry"):
+            (working / f"{STEM_A}{modifier}.jpg").touch()
+
+        # Second run WITHOUT clearing the gate cache — stale scan still shows
+        # no variants, so the pipeline incorrectly generates again.
+        cb2, generated2 = _callbacks()
+        run_pipeline(p, str(seed), cb2, base_directory=str(working))
+        assert len(generated2) == 3, (
+            "Stale cache bug: expected duplicate generate without cache clear"
+        )
+
+    def test_clearing_cache_skips_already_generated(self, layout):
+        """
+        After clearing the gate cache (as the pipeline worker now does at the
+        start of each run), the second run correctly detects the existing variant
+        files in the working directory and skips all three GENERATE actions.
+        """
+        working, *_ = layout
+        seed = working / f"{STEM_A}.jpg"
+        seed.touch()
+
+        p = _pipeline(layout)
+
+        # First run — variants not yet present, all three generated.
+        cb, generated = _callbacks()
+        run_pipeline(p, str(seed), cb, base_directory=str(working))
+        assert len(generated) == 3
+
+        # Simulate generation: place variant files in the working directory.
+        for modifier in ("_apple", "_banana", "_cherry"):
+            (working / f"{STEM_A}{modifier}.jpg").touch()
+
+        # Clear the gate cache as the pipeline worker now does between runs.
+        clear_generate_gate_cache()
+
+        # Second run — fresh scan finds the variants, all three skipped.
+        cb2, generated2 = _callbacks()
+        run_pipeline(p, str(seed), cb2, base_directory=str(working))
+        assert generated2 == [], (
+            "After cache clear, variants in working dir must suppress all GENERATEs"
+        )

@@ -383,10 +383,11 @@ class ClassifierPipelinesTab(QWidget):
             from compare.base_compare import gather_files
             from compare.pipeline_run_report import PipelineRunReport, PipelineRunStats
             from compare.classifier_pipeline_runner import run_pipeline
-            from files.related_image import clear_base_stem_dir_cache
+            from files.related_image import clear_base_stem_dir_cache, clear_generate_gate_cache
             from utils.constants import ClassifierActionType
 
             clear_base_stem_dir_cache()
+            clear_generate_gate_cache()
             report = PipelineRunReport()
             total = 0
             errors = 0

@@ -28,6 +28,7 @@ from files.directory_profile import DirectoryProfile
 from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle
 from utils.app_info_cache import app_info_cache
+from utils.config import config
 from utils.logging_setup import get_logger
 from utils.translations import _
 
@@ -384,6 +385,7 @@ class ClassifierPipelinesTab(QWidget):
             from compare.pipeline_run_report import PipelineRunReport, PipelineRunStats
             from compare.classifier_pipeline_runner import run_pipeline
             from files.related_image import clear_base_stem_dir_cache, clear_generate_gate_cache
+            from files.filename_utils import extract_filename_base_stem
             from utils.constants import ClassifierActionType
 
             clear_base_stem_dir_cache()
@@ -402,6 +404,7 @@ class ClassifierPipelinesTab(QWidget):
                 )
                 for image_path in files:
                     try:
+                        msg_snapshot = report.message_count()
                         result = run_pipeline(
                             pipeline, image_path, callbacks,
                             base_directory=directory, report=report,
@@ -409,6 +412,15 @@ class ClassifierPipelinesTab(QWidget):
                         total += 1
                         key = result.value if isinstance(result, ClassifierActionType) else "(no action)"
                         actions[key] = actions.get(key, 0) + 1
+                        if not config.debug:
+                            base_stem = extract_filename_base_stem(image_path)
+                            file_stem = os.path.splitext(os.path.basename(image_path))[0]
+                            if base_stem and file_stem.lower() == base_stem.lower():
+                                logger.info(
+                                    "Pipeline %r: %s",
+                                    pipeline.name,
+                                    report.format_seed_summary(image_path, result, msg_snapshot),
+                                )
                     except Exception:
                         errors += 1
                         logger.exception("Pipeline run error on %s", image_path)

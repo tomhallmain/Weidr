@@ -144,10 +144,11 @@ def _resolve_stem_group(
         # Type 1 valid or Malformed C.
         if _seed_exists_in_dirs(base_stem, target_dirs):
             return True, True   # Type 1 valid
-        logger.debug(
-            "stem-group %r: Malformed C — seed in working dir but not in any target dir (%s)",
-            base_stem, image_path,
-        )
+        if config.debug:
+            logger.debug(
+                "stem-group %r: Malformed C — seed in working dir but not in any target dir (%s)",
+                base_stem, image_path,
+            )
         return False, True  # Malformed C
 
     # Derivative: check if seed is present in the working directory.
@@ -158,17 +159,19 @@ def _resolve_stem_group(
     # Seed not in working dir: inspect related-image metadata.
     related_path, found_on_disk = get_related_image_path(image_path)
     if related_path is None:
-        logger.debug(
-            "stem-group %r: Malformed A — no related-image metadata (%s)",
-            base_stem, image_path,
-        )
+        if config.debug:
+            logger.debug(
+                "stem-group %r: Malformed A — no related-image metadata (%s)",
+                base_stem, image_path,
+            )
         return False, True  # Malformed A
 
     if not found_on_disk:
-        logger.debug(
-            "stem-group %r: Malformed B — metadata names %r but file not found in target dirs (%s)",
-            base_stem, os.path.basename(related_path), image_path,
-        )
+        if config.debug:
+            logger.debug(
+                "stem-group %r: Malformed B — metadata names %r but file not found in target dirs (%s)",
+                base_stem, os.path.basename(related_path), image_path,
+            )
         return False, True  # Malformed B
 
     return True, True  # Type 2 valid; this derivative is the generation source
@@ -212,27 +215,32 @@ def run_pipeline(
         derivatives for maximum skip efficiency.
     """
     if not pipeline.is_active or not pipeline.nodes:
-        logger.debug("Pipeline %r: skipped (inactive or no nodes) for %s", pipeline.name, image_path)
+        if config.debug:
+            logger.debug("Pipeline %r: skipped (inactive or no nodes) for %s", pipeline.name, image_path)
         return None
     if not pipeline.media_type_allowed(image_path):
-        logger.debug("Pipeline %r: media type not allowed for %s", pipeline.name, image_path)
+        if config.debug:
+            logger.debug("Pipeline %r: media type not allowed for %s", pipeline.name, image_path)
         return None
 
     base_stem: Optional[str] = extract_filename_base_stem(image_path)
     image_file_stem = os.path.splitext(os.path.basename(image_path))[0]
     is_seed = base_stem is not None and image_file_stem.lower() == base_stem.lower()
-    logger.debug("Pipeline %r: evaluating %s (base_stem=%r, is_seed=%s)", pipeline.name, image_path, base_stem, is_seed)
+    if config.debug:
+        logger.debug("Pipeline %r: evaluating %s (base_stem=%r, is_seed=%s)", pipeline.name, image_path, base_stem, is_seed)
 
     # Stem-group skip and validity gate.
     should_mark_done = False
     if processed_stems is not None and base_stem:
         if base_stem in processed_stems:
-            logger.debug("Pipeline %r: stem %r already processed, skipping %s", pipeline.name, base_stem, image_path)
+            if config.debug:
+                logger.debug("Pipeline %r: stem %r already processed, skipping %s", pipeline.name, base_stem, image_path)
             return None
 
         should_evaluate, should_mark_done = _resolve_stem_group(image_path, base_stem, is_seed)
         if not should_evaluate:
-            logger.debug("Pipeline %r: stem group resolve says skip %s", pipeline.name, image_path)
+            if config.debug:
+                logger.debug("Pipeline %r: stem group resolve says skip %s", pipeline.name, image_path)
             processed_stems.add(base_stem)
             return None
 
@@ -255,7 +263,8 @@ def run_pipeline(
         node = nodes_by_name[current_name]
 
         if not node.enabled:
-            logger.debug("Pipeline %r: node %r disabled — skipped", pipeline.name, node.name)
+            if config.debug:
+                logger.debug("Pipeline %r: node %r disabled — skipped", pipeline.name, node.name)
             if report:
                 report.add(
                     "INFO",
@@ -276,10 +285,11 @@ def run_pipeline(
             and node.on_match.action_modifier == seed_suffix
         ):
             result, score = False, None
-            logger.debug(
-                "Pipeline %r: node %r — seed is category %r, GENERATE skipped",
-                pipeline.name, node.name, pipeline.seed_category,
-            )
+            if config.debug:
+                logger.debug(
+                    "Pipeline %r: node %r — seed is category %r, GENERATE skipped",
+                    pipeline.name, node.name, pipeline.seed_category,
+                )
             if report:
                 report.add(
                     "INFO",
@@ -305,16 +315,18 @@ def run_pipeline(
 
         node_results[node.name] = result
         node_scores[node.name] = score
-        logger.debug(
-            "Pipeline %r: node %r → %s (score=%s)",
-            pipeline.name, node.name, "MATCH" if result else "NO-MATCH", score,
-        )
+        if config.debug:
+            logger.debug(
+                "Pipeline %r: node %r → %s (score=%s)",
+                pipeline.name, node.name, "MATCH" if result else "NO-MATCH", score,
+            )
 
         outcome: NodeOutcome = node.on_match if result else node.on_no_match
-        logger.debug(
-            "Pipeline %r: node %r outcome → %s",
-            pipeline.name, node.name, outcome.outcome_type.value,
-        )
+        if config.debug:
+            logger.debug(
+                "Pipeline %r: node %r outcome → %s",
+                pipeline.name, node.name, outcome.outcome_type.value,
+            )
 
         if outcome.outcome_type == OutcomeType.EXECUTE:
             _dispatch_action(
@@ -372,10 +384,11 @@ def run_pipeline(
             current_name = node_order[idx + 1] if idx + 1 < len(node_order) else None
 
     # All nodes exhausted without a terminal outcome.
-    logger.debug(
-        "Pipeline %r: all nodes exhausted for %s — default_action=%s",
-        pipeline.name, image_path, pipeline.default_action,
-    )
+    if config.debug:
+        logger.debug(
+            "Pipeline %r: all nodes exhausted for %s — default_action=%s",
+            pipeline.name, image_path, pipeline.default_action,
+        )
     _dispatch_action(
         pipeline.default_action,
         None,
@@ -638,7 +651,8 @@ def _eval_base_stem_match(
 ) -> tuple[bool, object]:
     base_stem = extract_filename_base_stem(image_path)
     if not base_stem:
-        logger.debug("BaseStemMatch[%s]: no base stem extractable from %s", node_name, image_path)
+        if config.debug:
+            logger.debug("BaseStemMatch[%s]: no base stem extractable from %s", node_name, image_path)
         return False, None
     if condition.search_directory:
         dirs = [condition.search_directory]
@@ -647,13 +661,15 @@ def _eval_base_stem_match(
     else:
         dirs = config.directories_to_search_for_related_images
     if not dirs:
-        logger.debug("BaseStemMatch[%s]: no search directories configured", node_name)
+        if config.debug:
+            logger.debug("BaseStemMatch[%s]: no search directories configured", node_name)
         return False, None
     matches = find_files_by_base_stem(dirs, base_stem, use_cache=True)
-    logger.debug(
-        "BaseStemMatch[%s]: base_stem=%r, dirs=%s, raw_matches=%d",
-        node_name, base_stem, dirs, len(matches),
-    )
+    if config.debug:
+        logger.debug(
+            "BaseStemMatch[%s]: base_stem=%r, dirs=%s, raw_matches=%d",
+            node_name, base_stem, dirs, len(matches),
+        )
     if condition.suffix_filter:
         matches = [
             f for f in matches
@@ -662,7 +678,8 @@ def _eval_base_stem_match(
                 condition.suffix_filter,
             )
         ]
-        logger.debug("BaseStemMatch[%s]: after suffix filter %s → %d matches", node_name, condition.suffix_filter, len(matches))
+        if config.debug:
+            logger.debug("BaseStemMatch[%s]: after suffix filter %s → %d matches", node_name, condition.suffix_filter, len(matches))
 
     # Overflow-detection mode: active when max_stem_group_size > 0, or when < 0
     # (explicit auto-compute sentinel), or when 0 with no search_directory set
@@ -677,10 +694,11 @@ def _eval_base_stem_match(
     if effective_limit > 0:
         overflow = len(matches) > effective_limit
         if overflow:
-            logger.debug(
-                "BaseStemMatchCondition: stem %r has %d matches (limit %d) — not unique",
-                base_stem, len(matches), effective_limit,
-            )
+            if config.debug:
+                logger.debug(
+                    "BaseStemMatchCondition: stem %r has %d matches (limit %d) — not unique",
+                    base_stem, len(matches), effective_limit,
+                )
             if report:
                 report.add(
                     "WARNING", node_name, image_path,
@@ -713,10 +731,11 @@ def _eval_base_stem_match(
         )
     found = bool(matches)
     result = found if condition.require_match else not found
-    logger.debug(
-        "BaseStemMatch[%s]: found=%s, require_match=%s → result=%s",
-        node_name, found, condition.require_match, result,
-    )
+    if config.debug:
+        logger.debug(
+            "BaseStemMatch[%s]: found=%s, require_match=%s → result=%s",
+            node_name, found, condition.require_match, result,
+        )
     return result, None
 
 

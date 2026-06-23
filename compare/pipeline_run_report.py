@@ -91,6 +91,32 @@ class PipelineRunReport:
         with self._lock:
             self._messages.clear()
 
+    def format_seed_summary(
+        self,
+        image_path: str,
+        action: Optional[Any],
+        messages_since: int = 0,
+    ) -> str:
+        """Return a compact one-or-few-line summary for a single seed image.
+
+        *messages_since* should be the ``message_count()`` captured immediately
+        before ``run_pipeline`` was called for this image, so that only messages
+        produced during that call are included.
+        """
+        try:
+            action_label = action.get_translation()
+        except AttributeError:
+            action_label = _("(no action)")
+        image_name = os.path.basename(image_path)
+        with self._lock:
+            recent = self._messages[messages_since:]
+        if not recent:
+            return f"{image_name} → {action_label}"
+        lines = [f"{image_name} → {action_label}"]
+        for msg in recent:
+            lines.append(f"  [{msg.node}] {msg.detail}")
+        return "\n".join(lines)
+
     def format_completion_report(self, stats: PipelineRunStats) -> str:
         """Return a multi-line human-readable end-of-run summary."""
         lines: list[str] = []

@@ -16,6 +16,72 @@ logger = get_logger("config")
 class Config:
     CONFIGS_DIR_LOC = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), "configs")
 
+    # Registry of config keys that the Help/Config dialog exposes as editable.
+    # Maps key → expected Python type for conversion:
+    #   bool  — value is already a bool (checkbox); stored as-is
+    #   int   — value is a str; parsed with int()
+    #   float — value is a str; parsed with float()
+    #   str   — value is a str; stored as-is (stripped)
+    #   None  — nullable str: empty string is stored as Python None
+    DIALOG_FIELDS: dict[str, type | None] = {
+        # General
+        "always_open_new_windows":             bool,
+        "show_negative_prompt":                bool,
+        "media_volume_use_eq":                 bool,
+        "show_toasts":                         bool,
+        "toasts_persist_seconds":              int,
+        "title_notify_persist_seconds":        int,
+        "font_size":                           int,
+        "default_main_window_size":            str,
+        "default_secondary_window_size":       str,
+        # Slideshow
+        "slideshow_interval_seconds":          int,
+        "slideshow_dynamic_video_max_seconds": float,
+        "slideshow_dynamic_gif_max_seconds":   float,
+        "slideshow_dynamic_pdf_max_pages":     int,
+        # Comparison / search
+        "max_search_results":                  int,
+        "text_embedding_search_presets_exclusive": bool,
+        "threshold_potential_duplicate_embedding": float,
+        "threshold_potential_duplicate_color": int,
+        "compare_embedding_dynamic_media_sample_ratio": float,
+        "compare_embedding_dynamic_media_max_samples":  int,
+        # File operations / marks
+        "image_tagging_enabled":               bool,
+        "escape_backslash_filepaths":          bool,
+        "delete_instantly":                    bool,
+        "trash_folder":                        None,
+        "clear_marks_with_errors_after_move":  bool,
+        "move_marks_overwrite_existing_file":  bool,
+        "file_actions_history_max":            int,
+        # File check
+        "file_check_interval_seconds":         int,
+        "file_check_skip_if_n_files_over":     int,
+        # Screenshots
+        "screenshot_directory":                None,
+        "save_screenshot_to_same_dir":         bool,
+        # Prevalidation (dynamic media)
+        "enable_prevalidations":               bool,
+        "dynamic_media_min_sample_count":      int,
+        "dynamic_media_max_sample_frames":     int,
+        "dynamic_media_max_sample_pages":      int,
+        "dynamic_media_max_sample_duration_seconds": int,
+        "dynamic_media_max_sample_size_mb":    int,
+        # Large images
+        "large_image_dim_threshold_px":        int,
+        "large_image_preview_overscan":        float,
+        "large_image_preview_max_dim":         int,
+        "large_image_enable_hq_idle_downscale": bool,
+        "large_image_enable_full_res_promotion": bool,
+        "large_image_hq_downscale_ratio_threshold": float,
+        "large_image_promotion_min_free_ram_gb": float,
+        "large_image_promotion_max_estimated_mb": int,
+        "large_image_promotion_available_ram_fraction": float,
+        # External tools
+        "gimp_exe_loc":                        None,
+        "sd_prompt_reader_loc":                None,
+    }
+
     @staticmethod
     def resolve_config_path():
         """Resolve the active config file path, preferring config.json."""
@@ -642,11 +708,66 @@ class Config:
         persisted["compare_group_sort"] = self.compare_group_sort.name
         return persisted
 
+    def apply_and_persist(self, raw: dict[str, object]) -> list[str]:
+        """Validate *raw* field values, apply them in-memory, and persist to disk.
+
+        *raw* maps config-key → value, where:
+          - bool fields supply a Python ``bool`` directly (e.g. from a checkbox)
+          - all other fields supply a ``str`` that will be coerced to the
+            registered type (see ``DIALOG_FIELDS``)
+
+        Returns a list of validation-error strings.  When the list is non-empty
+        nothing has been changed — neither in-memory nor on disk.
+        """
+        errors: list[str] = []
+        typed: dict[str, object] = {}
+        for key, value in raw.items():
+            if key not in self.DIALOG_FIELDS:
+                logger.warning("apply_and_persist: unknown key %r ignored", key)
+                continue
+            expected = self.DIALOG_FIELDS[key]
+            if expected is bool:
+                typed[key] = bool(value)
+            elif expected is None:
+                # Nullable str: empty string → Python None
+                s = str(value).strip()
+                typed[key] = s if s else None
+            elif expected is str:
+                typed[key] = str(value).strip()
+            else:
+                try:
+                    typed[key] = expected(str(value).strip())  # type: ignore[call-arg]
+                except (ValueError, TypeError):
+                    name = getattr(expected, "__name__", str(expected))
+                    errors.append(f"{key}: expected {name}, got {str(value)!r}")
+        if errors:
+            return errors
+        for key, val in typed.items():
+            self.dict[key] = val
+            setattr(self, key, val)
+        self.persist()
+        return []
+
     def persist(self):
-        """Write current config values back to the active config file."""
+        """Write current config values back to the active config file.
+
+        Uses a write-then-rename swap so a crash mid-write never leaves the
+        config file in a partially-written state.
+        """
         config_dict = self._build_persisted_config_dict()
-        with open(self.config_path, "w", encoding="utf-8") as config_file:
-            json.dump(config_dict, config_file, ensure_ascii=False, indent=2)
+        tmp_path = self.config_path + ".tmp"
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(config_dict, f, ensure_ascii=False, indent=2)
+            with open(tmp_path, "r", encoding="utf-8") as f:
+                json.load(f)  # verify readable before replacing original
+            os.replace(tmp_path, self.config_path)
+        except Exception:
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+            raise
         self.dict = config_dict
 
     def set_image_classifier_models(self, model_details_list):

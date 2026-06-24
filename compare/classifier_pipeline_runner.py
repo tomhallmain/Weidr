@@ -74,7 +74,7 @@ def _load_prototype(directory: str, cache: dict) -> object:
 
 
 # ---------------------------------------------------------------------------
-# Stem-group validity helpers (§5.13)
+# Stem-group validity helpers
 # ---------------------------------------------------------------------------
 
 def _seed_exists_in_dirs(base_stem: str, dirs: list) -> bool:
@@ -95,7 +95,7 @@ def _resolve_stem_group(
 
     Returns (should_evaluate: bool, should_mark_done: bool).
 
-    The six cases (see §5.13 in the design document):
+    The six cases:
 
     Type 1 — valid
         Image stem == base_stem (this IS the seed) AND the seed file is found
@@ -196,16 +196,43 @@ def run_pipeline(
     None for no action.
 
     Execution halts at the first EXECUTE / ACCEPT / REJECT outcome, or when
-    all nodes have been visited (in which case default_action applies).
+    all nodes have been visited (in which case ``default_action`` applies).
     GOTO jumps forward; CONTINUE advances sequentially.
+    EXECUTE_AND_CONTINUE fires an action immediately and then advances to the
+    next node, accumulating actions without halting.  If all nodes are
+    exhausted and no ``default_action`` is set, but one or more
+    EXECUTE_AND_CONTINUE outcomes fired, the last such action type is returned
+    so callers can account for the work done.
+
+    seed_category guard
+        When ``pipeline.seed_category`` is non-empty and the current image
+        is the seed (its file stem equals the base stem), any pipeline node
+        whose on_match would fire GENERATE for the seed category's suffix is
+        skipped (treated as no-match) without evaluating its condition.  This
+        prevents redundant generation for the category the seed already
+        represents.  ``pipeline.seed_category`` must be a key in
+        ``pipeline.category_map`` (enforced by ``validate()``).
+
+    report
+        Optional ``PipelineRunReport`` that accumulates notable-but-non-fatal
+        events (e.g. base-stem overflow, unrecognised suffix files) during
+        evaluation.  Pass the same report object for every call in a batch to
+        collect a run-level summary; call ``report.format_completion_report()``
+        at the end.
+
+    generate_queue
+        Optional ``DebouncedGenerateQueue`` that serialises GENERATE callbacks
+        with a minimum inter-dispatch interval, preventing burst requests from
+        overloading the cross-process generator.  When omitted, GENERATE
+        callbacks are invoked synchronously.
 
     processed_stems
         Optional batch-level set of base stems already handled. When provided:
         - Images whose base_stem is already in the set are skipped immediately.
         - Before entering the evaluation loop, _resolve_stem_group() classifies
-          the image's stem-group role. Malformed cases (A, B, C — see §5.13)
-          are skipped without evaluation and marked done to suppress later
-          derivatives of the same group.
+          the image's stem-group role. Malformed cases (A, B, C) are skipped
+          without evaluation and marked done to suppress later derivatives of
+          the same stem group.
         - After any terminal outcome, images flagged should_mark_done add
           their base_stem to the set so subsequent group members are skipped.
         Pass the same set for every call in a batch run. The parameter is

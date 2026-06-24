@@ -12,7 +12,7 @@ Title-bar notification scheduling uses two QTimers (main-thread owned):
 This replaces the old threading.Timer approach, which caused a race where the
 timer callback's queued Signal.emit() (background thread) could arrive in the
 event queue *after* a direct main-thread emit, silently reverting newly-set
-notification titles. See docs/notification_manager_timing_bug.md for full details.
+notification titles.
 """
 
 from __future__ import annotations

@@ -3,9 +3,8 @@ Notification data layer — stores, groups, and expires title-bar notifications.
 
 All scheduling and Qt title-update calls are handled by NotificationController,
 which uses QTimer (main-thread owned) to avoid threading.Timer race conditions.
-The three bugs documented in docs/notification_manager_timing_bug.md are fixed by
-this split: there are no background threads, no shared self._timer between cleanup
-and expiry paths, and no unguarded cross-thread reads.
+This split eliminates background threads, the shared self._timer race between
+cleanup and expiry paths, and unguarded cross-thread reads.
 """
 
 import time

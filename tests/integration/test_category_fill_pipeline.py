@@ -3,7 +3,9 @@ Integration tests for the category-fill demo pipeline.
 
 Exercises the full run_pipeline() path against real files on disk, verifying
 that the pipeline makes correct GENERATE decisions for each image state
-described in §4.5 of docs/generation-pipeline-category-fill.md.
+(seed, local derivative, filed, malformed stem group) as documented in the
+ClassifierPipelines.build_category_fill_pipeline() demo and the
+_resolve_stem_group() docstring in compare/classifier_pipeline_runner.py.
 
 Base-stem naming convention
 ────────────────────────────
@@ -138,7 +140,7 @@ class TestPipelineMeta:
 
 
 # ---------------------------------------------------------------------------
-# §4.5 row 1 — Seed, no variants anywhere → GENERATE apple
+# Case: Seed, no variants anywhere → GENERATE apple
 # ---------------------------------------------------------------------------
 
 class TestFreshSeed:
@@ -184,7 +186,7 @@ class TestFreshSeed:
 
 
 # ---------------------------------------------------------------------------
-# §4.5 rows 2/3 — Target partially or fully covered
+# Case: Target partially or fully covered
 # ---------------------------------------------------------------------------
 
 class TestPartiallyFilledTarget:
@@ -234,7 +236,7 @@ class TestPartiallyFilledTarget:
 
     def test_wrong_suffix_in_correct_dir_still_covers_category(self, layout):
         """
-        §5.1: BaseStemMatchCondition uses directory as the primary discriminant.
+        BaseStemMatchCondition uses directory as the primary discriminant.
         A file with an unexpected suffix living in target/A/ still signals that
         the apple category is covered for this stem.
 
@@ -258,7 +260,7 @@ class TestPartiallyFilledTarget:
 
 
 # ---------------------------------------------------------------------------
-# §4.5 row 2 — Category variant present in working dir → that category skipped
+# Case: Category variant present in working dir → that category skipped
 # ---------------------------------------------------------------------------
 
 class TestVariantInWorkingDir:
@@ -356,7 +358,7 @@ class TestVariantInWorkingDir:
 
 
 # ---------------------------------------------------------------------------
-# §4.5 row 5 — Type-3 derivative (upstream in working dir) → no generation
+# Case: Type-3 derivative (upstream in working dir) → no generation
 # ---------------------------------------------------------------------------
 
 class TestType3Derivative:
@@ -390,7 +392,7 @@ class TestType3Derivative:
 
 
 # ---------------------------------------------------------------------------
-# §4.5 row 6 — Unknown-suffix guard → REJECT
+# Case: Unknown-suffix guard → REJECT
 # ---------------------------------------------------------------------------
 
 class TestUnknownSuffixGuard:
@@ -433,7 +435,7 @@ class TestUnknownSuffixGuard:
 
 
 # ---------------------------------------------------------------------------
-# §5.13 — processed_stems batch skip
+# processed_stems batch skip
 # ---------------------------------------------------------------------------
 
 class TestProcessedStemsBatch:

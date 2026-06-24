@@ -1607,7 +1607,8 @@ class ClassifierPipelines:
         """
         Demo pipeline for filling a per-category target directory set.
 
-        Illustrates the §4 architecture from docs/generation-pipeline-category-fill.md.
+        Illustrates the recommended category-fill pipeline architecture:
+        guard → uniqueness check → per-category GENERATE nodes.
 
         Categories and suffixes
         ───────────────────────
@@ -1631,7 +1632,7 @@ class ClassifierPipelines:
              on_match  → EXECUTE_AND_CONTINUE GENERATE (dispatch and advance to next node)
              on_no_match → CONTINUE (check next category)
 
-        Behaviour table (per §4.5)
+        Behaviour table
         ─────────────────────────────────────────────────────────────────────────
         Image state                         Guard   Cond[0]  Cond[1]  Action
         ─────────────────────────────────────────────────────────────────────────
@@ -1645,14 +1646,14 @@ class ClassifierPipelines:
         The pipeline is inactive by default. Replace the placeholder target
         directory paths with absolute paths before activating.
 
-        Seed guard note (§5.8)
+        Seed guard note
         ───────────────────────
         Each category node could optionally include a CompositeCondition(NOT,
         ClassifierRankCondition(...)) as a third AND sub-condition to skip
         generation when the seed image is already classified as that category.
         This is omitted here pending classifier validation.
 
-        processed_stems note (§5.13)
+        processed_stems note
         ─────────────────────────────
         Pass a shared set() as processed_stems to run_pipeline() to skip
         derivative images whose stem group has already been evaluated.
@@ -1712,7 +1713,7 @@ class ClassifierPipelines:
                         # [1] No file with this base stem exists in the target category dir.
                         # search_directory pins the check to the specific category directory,
                         # so a file with the wrong suffix in the right directory still
-                        # correctly signals that the category is covered (§5.1).
+                        # correctly signals that the category is covered.
                         BaseStemMatchCondition(
                             require_match=False,
                             search_directory=target_dir,
@@ -1762,8 +1763,7 @@ class ClassifierPipelines:
                 "target dirs (non-unique base stem). "
                 "Each category node generates if and only if (a) the image is not a "
                 "local derivative and (b) the target directory does not already contain "
-                "a file with this base stem. See §4 of "
-                "docs/generation-pipeline-category-fill.md."
+                "a file with this base stem."
             ),
             nodes=[node_guard, node_uniqueness, node_apple, node_banana, node_cherry],
             is_active=False,

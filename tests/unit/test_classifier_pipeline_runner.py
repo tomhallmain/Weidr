@@ -2068,7 +2068,7 @@ class TestRunPipelineMediaTypeGate:
 
 
 # ---------------------------------------------------------------------------
-# Stem-group skip: _seed_exists_in_dirs and _resolve_stem_group (§5.13)
+# Stem-group skip: _seed_exists_in_dirs and _resolve_stem_group
 # ---------------------------------------------------------------------------
 
 class TestSeedExistsInDirs:

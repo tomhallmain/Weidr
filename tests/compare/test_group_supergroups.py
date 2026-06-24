@@ -565,7 +565,7 @@ class TestCompareWrapperSupergroupNavigation:
 
     def test_stale_group_index_is_skipped_defensively(self):
         """A supergroup referencing a group_index no longer in group_indexes
-        (per docs §2.5 -- not re-clustered after purge/remove) doesn't crash;
+        (accepted limitation: supergroups are not re-clustered after purge/remove) doesn't crash;
         it falls back to whichever member still exists."""
         wrapper = _make_wrapper(supergroups=[[99, 1]], group_indexes=[1])
         wrapper.current_supergroup_index = -1

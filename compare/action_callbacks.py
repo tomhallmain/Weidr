@@ -14,3 +14,4 @@ class ActionCallbacks:
     add_mark_callback: Optional[Callable] = None
     blur_callback: Optional[Callable] = None
     generate_callback: Optional[Callable] = None
+    scramble_callback: Optional[Callable] = None

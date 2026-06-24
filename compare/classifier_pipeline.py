@@ -1771,6 +1771,115 @@ class ClassifierPipelines:
         )
 
     @staticmethod
+    def build_scramble_coherence_pipeline() -> "ClassifierPipeline":
+        """
+        Demo pipeline for building a three-bucket coherence training set.
+
+        Categories and suffixes
+        ───────────────────────
+          coherent         _coherent  → GENERATE (image-generation pass)
+          semi-incoherent  _semiinco  → SCRAMBLE (semi_scramble_image)
+          incoherent       _inco      → SCRAMBLE (scramble_image)
+
+        Each category node checks two AND conditions:
+          [0] RelatedImageCondition — no existing variant with this suffix
+          [1] BaseStemMatchCondition(require_match=False) — no file for this
+              base stem already exists in the category target directory
+
+        The pipeline is inactive by default. Set target directories and
+        attach a coherence classifier before activating.
+        """
+        CATEGORY_MAP = {
+            "Coherent":        "_coherent",
+            "Semi-incoherent": "_semiinco",
+            "Incoherent":      "_inco",
+        }
+        ALL_SUFFIXES = list(CATEGORY_MAP.values())
+
+        node_guard = PipelineNode(
+            name="Unknown-suffix guard",
+            condition=CompositeCondition(
+                operator="NOT",
+                sub_conditions=[
+                    UnknownSuffixCondition(
+                        expected_suffixes=ALL_SUFFIXES,
+                        use_base_directory=True,
+                    ),
+                ],
+            ),
+            on_match=NodeOutcome(OutcomeType.CONTINUE),
+            on_no_match=NodeOutcome(OutcomeType.REJECT),
+        )
+
+        node_uniqueness = PipelineNode(
+            name="Stem uniqueness check",
+            condition=BaseStemMatchCondition(max_stem_group_size=-1),
+            on_match=NodeOutcome(OutcomeType.REJECT),
+            on_no_match=NodeOutcome(OutcomeType.CONTINUE),
+        )
+
+        def _make_node(
+            name: str,
+            suffix: str,
+            action: ClassifierActionType,
+            target_dir: str = "",
+        ) -> PipelineNode:
+            return PipelineNode(
+                name=name,
+                condition=CompositeCondition(
+                    operator="AND",
+                    sub_conditions=[
+                        RelatedImageCondition(
+                            edit_suffix=suffix,
+                            use_configured_search_directories=False,
+                            count_threshold=1,
+                        ),
+                        BaseStemMatchCondition(
+                            require_match=False,
+                            search_directory=target_dir,
+                        ),
+                    ],
+                ),
+                on_match=NodeOutcome(
+                    OutcomeType.EXECUTE_AND_CONTINUE,
+                    action_type=action,
+                    action_modifier=suffix,
+                ),
+                on_no_match=NodeOutcome(OutcomeType.CONTINUE),
+            )
+
+        node_coherent = _make_node(
+            "Generate coherent variant",
+            "_coherent",
+            ClassifierActionType.GENERATE,
+        )
+        node_semi = _make_node(
+            "Scramble semi-incoherent variant",
+            "_semiinco",
+            ClassifierActionType.SCRAMBLE,
+        )
+        node_incoherent = _make_node(
+            "Scramble incoherent variant",
+            "_inco",
+            ClassifierActionType.SCRAMBLE,
+        )
+
+        return ClassifierPipeline(
+            name="Example: Scramble Coherence Set Builder",
+            description=(
+                "Demo pipeline (inactive). Builds a three-bucket coherence training set "
+                "from a directory of seed images. "
+                "coherent → GENERATE (_coherent suffix); "
+                "semi-incoherent → SCRAMBLE via semi_scramble_image (_semiinco suffix); "
+                "incoherent → SCRAMBLE via scramble_image (_inco suffix). "
+                "Set target directories and a coherence classifier before activating."
+            ),
+            nodes=[node_guard, node_uniqueness, node_coherent, node_semi, node_incoherent],
+            is_active=False,
+            category_map=CATEGORY_MAP,
+        )
+
+    @staticmethod
     def store() -> None:
         app_info_cache.set_meta(
             _CACHE_KEY,

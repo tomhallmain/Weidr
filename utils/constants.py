@@ -546,12 +546,14 @@ class ClassifierActionType(Enum):
     ADD_MARK = "ADD_MARK"
     BLUR = "BLUR"
     GENERATE = "GENERATE"
+    SCRAMBLE = "SCRAMBLE"
 
     def is_cache_type(self):
         # If the action is not one of these types, it should have been moved out of the directory.
         return (self == ClassifierActionType.HIDE or self == ClassifierActionType.NOTIFY
             or self == ClassifierActionType.SKIP or self == ClassifierActionType.ADD_MARK
-            or self == ClassifierActionType.BLUR or self == ClassifierActionType.GENERATE)
+            or self == ClassifierActionType.BLUR or self == ClassifierActionType.GENERATE
+            or self == ClassifierActionType.SCRAMBLE)
 
     def requires_target_directory(self) -> bool:
         """True for MOVE and COPY — actions that need a target directory modifier."""
@@ -576,6 +578,8 @@ class ClassifierActionType(Enum):
             return _("Blur")
         elif self == ClassifierActionType.GENERATE:
             return _("Generate")
+        elif self == ClassifierActionType.SCRAMBLE:
+            return _("Scramble")
         raise Exception("Classifier action translation not found: " + str(self))
 
     @staticmethod

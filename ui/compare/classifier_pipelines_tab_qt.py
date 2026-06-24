@@ -370,6 +370,17 @@ class ClassifierPipelinesTab(QWidget):
 
         from compare.action_callbacks import ActionCallbacks
         from files.marked_files import MarkedFiles
+        from image.image_ops import ImageOps
+
+        def _make_scramble_callback():
+            def _cb(path: str, modifier: str | None) -> None:
+                out = ImageOps.new_filepath(path, append_part=modifier) if modifier else None
+                if modifier and "semi" in modifier:
+                    ImageOps.semi_scramble_image(path, output_path=out)
+                else:
+                    ImageOps.scramble_image(path, output_path=out)
+            return _cb
+
         callbacks = ActionCallbacks(
             hide_callback=self._app_actions.hide_current_media,
             notify_callback=self._app_actions.title_notify,
@@ -378,6 +389,7 @@ class ClassifierPipelinesTab(QWidget):
             generate_callback=lambda path, edit_suffix=None: pending_generates.append(
                 (path, edit_suffix)
             ),
+            scramble_callback=_make_scramble_callback(),
         )
 
         def _worker():

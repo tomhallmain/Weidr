@@ -196,6 +196,7 @@ class TestClassifierActionType:
         assert ClassifierActionType.NOTIFY.is_cache_type() is True
         assert ClassifierActionType.SKIP.is_cache_type() is True
         assert ClassifierActionType.ADD_MARK.is_cache_type() is True
+        assert ClassifierActionType.SCRAMBLE.is_cache_type() is True
 
     def test_is_cache_type_false(self):
         assert ClassifierActionType.MOVE.is_cache_type() is False
@@ -207,6 +208,7 @@ class TestClassifierActionType:
         assert ClassifierActionType.COPY.requires_target_directory() is True
         assert ClassifierActionType.GENERATE.requires_target_directory() is False
         assert ClassifierActionType.HIDE.requires_target_directory() is False
+        assert ClassifierActionType.SCRAMBLE.requires_target_directory() is False
 
     def test_get_translation_non_empty_for_all(self):
         for action in ClassifierActionType:

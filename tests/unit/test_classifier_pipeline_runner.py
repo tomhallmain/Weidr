@@ -83,7 +83,7 @@ def _pipeline(*nodes, name="test", default_action=None):
 
 def _callbacks():
     """Return mock callback objects that record calls."""
-    calls = {"hide": [], "notify": [], "mark": [], "blur": []}
+    calls = {"hide": [], "notify": [], "mark": [], "blur": [], "scramble": []}
     return (
         calls,
         lambda p: calls["hide"].append(p),
@@ -766,6 +766,9 @@ class TestActionDispatch:
                   on_match=_execute(action_type, modifier))
         )
         calls, hide, notify, mark, blur = _callbacks()
+        scramble = extra_callbacks.get(
+            "scramble", lambda p, m=None: calls["scramble"].append((p, m))
+        )
         run_pipeline(
             p, IMAGE,
             ActionCallbacks(
@@ -773,9 +776,28 @@ class TestActionDispatch:
                 notify_callback=extra_callbacks.get("notify", notify),
                 add_mark_callback=extra_callbacks.get("mark", mark),
                 blur_callback=extra_callbacks.get("blur", blur),
+                scramble_callback=scramble,
             ),
         )
         return calls
+
+    def test_scramble_action(self, monkeypatch):
+        calls = self._run(monkeypatch, ClassifierActionType.SCRAMBLE)
+        assert len(calls["scramble"]) == 1
+        assert calls["scramble"][0][0] == IMAGE
+
+    def test_scramble_action_passes_modifier(self, monkeypatch):
+        calls = self._run(monkeypatch, ClassifierActionType.SCRAMBLE, "_inco")
+        assert calls["scramble"][0] == (IMAGE, "_inco")
+
+    def test_scramble_action_no_callback_does_not_raise(self, monkeypatch):
+        self._patch_embedding(monkeypatch)
+        p = _pipeline(_node("n1", EmbeddingCondition(["x"]),
+                             on_match=_execute(ClassifierActionType.SCRAMBLE)))
+        calls, hide, notify, mark, blur = _callbacks()
+        # no scramble_callback provided — must not raise
+        result = run_pipeline(p, IMAGE, ActionCallbacks(notify_callback=notify))
+        assert result == ClassifierActionType.SCRAMBLE
 
     def test_notify_action(self, monkeypatch):
         calls = self._run(monkeypatch, ClassifierActionType.NOTIFY)

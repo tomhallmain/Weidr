@@ -999,6 +999,7 @@ def _dispatch_action(
     add_mark_callback = callbacks.add_mark_callback
     blur_callback = callbacks.blur_callback
     generate_callback = callbacks.generate_callback
+    scramble_callback = callbacks.scramble_callback
     _notify = notify_callback or (lambda *a, **kw: None)
     base_message = pipeline_name + _(" detected")
 
@@ -1106,3 +1107,11 @@ def _dispatch_action(
                 generate_queue.submit(generate_callback, image_path, action_modifier or None)
             else:
                 generate_callback(image_path, action_modifier or None)
+
+    elif action_type == ClassifierActionType.SCRAMBLE:
+        _notify(
+            "\n" + base_message + _(" - scrambling"),
+            base_message=base_message, action_type=ActionType.SYSTEM, is_manual=False,
+        )
+        if scramble_callback:
+            scramble_callback(image_path, action_modifier or None)

@@ -968,6 +968,11 @@ class ClassifierAction:
             notify_callback("\n" + base_message + _(" - generating"), base_message=base_message, action_type=ActionType.GENERATE_IMAGE, is_manual=False)
             if generate_callback is not None:
                 generate_callback(image_path, self.related_image_edit_suffix or None)
+        elif self.action == ClassifierActionType.SCRAMBLE:
+            notify_callback("\n" + base_message + _(" - scrambling"), base_message=base_message, action_type=ActionType.SYSTEM, is_manual=False)
+            scramble_callback = callbacks.scramble_callback
+            if scramble_callback is not None:
+                scramble_callback(image_path, self.related_image_edit_suffix or None)
         return self.action
 
     def get_negatives_str(self):

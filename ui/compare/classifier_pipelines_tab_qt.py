@@ -443,6 +443,7 @@ class ClassifierPipelinesTab(QWidget):
             )
             summary = report.format_completion_report(stats)
             logger.info("\n%s", summary)
+            self._write_pipeline_run_dump(pipeline, stats, report)
             try:
                 self._app_actions.title_notify(summary)
             except Exception:
@@ -466,6 +467,50 @@ class ClassifierPipelinesTab(QWidget):
 
         from utils.running_tasks_registry import start_thread
         start_thread(_worker, use_asyncio=False)
+
+    # ------------------------------------------------------------------
+    # Pipeline run dump
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _write_pipeline_run_dump(pipeline, stats, report) -> None:
+        try:
+            import json
+            from datetime import datetime
+            from utils.logging_setup import get_log_dir
+            dump = {
+                "timestamp": datetime.now().isoformat(),
+                "pipeline": pipeline.to_dict(),
+                "stats": {
+                    "pipeline_name": stats.pipeline_name,
+                    "profile_name": stats.profile_name,
+                    "directories": stats.directories,
+                    "files_by_directory": stats.files_by_directory,
+                    "files_evaluated": stats.files_evaluated,
+                    "errors": stats.errors,
+                    "action_counts": stats.action_counts,
+                    "generates_queued": stats.generates_queued,
+                    "generation_type_label": stats.generation_type_label,
+                    "category_map": stats.category_map,
+                },
+                "messages": [
+                    {
+                        "severity": m.severity,
+                        "node": m.node,
+                        "image_path": m.image_path,
+                        "detail": m.detail,
+                        "data": m.data,
+                    }
+                    for m in report.messages()
+                ],
+            }
+            ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in pipeline.name)
+            dump_path = get_log_dir() / f"pipeline_run_{ts}_{safe_name}.json"
+            dump_path.write_text(json.dumps(dump, indent=2, default=str), encoding="utf-8")
+            logger.info("Pipeline run data written to %s", dump_path)
+        except Exception:
+            logger.exception("Failed to write pipeline run dump")
 
     # ------------------------------------------------------------------
     # Editor window helpers

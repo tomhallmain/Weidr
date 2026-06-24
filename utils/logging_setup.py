@@ -38,6 +38,14 @@ def _cleanup_old_logs(log_dir: Path, logger: logging.Logger) -> None:
     except Exception as e:
         logger.error(f"Error cleaning up old log files: {e}")
 
+def get_log_dir() -> Path:
+    """Return the application log directory, creating it if necessary."""
+    appdata_dir: str = os.getenv('APPDATA') if sys.platform == 'win32' else os.path.expanduser('~/.local/share')
+    log_dir: Path = Path(appdata_dir) / 'Weidr' / 'logs'
+    log_dir.mkdir(parents=True, exist_ok=True)
+    return log_dir
+
+
 def get_logger(module_name: str) -> logging.Logger:
     """
     Get a logger instance for a specific module.
@@ -63,10 +71,7 @@ def get_logger(module_name: str) -> logging.Logger:
     ch.setFormatter(CustomFormatter())
     logger.addHandler(ch)
 
-    # Create log file in ApplicationData
-    appdata_dir: str = os.getenv('APPDATA') if sys.platform == 'win32' else os.path.expanduser('~/.local/share')
-    log_dir: Path = Path(appdata_dir) / 'Weidr' / 'logs'
-    log_dir.mkdir(parents=True, exist_ok=True)
+    log_dir: Path = get_log_dir()
 
     # Clean up old logs before creating new one
     _cleanup_old_logs(log_dir, logger)

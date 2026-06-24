@@ -657,6 +657,125 @@ class FileOpsController:
                 ).format(converted_count, failed_count, skipped_existing_count)
             )
 
+    def scale_directory_images(self, event=None) -> None:
+        """Scale all images in the current directory scope to an equivalent pixel area."""
+        import math
+        from PIL import Image as PILImage
+        from PySide6.QtWidgets import QInputDialog
+        from image.image_ops import ImageOps
+
+        if self._app.is_compare_running():
+            self._app.app_actions.warn(compare_running_warn(_("scale images")))
+            return
+
+        base_dir = self._app.get_base_dir()
+        if not base_dir or not os.path.isdir(base_dir):
+            self._app.app_actions.warn(_("No valid base directory to scale images"))
+            return
+
+        target_side, ok = QInputDialog.getInt(
+            self._app,
+            _("Scale Directory Images"),
+            _("Equivalent square side (pixels).\n"
+              "Images are scaled so their total pixel count matches this value squared.\n"
+              "Example: 320 → target area = 320×320 = 102 400 px"),
+            value=320,
+            min=1,
+            max=65535,
+        )
+        if not ok:
+            return
+
+        self._app.app_actions.refresh(file_check=False)
+        files = self._fb.get_files_sorted_for_operation(
+            sort_by=SortBy.CREATION_TIME,
+            sort=Sort.ASC,
+        )
+        if not files:
+            self._app.notification_ctrl.toast(_("No files found"))
+            return
+
+        scaleable_extensions = frozenset(
+            e.lower() for e in getattr(config, "image_types", []) if isinstance(e, str)
+        ) | {".gif"}
+
+        candidates = [
+            f for f in files
+            if os.path.splitext(f)[1].lower() in scaleable_extensions
+        ]
+        if not candidates:
+            self._app.notification_ctrl.toast(_("No image files found to scale"))
+            return
+
+        target_pixels = target_side * target_side
+        already_within = 0
+        for filepath in candidates:
+            try:
+                with PILImage.open(filepath) as img:
+                    w, h = img.size
+                    if w * h <= target_pixels:
+                        already_within += 1
+            except Exception:
+                pass
+
+        to_scale = len(candidates) - already_within
+        if to_scale == 0:
+            self._app.notification_ctrl.toast(
+                _("{0} image(s) are already at or below {1}²={2} px — nothing to scale").format(
+                    len(candidates), target_side, target_pixels,
+                )
+            )
+            return
+
+        choice = self._app.app_actions.alert(
+            _("Scale Directory Images"),
+            _(
+                "Scale images in:\n{0}\n\n"
+                "Target area: {1}×{1} = {2} px (aspect ratio preserved)\n\n"
+                "Images in scope: {3}\n"
+                "Already within limit: {4}\n"
+                "Will be scaled down: {5}\n\n"
+                "This modifies image files in place. Proceed?"
+            ).format(base_dir, target_side, target_pixels,
+                     len(candidates), already_within, to_scale),
+            kind="askokcancel",
+        )
+        if choice != QMessageBox.StandardButton.Ok:
+            return
+
+        scaled_count = 0
+        skipped_count = 0
+        failed_count = 0
+
+        for filepath in candidates:
+            try:
+                _, was_scaled = ImageOps.scale_image_to_equivalent_pixels(
+                    filepath, target_side
+                )
+                if was_scaled:
+                    scaled_count += 1
+                else:
+                    skipped_count += 1
+            except Exception as e:
+                failed_count += 1
+                logger.warning("Failed to scale image: %s — %s", filepath, e)
+
+        if scaled_count > 0:
+            self._app.refresh()
+
+        if failed_count == 0:
+            self._app.notification_ctrl.toast(
+                _("Scaled {0} image(s) to ~{1}² px, {2} already within limit").format(
+                    scaled_count, target_side, skipped_count,
+                )
+            )
+        else:
+            self._app.app_actions.warn(
+                _("Scaled {0} image(s) to ~{1}² px, {2} failed, {3} skipped").format(
+                    scaled_count, target_side, failed_count, skipped_count,
+                )
+            )
+
     # ==================================================================
     # Replace / group operations
     # ==================================================================

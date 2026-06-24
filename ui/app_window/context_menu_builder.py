@@ -209,6 +209,10 @@ class ContextMenuBuilder:
             _("Convert directory images to JPG"),
             lambda: app.file_ops_ctrl.convert_directory_images_to_jpg(),
         )
+        menu.addAction(
+            _("Scale directory images to equivalent pixel area…"),
+            lambda: app.file_ops_ctrl.scale_directory_images(),
+        )
         if config.enable_svgs:
             menu.addAction(
                 _("Convert directory SVGs to PNG"),

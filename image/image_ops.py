@@ -474,6 +474,89 @@ class ImageOps:
             raise
 
     @staticmethod
+    def scale_image_to_equivalent_pixels(
+        image_path: str,
+        target_side: int,
+        output_path: str | None = None,
+    ) -> tuple[str, bool]:
+        """Scale an image so its total pixel count matches *target_side*².
+
+        Preserves the exact aspect ratio — the image is scaled by
+        ``sqrt(target_side² / (width × height))``, so a non-square image will
+        not have either dimension equal to *target_side*.  Only images whose
+        pixel count exceeds the target are scaled down; smaller images are left
+        unchanged.
+
+        For animated images (GIF, animated WebP, etc.) all frames are resized.
+
+        Args:
+            image_path:  Source image file path.
+            target_side: One side of the equivalent square (e.g. 320 → 102,400
+                         target pixels).  Must be >= 1.
+            output_path: Destination path.  Defaults to *image_path* (in-place).
+
+        Returns:
+            (path, scaled) — output file path and whether resizing occurred.
+
+        Raises:
+            ValueError if target_side < 1.
+            Exception if the file cannot be opened or written.
+        """
+        if target_side < 1:
+            raise ValueError(f"target_side must be >= 1, got {target_side}")
+
+        dest = output_path if output_path else image_path
+        target_pixels = target_side * target_side
+
+        img = PIL.Image.open(image_path)
+        try:
+            orig_w, orig_h = img.size
+            current_pixels = orig_w * orig_h
+
+            if current_pixels <= target_pixels:
+                img.close()
+                return dest, False
+
+            scale = math.sqrt(target_pixels / current_pixels)
+            new_w = max(1, round(orig_w * scale))
+            new_h = max(1, round(orig_h * scale))
+
+            n_frames = getattr(img, "n_frames", 1)
+            if n_frames > 1:
+                from PIL import ImageSequence
+                frames = []
+                durations = []
+                for frame in ImageSequence.Iterator(img):
+                    durations.append(frame.info.get("duration", 100))
+                    frames.append(
+                        frame.copy().resize((new_w, new_h), PIL.Image.Resampling.LANCZOS)
+                    )
+                frames[0].save(
+                    dest,
+                    save_all=True,
+                    append_images=frames[1:],
+                    loop=img.info.get("loop", 0),
+                    duration=durations,
+                )
+            else:
+                dest_ext = os.path.splitext(dest)[1].lower()
+                resized = img.resize((new_w, new_h), PIL.Image.Resampling.LANCZOS)
+                save_kwargs: dict = {}
+                if dest_ext in (".jpg", ".jpeg"):
+                    if resized.mode not in ("RGB", "L"):
+                        resized = resized.convert("RGB")
+                    save_kwargs = {"quality": 90, "optimize": True}
+                resized.save(dest, **save_kwargs)
+        finally:
+            img.close()
+
+        logger.info(
+            "Scaled %s: %dx%d → %dx%d (target %d²=%d px)",
+            image_path, orig_w, orig_h, new_w, new_h, target_side, target_pixels,
+        )
+        return dest, True
+
+    @staticmethod
     def _flip_image(im, top_bottom=False):
         return im.transpose(method=PIL.Image.FLIP_TOP_BOTTOM if top_bottom else PIL.Image.FLIP_LEFT_RIGHT), im
 

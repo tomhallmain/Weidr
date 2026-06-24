@@ -807,6 +807,283 @@ class ImageOps:
             raise
 
     @staticmethod
+    def _block_shuffle_array(arr: np.ndarray, block_size: int) -> np.ndarray:
+        h, w = arr.shape[:2]
+        bh, bw = h // block_size, w // block_size
+        if bh < 2 or bw < 2:
+            return arr
+        blocks = [
+            arr[i * block_size:(i + 1) * block_size,
+                j * block_size:(j + 1) * block_size].copy()
+            for i in range(bh) for j in range(bw)
+        ]
+        coords = [(i * block_size, j * block_size) for i in range(bh) for j in range(bw)]
+        random.shuffle(blocks)
+        result = arr.copy()
+        for k, (y0, x0) in enumerate(coords):
+            result[y0:y0 + block_size, x0:x0 + block_size] = blocks[k]
+        return result
+
+    @staticmethod
+    def _phase_scramble_array(arr: np.ndarray) -> np.ndarray:
+        result = np.empty_like(arr)
+        for c in range(arr.shape[2]):
+            channel = arr[:, :, c].astype(np.float32)
+            f = np.fft.fft2(channel)
+            rng_phase = np.random.uniform(-np.pi, np.pi, channel.shape)
+            new_f = np.abs(f) * np.exp(1j * rng_phase)
+            result[:, :, c] = np.clip(np.real(np.fft.ifft2(new_f)), 0, 255).astype(np.uint8)
+        return result
+
+    @staticmethod
+    def _swap_patches_array(
+        arr: np.ndarray, n_swaps: int,
+        min_frac: float = 0.25, max_frac: float = 0.55,
+    ) -> np.ndarray:
+        h, w = arr.shape[:2]
+        result = arr.copy()
+        for _ in range(n_swaps):
+            ph = random.randint(max(1, int(h * min_frac)), max(2, int(h * max_frac)))
+            pw = random.randint(max(1, int(w * min_frac)), max(2, int(w * max_frac)))
+            if ph >= h or pw >= w:
+                continue
+            y1 = random.randint(0, h - ph)
+            x1 = random.randint(0, w - pw)
+            y2 = random.randint(0, h - ph)
+            x2 = random.randint(0, w - pw)
+            p1 = result[y1:y1 + ph, x1:x1 + pw].copy()
+            result[y1:y1 + ph, x1:x1 + pw] = result[y2:y2 + ph, x2:x2 + pw]
+            result[y2:y2 + ph, x2:x2 + pw] = p1
+        return result
+
+    @staticmethod
+    def _strip_shuffle_array(arr: np.ndarray) -> np.ndarray:
+        h, w = arr.shape[:2]
+        result = arr.copy()
+        if random.random() > 0.5:
+            stripe = max(1, random.randint(h // 15, h // 6))
+            n = h // stripe
+            if n < 2:
+                return result
+            strips = [result[i * stripe:(i + 1) * stripe].copy() for i in range(n)]
+            random.shuffle(strips)
+            for i, strip in enumerate(strips):
+                result[i * stripe:(i + 1) * stripe] = strip
+        else:
+            stripe = max(1, random.randint(w // 15, w // 6))
+            n = w // stripe
+            if n < 2:
+                return result
+            strips = [result[:, j * stripe:(j + 1) * stripe].copy() for j in range(n)]
+            random.shuffle(strips)
+            for j, strip in enumerate(strips):
+                result[:, j * stripe:(j + 1) * stripe] = strip
+        return result
+
+    @staticmethod
+    def scramble_image(image_path: str, output_path: str | None = None) -> str:
+        """Apply heavy random distortion to produce a visually incoherent image.
+
+        Unlike randomly_modify_image() which preserves legibility, this is
+        designed for coherence-detection training data: the output retains some
+        colour/frequency characteristics of the source but loses all meaningful
+        spatial structure.
+
+        Randomly combines 1–3 of:
+        - block_shuffle  : permutes NxN pixel blocks, destroying spatial layout
+        - phase_scramble : randomises FFT phase, eliminating all spatial relations
+        - patch_swap     : transplants large regions to distant positions (swabbing)
+        - strip_shuffle  : shuffles horizontal or vertical strips
+
+        Returns the output file path.
+        """
+        _STRATEGIES = ["block_shuffle", "phase_scramble", "patch_swap", "strip_shuffle"]
+        chosen = random.sample(_STRATEGIES, random.randint(1, min(3, len(_STRATEGIES))))
+
+        img = None
+        try:
+            img = PIL.Image.open(image_path)
+            if img.mode != "RGB":
+                img = img.convert("RGB")
+            arr = np.array(img)
+            img.close()
+            img = None
+
+            for strategy in chosen:
+                if strategy == "block_shuffle":
+                    h, w = arr.shape[:2]
+                    block_size = random.randint(
+                        max(8, min(h, w) // 20),
+                        max(16, min(h, w) // 8),
+                    )
+                    arr = ImageOps._block_shuffle_array(arr, block_size)
+                elif strategy == "phase_scramble":
+                    arr = ImageOps._phase_scramble_array(arr)
+                elif strategy == "patch_swap":
+                    arr = ImageOps._swap_patches_array(arr, n_swaps=random.randint(3, 8))
+                elif strategy == "strip_shuffle":
+                    arr = ImageOps._strip_shuffle_array(arr)
+
+            dest = output_path or ImageOps.new_filepath(image_path, append_part="_scramble")
+            result_img = PIL.Image.fromarray(arr)
+            save_kwargs: dict = {}
+            if os.path.splitext(dest)[1].lower() in (".jpg", ".jpeg"):
+                save_kwargs = {"quality": 90, "optimize": True}
+            result_img.save(dest, **save_kwargs)
+            result_img.close()
+
+            logger.info("scramble_image: strategies=%s → %s", chosen, dest)
+            return dest
+        except Exception as e:
+            logger.warning("scramble_image failed for %s: %s", image_path, e)
+            if img is not None:
+                try:
+                    img.close()
+                except Exception:
+                    pass
+            raise
+
+    @staticmethod
+    def _apply_local_gaussian_blur(
+        arr: np.ndarray, y0: int, x0: int, y1: int, x1: int, sigma: float
+    ) -> np.ndarray:
+        ksize = max(3, int(sigma * 6) | 1)  # must be odd and >= 3
+        result = arr.copy()
+        result[y0:y1, x0:x1] = cv2.GaussianBlur(
+            result[y0:y1, x0:x1], (ksize, ksize), sigma
+        )
+        return result
+
+    @staticmethod
+    def _apply_local_smear(
+        arr: np.ndarray, y0: int, x0: int, y1: int, x1: int,
+        length: int, angle_deg: float,
+    ) -> np.ndarray:
+        length = max(3, length | 1)
+        kernel = np.zeros((length, length), dtype=np.float32)
+        kernel[length // 2, :] = 1.0
+        M = cv2.getRotationMatrix2D((length // 2, length // 2), angle_deg, 1.0)
+        kernel = cv2.warpAffine(kernel, M, (length, length))
+        total = kernel.sum()
+        if total > 0:
+            kernel /= total
+        result = arr.copy()
+        result[y0:y1, x0:x1] = cv2.filter2D(
+            result[y0:y1, x0:x1], -1, kernel, borderType=cv2.BORDER_REFLECT
+        )
+        return result
+
+    @staticmethod
+    def _apply_local_pixel_shuffle(
+        arr: np.ndarray, y0: int, x0: int, y1: int, x1: int
+    ) -> np.ndarray:
+        result = arr.copy()
+        region = result[y0:y1, x0:x1].copy()
+        orig_shape = region.shape
+        flat = region.reshape(-1, orig_shape[2])
+        np.random.shuffle(flat)  # shuffles pixel rows in-place
+        result[y0:y1, x0:x1] = flat.reshape(orig_shape)
+        return result
+
+    @staticmethod
+    def _apply_local_pixelation(
+        arr: np.ndarray, y0: int, x0: int, y1: int, x1: int, block_size: int
+    ) -> np.ndarray:
+        result = arr.copy()
+        region = result[y0:y1, x0:x1]
+        rh, rw = region.shape[:2]
+        small_h = max(1, rh // block_size)
+        small_w = max(1, rw // block_size)
+        # INTER_AREA = averaging; INTER_NEAREST = blocky upscale (preserves mosaic look)
+        small = cv2.resize(region, (small_w, small_h), interpolation=cv2.INTER_AREA)
+        result[y0:y1, x0:x1] = cv2.resize(
+            small, (rw, rh), interpolation=cv2.INTER_NEAREST
+        )
+        return result
+
+    @staticmethod
+    def semi_scramble_image(image_path: str, output_path: str | None = None) -> str:
+        """Apply local distortions to a random subset of the image, leaving the rest coherent.
+
+        Selects 1–4 random regions and applies one of the following per region:
+        - gaussian_blur  : heavy Gaussian blur — destroys fine detail and edges
+        - smear          : directional motion blur — drags content in a random direction
+        - pixel_shuffle  : randomly reorders every pixel — noise-like scrambling
+        - pixelate       : mosaic / block-average (censor-style) — preserves coarse colour
+
+        Designed for "semi-incoherent" training examples: the distorted regions lose
+        local coherence while the untouched areas remain fully readable.
+
+        Returns the output file path (suffix ``_semi_scramble`` unless output_path given).
+        """
+        _EFFECTS = ["gaussian_blur", "smear", "pixel_shuffle", "pixelate"]
+
+        img = None
+        try:
+            img = PIL.Image.open(image_path)
+            if img.mode != "RGB":
+                img = img.convert("RGB")
+            arr = np.array(img)
+            img.close()
+            img = None
+
+            h, w = arr.shape[:2]
+            n_regions = random.randint(1, 4)
+            applied: list[str] = []
+
+            for _ in range(n_regions):
+                rh = max(16, random.randint(int(h * 0.20), int(h * 0.60)))
+                rw = max(16, random.randint(int(w * 0.20), int(w * 0.60)))
+                if rh >= h or rw >= w:
+                    continue
+                y0 = random.randint(0, h - rh)
+                x0 = random.randint(0, w - rw)
+                y1, x1 = y0 + rh, x0 + rw
+
+                effect = random.choice(_EFFECTS)
+                applied.append(effect)
+
+                if effect == "gaussian_blur":
+                    sigma = random.uniform(8.0, max(8.0, min(rh, rw) * 0.15))
+                    arr = ImageOps._apply_local_gaussian_blur(arr, y0, x0, y1, x1, sigma)
+                elif effect == "smear":
+                    min_len = max(15, min(rh, rw) // 8)
+                    max_len = max(min_len + 2, min(rh, rw) // 3)
+                    length = random.randint(min_len, max_len)
+                    arr = ImageOps._apply_local_smear(
+                        arr, y0, x0, y1, x1, length, random.uniform(0.0, 360.0)
+                    )
+                elif effect == "pixel_shuffle":
+                    arr = ImageOps._apply_local_pixel_shuffle(arr, y0, x0, y1, x1)
+                elif effect == "pixelate":
+                    min_blk = max(8, min(rh, rw) // 20)
+                    max_blk = max(min_blk + 2, min(rh, rw) // 8)
+                    arr = ImageOps._apply_local_pixelation(
+                        arr, y0, x0, y1, x1, random.randint(min_blk, max_blk)
+                    )
+
+            dest = output_path or ImageOps.new_filepath(
+                image_path, append_part="_semi_scramble"
+            )
+            result_img = PIL.Image.fromarray(arr)
+            save_kwargs: dict = {}
+            if os.path.splitext(dest)[1].lower() in (".jpg", ".jpeg"):
+                save_kwargs = {"quality": 90, "optimize": True}
+            result_img.save(dest, **save_kwargs)
+            result_img.close()
+
+            logger.info("semi_scramble_image: effects=%s → %s", applied, dest)
+            return dest
+        except Exception as e:
+            logger.warning("semi_scramble_image failed for %s: %s", image_path, e)
+            if img is not None:
+                try:
+                    img.close()
+                except Exception:
+                    pass
+            raise
+
+    @staticmethod
     def random_draw(image_path):
         try:
             with PIL.Image.open(image_path) as image:

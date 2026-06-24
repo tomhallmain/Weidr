@@ -478,6 +478,7 @@ class MediaDetails(SmartWindow):
         sc("Shift+B", lambda: self.enhance_image())
         sc("Shift+A", lambda: self.random_crop())
         sc("Shift+Q", lambda: self.random_modification())
+        sc("Ctrl+Shift+Q", lambda: self.scramble_image())
         sc("Shift+H", lambda: self.flip_image())
         sc("Shift+V", lambda: self.flip_image(top_bottom=True))
         sc("Shift+X", lambda: self.copy_without_exif())
@@ -989,6 +990,40 @@ class MediaDetails(SmartWindow):
                 )
         else:
             app_actions.toast(_("No new image created"))
+
+    def scramble_image(self) -> None:
+        MediaDetails.scramble_image_static(
+            self._image_path, self._app_actions, self._parent_ref
+        )
+
+    @staticmethod
+    def scramble_image_static(
+        image_path: str, app_actions, master=None
+    ) -> None:
+        new_filepath = ImageOps.scramble_image(image_path)
+        app_actions.refresh()
+        if os.path.exists(new_filepath):
+            app_actions.success(_("Scrambled image"))
+            if master is not None:
+                MediaDetails.open_temp_media_canvas(
+                    master=master,
+                    media_path=new_filepath,
+                    app_actions=app_actions,
+                )
+        else:
+            app_actions.toast(_("No new image created"))
+
+    def _scramble_image_and_mark(self) -> None:
+        new_filepath = ImageOps.scramble_image(self._image_path)
+        self.close_windows()
+        self._app_actions.refresh()
+        if new_filepath and os.path.exists(new_filepath):
+            self._app_actions.toast(_("Scrambled image"))
+            self._app_actions.open_move_marks_window(
+                filepath=new_filepath, open_gui=False
+            )
+        else:
+            self._app_actions.toast(_("No new image created"))
 
     def flip_image(self, top_bottom: bool = False) -> None:
         if top_bottom:

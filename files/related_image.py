@@ -406,6 +406,57 @@ def should_run_generate_action(
     return suffix_count < count_threshold
 
 
+def get_image_edit_redo_params(
+    image_path: str,
+) -> tuple[str | None, str | None]:
+    """Return (related_path, edit_suffix) if image_path can be redone as an image edit.
+
+    Eligible when:
+    - The image has a related image reference in its metadata (path need not exist
+      locally — a sufficiently unique basename is likely the correct source), OR
+      the base stem of the filename matches exactly one file in the same directory
+      whose stem is exactly that base stem (no appended suffix).
+    - The image's stem ends with a non-numeric variant suffix (_VARIANT_SUFFIX_RE).
+
+    The suffix is the tail of the current stem beyond the related image's stem
+    (e.g. source ``img.png``, edit ``img_edit.png`` → suffix ``_edit``).
+    Returns (None, None) when either condition is not met.
+    """
+    related_path, _exact = get_related_image_path(image_path)
+
+    if related_path is None:
+        base_stem = extract_filename_base_stem(image_path)
+        if base_stem:
+            same_dir = os.path.dirname(os.path.abspath(image_path))
+            matches = find_files_by_base_stem([same_dir], base_stem)
+            source_matches = [
+                f for f in matches
+                if os.path.splitext(os.path.basename(f))[0] == base_stem
+                and f != image_path
+            ]
+            if len(source_matches) == 1:
+                related_path = source_matches[0]
+
+    if related_path is None:
+        return None, None
+
+    stem = os.path.splitext(os.path.basename(image_path))[0]
+    if not _VARIANT_SUFFIX_RE.match(stem):
+        return None, None
+
+    related_stem = os.path.splitext(os.path.basename(related_path))[0]
+    if stem.lower().startswith(related_stem.lower()):
+        edit_suffix = stem[len(related_stem):]
+    else:
+        m = _VARIANT_SUFFIX_RE.match(stem)
+        edit_suffix = stem[len(m.group(1)):]
+
+    if suffix_is_numeric(edit_suffix):
+        return None, None
+
+    return related_path, edit_suffix
+
+
 def get_downstream_files_for_sources(
     source_paths: list[str],
     other_base_dir: str,

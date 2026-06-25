@@ -1,8 +1,12 @@
 """
-Unit tests for files.related_image.should_run_generate_action.
+Unit tests for files.related_image generate-action helpers.
+
+Covers:
+  - should_run_generate_action
+  - get_image_edit_redo_params
 
 All filesystem operations (related-image metadata lookup and directory scanning)
-are mocked so no real directories are accessed.
+are mocked or use real temporary directories as appropriate.
 """
 from unittest.mock import patch
 
@@ -11,6 +15,7 @@ import pytest
 from files.related_image import (
     _scan_dir_cached,
     clear_generate_gate_cache,
+    get_image_edit_redo_params,
     should_run_generate_action,
 )
 
@@ -375,3 +380,64 @@ class TestGenerateGateCache:
         _scan_dir_cached("/dir/b")
 
         assert calls == ["/dir/a", "/dir/b", "/dir/a", "/dir/b"]
+
+
+# ---------------------------------------------------------------------------
+# get_image_edit_redo_params
+# ---------------------------------------------------------------------------
+
+def _patch_get_related(related_path):
+    return patch(
+        "files.related_image.get_related_image_path",
+        return_value=(related_path, related_path is not None),
+    )
+
+
+class TestGetImageEditRedoParams:
+    def test_metadata_related_image_with_suffix(self):
+        """Standard path: metadata supplies the source; suffix extracted from stem comparison."""
+        with _patch_get_related("/base/CUI_12345.png"):
+            related, suffix = get_image_edit_redo_params("/base/CUI_12345_edit.png")
+        assert related == "/base/CUI_12345.png"
+        assert suffix == "_edit"
+
+    def test_numeric_suffix_rejected(self):
+        """A purely numeric suffix like _12345 is not a valid category edit suffix."""
+        with _patch_get_related("/base/source.png"):
+            related, suffix = get_image_edit_redo_params("/base/source_12345.png")
+        assert (related, suffix) == (None, None)
+
+    def test_no_variant_suffix_returns_none(self):
+        """A stem with no trailing _word has no edit suffix to extract."""
+        with _patch_get_related("/base/other.png"):
+            related, suffix = get_image_edit_redo_params("/base/plainimage.png")
+        assert (related, suffix) == (None, None)
+
+    def test_fallback_finds_unique_source_in_same_directory(self, tmp_path):
+        """When metadata has no related image, base-stem search in the same dir finds the source."""
+        source = tmp_path / "CUI_12345.png"
+        edit = tmp_path / "CUI_12345_edit.png"
+        source.write_bytes(b"")
+        edit.write_bytes(b"")
+        with _patch_get_related(None):
+            related, suffix = get_image_edit_redo_params(str(edit))
+        assert related == str(source)
+        assert suffix == "_edit"
+
+    def test_fallback_ambiguous_sources_returns_none(self, tmp_path):
+        """Two files share the exact base stem — ambiguous, so return (None, None)."""
+        (tmp_path / "CUI_12345.png").write_bytes(b"")
+        (tmp_path / "CUI_12345.jpg").write_bytes(b"")
+        edit = tmp_path / "CUI_12345_edit.png"
+        edit.write_bytes(b"")
+        with _patch_get_related(None):
+            related, suffix = get_image_edit_redo_params(str(edit))
+        assert (related, suffix) == (None, None)
+
+    def test_fallback_no_source_in_directory_returns_none(self, tmp_path):
+        """No metadata and no same-dir file with exact base stem → (None, None)."""
+        edit = tmp_path / "CUI_12345_edit.png"
+        edit.write_bytes(b"")
+        with _patch_get_related(None):
+            related, suffix = get_image_edit_redo_params(str(edit))
+        assert (related, suffix) == (None, None)

@@ -539,6 +539,26 @@ class SearchController:
         worker.start()
 
     @require_password(ProtectedActions.RUN_IMAGE_GENERATION)
+    def redo_image_edit_from_suffix(self, event=None) -> None:
+        """Re-send the source image to sd-runner as an IMAGE_EDIT with the same suffix."""
+        from files.related_image import get_image_edit_redo_params
+
+        media_path = self._get_media_path()
+        if media_path is None:
+            return
+        related_path, edit_suffix = get_image_edit_redo_params(media_path)
+        if related_path is None:
+            self._app.notification_ctrl.toast(
+                _("Not a valid image edit — no related image reference or suffix found.")
+            )
+            return
+        self.run_image_generation(
+            _type=ImageGenerationType.IMAGE_EDIT,
+            media_path=related_path,
+            edit_suffix=edit_suffix or None,
+        )
+
+    @require_password(ProtectedActions.RUN_IMAGE_GENERATION)
     def run_image_generation_on_directory(
         self, event=None, _type: Optional[str] = None, media_path: Optional[str] = None
     ) -> None:

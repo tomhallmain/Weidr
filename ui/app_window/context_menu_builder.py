@@ -121,6 +121,10 @@ class ContextMenuBuilder:
             _("Run Image Generation on Directory"),
             lambda: app.search_ctrl.run_image_generation_on_directory(),
         )
+        menu.addAction(
+            _("Redo image edit from suffix"),
+            lambda: app.search_ctrl.redo_image_edit_from_suffix(),
+        )
 
         menu.addSeparator()
 

@@ -356,6 +356,21 @@ class ClassifierPipelinesTab(QWidget):
 
         app_info_cache.set_meta(_last_profile_key, profile_name)
 
+        if pipeline.has_generate_action():
+            from extensions.sd_runner_client import SDRunnerClient
+            if not SDRunnerClient.is_reachable():
+                if not qt_alert(
+                    self,
+                    _("SD Runner Not Available"),
+                    _(
+                        "This pipeline has GENERATE actions but the SD Runner is not "
+                        "reachable.\n\nGenerated images will not be produced unless SD "
+                        "Runner is started before the run completes.\n\nContinue anyway?"
+                    ),
+                    kind="askokcancel",
+                ):
+                    return
+
         # Capture the generation type on the main thread before the worker starts.
         # Pipeline-level setting takes priority; fall back to the application's global mode.
         if pipeline.generation_type is not None:

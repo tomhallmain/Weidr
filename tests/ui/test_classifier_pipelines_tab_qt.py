@@ -601,3 +601,182 @@ class TestRunOnProfile:
 
         assert isolated_singletons.get_meta("pipeline_last_profile:SavePipe") == "SaveProfile"
 
+
+# ---------------------------------------------------------------------------
+# _run_on_profile — SD Runner pre-run check
+# ---------------------------------------------------------------------------
+
+def _make_pipeline_with_generate(name: str) -> ClassifierPipeline:
+    """Pipeline that has a GENERATE node — triggers the SD Runner pre-run check."""
+    from utils.constants import ClassifierActionType
+    p = ClassifierPipeline(name=name, is_active=True)
+    cond = EmbeddingCondition(positives=["cat"], negatives=[], threshold=0.3)
+    node = PipelineNode(
+        name="gen_node",
+        condition=cond,
+        on_match=NodeOutcome(OutcomeType.EXECUTE, action_type=ClassifierActionType.GENERATE),
+        on_no_match=NodeOutcome(OutcomeType.REJECT),
+    )
+    p.nodes = [node]
+    return p
+
+
+class TestSDRunnerPreCheck:
+    """The SD Runner reachability probe fires only for pipelines with GENERATE nodes."""
+
+    def _setup_with_generate(self, qtbot, monkeypatch, isolated_singletons, alert_returns):
+        """
+        Build a tab with a GENERATE pipeline. `alert_returns` is a list of booleans
+        consumed in order by successive qt_alert calls (first = run-confirm, second =
+        SD-Runner-unavailable warn).
+        """
+        from files.directory_profile import DirectoryProfile
+        from utils.constants import ImageGenerationType
+
+        profile = DirectoryProfile(name="GenProfile", directories=["/d"])
+        DirectoryProfile.directory_profiles.append(profile)
+
+        pipeline = _make_pipeline_with_generate("GenPipeline")
+        pipeline.generation_type = ImageGenerationType.IMG2IMG
+        ClassifierPipelines.add_pipeline(pipeline)
+        ClassifierPipelines.store()
+
+        return_iter = iter(alert_returns)
+        import ui.compare.classifier_pipelines_tab_qt as _mod
+        monkeypatch.setattr(_mod, "qt_alert", lambda *a, kind="info", **kw: next(return_iter))
+        monkeypatch.setattr("utils.running_tasks_registry.start_thread", lambda fn, **kw: None)
+
+        tab = ClassifierPipelinesTab(None, type("A", (), {"__getattr__": lambda s, n: (lambda *a, **kw: None)})())
+        qtbot.addWidget(tab)
+        tab._profile_combo.setCurrentText("GenProfile")
+        return tab, pipeline
+
+    def test_probe_not_called_for_non_generate_pipeline(
+        self, qtbot, monkeypatch, isolated_singletons
+    ):
+        """Pipeline without GENERATE nodes never calls is_reachable."""
+        from files.directory_profile import DirectoryProfile
+
+        profile = DirectoryProfile(name="NoGenProfile", directories=["/d"])
+        DirectoryProfile.directory_profiles.append(profile)
+
+        pipeline = _make_pipeline("NoGenPipe")
+        ClassifierPipelines.add_pipeline(pipeline)
+        ClassifierPipelines.store()
+
+        probe_called = []
+        import ui.compare.classifier_pipelines_tab_qt as _mod
+        monkeypatch.setattr(_mod, "qt_alert", lambda *a, kind="info", **kw: False)
+        monkeypatch.setattr(
+            "extensions.sd_runner_client.SDRunnerClient.is_reachable",
+            staticmethod(lambda: probe_called.append(True) or True),
+        )
+
+        tab = _make_tab(qtbot)
+        tab._profile_combo.setCurrentText("NoGenProfile")
+        tab._run_on_profile(pipeline)
+
+        assert probe_called == [], "is_reachable must not be called for non-GENERATE pipelines"
+
+    def test_unreachable_sd_runner_shows_warning(
+        self, qtbot, monkeypatch, isolated_singletons
+    ):
+        """When SD Runner is unreachable a second alert (warning) is shown."""
+        monkeypatch.setattr(
+            "extensions.sd_runner_client.SDRunnerClient.is_reachable",
+            staticmethod(lambda: False),
+        )
+        alerts: list[tuple] = []
+        from files.directory_profile import DirectoryProfile
+        from utils.constants import ImageGenerationType
+
+        profile = DirectoryProfile(name="GenProfile2", directories=["/d"])
+        DirectoryProfile.directory_profiles.append(profile)
+        pipeline = _make_pipeline_with_generate("GenPipeline2")
+        pipeline.generation_type = ImageGenerationType.IMG2IMG
+        ClassifierPipelines.add_pipeline(pipeline)
+        ClassifierPipelines.store()
+
+        import ui.compare.classifier_pipelines_tab_qt as _mod
+        alert_values = iter([True, False])  # confirm run, then dismiss SD Runner warning
+        monkeypatch.setattr(
+            _mod, "qt_alert",
+            lambda _parent, title, msg, kind="info": alerts.append((title, msg)) or next(alert_values),
+        )
+
+        tab = ClassifierPipelinesTab(None, type("A", (), {"__getattr__": lambda s, n: (lambda *a, **kw: None)})())
+        qtbot.addWidget(tab)
+        tab._profile_combo.setCurrentText("GenProfile2")
+        tab._run_on_profile(pipeline)
+
+        assert len(alerts) == 2, "Expected run-confirm + SD-Runner-unavailable alerts"
+        titles = [t for t, _ in alerts]
+        assert any("SD Runner" in t for t in titles)
+
+    def test_unreachable_and_user_cancels_does_not_start_worker(
+        self, qtbot, monkeypatch, isolated_singletons
+    ):
+        """User cancels the SD Runner warning → worker thread never starts."""
+        monkeypatch.setattr(
+            "extensions.sd_runner_client.SDRunnerClient.is_reachable",
+            staticmethod(lambda: False),
+        )
+        thread_started = []
+        monkeypatch.setattr(
+            "utils.running_tasks_registry.start_thread",
+            lambda fn, **kw: thread_started.append(True),
+        )
+        tab, pipeline = self._setup_with_generate(
+            qtbot, monkeypatch, isolated_singletons,
+            alert_returns=[True, False],  # confirm run, cancel SD Runner warning
+        )
+        tab._run_on_profile(pipeline)
+        assert thread_started == []
+
+    def test_unreachable_but_user_continues_starts_worker(
+        self, qtbot, monkeypatch, isolated_singletons
+    ):
+        """User dismisses the SD Runner warning and continues → worker starts."""
+        monkeypatch.setattr(
+            "extensions.sd_runner_client.SDRunnerClient.is_reachable",
+            staticmethod(lambda: False),
+        )
+        thread_started = []
+        tab, pipeline = self._setup_with_generate(
+            qtbot, monkeypatch, isolated_singletons,
+            alert_returns=[True, True],  # confirm run, continue despite warning
+        )
+        monkeypatch.setattr(
+            "utils.running_tasks_registry.start_thread",
+            lambda fn, **kw: thread_started.append(True),
+        )
+        tab._run_on_profile(pipeline)
+        assert thread_started == [True]
+
+    def test_reachable_sd_runner_starts_worker_without_warning(
+        self, qtbot, monkeypatch, isolated_singletons
+    ):
+        """When SD Runner is reachable no warning is shown and the worker starts."""
+        monkeypatch.setattr(
+            "extensions.sd_runner_client.SDRunnerClient.is_reachable",
+            staticmethod(lambda: True),
+        )
+        alerts: list[str] = []
+        thread_started = []
+        tab, pipeline = self._setup_with_generate(
+            qtbot, monkeypatch, isolated_singletons,
+            alert_returns=[True],  # only the run-confirm dialog
+        )
+        monkeypatch.setattr(
+            "utils.running_tasks_registry.start_thread",
+            lambda fn, **kw: thread_started.append(True),
+        )
+        import ui.compare.classifier_pipelines_tab_qt as _mod
+        monkeypatch.setattr(
+            _mod, "qt_alert",
+            lambda _parent, title, msg, kind="info": alerts.append(title) or True,
+        )
+        tab._run_on_profile(pipeline)
+
+        assert not any("SD Runner" in t for t in alerts)
+        assert thread_started == [True]

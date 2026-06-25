@@ -1193,6 +1193,25 @@ class TestBaseStemMatchConditionRunner:
         result, _ = _eval_base_stem_match(cond, IMAGE, pipeline_categories=["_a", "_b", "_c"])
         assert result is False
 
+    def test_use_working_directory_exempts_overflow_auto_compute(self, monkeypatch):
+        """use_working_directory=True must not trigger the pipeline_categories overflow
+        auto-compute, even when pipeline_categories is non-empty.
+
+        Without the fix, 5 matches with 3 categories would set effective_limit=4
+        and return True (overflow detected).  With the fix, require_match governs:
+        5 matches found, require_match=False → False (found but not wanted).
+        """
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda *a, **kw: [f"/working/stem_{i}.jpg" for i in range(5)])
+        cond = BaseStemMatchCondition(require_match=False, use_working_directory=True)
+        result, _ = _eval_base_stem_match(
+            cond, IMAGE,
+            base_directory="/working",
+            pipeline_categories=["_a", "_b", "_c"],
+        )
+        assert result is False  # require_match=False: matches found → False; overflow mode would give True
+
     def test_max_stem_group_warning_in_report(self, monkeypatch):
         """Exceeding the limit emits a WARNING entry in the report."""
         monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")

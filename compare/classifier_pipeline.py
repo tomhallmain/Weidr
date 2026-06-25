@@ -880,6 +880,16 @@ class ClassifierPipeline:
     def __hash__(self):
         return hash(self.name)
 
+    def has_generate_action(self) -> bool:
+        """True if any enabled node can produce a GENERATE action on match or no-match."""
+        for node in self.nodes:
+            if not node.enabled:
+                continue
+            for outcome in (node.on_match, node.on_no_match):
+                if outcome is not None and outcome.action_type == ClassifierActionType.GENERATE:
+                    return True
+        return False
+
     # ------------------------------------------------------------------
     # Validation
     # ------------------------------------------------------------------
@@ -1771,23 +1781,29 @@ class ClassifierPipelines:
         )
 
     @staticmethod
-    def build_scramble_coherence_pipeline() -> "ClassifierPipeline":
+    def build_scramble_coherence_pipeline(
+        target_dir_coherent: str = "target/coherent/",
+        target_dir_semiinco: str = "target/semi_incoherent/",
+        target_dir_inco: str = "target/incoherent/",
+    ) -> "ClassifierPipeline":
         """
         Demo pipeline for building a three-bucket coherence training set.
 
         Categories and suffixes
         ───────────────────────
-          coherent         _coherent  → GENERATE (image-generation pass)
-          semi-incoherent  _semiinco  → SCRAMBLE (semi_scramble_image)
-          incoherent       _inco      → SCRAMBLE (scramble_image)
+          coherent         _coherent  → GENERATE (image-generation pass) → target/coherent/
+          semi-incoherent  _semiinco  → SCRAMBLE (semi_scramble_image)   → target/semi_incoherent/
+          incoherent       _inco      → SCRAMBLE (scramble_image)         → target/incoherent/
 
         Each category node checks two AND conditions:
-          [0] RelatedImageCondition — no existing variant with this suffix
-          [1] BaseStemMatchCondition(require_match=False) — no file for this
-              base stem already exists in the category target directory
+          [0] RelatedImageCondition — no existing variant with this suffix in
+              the working dir (use_configured_search_directories=False)
+          [1] BaseStemMatchCondition(require_match=False, search_directory=target_dir)
+              — no file for this base stem already exists in the category target directory
 
-        The pipeline is inactive by default. Set target directories and
-        attach a coherence classifier before activating.
+        The pipeline is inactive by default. Set target directories, configure
+        directories_to_search_for_related_images to include the target dirs,
+        and attach a coherence classifier before activating.
         """
         CATEGORY_MAP = {
             "Coherent":        "_coherent",
@@ -1852,16 +1868,19 @@ class ClassifierPipelines:
             "Generate coherent variant",
             "_coherent",
             ClassifierActionType.GENERATE,
+            target_dir_coherent,
         )
         node_semi = _make_node(
             "Scramble semi-incoherent variant",
             "_semiinco",
             ClassifierActionType.SCRAMBLE,
+            target_dir_semiinco,
         )
         node_incoherent = _make_node(
             "Scramble incoherent variant",
             "_inco",
             ClassifierActionType.SCRAMBLE,
+            target_dir_inco,
         )
 
         return ClassifierPipeline(
@@ -1869,14 +1888,15 @@ class ClassifierPipelines:
             description=(
                 "Demo pipeline (inactive). Builds a three-bucket coherence training set "
                 "from a directory of seed images. "
-                "coherent → GENERATE (_coherent suffix); "
-                "semi-incoherent → SCRAMBLE via semi_scramble_image (_semiinco suffix); "
-                "incoherent → SCRAMBLE via scramble_image (_inco suffix). "
-                "Set target directories and a coherence classifier before activating."
+                "coherent → GENERATE (_coherent suffix, target/coherent/); "
+                "semi-incoherent → SCRAMBLE via semi_scramble_image (_semiinco suffix, target/semi_incoherent/); "
+                "incoherent → SCRAMBLE via scramble_image (_inco suffix, target/incoherent/). "
+                "Set target directories, configure search dirs, and add a coherence classifier before activating."
             ),
             nodes=[node_guard, node_uniqueness, node_coherent, node_semi, node_incoherent],
             is_active=False,
             category_map=CATEGORY_MAP,
+            seed_category="Coherent",
         )
 
     @staticmethod

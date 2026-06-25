@@ -715,7 +715,9 @@ def _eval_base_stem_match(
     effective_limit = condition.max_stem_group_size
     if effective_limit < 0 and pipeline_categories:
         effective_limit = len(pipeline_categories) + 1
-    elif effective_limit == 0 and pipeline_categories and not condition.search_directory:
+    elif (effective_limit == 0 and pipeline_categories
+          and not condition.search_directory
+          and not condition.use_working_directory):
         effective_limit = len(pipeline_categories) + 1
 
     if effective_limit > 0:

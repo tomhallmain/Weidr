@@ -80,6 +80,22 @@ class SDRunnerClient:
             self.close()
             raise Exception(f'Failed to connect to SD Runner: {e}')
 
+    @staticmethod
+    def is_reachable() -> bool:
+        """Return True if the SD Runner server is up and responds to a validate command.
+
+        Opens a fresh connection, sends the validate command, and closes cleanly.
+        Never raises; all failures return False.
+        """
+        client = SDRunnerClient()
+        try:
+            client.start(max_retries=1)
+            client.validate_connection()
+            client.close()
+            return True
+        except Exception:
+            return False
+
     def validate_image_for_type(self, _type, base_image):
         if _type == ImageGenerationType.REDO_PROMPT:
             prompt, software_type = image_data_extractor.extract_prompt(base_image)

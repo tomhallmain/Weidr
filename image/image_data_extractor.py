@@ -196,6 +196,21 @@ class ImageDataExtractor:
         with open(prompt_file_path, "w") as store:
             json.dump(prompt, store, indent=2)
 
+    def _resolve_clip_text(self, prompt, node_key, prompt_dicts, visited=None):
+        """Walk conditioning references through intermediate nodes to reach a CLIPTextEncode."""
+        if visited is None:
+            visited = set()
+        if node_key is None or node_key in visited:
+            return ""
+        visited.add(node_key)
+        if node_key in prompt_dicts:
+            return prompt_dicts[node_key]
+        node = prompt.get(str(node_key), {})
+        conditioning = node.get(ImageDataExtractor.INPUTS, {}).get("conditioning")
+        if isinstance(conditioning, list) and len(conditioning) >= 1:
+            return self._resolve_clip_text(prompt, str(conditioning[0]), prompt_dicts, visited)
+        return ""
+
     def extract(self, image_path):
         positive = None
         negative = None
@@ -219,7 +234,7 @@ class ImageDataExtractor:
                         prompt_dicts[k] = text
                     elif v[ImageDataExtractor.CLASS_TYPE] == "ImpactWildcardProcessor":
                         positive = v[ImageDataExtractor.INPUTS]["populated_text"]
-                    elif (ImageDataExtractor.POSITIVE in v[ImageDataExtractor.INPUTS] and 
+                    elif (ImageDataExtractor.POSITIVE in v[ImageDataExtractor.INPUTS] and
                            ImageDataExtractor.NEGATIVE in v[ImageDataExtractor.INPUTS]):
                         # logger.debug(f"Found KSampler variant or other node with positive/negative inputs: {v[ImageDataExtractor.CLASS_TYPE]}")
                         if has_found_discriminator and v[ImageDataExtractor.CLASS_TYPE].startswith("KSampler"):
@@ -239,12 +254,13 @@ class ImageDataExtractor:
                         return ""
                 return str(v) if isinstance(v, str) else str(v)
 
-            # Only use node_inputs if we found a node with positive/negative (e.g. KSampler)
+            # Resolve positive/negative through the node graph; intermediate nodes like
+            # ReferenceLatent pass conditioning through and are followed via _resolve_clip_text.
             pos_key = node_inputs.get(ImageDataExtractor.POSITIVE)
             neg_key = node_inputs.get(ImageDataExtractor.NEGATIVE)
             if positive is None or (isinstance(positive, str) and positive.strip() == ""):
-                positive = prompt_dicts.get(pos_key, "") if pos_key is not None else ""
-            negative = prompt_dicts.get(neg_key, "") if neg_key is not None else ""
+                positive = self._resolve_clip_text(prompt, str(pos_key), prompt_dicts) if pos_key is not None else ""
+            negative = self._resolve_clip_text(prompt, str(neg_key), prompt_dicts) if neg_key is not None else ""
             positive = _prompt_str(positive)
             negative = _prompt_str(negative)
             # logger.debug(f"Positive: \"{positive}\"")

@@ -422,3 +422,119 @@ class TestSeedCategoryGuard:
 
         modifiers = [m for _, m in generated]
         assert "_coherent" in modifiers
+
+
+# ---------------------------------------------------------------------------
+# Cross-pipeline protection
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def cross_run_layout(tmp_path, monkeypatch):
+    """
+    Combined layout for sequential cross-pipeline tests.
+
+    working/  is shared between both pipelines.
+    fill/A,B,C/  are the category-fill target dirs.
+    scr/coherent,semi_incoherent,incoherent/  are the scramble-coherence target dirs.
+
+    directories_to_search_for_related_images is set to the category-fill
+    target dirs (mirrors the typical category-fill test setup).
+    """
+    working      = tmp_path / "working"
+    fill_a       = tmp_path / "fill" / "A"
+    fill_b       = tmp_path / "fill" / "B"
+    fill_c       = tmp_path / "fill" / "C"
+    scr_coherent = tmp_path / "scr" / "coherent"
+    scr_semiinco = tmp_path / "scr" / "semi_incoherent"
+    scr_inco     = tmp_path / "scr" / "incoherent"
+    for d in (working, fill_a, fill_b, fill_c,
+              scr_coherent, scr_semiinco, scr_inco):
+        d.mkdir(parents=True)
+
+    monkeypatch.setattr(
+        config, "directories_to_search_for_related_images",
+        [str(fill_a), str(fill_b), str(fill_c)],
+    )
+
+    clear_base_stem_dir_cache()
+    clear_generate_gate_cache()
+
+    yield working, fill_a, fill_b, fill_c, scr_coherent, scr_semiinco, scr_inco
+
+    clear_base_stem_dir_cache()
+    clear_generate_gate_cache()
+
+
+class TestCrossRunProtection:
+    """
+    Validates that running category-fill after scramble-coherence on the same
+    working directory does not produce spurious generates.
+
+    Scramble callbacks write siblings into working/ (as a real scramble_image
+    call would).  Those siblings carry _semiinco / _inco suffixes which are
+    unknown to the category-fill pipeline's guard → the seed is rejected before
+    any category node evaluates.
+    """
+
+    def test_sequential_scramble_then_category_fill(self, cross_run_layout):
+        """
+        Phase 1 — scramble-coherence runs; callbacks write _semiinco and _inco
+                   siblings into working/.
+        Phase 2 — category-fill runs on the same seed; unknown-suffix guard
+                   fires because of those siblings → zero generates.
+        """
+        working, fill_a, fill_b, fill_c, scr_co, scr_si, scr_in = cross_run_layout
+        seed = working / f"{STEM_A}.jpg"
+        seed.touch()
+
+        # --- Phase 1: scramble-coherence pipeline ---
+        scr_pipeline = ClassifierPipelines.build_scramble_coherence_pipeline(
+            target_dir_coherent=str(scr_co),
+            target_dir_semiinco=str(scr_si),
+            target_dir_inco=str(scr_in),
+        )
+        scr_pipeline.is_active = True
+        # seed_category="Coherent" is the default: GENERATE is suppressed for
+        # the seed, so only the two SCRAMBLE callbacks fire.
+
+        scr_scrambled = []
+
+        def _write_scramble(path, modifier=None):
+            # Simulate what scramble_image does: write sibling into working dir.
+            (working / f"{STEM_A}{modifier}.jpg").touch()
+            scr_scrambled.append((path, modifier))
+
+        scr_cb = ActionCallbacks(
+            generate_callback=lambda path, modifier, *a, **kw: None,
+            scramble_callback=_write_scramble,
+        )
+        run_pipeline(scr_pipeline, str(seed), scr_cb,
+                     base_directory=str(working))
+
+        assert len(scr_scrambled) == 2
+        assert {m for _, m in scr_scrambled} == {"_semiinco", "_inco"}
+        # working/ now contains: seed.jpg, seed_semiinco.jpg, seed_inco.jpg
+
+        clear_generate_gate_cache()
+        clear_base_stem_dir_cache()
+
+        # --- Phase 2: category-fill pipeline on the same working dir ---
+        cat_pipeline = ClassifierPipelines.build_category_fill_pipeline(
+            target_dir_apple=str(fill_a),
+            target_dir_banana=str(fill_b),
+            target_dir_cherry=str(fill_c),
+        )
+        cat_pipeline.is_active = True
+
+        cat_generated = []
+        cat_cb = ActionCallbacks(
+            generate_callback=lambda path, modifier, *a, **kw:
+                cat_generated.append((path, modifier)),
+        )
+        run_pipeline(cat_pipeline, str(seed), cat_cb,
+                     base_directory=str(working))
+
+        assert cat_generated == [], (
+            "Unknown-suffix guard must reject the seed when _semiinco/_inco "
+            "siblings are present in working/ — these are not category-fill suffixes"
+        )

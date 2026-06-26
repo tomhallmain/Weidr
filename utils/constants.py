@@ -436,6 +436,10 @@ class CompareMediaType(Enum):
     def is_gif(self) -> bool:
         return self == CompareMediaType.GIF
 
+    def is_image(self) -> bool:
+        """True only for :data:`IMAGE` (static raster, not GIF/SVG/PDF/video)."""
+        return self == CompareMediaType.IMAGE
+
     def is_unconfigured(self) -> bool:
         """True when the path is invalid or the matching media type is disabled in config."""
         return self == CompareMediaType.UNCONFIGURED

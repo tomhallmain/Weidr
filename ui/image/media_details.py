@@ -279,19 +279,45 @@ class MediaDetails(SmartWindow):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setStyleSheet(f"background: {AppStyle.BG_COLOR};")
-        content = QWidget()
-        grid = QGridLayout(content)
-        grid.setSpacing(6)
-        scroll.setWidget(content)
+        self._scroll_area = scroll
 
         outer = QVBoxLayout()
         outer.setContentsMargins(0, 0, 0, 0)
         outer.addWidget(scroll)
         self.setLayout(outer)
 
+        self._populate_scroll_content(
+            image_mode, image_dims, positive_display, negative_display,
+            neg_is_placeholder, models, loras, mod_time, file_size,
+            index_text, related_image_text,
+        )
+
+    def _populate_scroll_content(
+        self,
+        image_mode: str,
+        image_dims: str,
+        positive_display: str,
+        negative_display: str,
+        neg_is_placeholder: bool,
+        models,
+        loras,
+        mod_time: str,
+        file_size: str,
+        index_text: str,
+        related_image_text: str,
+    ) -> None:
+        """Build (or rebuild) the scrollable content area.
+
+        Safe to call more than once — QScrollArea takes ownership of the new
+        content widget and deletes the previous one automatically.
+        """
+        content = QWidget()
+        grid = QGridLayout(content)
+        grid.setSpacing(6)
+
         row = 0
 
-        # -- helpers local to _build_ui ----------------------------
+        # -- helpers -----------------------------------------------
         def _header(text: str, r: int, c: int = 0) -> QLabel:
             lbl = QLabel(text)
             lbl.setWordWrap(True)
@@ -390,58 +416,66 @@ class MediaDetails(SmartWindow):
         _btn(_("Copy Prompt No BREAK"), self.copy_prompt_no_break, row, 1)
         row += 1
 
-        _btn(_("Rotate Image Left"), lambda: self.rotate_image(right=False), row, 0)
-        _btn(_("Rotate Image Right"), lambda: self.rotate_image(right=True), row, 1)
-        row += 1
+        if self.media_type.supports_raster_image_details():
+            _btn(_("Rotate Image Left"), lambda: self.rotate_image(right=False), row, 0)
+            _btn(_("Rotate Image Right"), lambda: self.rotate_image(right=True), row, 1)
+            row += 1
 
-        _btn(_("Crop Image (Smart Detect)"), lambda: self.crop_image(), row, 0)
-        _btn(_("Enhance Image"), lambda: self.enhance_image(), row, 1)
-        row += 1
+            _btn(_("Crop Image (Smart Detect)"), lambda: self.crop_image(), row, 0)
+            _btn(_("Enhance Image"), lambda: self.enhance_image(), row, 1)
+            row += 1
 
-        _btn(_("Random Crop"), lambda: self.random_crop(), row, 0)
-        _btn(_("Randomly Modify"), lambda: self.random_modification(), row, 1)
-        row += 1
+            _btn(_("Random Crop"), lambda: self.random_crop(), row, 0)
+            _btn(_("Randomly Modify"), lambda: self.random_modification(), row, 1)
+            row += 1
 
-        _btn(_("Flip Image Horizontally"), lambda: self.flip_image(), row, 0)
-        _btn(_("Flip Image Vertically"), lambda: self.flip_image(top_bottom=True), row, 1)
-        row += 1
+            _btn(_("Flip Image Horizontally"), lambda: self.flip_image(), row, 0)
+            _btn(_("Flip Image Vertically"), lambda: self.flip_image(top_bottom=True), row, 1)
+            row += 1
 
-        _btn(_("Change Aspect Ratio"), self.open_change_aspect_ratio_dialog, row, 0)
-        _btn(_("Flip Aspect Ratio"), self.flip_aspect_ratio, row, 1)
-        row += 1
+            _btn(_("Change Aspect Ratio"), self.open_change_aspect_ratio_dialog, row, 0)
+            _btn(_("Flip Aspect Ratio"), self.flip_aspect_ratio, row, 1)
+            row += 1
 
-        _btn(_("Copy Without EXIF"), lambda: self.copy_without_exif(), row, 0)
-        _btn(_("Convert to JPG"), lambda: self.convert_to_jpg(), row, 1)
-        row += 1
+            _btn(_("Copy Without EXIF"), lambda: self.copy_without_exif(), row, 0)
+            _btn(_("Convert to JPG"), lambda: self.convert_to_jpg(), row, 1)
+            row += 1
 
         _btn(_("Show Metadata"), lambda: self.show_metadata(), row, 0)
-        _btn(_("Run OCR"), lambda: self.run_ocr(), row, 1)
+        if self.media_type.supports_raster_image_details():
+            _btn(_("Run OCR"), lambda: self.run_ocr(), row, 1)
         row += 1
+
+        if self.media_type.supports_raster_image_details():
+            _btn(_("Color Diversity Score"), lambda: self.show_color_diversity_score(), row, 0)
+            _btn(_("Hue Breadth Score"), lambda: self.show_hue_breadth_score(), row, 1)
+            row += 1
 
         _btn(_("Open Related Image"), self.open_related_image, row, 0)
         self._lbl_related_image = _value(related_image_text, row)
         row += 1
 
-        # -- Image generation section ------------------------------
-        _header(_("Image Generation"), row)
-        self._gen_mode_combo = QComboBox()
-        for member in ImageGenerationType:
-            self._gen_mode_combo.addItem(member.get_text(), member.value)
-        selected_index = self._gen_mode_combo.findData(
-            MediaDetails.image_generation_mode.value
-        )
-        if selected_index >= 0:
-            self._gen_mode_combo.setCurrentIndex(selected_index)
-        self._gen_mode_combo.currentIndexChanged.connect(self._on_gen_mode_changed)
-        grid.addWidget(self._gen_mode_combo, row, 1)
-        row += 1
+        # -- Image generation section (raster only) ----------------
+        if self.media_type.supports_raster_image_details():
+            _header(_("Image Generation"), row)
+            self._gen_mode_combo = QComboBox()
+            for member in ImageGenerationType:
+                self._gen_mode_combo.addItem(member.get_text(), member.value)
+            selected_index = self._gen_mode_combo.findData(
+                MediaDetails.image_generation_mode.value
+            )
+            if selected_index >= 0:
+                self._gen_mode_combo.setCurrentIndex(selected_index)
+            self._gen_mode_combo.currentIndexChanged.connect(self._on_gen_mode_changed)
+            grid.addWidget(self._gen_mode_combo, row, 1)
+            row += 1
 
-        _btn(_("Run Image Generation"), self.run_image_generation, row, 0)
-        _value(_("Press Shift+I on a main app window to run this"), row)
-        row += 1
+            _btn(_("Run Image Generation"), self.run_image_generation, row, 0)
+            _value(_("Press Shift+I on a main app window to run this"), row)
+            row += 1
 
-        _btn(_("Redo Prompt"), self.run_redo_prompt, row, 0)
-        row += 1
+            _btn(_("Redo Prompt"), self.run_redo_prompt, row, 0)
+            row += 1
 
         # -- Tags section (conditional) ----------------------------
         if config.image_tagging_enabled and self.media_type.supports_raster_image_details():
@@ -458,6 +492,8 @@ class MediaDetails(SmartWindow):
 
         # Stretch at bottom
         grid.setRowStretch(row, 1)
+
+        self._scroll_area.setWidget(content)
 
     # -- Shortcuts -------------------------------------------------
 
@@ -691,6 +727,7 @@ class MediaDetails(SmartWindow):
         )
         media_ext = os.path.splitext(self._media_path)[1].lower()
         self._show_temp_path = media_ext in {".svg", ".pdf"} and self._temp_path is not None
+        old_supports_raster = self.media_type.supports_raster_image_details()
         self.media_type = get_media_type_for_path(self._media_path)
         if self.media_type.is_video():
             (
@@ -743,41 +780,47 @@ class MediaDetails(SmartWindow):
         pos_display, neg_display, neg_is_placeholder = (
             self._store_prompt_strings_for_copy_and_get_display(positive, negative)
         )
-        self._lbl_path.setText(self._media_path)
-        if self._lbl_temp_path is not None and self._lbl_temp_path_header is not None:
-            self._lbl_temp_path_header.setVisible(self._show_temp_path)
-            self._lbl_temp_path.setVisible(self._show_temp_path)
-            self._lbl_temp_path.setText(self._temp_path if self._show_temp_path else "")
-        self._lbl_index.setText(index_text)
-        self._lbl_mode.setText(image_mode)
-        self._lbl_dims.setText(image_dims)
-        self._lbl_mtime.setText(mod_time)
-        self._lbl_size.setText(file_size)
-        self._lbl_positive.setText(pos_display)
-        if self._prompt_extraction_failed:
-            self._lbl_positive.setStyleSheet(
-                f"color: {MediaDetails._PROMPT_NOT_FOUND_COLOR};"
-                f"background: {AppStyle.BG_COLOR};"
+        if self.media_type.supports_raster_image_details() != old_supports_raster:
+            self._populate_scroll_content(
+                image_mode, image_dims, pos_display, neg_display, neg_is_placeholder,
+                models, loras, mod_time, file_size, index_text, related_image_text,
             )
         else:
-            self._lbl_positive.setStyleSheet(
-                f"color: {AppStyle.FG_COLOR};"
-                f"background: {AppStyle.BG_COLOR};"
-            )
-        self._lbl_negative.setText(neg_display)
-        if neg_is_placeholder:
-            self._lbl_negative.setStyleSheet(
-                f"color: {MediaDetails._NEGATIVE_HIDDEN_COLOR};"
-                f"background: {AppStyle.BG_COLOR};"
-            )
-        else:
-            self._lbl_negative.setStyleSheet(
-                f"color: {AppStyle.FG_COLOR};"
-                f"background: {AppStyle.BG_COLOR};"
-            )
-        self._lbl_models.setText(", ".join(models))
-        self._lbl_loras.setText(", ".join(loras))
-        self._lbl_related_image.setText(related_image_text)
+            self._lbl_path.setText(self._media_path)
+            if self._lbl_temp_path is not None and self._lbl_temp_path_header is not None:
+                self._lbl_temp_path_header.setVisible(self._show_temp_path)
+                self._lbl_temp_path.setVisible(self._show_temp_path)
+                self._lbl_temp_path.setText(self._temp_path if self._show_temp_path else "")
+            self._lbl_index.setText(index_text)
+            self._lbl_mode.setText(image_mode)
+            self._lbl_dims.setText(image_dims)
+            self._lbl_mtime.setText(mod_time)
+            self._lbl_size.setText(file_size)
+            self._lbl_positive.setText(pos_display)
+            if self._prompt_extraction_failed:
+                self._lbl_positive.setStyleSheet(
+                    f"color: {MediaDetails._PROMPT_NOT_FOUND_COLOR};"
+                    f"background: {AppStyle.BG_COLOR};"
+                )
+            else:
+                self._lbl_positive.setStyleSheet(
+                    f"color: {AppStyle.FG_COLOR};"
+                    f"background: {AppStyle.BG_COLOR};"
+                )
+            self._lbl_negative.setText(neg_display)
+            if neg_is_placeholder:
+                self._lbl_negative.setStyleSheet(
+                    f"color: {MediaDetails._NEGATIVE_HIDDEN_COLOR};"
+                    f"background: {AppStyle.BG_COLOR};"
+                )
+            else:
+                self._lbl_negative.setStyleSheet(
+                    f"color: {AppStyle.FG_COLOR};"
+                    f"background: {AppStyle.BG_COLOR};"
+                )
+            self._lbl_models.setText(", ".join(models))
+            self._lbl_loras.setText(", ".join(loras))
+            self._lbl_related_image.setText(related_image_text)
 
         # Refresh open metadata viewer
         if MediaDetails.metadata_viewer_window is not None:
@@ -1304,6 +1347,42 @@ class MediaDetails(SmartWindow):
             MediaDetails.ocr_text_window.show()
         else:
             w.update_text(ocr_text, self._image_path, confidence)
+
+    # ── Color analysis ───────────────────────────────────────────
+
+    def show_color_diversity_score(self) -> None:
+        try:
+            score = ImageOps.color_diversity_score(self._image_path)
+        except Exception as e:
+            logger.error("Color diversity score failed: %s", e)
+            self._app_actions.toast(_("Could not compute color diversity score"))
+            return
+        if score >= 0.75:
+            bracket = _("high")
+        elif score >= 0.4:
+            bracket = _("medium")
+        else:
+            bracket = _("low")
+        self._app_actions.toast(
+            _("Color diversity score: {0:.2f} ({1})").format(score, bracket)
+        )
+
+    def show_hue_breadth_score(self) -> None:
+        try:
+            score = ImageOps.hue_breadth_score(self._image_path)
+        except Exception as e:
+            logger.error("Hue breadth score failed: %s", e)
+            self._app_actions.toast(_("Could not compute hue breadth score"))
+            return
+        if score >= 0.75:
+            bracket = _("high")
+        elif score >= 0.4:
+            bracket = _("medium")
+        else:
+            bracket = _("low")
+        self._app_actions.toast(
+            _("Hue breadth score: {0:.2f} ({1})").format(score, bracket)
+        )
 
     # ── Related images ───────────────────────────────────────────
 

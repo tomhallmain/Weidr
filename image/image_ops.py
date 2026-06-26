@@ -1782,6 +1782,131 @@ class ImageOps:
         from extensions.surya_ocr_client import run_ocr as _run_ocr
         return _run_ocr(image_path)
 
+    # ── Image analysis ───────────────────────────────────────────
+
+    @staticmethod
+    def color_diversity_score(image_path: str) -> float:
+        """Return a Shannon-entropy diversity score in [0, 1] for the image.
+
+        1.0 means all 64 quantized palette slots are equally populated
+        (maximum diversity); 0.0 means the image is effectively monochrome.
+        """
+        MAX_DIM = 200
+        N_COLORS = 64
+
+        with Image.open(image_path) as img:
+            img = img.convert("RGB")
+            img.thumbnail((MAX_DIM, MAX_DIM), Image.Resampling.NEAREST)
+            quantized = img.quantize(colors=N_COLORS)
+
+        counts = quantized.getcolors()
+        if not counts:
+            return 0.0
+
+        total = sum(c for c, _ in counts)
+        probs = np.array([c / total for c, _ in counts], dtype=np.float64)
+        entropy = -float(np.sum(probs * np.log2(probs)))
+        return min(entropy / np.log2(N_COLORS), 1.0)
+
+    @staticmethod
+    def hue_breadth_score(image_path: str) -> float:
+        """Return a hue-breadth score in [0, 1].
+
+        Measures how widely chromatic pixels are distributed around the colour
+        wheel, ignoring lightness and saturation variation. A muted image with
+        many distinct hues scores higher than a trichromatic image with a full
+        range of shades. Near-achromatic pixels (very low HSV saturation) are
+        excluded so that grey/black/white regions don't dilute the result.
+        """
+        MAX_DIM = 200
+        N_BINS = 36    # 10° per bin
+        MIN_SAT = 0.08  # below this HSV saturation a pixel is treated as achromatic
+
+        with Image.open(image_path) as img:
+            img = img.convert("RGB")
+            img.thumbnail((MAX_DIM, MAX_DIM), Image.Resampling.NEAREST)
+            rgb = np.asarray(img, dtype=np.float32) / 255.0
+
+        r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+        cmax = np.maximum(np.maximum(r, g), b)
+        cmin = np.minimum(np.minimum(r, g), b)
+        delta = cmax - cmin
+
+        sat = np.where(cmax > 0, delta / cmax, 0.0)
+        chromatic = sat > MIN_SAT
+        if not np.any(chromatic):
+            return 0.0
+
+        hue = np.zeros_like(r)
+        eps = 1e-9
+        m_r = (cmax == r) & (delta > 0)
+        m_g = (cmax == g) & (delta > 0)
+        m_b = (cmax == b) & (delta > 0)
+        hue[m_r] = ((g[m_r] - b[m_r]) / (delta[m_r] + eps)) % 6
+        hue[m_g] = (b[m_g] - r[m_g]) / (delta[m_g] + eps) + 2
+        hue[m_b] = (r[m_b] - g[m_b]) / (delta[m_b] + eps) + 4
+        hue /= 6.0
+
+        counts, _ = np.histogram(hue[chromatic], bins=N_BINS, range=(0.0, 1.0))
+        total = counts.sum()
+        probs = counts[counts > 0] / total
+        entropy = -float(np.sum(probs * np.log2(probs)))
+        return min(entropy / np.log2(N_BINS), 1.0)
+
+    @staticmethod
+    def color_histogram(
+        image_path: str,
+        h_bins: int = 36,
+        s_bins: int = 16,
+        v_bins: int = 16,
+    ) -> "np.ndarray":
+        """Return a normalized HSV colour histogram for the image.
+
+        The result is a 1-D float64 array of length
+        ``h_bins + s_bins + v_bins`` (default 68).  Each channel's histogram
+        is independently normalized to sum to 1, then concatenated.
+
+        Intended as a colour-space signature for dataset diversity analysis:
+        aggregate across a corpus to find under-represented colour regions,
+        or compare pairs with a distance metric (Earth Mover's Distance /
+        cosine similarity / histogram intersection).
+        """
+        MAX_DIM = 200
+
+        with Image.open(image_path) as img:
+            img = img.convert("RGB")
+            img.thumbnail((MAX_DIM, MAX_DIM), Image.Resampling.NEAREST)
+            rgb = np.asarray(img, dtype=np.float32) / 255.0
+
+        r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+        cmax = np.maximum(np.maximum(r, g), b)
+        cmin = np.minimum(np.minimum(r, g), b)
+        delta = cmax - cmin
+
+        val = cmax
+        sat = np.where(cmax > 0, delta / cmax, 0.0)
+
+        hue = np.zeros_like(r)
+        eps = 1e-9
+        m_r = (cmax == r) & (delta > 0)
+        m_g = (cmax == g) & (delta > 0)
+        m_b = (cmax == b) & (delta > 0)
+        hue[m_r] = ((g[m_r] - b[m_r]) / (delta[m_r] + eps)) % 6
+        hue[m_g] = (b[m_g] - r[m_g]) / (delta[m_g] + eps) + 2
+        hue[m_b] = (r[m_b] - g[m_b]) / (delta[m_b] + eps) + 4
+        hue /= 6.0
+
+        def _norm(data: "np.ndarray", bins: int, lo: float, hi: float) -> "np.ndarray":
+            counts, _ = np.histogram(data.ravel(), bins=bins, range=(lo, hi))
+            total = counts.sum()
+            return (counts / total).astype(np.float64) if total > 0 else counts.astype(np.float64)
+
+        return np.concatenate([
+            _norm(hue, h_bins, 0.0, 1.0),
+            _norm(sat, s_bins, 0.0, 1.0),
+            _norm(val, v_bins, 0.0, 1.0),
+        ])
+
     # ── Image content comparison ─────────────────────────────────
 
     @staticmethod

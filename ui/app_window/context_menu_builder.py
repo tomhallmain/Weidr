@@ -16,7 +16,8 @@ from PySide6.QtWidgets import QMenu
 from files.directory_notes import DirectoryNotes
 from ui.files.marked_file_mover_qt import MarkedFiles
 from utils.config import config
-from utils.media_utils import is_video_file
+from utils.constants import MediaType
+from utils.media_utils import get_media_type_for_path
 from utils.logging_setup import get_logger
 from utils.translations import _
 
@@ -40,6 +41,7 @@ class ContextMenuBuilder:
 
         menu = QMenu(app)
         base_dir = app.get_base_dir()
+        media_type = get_media_type_for_path(media_path)
 
         # ------------------------------------------------------------------
         # Header: filename (italic, disabled)
@@ -109,22 +111,25 @@ class ContextMenuBuilder:
         # ------------------------------------------------------------------
         # External tools
         # ------------------------------------------------------------------
-        menu.addAction(
-            _("Open in GIMP"),
-            lambda: app.file_ops_ctrl.open_image_in_gimp(),
-        )
-        menu.addAction(
-            _("Run Image Generation"),
-            lambda: app.search_ctrl.trigger_image_generation(),
-        )
+        if media_type in (MediaType.IMAGE, MediaType.GIF, MediaType.SVG):
+            menu.addAction(
+                _("Open in GIMP"),
+                lambda: app.file_ops_ctrl.open_image_in_gimp(),
+            )
+        if media_type == MediaType.IMAGE:
+            menu.addAction(
+                _("Run Image Generation"),
+                lambda: app.search_ctrl.trigger_image_generation(),
+            )
         menu.addAction(
             _("Run Image Generation on Directory"),
             lambda: app.search_ctrl.run_image_generation_on_directory(),
         )
-        menu.addAction(
-            _("Redo image edit from suffix"),
-            lambda: app.search_ctrl.redo_image_edit_from_suffix(),
-        )
+        if media_type == MediaType.IMAGE:
+            menu.addAction(
+                _("Redo image edit from suffix"),
+                lambda: app.search_ctrl.redo_image_edit_from_suffix(),
+            )
 
         menu.addSeparator()
 
@@ -195,7 +200,7 @@ class ContextMenuBuilder:
             lambda: app.file_ops_ctrl.open_media_location(),
         )
 
-        if is_video_file(media_path):
+        if media_type == MediaType.VIDEO:
             menu.addAction(
                 _("Save copy without audio"),
                 lambda: app.file_ops_ctrl.strip_audio_from_current_video(),

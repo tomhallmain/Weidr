@@ -39,7 +39,16 @@ from unittest.mock import patch
 import pytest
 
 from compare.action_callbacks import ActionCallbacks
-from compare.classifier_pipeline import ClassifierPipelines
+from compare.classifier_pipeline import (
+    BaseStemMatchCondition,
+    ClassifierPipelines,
+    ClassifierRankCondition,
+    CompositeCondition,
+    NodeOutcome,
+    OutcomeType,
+    PipelineNode,
+    RelatedImageCondition,
+)
 from compare.classifier_pipeline_runner import run_pipeline
 from files.related_image import (
     clear_base_stem_dir_cache,
@@ -720,3 +729,141 @@ class TestGenerateGateCacheClearing:
         assert generated2 == [], (
             "After cache clear, variants in working dir must suppress all GENERATEs"
         )
+
+
+# ---------------------------------------------------------------------------
+# Classifier-condition gate for cherry
+# ---------------------------------------------------------------------------
+
+def _mock_banana_classifier(monkeypatch, *, is_banana: bool) -> None:
+    """Patch image_classifier_manager so the seed ranks (or doesn't) as Banana."""
+    import image.image_classifier_manager as mgr_mod
+
+    predictions = {
+        "Apple":  0.10 if is_banana else 0.80,
+        "Banana": 0.90 if is_banana else 0.05,
+        "Cherry": 0.00 if is_banana else 0.15,
+    }
+
+    class FakeClassifier:
+        def predict_image(self, path):
+            return predictions
+
+        def predict_image_ranked(self, path):
+            return sorted(predictions.items(), key=lambda kv: kv[1], reverse=True)
+
+    class FakeManager:
+        def get_classifier(self, name):
+            return FakeClassifier()
+
+    monkeypatch.setattr(mgr_mod, "image_classifier_manager", FakeManager())
+
+
+def _pipeline_with_banana_gate_for_cherry(layout) -> object:
+    """
+    Variant of the demo pipeline that gates cherry generation on seed category.
+
+    A CompositeCondition(NOT, [ClassifierRankCondition(categories=["Banana"])])
+    is prepended to the cherry node's AND sub-conditions, ahead of the existing
+    RelatedImageCondition.  If the seed ranks top-1 as Banana the NOT fires
+    False and the AND short-circuits, skipping cherry without evaluating the
+    remaining sub-conditions.
+
+    The pipeline structure is otherwise unchanged from the demo.
+    """
+    _, ta, tb, tc, _ = layout
+
+    base = ClassifierPipelines.build_category_fill_pipeline(
+        target_dir_apple=str(ta),
+        target_dir_banana=str(tb),
+        target_dir_cherry=str(tc),
+    )
+
+    node_cherry_gated = PipelineNode(
+        name="Generate cherry",
+        condition=CompositeCondition(
+            operator="AND",
+            sub_conditions=[
+                # Gate: skip cherry when seed is classified top-1 as Banana.
+                CompositeCondition(
+                    operator="NOT",
+                    sub_conditions=[
+                        ClassifierRankCondition(
+                            classifier_name="test_clf",
+                            categories=["Banana"],
+                            min_rank=1,
+                            max_rank=1,
+                        ),
+                    ],
+                ),
+                RelatedImageCondition(
+                    edit_suffix="_cherry",
+                    use_configured_search_directories=False,
+                    count_threshold=1,
+                ),
+                BaseStemMatchCondition(
+                    require_match=False,
+                    search_directory=str(tc),
+                ),
+            ],
+        ),
+        on_match=NodeOutcome(
+            OutcomeType.EXECUTE_AND_CONTINUE,
+            action_type=ClassifierActionType.GENERATE,
+            action_modifier="_cherry",
+        ),
+        on_no_match=NodeOutcome(OutcomeType.CONTINUE),
+    )
+
+    nodes_by_name = {n.name: n for n in base.nodes}
+    nodes_by_name["Generate cherry"] = node_cherry_gated
+    base.nodes = [nodes_by_name[n] for n in [
+        "Unknown-suffix guard", "Stem uniqueness check",
+        "Generate apple", "Generate banana", "Generate cherry",
+    ]]
+    base.is_active = True
+    return base
+
+
+class TestClassifierGateForCherry:
+    """
+    Verify that a ClassifierRankCondition embedded as a NOT sub-condition in the
+    cherry node's AND can gate cherry GENERATE actions in the category-fill pipeline.
+
+    The modified pipeline skips cherry generation when the seed ranks top-1 as
+    Banana.  The original demo pipeline is not modified.
+    """
+
+    def test_banana_seed_skips_cherry(self, layout, monkeypatch):
+        """Seed classified Banana → cherry gate fires → only apple and banana generated."""
+        working, *_ = layout
+        seed = working / f"{STEM_A}.jpg"
+        seed.touch()
+
+        _mock_banana_classifier(monkeypatch, is_banana=True)
+        p = _pipeline_with_banana_gate_for_cherry(layout)
+        cb, generated = _callbacks()
+        run_pipeline(p, str(seed), cb, base_directory=str(working))
+
+        modifiers = [m for _, m in generated]
+        assert "_cherry" not in modifiers
+        assert "_apple"  in modifiers
+        assert "_banana" in modifiers
+        assert len(generated) == 2
+
+    def test_non_banana_seed_generates_all_three(self, layout, monkeypatch):
+        """Control: seed NOT classified Banana → gate does not fire → all three generated."""
+        working, *_ = layout
+        seed = working / f"{STEM_A}.jpg"
+        seed.touch()
+
+        _mock_banana_classifier(monkeypatch, is_banana=False)
+        p = _pipeline_with_banana_gate_for_cherry(layout)
+        cb, generated = _callbacks()
+        run_pipeline(p, str(seed), cb, base_directory=str(working))
+
+        modifiers = [m for _, m in generated]
+        assert "_apple"  in modifiers
+        assert "_banana" in modifiers
+        assert "_cherry" in modifiers
+        assert len(generated) == 3

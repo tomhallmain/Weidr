@@ -15,6 +15,7 @@ import pytest
 from PySide6.QtCore import QPoint
 from PySide6.QtWidgets import QMenu
 
+from files.marked_files import MarkedFiles
 from ui.app_window.context_menu_builder import ContextMenuBuilder
 from utils.constants import MediaType
 from utils.translations import _
@@ -71,6 +72,8 @@ _SAVE_WITHOUT_METADATA  = _("Save copy without metadata")
 _CUT_VIDEO              = _("Cut video at current position…")
 _RUN_PREVALIDATIONS_DIR = _("Run Prevalidations on Directory")
 
+_SET_RELATED  = _("Set Marked File as Related Image of Current")
+
 _VIDEO_ONLY = {_SAVE_WITHOUT_AUDIO, _SAVE_WITHOUT_METADATA, _CUT_VIDEO}
 _IMAGE_ONLY = {_RUN_IMAGE_GEN, _REDO_EDIT_SUFFIX}
 _DIR_SCOPED = {_RUN_IMAGE_GEN_DIR, _RUN_PREVALIDATIONS_DIR}
@@ -124,3 +127,28 @@ class TestPdfMediaType:
         assert not _IMAGE_ONLY & set(actions)
         assert not _VIDEO_ONLY & set(actions)
         assert _DIR_SCOPED <= set(actions)
+
+
+class TestSetAsRelatedImageMenuItem:
+    """Menu item visibility: IMAGE + exactly 1 mark required."""
+
+    @pytest.fixture(autouse=True)
+    def _restore_marks(self):
+        saved = MarkedFiles.file_marks[:]
+        yield
+        MarkedFiles.file_marks = saved[:]
+
+    def test_appears_for_image_with_one_mark(self, qapp, monkeypatch):
+        MarkedFiles.file_marks = ["/dir/marked.png"]
+        actions = _build_menu_actions(monkeypatch, "/dir/source.png", MediaType.IMAGE)
+        assert _SET_RELATED in actions
+
+    def test_hidden_when_no_marks(self, qapp, monkeypatch):
+        MarkedFiles.file_marks = []
+        actions = _build_menu_actions(monkeypatch, "/dir/source.png", MediaType.IMAGE)
+        assert _SET_RELATED not in actions
+
+    def test_hidden_for_non_image_media_type(self, qapp, monkeypatch):
+        MarkedFiles.file_marks = ["/dir/marked.png"]
+        actions = _build_menu_actions(monkeypatch, "/dir/clip.mp4", MediaType.VIDEO)
+        assert _SET_RELATED not in actions

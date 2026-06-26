@@ -75,6 +75,19 @@ def suffix_is_numeric(suffix: str) -> bool:
     return bool(core) and core.isdigit()
 
 
+def validate_related_image_suffix(suffix: str) -> str | None:
+    """Validate a user-provided suffix for related-image renaming.
+
+    Valid: 1–8 alphanumeric characters, not purely numeric.
+    Returns None when valid; a translated error string when invalid.
+    """
+    if not re.match(r'^[A-Za-z0-9]{1,8}$', suffix):
+        return _("Suffix must be 1–8 alphanumeric characters (letters and digits only).")
+    if suffix_is_numeric(suffix):
+        return _("Suffix must not be purely numeric.")
+    return None
+
+
 def _stem_suffix_is_numeric(stem: str) -> bool:
     """Return True if the entire suffix portion of *stem* is only digits (and separators).
 

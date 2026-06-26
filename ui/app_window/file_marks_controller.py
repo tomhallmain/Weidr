@@ -13,6 +13,7 @@ from files.related_image import (
     get_downstream_related_images,
     get_downstream_files_for_sources,
     get_sources_with_downstream_in_dir,
+    validate_related_image_suffix,
 )
 from files.marked_files import MarkedFiles
 from ui.files.marked_file_mover_qt import MarkedFileMover
@@ -490,3 +491,82 @@ class FileMarksController:
         if window is not None:
             window.file_marks_ctrl.go_to_mark()
             window.media_frame.setFocus()
+
+    @require_password(ProtectedActions.RUN_FILE_ACTIONS)
+    def set_marked_file_as_related_to_current(self, event=None) -> None:
+        """Rename the single marked file to make it a named derivative of the current media.
+
+        The marked file is renamed to <current_stem>_<suffix><marked_ext>, which
+        is sufficient for the filename-pattern fallback in get_origin_basename() to
+        resolve the relationship without any metadata rewrite.
+        """
+        from PySide6.QtWidgets import QInputDialog
+
+        if not MarkedFiles.guard_mark_mutation(
+            self._app.app_actions, _("Set related image")
+        ):
+            return
+
+        if len(MarkedFiles.file_marks) != 1:
+            self._app.notification_ctrl.toast(
+                _("Exactly one file must be marked for this operation.")
+            )
+            return
+
+        marked_path = MarkedFiles.file_marks[0]
+        current_media = self._app.media_path
+
+        if not current_media or not os.path.isfile(current_media):
+            self._app.notification_ctrl.toast(_("No valid current media file."))
+            return
+        if not os.path.isfile(marked_path):
+            self._app.notification_ctrl.toast(_("Marked file no longer exists."))
+            return
+
+        current_stem = os.path.splitext(os.path.basename(current_media))[0]
+        marked_ext = os.path.splitext(marked_path)[1]
+        marked_dir = os.path.dirname(marked_path)
+
+        suffix, ok = QInputDialog.getText(
+            self._app,
+            _("Set as Related Image"),
+            _(
+                "Enter a suffix (1–8 alphanumeric characters, not purely numeric).\n"
+                "The marked file will be renamed to:\n"
+                "{0}_<suffix>{1}"
+            ).format(current_stem, marked_ext),
+        )
+        if not ok:
+            return
+
+        suffix = suffix.strip()
+        error = validate_related_image_suffix(suffix)
+        if error:
+            self._app.notification_ctrl.alert(
+                _("Invalid Suffix"), error, kind="error"
+            )
+            return
+
+        new_basename = f"{current_stem}_{suffix}{marked_ext}"
+        new_path = os.path.join(marked_dir, new_basename)
+
+        if os.path.exists(new_path):
+            self._app.notification_ctrl.alert(
+                _("File Already Exists"),
+                _("A file named {0} already exists in that directory.").format(new_basename),
+                kind="error",
+            )
+            return
+
+        try:
+            with Utils.file_operation_lock:
+                os.rename(marked_path, new_path)
+        except OSError as e:
+            self._app.notification_ctrl.alert(
+                _("Rename Failed"), str(e), kind="error"
+            )
+            return
+
+        MarkedFiles.file_marks[0] = new_path
+        self._app.notification_ctrl.toast(_("Renamed to {0}").format(new_basename))
+        self._app.app_actions.refresh(removed_files=[marked_path])

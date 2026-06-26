@@ -167,6 +167,11 @@ class ContextMenuBuilder:
             _("Set Marks from Downstream Related Media"),
             lambda: app.file_marks_ctrl.set_marks_from_downstream_related_images(),
         )
+        if len(MarkedFiles.file_marks) == 1 and media_type == MediaType.IMAGE:
+            menu.addAction(
+                _("Set Marked File as Related Image of Current"),
+                lambda: app.file_marks_ctrl.set_marked_file_as_related_to_current(),
+            )
 
         menu.addSeparator()
 

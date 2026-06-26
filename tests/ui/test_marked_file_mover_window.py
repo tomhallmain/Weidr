@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QPushButton, QScrollArea
 from files.marked_files import MarkedFiles
 from ui.files.marked_file_mover_qt import MarkedFileMover
 from utils.translations import _
+from utils.utils import Utils
 
 _tr = _
 
@@ -122,3 +123,89 @@ class TestMarkedFileMoverWindowOpen:
         scrolls = mover.findChildren(QScrollArea)
         assert scrolls
         assert len(mover._filtered_target_dirs) >= 1
+
+
+class TestMarkedFileMoverProgress:
+    """Tests for the progress dialog used during large mark-move operations."""
+
+    THRESHOLD = MarkedFileMover.LARGE_FILE_OP_SHOW_PROGRESS_THRESHOLD  # 100
+
+    @pytest.fixture(autouse=True)
+    def _restore_cancelled_flag(self):
+        old = MarkedFiles.is_cancelled_action
+        yield
+        MarkedFiles.is_cancelled_action = old
+
+    def test_below_threshold_returns_none_tuple(self, qtbot):
+        """No dialog or callback for operations below the show-progress threshold."""
+        progress, callback = MarkedFileMover.build_marks_progress(
+            None, self.THRESHOLD - 1, Utils.move_file
+        )
+        assert progress is None
+        assert callback is None
+
+    def test_at_threshold_creates_dialog_and_callback(self, qtbot):
+        """At exactly the threshold a dialog and callback are returned."""
+        progress, callback = MarkedFileMover.build_marks_progress(
+            None, self.THRESHOLD, Utils.move_file
+        )
+        try:
+            assert progress is not None
+            assert callback is not None
+        finally:
+            if progress:
+                progress.close()
+
+    def test_move_label_mentions_moving(self, qtbot):
+        """Progress dialog for a move operation says 'Moving'."""
+        progress, _ = MarkedFileMover.build_marks_progress(None, 200, Utils.move_file)
+        try:
+            assert "Moving" in progress.labelText()
+        finally:
+            progress.close()
+
+    def test_copy_label_mentions_copying(self, qtbot):
+        """Progress dialog for a copy operation says 'Copying'."""
+        progress, _ = MarkedFileMover.build_marks_progress(None, 200, Utils.copy_file)
+        try:
+            assert "Copying" in progress.labelText()
+        finally:
+            progress.close()
+
+    def test_generic_label_when_move_func_is_none(self, qtbot):
+        """Progress dialog with no move_func falls back to 'Processing'."""
+        progress, _ = MarkedFileMover.build_marks_progress(None, 200, None)
+        try:
+            assert "Processing" in progress.labelText()
+        finally:
+            progress.close()
+
+    def test_callback_sets_cancelled_flag_when_dialog_wasCanceled(
+        self, qtbot, monkeypatch
+    ):
+        """Callback sets is_cancelled_action=True when the dialog reports cancellation."""
+        MarkedFiles.is_cancelled_action = False
+        progress, callback = MarkedFileMover.build_marks_progress(
+            None, 200, Utils.move_file
+        )
+        try:
+            monkeypatch.setattr(progress, "wasCanceled", lambda: True)
+            callback(50, 200)
+            assert MarkedFiles.is_cancelled_action is True
+        finally:
+            progress.close()
+
+    def test_callback_does_not_set_cancelled_flag_when_dialog_not_cancelled(
+        self, qtbot, monkeypatch
+    ):
+        """Callback leaves is_cancelled_action untouched when the dialog is not cancelled."""
+        MarkedFiles.is_cancelled_action = False
+        progress, callback = MarkedFileMover.build_marks_progress(
+            None, 200, Utils.move_file
+        )
+        try:
+            monkeypatch.setattr(progress, "wasCanceled", lambda: False)
+            callback(50, 200)
+            assert MarkedFiles.is_cancelled_action is False
+        finally:
+            progress.close()

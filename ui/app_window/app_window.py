@@ -1396,13 +1396,25 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         if self._closing:
             event.accept()
             return
+        if MarkedFiles.is_performing_action:
+            # A marks transfer is running on the main thread.  Cancel it so the
+            # loop exits on its next iteration, then re-attempt close once the
+            # transfer has finished its cleanup (committed or reverted).
+            if not MarkedFiles.is_shutdown_requested:
+                MarkedFiles.is_cancelled_action = True
+                MarkedFiles.is_shutdown_requested = True
+            # QTimer(0) fires as soon as the event loop regains control — i.e.
+            # after the transfer loop breaks and unwinds back to Qt.
+            QTimer.singleShot(0, self.close)
+            event.ignore()
+            return
+        MarkedFiles.is_shutdown_requested = False
         self._closing = True
         self.on_closing()
         event.accept()
         # If this is the primary window, terminate the entire application
         # so the process doesn't linger after the window is destroyed.
         if not self.is_secondary():
-            from PySide6.QtWidgets import QApplication
             QApplication.instance().quit()
 
     def quit(self, event=None) -> None:

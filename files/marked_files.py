@@ -27,6 +27,9 @@ class MarkedFiles():
     # running should not attempt to undo the action before the currently running one.
     is_performing_action = False
     is_cancelled_action = False
+    # Set by AppWindow.closeEvent when the window is closed during a running transfer.
+    # _ask_keep_partial_progress checks this and auto-keeps without showing a dialog.
+    is_shutdown_requested = False
 
     # Track if GIMP was opened in the last action (for delete source file check)
     gimp_opened_in_last_action = False
@@ -270,6 +273,91 @@ class MarkedFiles():
 
 
     @staticmethod
+    def _ask_keep_partial_progress(
+        app_actions, is_moving: bool, target_dir: str, n_moved: int
+    ) -> bool:
+        """
+        Return True to keep partial progress in place, False to revert everything.
+
+        On app shutdown (is_shutdown_requested=True) the keep path is chosen
+        automatically without showing a dialog, to avoid data loss.
+        """
+        if MarkedFiles.is_shutdown_requested:
+            logger.warning(
+                "App shutdown during marks transfer; keeping %d partially %s file(s).",
+                n_moved,
+                "moved" if is_moving else "copied",
+            )
+            return True
+        action_verb = _("moved") if is_moving else _("copied")
+        revert_verb = _("move back") if is_moving else _("delete")
+        target_name = Utils.get_relative_dirpath(target_dir, levels=2)
+        return bool(
+            app_actions.alert(
+                _("Transfer Stopped"),
+                _(
+                    "Stopped after {0} file(s) were {1} to:\n{2}\n\n"
+                    "OK — keep the {0} {1} file(s) in place; "
+                    "remaining stay marked for a follow-up run.\n"
+                    "Cancel — {3} all {0} file(s) back to their original location."
+                ).format(n_moved, action_verb, target_name, revert_verb),
+                kind="askokcancel",
+            )
+        )
+
+    @staticmethod
+    def _commit_partial_transfer(
+        app_actions,
+        files_to_move: list,
+        exceptions: dict,
+        invalid_files: list,
+        single_image: bool,
+        action: "FileAction",
+        target_dir: str,
+        is_moving: bool,
+    ) -> None:
+        """
+        Persist partial-transfer state when the user (or shutdown) elects to keep
+        the files already moved rather than reverting them.
+
+        * Records the partial action in history so Ctrl+Z can undo only what moved.
+        * Leaves every file that was NOT yet moved (or failed) in file_marks so the
+          user can run a follow-up transfer for the remainder.
+        * Skips invalid (no-longer-existing) source files from the remaining marks.
+        """
+        n_moved = len(MarkedFiles.previous_marks)
+        if n_moved == 0:
+            return
+
+        FileAction.update_history(action)
+        MarkedFiles.last_set_target_dir = target_dir
+        MarkedFiles.delete_lock = False
+
+        moved_set = set(MarkedFiles.previous_marks)
+        MarkedFiles.file_marks.clear()
+        if not single_image:
+            for f in files_to_move:
+                if f not in moved_set and f not in invalid_files:
+                    MarkedFiles.file_marks.append(f)
+        if MarkedFiles.mark_cursor >= len(MarkedFiles.file_marks):
+            MarkedFiles.mark_cursor = max(-1, len(MarkedFiles.file_marks) - 1)
+
+        action_part2 = _("Moved") if is_moving else _("Copied")
+        target_name = Utils.get_relative_dirpath(target_dir, levels=2)
+        action_type = ActionType.MOVE_FILE if is_moving else ActionType.COPY_FILE
+        message = _("{0} {1} file(s) to {2}. {3} remain marked.").format(
+            action_part2, n_moved, target_name, len(MarkedFiles.file_marks)
+        )
+        logger.warning(message.replace("\n", " "))
+        app_actions.title_notify(message, base_message=target_name, action_type=action_type)
+
+        if is_moving:
+            app_actions.refresh(removed_files=list(MarkedFiles.previous_marks))
+        else:
+            app_actions.refresh()
+        app_actions.refocus()
+
+    @staticmethod
     def move_marks_to_dir_static(
         app_actions,
         target_dir=None,
@@ -393,16 +481,24 @@ class MarkedFiles():
         if MarkedFiles.is_cancelled_action:
             MarkedFiles.is_cancelled_action = False
             logger.warning(f"Cancelled {action_part1} to {target_dir}")
-            if len(MarkedFiles.previous_marks) > 0:
-                # Release session lock before undo; outer finally has not run yet and
-                # undo_move_marks treats is_performing_action as "cancel in-flight".
-                MarkedFiles.is_performing_action = False
-                MarkedFiles.undo_move_marks(
-                    app_actions.get_base_dir(),
-                    app_actions,
-                    get_base_dir_callback,
-                    get_target_dir_callback,
-                )
+            if MarkedFiles.previous_marks:
+                if MarkedFiles._ask_keep_partial_progress(
+                    app_actions, is_moving, target_dir, len(MarkedFiles.previous_marks)
+                ):
+                    MarkedFiles._commit_partial_transfer(
+                        app_actions, files_to_move, exceptions, invalid_files,
+                        single_image, action, target_dir, is_moving,
+                    )
+                else:
+                    # Release session lock before undo; outer finally has not run yet and
+                    # undo_move_marks treats is_performing_action as "cancel in-flight".
+                    MarkedFiles.is_performing_action = False
+                    MarkedFiles.undo_move_marks(
+                        app_actions.get_base_dir(),
+                        app_actions,
+                        get_base_dir_callback,
+                        get_target_dir_callback,
+                    )
             return False, False
         if len(exceptions) < len(files_to_move):
             FileAction.update_history(action)

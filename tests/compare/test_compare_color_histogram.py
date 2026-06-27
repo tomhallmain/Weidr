@@ -60,10 +60,15 @@ class TestL1Distance:
         assert _l1_distance(h1, h2) == pytest.approx(1.0)
 
     def test_result_in_unit_interval(self):
+        # _l1_distance divides by 2, bounding the result to [0, 1] only for
+        # unit-sum inputs (i.e. proper probability vectors).  Normalise before
+        # calling so the property actually holds.
         rng = np.random.default_rng(0)
         for _ in range(20):
             h1 = rng.random(_HIST_LEN)
+            h1 /= h1.sum()
             h2 = rng.random(_HIST_LEN)
+            h2 /= h2.sum()
             d = _l1_distance(h1, h2)
             assert 0.0 <= d <= 1.0
 
@@ -217,16 +222,18 @@ class TestGetData:
         cc1 = _make_compare(d, threshold=0.15)
         cc1.get_files()
         cc1.get_data()
-        first_dict = dict(cc1.compare_data.file_data_dict)
+        # CompareData.save_data() clears file_data_dict to free memory after
+        # persisting to disk.  Compare the in-memory histogram matrix instead.
+        first_hists = cc1._file_histograms.copy()
+        first_files = list(cc1.compare_data.files_found)
 
         cc2 = _make_compare(d, threshold=0.15)
         cc2.get_files()
         cc2.get_data()
 
-        for path, hist in first_dict.items():
-            np.testing.assert_array_almost_equal(
-                hist, cc2.compare_data.file_data_dict[path]
-            )
+        # _png_gather is deterministic (sorted), so order must match.
+        assert cc2.compare_data.files_found == first_files
+        np.testing.assert_array_almost_equal(first_hists, cc2._file_histograms)
 
     def test_each_histogram_is_float64(self, loaded_compare):
         cc, _ = loaded_compare
@@ -239,12 +246,59 @@ class TestGetData:
         dist = _l1_distance(cc._file_histograms[red_idx], cc._file_histograms[blue_idx])
         assert dist > cc.threshold
 
-    def test_red_variants_distance_below_threshold(self, loaded_compare):
-        cc, colors = loaded_compare
+    def test_red_variants_distance_below_threshold(self, histogram_stable_loaded):
+        # Uses bin-stable images (all reds in the same HSV V-bin) so that
+        # intra-family L1 = 0.0, well within any reasonable threshold.
+        cc, colors = histogram_stable_loaded
         idx0 = cc.compare_data.files_found.index(colors["red"][0])
         idx1 = cc.compare_data.files_found.index(colors["red"][1])
         dist = _l1_distance(cc._file_histograms[idx0], cc._file_histograms[idx1])
         assert dist < cc.threshold
+
+
+# ---------------------------------------------------------------------------
+# Bin-stable fixture for grouping / distance tests
+#
+# compare_colors_dir was designed for LAB-space comparison and uses red
+# variants with R in [210, 230].  In HSV histogram space (16 V-bins) this
+# range straddles the bin 13/14 boundary, giving cross-bin L1 = 1.0 for
+# "similar" reds — defeating the grouping assertions below.
+#
+# histogram_stable_compare picks colors guaranteed to land in the same V-bin
+# for every family member (R,G,B in [225, 233] → V-bin 14 for each family),
+# so intra-family L1 = 0.0 and cross-family L1 ≥ 1.0 (different H-bins).
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def histogram_stable_compare(tmp_path):
+    d = str(tmp_path / "hist_stable")
+    os.makedirs(d)
+
+    # All primaries in V-bin 14: R/255 (or G/255, B/255) in [224/255, 239/255)
+    reds   = [(225, 0, 0), (227, 0, 0), (229, 0, 0), (231, 0, 0), (233, 0, 0)]
+    blues  = [(0, 0, 225), (0, 0, 227), (0, 0, 229), (0, 0, 231), (0, 0, 233)]
+    greens = [(0, 225, 0), (0, 227, 0), (0, 229, 0), (0, 231, 0), (0, 233, 0)]
+
+    def write(name, color):
+        p = os.path.join(d, name)
+        Image.new("RGB", (48, 48), color).save(p, format="PNG")
+        return p
+
+    return {
+        "dir": d,
+        "red":   [write(f"red_{i:02d}.png", c)   for i, c in enumerate(reds)],
+        "blue":  [write(f"blue_{i:02d}.png", c)  for i, c in enumerate(blues)],
+        "green": [write(f"green_{i:02d}.png", c) for i, c in enumerate(greens)],
+    }
+
+
+@pytest.fixture
+def histogram_stable_loaded(histogram_stable_compare):
+    d = histogram_stable_compare["dir"]
+    cc = _make_compare(d, threshold=0.15)
+    cc.get_files()
+    cc.get_data()
+    return cc, histogram_stable_compare
 
 
 # ---------------------------------------------------------------------------
@@ -277,8 +331,10 @@ class TestRunComparison:
                 f"Group {group_idx} mixes color families: {group_files}"
             )
 
-    def test_all_red_siblings_in_same_group(self, loaded_compare):
-        cc, colors = loaded_compare
+    def test_all_red_siblings_in_same_group(self, histogram_stable_loaded):
+        # Uses bin-stable images so all reds are equidistant (L1=0.0) and
+        # always collapse into a single group at threshold 0.15.
+        cc, colors = histogram_stable_loaded
         cc.run_comparison()
         red_set = set(colors["red"])
         red_groups = {
@@ -301,11 +357,13 @@ class TestRunComparison:
 # ---------------------------------------------------------------------------
 
 class TestFindSimilarsToMedia:
-    def test_red_query_returns_only_red_siblings(self, loaded_compare, monkeypatch):
+    def test_red_query_returns_only_red_siblings(self, histogram_stable_loaded, monkeypatch):
+        # Uses bin-stable images: all 4 non-query reds are at L1=0.0 and
+        # therefore all returned; blues/greens differ in H-bin so L1≥1.0.
         import compare.compare_color_histogram as _mod
         monkeypatch.setattr(_mod.config, "search_only_return_closest", True)
 
-        cc, colors = loaded_compare
+        cc, colors = histogram_stable_loaded
         search_path = colors["red"][0]
         search_idx = cc.compare_data.files_found.index(search_path)
         result = cc.find_similars_to_media(search_path, search_idx)

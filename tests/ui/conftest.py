@@ -49,6 +49,23 @@ def immediate_compare_debounce(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def ui_block_alert_dialogs(monkeypatch):
+    """Prevent notification_ctrl.alert() from showing a real QMessageBox.
+
+    qt_alert is imported at module level in notification_controller.py, so
+    patching it there intercepts every call that goes through
+    NotificationController.alert() — the path most UI-layer code takes.
+    Individual tests that call qt_alert directly in other modules must patch
+    those modules separately, as they do already.
+
+    Returns True (the OK / accept value) so callers that branch on the return
+    value keep behaving as if the user dismissed the dialog normally.
+    """
+    import ui.app_window.notification_controller as _nc
+    monkeypatch.setattr(_nc, "qt_alert", lambda *a, **kw: True)
+
+
+@pytest.fixture(autouse=True)
 def ui_qt_media_cleanup_after_test():
     """Sweep MediaFrame/VLC/Qt widgets after each UI test so pytest exits cleanly."""
     yield

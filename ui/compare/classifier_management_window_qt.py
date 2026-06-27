@@ -45,6 +45,8 @@ from utils.translations import _
 from utils.logging_setup import get_logger
 logger = get_logger("classifier_management_window_qt")
 
+_CMW_TAB_CACHE_KEY = "classifier_management_tab"
+
 
 # ======================================================================
 # ClassifierActionModifyWindow
@@ -651,12 +653,12 @@ class ClassifierManagementWindow(SmartDialog):
             self._tabs.setTabToolTip(2, _pv_tip)
 
         # Restore last-selected tab, then persist any future changes.
-        _CACHE_KEY = "classifier_management_tab"
-        saved_tab = app_info_cache.get_meta(_CACHE_KEY, 0)
+        # Default is 2 (Prevalidations) so first-time opens land there.
+        saved_tab = app_info_cache.get_meta(_CMW_TAB_CACHE_KEY, 2)
         if isinstance(saved_tab, int) and 0 <= saved_tab < self._tabs.count():
             self._tabs.setCurrentIndex(saved_tab)
         self._tabs.currentChanged.connect(
-            lambda idx: app_info_cache.set_meta(_CACHE_KEY, idx)
+            lambda idx: app_info_cache.set_meta(_CMW_TAB_CACHE_KEY, idx)
         )
 
         QShortcut(QKeySequence(Qt.Key_Escape), self).activated.connect(
@@ -706,10 +708,13 @@ class ClassifierManagementWindow(SmartDialog):
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
-    def reject(self) -> None:  # noqa: N802
+    def _on_close(self) -> None:
         ClassifierManagementWindow._instance = None
+
+    def reject(self) -> None:  # noqa: N802  (Escape key — does NOT call closeEvent)
+        self._on_close()
         super().reject()
 
-    def closeEvent(self, event) -> None:  # noqa: N802
-        ClassifierManagementWindow._instance = None
+    def closeEvent(self, event) -> None:  # noqa: N802  (X button → default QDialog.closeEvent calls reject())
+        self._on_close()
         super().closeEvent(event)

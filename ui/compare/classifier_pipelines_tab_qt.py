@@ -379,19 +379,20 @@ class ClassifierPipelinesTab(QWidget):
             from ui.image.media_details import MediaDetails
             generation_type = MediaDetails.get_image_specific_generation_mode()
 
-        # Collect generate actions during the run; dispatch them via a single
-        # SD runner connection at the end so no QThread is created off-thread.
-        pending_generates: list[tuple[str, str | None]] = []
-        all_generates: list[tuple[str, str | None]] = []
+        # 0 means "no intermediate flush" (old single-batch-at-end behaviour).
+        _gen_batch_cfg = config.pipeline_generate_batch_size
+        generate_batch_size: int | None = _gen_batch_cfg if _gen_batch_cfg > 0 else None
+
+        # all_generates: full audit record written to the dump and used by rerun-last.
+        # Intermediate-flush state is encapsulated in _make_generate_batch_state().
+        all_generates, _on_generate, _dispatch_generate_batch = (
+            ClassifierPipelinesTab._make_generate_batch_state(generation_type, generate_batch_size)
+        )
         all_scrambles: list[tuple[str, str | None]] = []
 
         from compare.action_callbacks import ActionCallbacks
         from files.marked_files import MarkedFiles
         from image.image_ops import ImageOps
-
-        def _on_generate(path: str, edit_suffix: str | None = None) -> None:
-            pending_generates.append((path, edit_suffix))
-            all_generates.append((path, edit_suffix))
 
         def _make_scramble_callback():
             def _cb(path: str, modifier: str | None) -> None:
@@ -469,37 +470,74 @@ class ClassifierPipelinesTab(QWidget):
                 files_evaluated=total,
                 errors=errors,
                 action_counts=actions,
-                generates_queued=len(pending_generates),
+                generates_queued=len(all_generates),
                 generation_type_label=gen_label,
                 generation_type_value=generation_type.value if generation_type is not None else None,
                 category_map=dict(pipeline.category_map or {}),
             )
             summary = report.format_completion_report(stats)
             logger.info("\n%s", summary)
+            _dispatch_generate_batch()  # flush remainder
             self._write_pipeline_run_dump(pipeline, stats, report, all_generates, all_scrambles)
             try:
                 self._app_actions.title_notify(summary)
             except Exception:
                 pass
 
-            # Dispatch all queued generates in a single SD runner connection.
-            if pending_generates:
-                from extensions.sd_runner_client import SDRunnerClient
-                batch_args = [
-                    {
-                        'image': path,
-                        'append': False,
-                        **({'edit_suffix': suffix} if suffix else {}),
-                    }
-                    for path, suffix in pending_generates
-                ]
-                try:
-                    SDRunnerClient().run_batch(generation_type, batch_args)
-                except Exception:
-                    logger.exception("Batch SD runner generation failed")
-
         from utils.running_tasks_registry import start_thread
         start_thread(_worker, use_asyncio=False)
+
+    # ------------------------------------------------------------------
+    # Generate batch dispatch
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _make_generate_batch_state(
+        generation_type,
+        generate_batch_size: int | None,
+    ) -> tuple[list, object, object]:
+        """Build the generate-dispatch state for a pipeline run.
+
+        Returns (all_generates, on_generate, dispatch_batch) where:
+          all_generates   – grows with every call to on_generate; written to the dump.
+          on_generate     – use as ActionCallbacks.generate_callback.
+          dispatch_batch  – call at the end-of-run to flush any remainder; also
+                            called automatically at each intermediate BATCH_SIZE threshold.
+
+        generate_batch_size=None disables intermediate flushes; one dispatch happens
+        at end-of-run.  Setting pipeline_generate_batch_size=0 in config produces None.
+        """
+        all_generates: list[tuple[str, str | None]] = []
+        flush_generates: list[tuple[str, str | None]] = []
+
+        def dispatch_batch() -> None:
+            if not flush_generates:
+                return
+            batch = list(flush_generates)
+            flush_generates.clear()
+            batch_args = [
+                {
+                    'image': path,
+                    'append': False,
+                    **({'edit_suffix': suffix} if suffix else {}),
+                }
+                for path, suffix in batch
+            ]
+            try:
+                from extensions.sd_runner_client import SDRunnerClient
+                SDRunnerClient().run_batch(generation_type, batch_args)
+            except Exception:
+                logger.exception(
+                    "Intermediate generate batch failed; items in all_generates for rerun"
+                )
+
+        def on_generate(path: str, edit_suffix: str | None = None) -> None:
+            all_generates.append((path, edit_suffix))
+            flush_generates.append((path, edit_suffix))
+            if generate_batch_size is not None and len(flush_generates) >= generate_batch_size:
+                dispatch_batch()
+
+        return all_generates, on_generate, dispatch_batch
 
     # ------------------------------------------------------------------
     # Pipeline run dump

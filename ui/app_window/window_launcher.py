@@ -173,16 +173,18 @@ class WindowLauncher:
 
     @require_password(ProtectedActions.EDIT_PREVALIDATIONS)
     def open_prevalidations_window(self, event=None) -> None:
-        """Open the prevalidations window (goes to the prevalidations tab)."""
+        """Open the classifier management window, restoring the last-used tab.
+
+        The first-time default is Prevalidations (tab 2), set via the cache
+        default in ClassifierManagementWindow.__init__.  Subsequent opens
+        restore whatever tab the user was on when they last closed the window.
+        """
         from utils.config import config as _config
         if not _config.enable_prevalidations:
             return
         try:
             from ui.compare.classifier_management_window_qt import ClassifierManagementWindow
             ClassifierManagementWindow.show_window(self._app, self._app.app_actions)
-            mgmt = ClassifierManagementWindow._instance
-            if mgmt and hasattr(mgmt, '_tabs'):
-                mgmt._tabs.setCurrentIndex(2)  # Prevalidations is tab 2 (Pipelines inserted at 1)
         except Exception as e:
             self._handle_error(e, "Prevalidations Window Error")
 

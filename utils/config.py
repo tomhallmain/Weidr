@@ -46,6 +46,8 @@ class Config:
         "threshold_potential_duplicate_color": int,
         "compare_embedding_dynamic_media_sample_ratio": float,
         "compare_embedding_dynamic_media_max_samples":  int,
+        # Pipeline batch dispatch
+        "pipeline_generate_batch_size":        int,
         # File operations / marks
         "image_tagging_enabled":               bool,
         "escape_backslash_filepaths":          bool,
@@ -223,6 +225,7 @@ class Config:
         # (smaller) sample cap since each sample costs a full model forward pass.
         self.compare_embedding_dynamic_media_sample_ratio = 0.1
         self.compare_embedding_dynamic_media_max_samples = 6
+        self.pipeline_generate_batch_size = 150
         self.show_negative_prompt = True
         self.sd_runner_client_port = 6000
         self.sd_runner_client_password = "<PASSWORD>"

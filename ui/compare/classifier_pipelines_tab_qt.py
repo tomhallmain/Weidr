@@ -130,10 +130,11 @@ class ClassifierPipelinesTab(QWidget):
     _COL_PROFILE = 4
     _COL_FLOW    = 5
     _COL_RUN     = 6
-    _COL_EDIT    = 7
-    _COL_DUP     = 8
-    _COL_DEL     = 9
-    _COL_DOWN    = 10
+    _COL_RERUN   = 7
+    _COL_EDIT    = 8
+    _COL_DUP     = 9
+    _COL_DEL     = 10
+    _COL_DOWN    = 11
 
     def _rebuild_rows(self) -> None:
         _clear_layout(self._scroll_layout)
@@ -200,6 +201,15 @@ class ClassifierPipelinesTab(QWidget):
             run_btn.setToolTip(_("Run on all files in the selected profile's directories"))
             run_btn.clicked.connect(lambda _=False, p=pipeline: self._run_on_profile(p))
             grid.addWidget(run_btn, r, self._COL_RUN)
+
+            has_dump = ClassifierPipelinesTab._find_latest_dump(pipeline) is not None
+            rerun_btn = QPushButton(_("Rerun Last"))
+            rerun_btn.setToolTip(
+                _("Re-dispatch generates and re-execute scrambles from the most recent run")
+            )
+            rerun_btn.setEnabled(has_dump)
+            rerun_btn.clicked.connect(lambda _=False, p=pipeline: self._rerun_last(p))
+            grid.addWidget(rerun_btn, r, self._COL_RERUN)
 
             edit_btn = QPushButton(_("Edit"))
             edit_btn.clicked.connect(lambda _=False, p=pipeline: self._open_editor(p))
@@ -388,21 +398,14 @@ class ClassifierPipelinesTab(QWidget):
         all_generates, _on_generate, _dispatch_generate_batch = (
             ClassifierPipelinesTab._make_generate_batch_state(generation_type, generate_batch_size)
         )
-        all_scrambles: list[tuple[str, str | None]] = []
+        _scr_batch_cfg = config.pipeline_scramble_batch_size
+        scramble_batch_size: int | None = _scr_batch_cfg if _scr_batch_cfg > 0 else None
+        all_scrambles, _on_scramble, _execute_scramble_batch = (
+            ClassifierPipelinesTab._make_scramble_batch_state(scramble_batch_size)
+        )
 
         from compare.action_callbacks import ActionCallbacks
         from files.marked_files import MarkedFiles
-        from image.image_ops import ImageOps
-
-        def _make_scramble_callback():
-            def _cb(path: str, modifier: str | None) -> None:
-                all_scrambles.append((path, modifier))
-                out = ImageOps.new_filepath(path, append_part=modifier) if modifier else None
-                if modifier and "semi" in modifier:
-                    ImageOps.semi_scramble_image(path, output_path=out)
-                else:
-                    ImageOps.scramble_image(path, output_path=out)
-            return _cb
 
         callbacks = ActionCallbacks(
             hide_callback=self._app_actions.hide_current_media,
@@ -410,7 +413,7 @@ class ClassifierPipelinesTab(QWidget):
             add_mark_callback=MarkedFiles.add_mark_if_not_present,
             blur_callback=self._app_actions.request_media_blur,
             generate_callback=_on_generate,
-            scramble_callback=_make_scramble_callback(),
+            scramble_callback=_on_scramble,
         )
 
         def _worker():
@@ -477,7 +480,8 @@ class ClassifierPipelinesTab(QWidget):
             )
             summary = report.format_completion_report(stats)
             logger.info("\n%s", summary)
-            _dispatch_generate_batch()  # flush remainder
+            _dispatch_generate_batch()   # flush generate remainder
+            _execute_scramble_batch()    # flush scramble remainder
             self._write_pipeline_run_dump(pipeline, stats, report, all_generates, all_scrambles)
             try:
                 self._app_actions.title_notify(summary)
@@ -486,6 +490,66 @@ class ClassifierPipelinesTab(QWidget):
 
         from utils.running_tasks_registry import start_thread
         start_thread(_worker, use_asyncio=False)
+
+    # ------------------------------------------------------------------
+    # Scramble helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _run_one_scramble(
+        path: str, modifier: str | None, skip_existing: bool = False
+    ) -> None:
+        from image.image_ops import ImageOps
+        out = ImageOps.new_filepath(path, append_part=modifier) if modifier else None
+        if skip_existing and out and os.path.exists(out):
+            return
+        if modifier and "semi" in modifier:
+            ImageOps.semi_scramble_image(path, output_path=out)
+        else:
+            ImageOps.scramble_image(path, output_path=out)
+
+    @staticmethod
+    def _make_scramble_batch_state(
+        scramble_batch_size: int | None,
+    ) -> tuple[list, object, object]:
+        """Build the scramble-execution state for a pipeline run.
+
+        Returns (all_scrambles, on_scramble, execute_batch) where:
+          all_scrambles   – grows with every call to on_scramble; written to the dump.
+          on_scramble     – use as ActionCallbacks.scramble_callback.
+          execute_batch   – call at end-of-run to flush any remainder; also called
+                            automatically at each intermediate BATCH_SIZE threshold.
+
+        scramble_batch_size=None means no intermediate flushes; one flush at end-of-run.
+        Setting pipeline_scramble_batch_size=0 in config produces None (inline-like behaviour).
+        """
+        all_scrambles: list[tuple[str, str | None]] = []
+        flush_scrambles: list[tuple[str, str | None]] = []
+
+        def execute_batch() -> None:
+            if not flush_scrambles:
+                return
+            batch = list(flush_scrambles)
+            flush_scrambles.clear()
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                futures = [
+                    pool.submit(ClassifierPipelinesTab._run_one_scramble, path, modifier)
+                    for path, modifier in batch
+                ]
+                for f in futures:
+                    try:
+                        f.result()
+                    except Exception:
+                        logger.exception("Scramble batch item failed")
+
+        def on_scramble(path: str, modifier: str | None = None) -> None:
+            all_scrambles.append((path, modifier))
+            flush_scrambles.append((path, modifier))
+            if scramble_batch_size is not None and len(flush_scrambles) >= scramble_batch_size:
+                execute_batch()
+
+        return all_scrambles, on_scramble, execute_batch
 
     # ------------------------------------------------------------------
     # Generate batch dispatch
@@ -538,6 +602,115 @@ class ClassifierPipelinesTab(QWidget):
                 dispatch_batch()
 
         return all_generates, on_generate, dispatch_batch
+
+    # ------------------------------------------------------------------
+    # Rerun last
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _find_latest_dump(pipeline: ClassifierPipeline):
+        """Return the most recent dump Path for *pipeline*, or None if absent."""
+        try:
+            from utils.logging_setup import get_log_dir
+            safe_name = "".join(
+                c if c.isalnum() or c in "-_" else "_" for c in pipeline.name
+            )
+            return max(get_log_dir().glob(f"pipeline_run_*_{safe_name}.json"), default=None)
+        except Exception:
+            return None
+
+    def _rerun_last(self, pipeline: ClassifierPipeline) -> None:
+        dump_path = ClassifierPipelinesTab._find_latest_dump(pipeline)
+        if dump_path is None:
+            qt_alert(
+                self, _("Rerun Last"),
+                _("No previous run dump found for '{name}'.").format(name=pipeline.name),
+            )
+            return
+
+        try:
+            import json
+            dump = json.loads(dump_path.read_text(encoding="utf-8"))
+        except Exception as e:
+            qt_alert(self, _("Rerun Last"),
+                     _("Could not load dump file:\n{err}").format(err=e))
+            return
+
+        generates = dump.get("generates", [])
+        scrambles = dump.get("scrambles", [])
+        ts_raw = dump.get("timestamp", "")
+        try:
+            from datetime import datetime
+            ts = datetime.fromisoformat(ts_raw).strftime("%Y-%m-%d %H:%M:%S")
+        except Exception:
+            ts = ts_raw
+
+        msg = _(
+            "Rerun last run of '{name}'?\n\n"
+            "Run date: {ts}\n"
+            "Generates to re-dispatch: {n_gen}\n"
+            "Scrambles to re-execute:  {n_scr}"
+        ).format(name=pipeline.name, ts=ts, n_gen=len(generates), n_scr=len(scrambles))
+        if not qt_alert(self, _("Rerun Last"), msg, kind="askokcancel"):
+            return
+
+        generation_type_value = dump.get("stats", {}).get("generation_type_value")
+
+        def _worker():
+            gen_count = 0
+            scr_count = 0
+
+            if generates:
+                try:
+                    from extensions.sd_runner_client import SDRunnerClient
+                    from utils.constants import ImageGenerationType
+                    try:
+                        gen_type = ImageGenerationType(generation_type_value)
+                    except (ValueError, TypeError):
+                        from ui.image.media_details import MediaDetails
+                        gen_type = MediaDetails.get_image_specific_generation_mode()
+                    batch_args = [
+                        {
+                            "image": g["path"],
+                            "append": False,
+                            **({'edit_suffix': g["modifier"]} if g.get("modifier") else {}),
+                        }
+                        for g in generates
+                    ]
+                    SDRunnerClient().run_batch(gen_type, batch_args)
+                    gen_count = len(generates)
+                except Exception:
+                    logger.exception("Rerun: generate batch dispatch failed")
+
+            if scrambles:
+                from concurrent.futures import ThreadPoolExecutor
+                with ThreadPoolExecutor(max_workers=4) as pool:
+                    futures = [
+                        pool.submit(
+                            ClassifierPipelinesTab._run_one_scramble,
+                            s["path"], s.get("modifier"), True,
+                        )
+                        for s in scrambles
+                    ]
+                    for f in futures:
+                        try:
+                            f.result()
+                            scr_count += 1
+                        except Exception:
+                            logger.exception("Rerun: scramble item failed")
+
+            summary = _(
+                "Rerun complete for '{name}'.\n"
+                "Generates dispatched: {n_gen}  Scrambles executed: {n_scr}"
+            ).format(name=pipeline.name, n_gen=gen_count, n_scr=scr_count)
+            logger.info(summary)
+            try:
+                self._app_actions.title_notify(summary)
+            except Exception:
+                pass
+
+        from utils.running_tasks_registry import start_thread
+        start_thread(_worker, use_asyncio=False)
 
     # ------------------------------------------------------------------
     # Pipeline run dump

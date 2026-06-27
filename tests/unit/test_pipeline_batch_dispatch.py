@@ -250,8 +250,136 @@ class TestConfigDefault:
         c = Config()
         assert c.pipeline_generate_batch_size == 150
 
+    def test_default_pipeline_scramble_batch_size(self):
+        from utils.config import Config
+        c = Config()
+        assert c.pipeline_scramble_batch_size == 100
+
     def test_zero_config_produces_none_batch_size(self):
         """Config value 0 maps to None (no intermediate flush)."""
         batch_size = 0
         result = batch_size if batch_size > 0 else None
         assert result is None
+
+
+# ---------------------------------------------------------------------------
+# Scramble batch state factory
+# ---------------------------------------------------------------------------
+
+def _make_scramble_state(batch_size, run_one=None):
+    """Thin wrapper; optionally patches _run_one_scramble before building state."""
+    from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+    if run_one is not None:
+        ClassifierPipelinesTab._run_one_scramble = staticmethod(run_one)
+    return ClassifierPipelinesTab._make_scramble_batch_state(batch_size)
+
+
+class TestScrambleFlushThreshold:
+    def test_no_execute_before_batch_size(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr(
+            "ui.compare.classifier_pipelines_tab_qt.ClassifierPipelinesTab._run_one_scramble",
+            staticmethod(lambda path, mod, skip_existing=False: calls.append(path)),
+        )
+        from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+        _, on_scr, _ = ClassifierPipelinesTab._make_scramble_batch_state(5)
+        for p in _paths(4):
+            on_scr(p)
+        assert calls == []
+
+    def test_execute_triggers_at_exactly_batch_size(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr(
+            "ui.compare.classifier_pipelines_tab_qt.ClassifierPipelinesTab._run_one_scramble",
+            staticmethod(lambda path, mod, skip_existing=False: calls.append(path)),
+        )
+        from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+        _, on_scr, _ = ClassifierPipelinesTab._make_scramble_batch_state(5)
+        for p in _paths(5):
+            on_scr(p)
+        assert len(calls) == 5
+
+    def test_batch_size_none_never_intermediate_flushes(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr(
+            "ui.compare.classifier_pipelines_tab_qt.ClassifierPipelinesTab._run_one_scramble",
+            staticmethod(lambda path, mod, skip_existing=False: calls.append(path)),
+        )
+        from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+        _, on_scr, _ = ClassifierPipelinesTab._make_scramble_batch_state(None)
+        for p in _paths(200):
+            on_scr(p)
+        assert calls == []
+
+    def test_remainder_flushed_on_execute_batch_call(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr(
+            "ui.compare.classifier_pipelines_tab_qt.ClassifierPipelinesTab._run_one_scramble",
+            staticmethod(lambda path, mod, skip_existing=False: calls.append(path)),
+        )
+        from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+        _, on_scr, execute = ClassifierPipelinesTab._make_scramble_batch_state(10)
+        for p in _paths(7):
+            on_scr(p)
+        assert calls == []
+        execute()
+        assert len(calls) == 7
+
+    def test_double_execute_does_not_rerun(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr(
+            "ui.compare.classifier_pipelines_tab_qt.ClassifierPipelinesTab._run_one_scramble",
+            staticmethod(lambda path, mod, skip_existing=False: calls.append(path)),
+        )
+        from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+        _, on_scr, execute = ClassifierPipelinesTab._make_scramble_batch_state(10)
+        for p in _paths(3):
+            on_scr(p)
+        execute()
+        execute()
+        assert len(calls) == 3
+
+
+class TestScrambleAllAccumulation:
+    def test_all_scrambles_grows_across_flushes(self, monkeypatch):
+        monkeypatch.setattr(
+            "ui.compare.classifier_pipelines_tab_qt.ClassifierPipelinesTab._run_one_scramble",
+            staticmethod(lambda path, mod, skip_existing=False: None),
+        )
+        from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+        all_scr, on_scr, execute = ClassifierPipelinesTab._make_scramble_batch_state(3)
+        for p in _paths(7):
+            on_scr(p)
+        execute()
+        assert len(all_scr) == 7
+
+    def test_modifier_preserved(self, monkeypatch):
+        monkeypatch.setattr(
+            "ui.compare.classifier_pipelines_tab_qt.ClassifierPipelinesTab._run_one_scramble",
+            staticmethod(lambda path, mod, skip_existing=False: None),
+        )
+        from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+        all_scr, on_scr, execute = ClassifierPipelinesTab._make_scramble_batch_state(10)
+        on_scr("/img.png", "semi")
+        execute()
+        assert all_scr[0] == ("/img.png", "semi")
+
+
+class TestScrambleFaultIsolation:
+    def test_item_exception_does_not_abort_batch(self, monkeypatch):
+        call_count = [0]
+
+        def _failing(path, mod, skip_existing=False):
+            call_count[0] += 1
+            raise RuntimeError("disk error")
+
+        monkeypatch.setattr(
+            "ui.compare.classifier_pipelines_tab_qt.ClassifierPipelinesTab._run_one_scramble",
+            staticmethod(_failing),
+        )
+        from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+        _, on_scr, execute = ClassifierPipelinesTab._make_scramble_batch_state(10)
+        for p in _paths(3):
+            on_scr(p)
+        execute()  # must not raise; each future's exception is logged
+        assert call_count[0] == 3

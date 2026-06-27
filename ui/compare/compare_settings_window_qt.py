@@ -66,11 +66,15 @@ class CompareSettingsWindow(SmartDialog):
             win = cls._open_windows[compare_manager]
             try:
                 if win.isVisible():
+                    if win.isMinimized():
+                        win.showNormal()
                     win.raise_()
                     win.activateWindow()
                     return
+                else:
+                    cls._open_windows.pop(compare_manager, None)
             except Exception:
-                pass
+                cls._open_windows.pop(compare_manager, None)
         cls(parent, compare_manager, set_file_filter=set_file_filter)
 
     # ------------------------------------------------------------------
@@ -86,6 +90,8 @@ class CompareSettingsWindow(SmartDialog):
             existing = CompareSettingsWindow._open_windows[compare_manager]
             try:
                 if existing.isVisible():
+                    if existing.isMinimized():
+                        existing.showNormal()
                     existing.raise_()
                     existing.activateWindow()
                     return
@@ -689,6 +695,12 @@ class CompareSettingsWindow(SmartDialog):
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
+    def reject(self) -> None:  # noqa: N802
+        CompareSettingsWindow._open_windows.pop(
+            getattr(self, "_compare_manager", None), None
+        )
+        super().reject()
+
     def closeEvent(self, event) -> None:  # noqa: N802
         CompareSettingsWindow._open_windows.pop(self._compare_manager, None)
         super().closeEvent(event)

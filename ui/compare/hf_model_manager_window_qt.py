@@ -446,13 +446,21 @@ class HfModelManagerWindow(SmartDialog):
         if cls._instance is not None:
             try:
                 if cls._instance.isVisible():
+                    if cls._instance.isMinimized():
+                        cls._instance.showNormal()
                     cls._instance.raise_()
                     cls._instance.activateWindow()
                     return
+                else:
+                    cls._instance = None
             except Exception:
                 cls._instance = None
         win = cls(parent, app_actions)
         win.show()
+
+    def reject(self) -> None:  # noqa: N802
+        HfModelManagerWindow._instance = None
+        super().reject()
 
     def closeEvent(self, event):  # noqa: N802
         HfModelManagerWindow._instance = None

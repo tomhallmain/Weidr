@@ -6,11 +6,11 @@ app_info_cache, and the disabled-tab behaviour when prevalidations are off.
 
 Tab indices expected:
   0  Classifier Actions
-  1  Prevalidations
-  2  Lookaheads
-  3  Directory Profiles
-  4  Pipelines
-  5  Seek to Trigger
+  1  Pipelines
+  2  Prevalidations
+  3  Seek to Trigger
+  4  Lookaheads
+  5  Directory Profiles
 """
 
 from __future__ import annotations

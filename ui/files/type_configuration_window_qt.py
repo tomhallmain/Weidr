@@ -105,9 +105,17 @@ class TypeConfigurationWindow(SmartDialog):
     @classmethod
     def show(cls, master: Optional[QWidget] = None, app_actions=None) -> None:  # noqa: D401
         if cls._instance is not None:
-            cls._instance.raise_()
-            cls._instance.activateWindow()
-            return
+            try:
+                if cls._instance.isVisible():
+                    if cls._instance.isMinimized():
+                        cls._instance.showNormal()
+                    cls._instance.raise_()
+                    cls._instance.activateWindow()
+                    return
+                else:
+                    cls._instance = None
+            except Exception:
+                cls._instance = None
         if master is None:
             raise ValueError("Master window must be provided")
         if app_actions is None:
@@ -349,6 +357,10 @@ class TypeConfigurationWindow(SmartDialog):
             cls._pending_changes.clear()
 
     # ------------------------------------------------------------------
+    def reject(self) -> None:  # noqa: N802
+        TypeConfigurationWindow._instance = None
+        super().reject()
+
     def closeEvent(self, event) -> None:  # noqa: N802
         TypeConfigurationWindow._instance = None
         super().closeEvent(event)

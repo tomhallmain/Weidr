@@ -178,6 +178,8 @@ class MarkedFileMover(SmartDialog):
                 if win.isVisible():
                     win.setWindowTitle(_("Move {0} Marked File(s)").format(len(MarkedFiles.file_marks)))
                     win.setWindowOpacity(1.0)
+                    if win.isMinimized():
+                        win.showNormal()
                     win.raise_()
                     win.activateWindow()
                     return win
@@ -1179,6 +1181,11 @@ class MarkedFileMover(SmartDialog):
     # ==================================================================
     def close_windows(self) -> None:
         self.close()
+
+    def reject(self) -> None:  # noqa: N802
+        if MarkedFileMover._current_window is self:
+            MarkedFileMover._current_window = None
+        super().reject()
 
     def closeEvent(self, event) -> None:  # noqa: N802
         if MarkedFileMover._current_window is self:

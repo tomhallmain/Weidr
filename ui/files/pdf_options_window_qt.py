@@ -41,9 +41,17 @@ class PDFOptionsWindow(SmartDialog):
     ) -> None:
         """Show the PDF options dialog (singleton)."""
         if cls._instance is not None:
-            cls._instance.raise_()
-            cls._instance.activateWindow()
-            return
+            try:
+                if cls._instance.isVisible():
+                    if cls._instance.isMinimized():
+                        cls._instance.showNormal()
+                    cls._instance.raise_()
+                    cls._instance.activateWindow()
+                    return
+                else:
+                    cls._instance = None
+            except Exception:
+                cls._instance = None
 
         cls._instance = cls(
             parent=master,
@@ -151,6 +159,10 @@ class PDFOptionsWindow(SmartDialog):
         }
         self._callback(options)
         self.close()
+
+    def reject(self) -> None:  # noqa: N802
+        PDFOptionsWindow._instance = None
+        super().reject()
 
     def closeEvent(self, event) -> None:  # noqa: N802
         PDFOptionsWindow._instance = None

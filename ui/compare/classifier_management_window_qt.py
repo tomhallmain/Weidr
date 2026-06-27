@@ -671,11 +671,16 @@ class ClassifierManagementWindow(SmartDialog):
         if cls._instance is not None:
             try:
                 if cls._instance.isVisible():
+                    if cls._instance.isMinimized():
+                        cls._instance.showNormal()
                     cls._instance.raise_()
                     cls._instance.activateWindow()
                     return
+                else:
+                    # Exists but hidden (e.g. via reject()) — discard stale ref.
+                    cls._instance = None
             except Exception:
-                pass
+                cls._instance = None
         win = cls(parent, app_actions)
         win.show()
 
@@ -701,6 +706,10 @@ class ClassifierManagementWindow(SmartDialog):
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
+    def reject(self) -> None:  # noqa: N802
+        ClassifierManagementWindow._instance = None
+        super().reject()
+
     def closeEvent(self, event) -> None:  # noqa: N802
         ClassifierManagementWindow._instance = None
         super().closeEvent(event)

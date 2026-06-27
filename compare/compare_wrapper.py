@@ -6,6 +6,7 @@ from typing import Optional
 from compare.compare_args import CompareArgs
 from compare.compare_result import CompareResult
 from compare.compare_colors import CompareColors
+from compare.compare_color_histogram import CompareColorHistogram
 from compare.compare_embeddings_align import CompareEmbeddingAlign
 from compare.compare_embeddings_clip import CompareEmbeddingClip
 from compare.compare_embeddings_flava import CompareEmbeddingFlava
@@ -228,6 +229,13 @@ class CompareWrapper:
             MarkedFiles.add_mark_if_not_present(path, app_actions=app_actions)
         return result[0]
 
+    def _is_related_by_mode(self, media1: str, media2: str) -> bool:
+        if self.compare_mode == CompareMode.COLOR_MATCHING:
+            return CompareColors.is_related(media1, media2)
+        if self.compare_mode == CompareMode.COLOR_HISTOGRAM:
+            return CompareColorHistogram.is_related(media1, media2)
+        return CompareEmbeddingClip.is_related(media1, media2)
+
     def find_next_unrelated_media(self, file_browser, forward=True):
         found_unrelated_media = False
         previous_media = file_browser.current_file()
@@ -237,8 +245,7 @@ class CompareWrapper:
             return
         while not found_unrelated_media:
             next_media = file_browser.next_file() if forward else file_browser.previous_file()
-            if (self.compare_mode == CompareMode.COLOR_MATCHING and not CompareColors.is_related(previous_media, next_media)) or \
-                    (self.compare_mode != CompareMode.COLOR_MATCHING and not CompareEmbeddingClip.is_related(previous_media, next_media)):
+            if not self._is_related_by_mode(previous_media, next_media):
                 found_unrelated_media = True
                 self._app_actions.create_media(next_media)
                 self._app_actions.toast(_("Skipped {0} media.").format(skip_count))
@@ -587,6 +594,8 @@ class CompareWrapper:
             self._compare = CompareEmbeddingClip(args)
         elif self.compare_mode == CompareMode.COLOR_MATCHING:
             self._compare = CompareColors(args, use_thumb=True)
+        elif self.compare_mode == CompareMode.COLOR_HISTOGRAM:
+            self._compare = CompareColorHistogram(args)
         elif self.compare_mode == CompareMode.SIGLIP_EMBEDDING:
             self._compare = CompareEmbeddingSiglip(args)
         elif self.compare_mode == CompareMode.FLAVA_EMBEDDING:

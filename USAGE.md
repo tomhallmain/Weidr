@@ -9,9 +9,10 @@ You can also run comparison from the command line. The compare logic lives in th
 ```
 python -m compare.compare_embeddings_clip --dir /path/to/media
 python -m compare.compare_colors --dir /path/to/media
+python -m compare.compare_color_histogram --dir /path/to/media
 ```
 
-Supported command line options (embedding and color modules): `--dir`, `--counter`, `--include`, `--search`, `-o`/`--overwrite`, `--threshold`, `-v` (verbose), `-h`/`--help`. Embedding modules use `--threshold=float` (similarity, default 0.9); color uses `--threshold=int` (color diff) and `--use_thumb`. Multiple embedding modes exist (e.g. `compare_embeddings_clip`, `compare_embeddings_siglip`, `compare_embeddings_laion`); each shares the same CLI.
+Supported command line options: `--dir`, `--counter`, `--include`, `--search`, `-o`/`--overwrite`, `--threshold`, `-v` (verbose), `-h`/`--help`. Embedding modules use `--threshold=float` (similarity, default 0.9); color matching uses `--threshold=int` (color diff) and `--use_thumb`; color histogram uses `--threshold=float` (L1 distance, default 0.2). Multiple embedding modes exist (e.g. `compare_embeddings_clip`, `compare_embeddings_siglip`, `compare_embeddings_laion`); each shares the same CLI.
 
 <details>
 <summary>View Usage Details</summary>
@@ -21,6 +22,8 @@ Useful for detecting duplicates or finding associations between large unstructur
 Individual media files can be passed to search against the full data set by passing flag `--search` with the path of the search file, or setting a search file in the UI before running comparison.
 
 The color matching compare mode is faster than embedding comparison but less robust. In the group comparison case, since every image must be compared to every other image the time complexity is $\mathcal{O}(n^2)$. To remedy this issue for large media sets, set the `store_checkpoints` config setting to enable process caching to close and pick up where you left off previously, but ensure no files are added or removed from the comparison directory before restarting a compare job.
+
+The color histogram compare mode groups images by the similarity of their overall HSV colour distribution rather than pixel-level colour or learned embeddings. It is useful for finding images with similar colour moods or for identifying gaps in colour coverage across a dataset. Like color matching, it supports GIF and video by averaging histograms across sampled frames. The threshold is an L1 distance in [0, 1]; lower values mean stricter grouping.
 
 When using embedding compare modes, you can search your image-based media files by text - both positive and negative. Commas will break the texts to search into multiple parts, to be combined in a final set of results. If there is a good embedding signal for the search texts it will likely return the media files you are looking for. It will take a while to load the first time as embeddings need to be generated. If a list of preset text searches is defined in your config JSON, you can cycle between them with the dedicated shortcut found below.
 

@@ -47,6 +47,7 @@ class CompareMode(Enum):
     PROMPTS_EXACT = _("Prompts (Exact Match)")
     SIZE = _("Size")
     MODELS = _("Models")
+    COLOR_HISTOGRAM = _("Color Histogram")
 
     def get_text(self):
         if self == CompareMode.COLOR_MATCHING:
@@ -79,6 +80,8 @@ class CompareMode(Enum):
             return _("Size")
         elif self == CompareMode.MODELS:
             return _("Models")
+        elif self == CompareMode.COLOR_HISTOGRAM:
+            return _("Color Histogram")
         raise Exception("Unhandled Compare Mode text: " + str(self))
 
     def __str__(self):
@@ -110,11 +113,15 @@ class CompareMode(Enum):
             return _("Size tolerance")
         elif self == CompareMode.MODELS:
             return _("Model similarity threshold")
+        elif self == CompareMode.COLOR_HISTOGRAM:
+            return _("Histogram distance threshold")
         raise Exception("Unhandled Compare Mode text: " + str(self))
 
     def threshold_vals(self):
         if self == CompareMode.COLOR_MATCHING:
             return [str(i) for i in list(range(31))]
+        if self == CompareMode.COLOR_HISTOGRAM:
+            return [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5]
         if self.is_embedding():
             return [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.925, 0.95, 0.98, 0.99]
         elif self == CompareMode.PROMPTS_EXACT:
@@ -128,8 +135,9 @@ class CompareMode(Enum):
         return [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.925, 0.95, 0.98, 0.99]
 
     def is_embedding(self):
-        return (self != CompareMode.COLOR_MATCHING and 
-                self != CompareMode.SIZE and 
+        return (self != CompareMode.COLOR_MATCHING and
+                self != CompareMode.COLOR_HISTOGRAM and
+                self != CompareMode.SIZE and
                 self != CompareMode.MODELS and
                 self != CompareMode.PROMPTS_EXACT)
 
@@ -139,7 +147,9 @@ class CompareMode(Enum):
 
     @staticmethod
     def text_search_modes():
-        return [mode for mode in CompareMode if mode != CompareMode.SIZE and mode != CompareMode.COLOR_MATCHING]
+        return [mode for mode in CompareMode if mode != CompareMode.SIZE
+                and mode != CompareMode.COLOR_MATCHING
+                and mode != CompareMode.COLOR_HISTOGRAM]
 
 
 class SortBy(Enum):

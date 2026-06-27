@@ -367,7 +367,7 @@ class Config:
             try:
                 self.compare_mode = CompareMode[self.dict["compare_mode"]]
             except Exception:
-                raise AssertionError("Invalid compare mode for compare_mode config setting. Must be one of CLIP_EMBEDDING, COLOR_MATCHING")
+                raise AssertionError("Invalid compare mode for compare_mode config setting. Must be one of CLIP_EMBEDDING, COLOR_MATCHING, COLOR_HISTOGRAM")
 
             try:
                 self.sort_by = SortBy[self.dict["sort_by"]]

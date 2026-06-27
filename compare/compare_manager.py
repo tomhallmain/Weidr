@@ -372,6 +372,8 @@ class CompareManager:
         # Threshold display depends on mode
         if self._primary_mode == CompareMode.COLOR_MATCHING:
             logger.info(f" color diff threshold: {args.threshold}")
+        elif self._primary_mode == CompareMode.COLOR_HISTOGRAM:
+            logger.info(f" histogram distance threshold: {args.threshold}")
         else:
             logger.info(f" embedding similarity threshold: {args.threshold}")
         
@@ -816,6 +818,8 @@ class CompareManager:
         if mode == CompareMode.COLOR_MATCHING:
             from compare.compare_colors import CompareColors
             return max(0.0, min(1.0, 1.0 - score / CompareColors.THRESHHOLD_GROUP_CUTOFF))
+        if mode == CompareMode.COLOR_HISTOGRAM:
+            return max(0.0, min(1.0, 1.0 - score))
         return score
 
     def _run_composite(self, args: CompareArgs):

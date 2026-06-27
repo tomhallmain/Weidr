@@ -359,6 +359,8 @@ class SearchController:
         primary_mode = self._cm.compare_mode
         if primary_mode == CompareMode.COLOR_MATCHING:
             return config.color_diff_threshold
+        if primary_mode == CompareMode.COLOR_HISTOGRAM:
+            return 0.2
         return config.embedding_similarity_threshold
 
     def get_file_filter(self) -> Optional[str]:

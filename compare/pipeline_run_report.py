@@ -34,6 +34,7 @@ class PipelineRunStats:
     action_counts: dict[str, int] = field(default_factory=dict)
     generates_queued: int = 0
     generation_type_label: Optional[str] = None
+    generation_type_value: Optional[str] = None
     category_map: dict[str, str] = field(default_factory=dict)
 
 

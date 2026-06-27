@@ -56,9 +56,16 @@ def isolated_singletons(tmp_path, monkeypatch):
     pointing at a fresh per-test temp directory. No production files are touched."""
     cache_dir = tmp_path / "cache"
     configs_dir = tmp_path / "configs"
+    log_dir = tmp_path / "logs"
     cache_dir.mkdir()
     configs_dir.mkdir()
+    log_dir.mkdir()
     shutil.copy(_src_example, configs_dir / "config.json")
+
+    # Redirect the log directory so no test can accidentally write pipeline
+    # run dumps (or any other log-dir artefact) to the real user log path.
+    import utils.logging_setup as _ls
+    monkeypatch.setattr(_ls, "get_log_dir", lambda: log_dir)
 
     monkeypatch.setenv("WEIDR_CACHE_DIR", str(cache_dir))
     monkeypatch.setenv("WEIDR_CONFIGS_DIR", str(configs_dir))

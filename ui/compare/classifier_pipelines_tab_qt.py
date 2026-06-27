@@ -382,13 +382,20 @@ class ClassifierPipelinesTab(QWidget):
         # Collect generate actions during the run; dispatch them via a single
         # SD runner connection at the end so no QThread is created off-thread.
         pending_generates: list[tuple[str, str | None]] = []
+        all_generates: list[tuple[str, str | None]] = []
+        all_scrambles: list[tuple[str, str | None]] = []
 
         from compare.action_callbacks import ActionCallbacks
         from files.marked_files import MarkedFiles
         from image.image_ops import ImageOps
 
+        def _on_generate(path: str, edit_suffix: str | None = None) -> None:
+            pending_generates.append((path, edit_suffix))
+            all_generates.append((path, edit_suffix))
+
         def _make_scramble_callback():
             def _cb(path: str, modifier: str | None) -> None:
+                all_scrambles.append((path, modifier))
                 out = ImageOps.new_filepath(path, append_part=modifier) if modifier else None
                 if modifier and "semi" in modifier:
                     ImageOps.semi_scramble_image(path, output_path=out)
@@ -401,9 +408,7 @@ class ClassifierPipelinesTab(QWidget):
             notify_callback=self._app_actions.title_notify,
             add_mark_callback=MarkedFiles.add_mark_if_not_present,
             blur_callback=self._app_actions.request_media_blur,
-            generate_callback=lambda path, edit_suffix=None: pending_generates.append(
-                (path, edit_suffix)
-            ),
+            generate_callback=_on_generate,
             scramble_callback=_make_scramble_callback(),
         )
 
@@ -466,11 +471,12 @@ class ClassifierPipelinesTab(QWidget):
                 action_counts=actions,
                 generates_queued=len(pending_generates),
                 generation_type_label=gen_label,
+                generation_type_value=generation_type.value if generation_type is not None else None,
                 category_map=dict(pipeline.category_map or {}),
             )
             summary = report.format_completion_report(stats)
             logger.info("\n%s", summary)
-            self._write_pipeline_run_dump(pipeline, stats, report)
+            self._write_pipeline_run_dump(pipeline, stats, report, all_generates, all_scrambles)
             try:
                 self._app_actions.title_notify(summary)
             except Exception:
@@ -500,7 +506,10 @@ class ClassifierPipelinesTab(QWidget):
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _write_pipeline_run_dump(pipeline, stats, report) -> None:
+    def _write_pipeline_run_dump(
+        pipeline, stats, report,
+        all_generates=(), all_scrambles=(),
+    ) -> None:
         try:
             import json
             from datetime import datetime
@@ -518,8 +527,17 @@ class ClassifierPipelinesTab(QWidget):
                     "action_counts": stats.action_counts,
                     "generates_queued": stats.generates_queued,
                     "generation_type_label": stats.generation_type_label,
+                    "generation_type_value": stats.generation_type_value,
                     "category_map": stats.category_map,
                 },
+                "generates": [
+                    {"path": path, "modifier": modifier}
+                    for path, modifier in all_generates
+                ],
+                "scrambles": [
+                    {"path": path, "modifier": modifier}
+                    for path, modifier in all_scrambles
+                ],
                 "messages": [
                     {
                         "severity": m.severity,

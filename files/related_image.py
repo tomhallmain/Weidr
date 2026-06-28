@@ -1,3 +1,4 @@
+import bisect
 import glob
 import os
 import re
@@ -611,14 +612,18 @@ def _check_base_stem_boundary(
 
 
 # Per-directory scan cache used by find_files_by_base_stem(use_cache=True).
-# Each entry is (entries, cached_at) where entries is a list of
-# (filepath, stem-without-extension) for every file found via os.walk.
+# Each entry is (entries, stems, cached_at) where:
+#   entries — list of (filepath, stem) sorted by stem, for every file in the dir.
+#   stems   — parallel list of just the stem strings, used for bisect_left lookups.
 # Entries expire after _BASE_STEM_CACHE_TTL seconds.
 _BASE_STEM_CACHE_TTL: float = 300.0  # 5 minutes
-_base_stem_dir_cache: dict[str, tuple[list[tuple[str, str]], float]] = {}
-# Results cache: (directory, base_stem) → matching file paths. Keyed the same
-# way as _base_stem_dir_cache so it can be invalidated in lockstep.
-_base_stem_results_cache: dict[tuple[str, str], list[str]] = {}
+_base_stem_dir_cache: dict[str, tuple[list[tuple[str, str]], list[str], float]] = {}
+# Cursor state for sequential (pipeline) workloads where stems arrive in sorted order.
+# Each entry is (cursor_index, last_stem_queried).  The cursor records the first
+# entries index not yet consumed by a previous in-order query, so the total advance
+# across an entire run is O(n) rather than O(n·m).
+# Cleared alongside _base_stem_dir_cache on invalidation.
+_base_stem_dir_cursor: dict[str, tuple[int, str]] = {}
 
 
 def clear_base_stem_dir_cache(search_dir: str | None = None) -> None:
@@ -631,12 +636,10 @@ def clear_base_stem_dir_cache(search_dir: str | None = None) -> None:
     """
     if search_dir is None:
         _base_stem_dir_cache.clear()
-        _base_stem_results_cache.clear()
+        _base_stem_dir_cursor.clear()
     else:
         _base_stem_dir_cache.pop(search_dir, None)
-        # Evict all results entries for this directory.
-        for key in [k for k in _base_stem_results_cache if k[0] == search_dir]:
-            del _base_stem_results_cache[key]
+        _base_stem_dir_cursor.pop(search_dir, None)
 
 
 def find_files_by_base_stem(
@@ -674,12 +677,8 @@ def find_files_by_base_stem(
 
     for directory in directories:
         if use_cache:
-            results_key = (directory, base_stem)
             cached = _base_stem_dir_cache.get(directory)
-            dir_expired = cached is None or (time.time() - cached[1]) > _BASE_STEM_CACHE_TTL
-            if not dir_expired and results_key in _base_stem_results_cache:
-                matching.extend(_base_stem_results_cache[results_key])
-                continue
+            dir_expired = cached is None or (time.time() - cached[2]) > _BASE_STEM_CACHE_TTL
             if dir_expired:
                 entries: list[tuple[str, str]] = []
                 file_count = 0
@@ -701,16 +700,38 @@ def find_files_by_base_stem(
                     logger.exception(
                         "Error scanning %r for base stem cache", directory
                     )
-                _base_stem_dir_cache[directory] = (entries, time.time())
-                scan_entries = entries
+                entries.sort(key=lambda x: x[1])
+                stems = [s for _, s in entries]
+                _base_stem_dir_cache[directory] = (entries, stems, time.time())
+                _base_stem_dir_cursor.pop(directory, None)
             else:
-                scan_entries = cached[0]
+                entries, stems = cached[0], cached[1]
 
+            cursor_idx, last_stem = _base_stem_dir_cursor.get(directory, (0, ""))
             dir_matches: list[str] = []
-            for filepath, filename_no_ext in scan_entries:
-                if _check_base_stem_boundary(filename_no_ext, base_stem, last_category):
-                    dir_matches.append(filepath)
-            _base_stem_results_cache[results_key] = dir_matches
+            if base_stem > last_stem:
+                # In-order query: advance the cursor from its current position.
+                # Total advance across an entire sorted run is O(n), not O(n·m).
+                c = cursor_idx
+                while c < len(entries) and stems[c] < base_stem:
+                    c += 1
+                i = c
+                while i < len(entries) and stems[i].startswith(base_stem):
+                    filepath, stem = entries[i]
+                    if _check_base_stem_boundary(stem, base_stem, last_category):
+                        dir_matches.append(filepath)
+                    i += 1
+                _base_stem_dir_cursor[directory] = (i, base_stem)
+            else:
+                # Out-of-order or repeated query: binary search from the start.
+                # Does not update the cursor so a later in-order sequence can resume.
+                c = bisect.bisect_left(stems, base_stem)
+                i = c
+                while i < len(entries) and stems[i].startswith(base_stem):
+                    filepath, stem = entries[i]
+                    if _check_base_stem_boundary(stem, base_stem, last_category):
+                        dir_matches.append(filepath)
+                    i += 1
             matching.extend(dir_matches)
         else:
             file_count = 0

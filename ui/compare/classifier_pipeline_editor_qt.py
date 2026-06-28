@@ -1698,9 +1698,19 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._desc_edit.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
         form.addRow(_("Description:"), self._desc_edit)
 
-        self._active_cb = QCheckBox()
+        _active_row_layout = QHBoxLayout()
+        self._active_cb = QCheckBox(_("Active"))
         self._active_cb.setChecked(p.is_active)
-        form.addRow(_("Active:"), self._active_cb)
+        _active_row_layout.addWidget(self._active_cb)
+        self._move_to_working_dir_cb = QCheckBox(_("Move generated to working dir"))
+        self._move_to_working_dir_cb.setChecked(p.move_to_working_dir)
+        self._move_to_working_dir_cb.setToolTip(
+            _("When enabled, GENERATE actions pass the current working directory "
+              "to sd-runner so generated files land there instead of the default output folder.")
+        )
+        _active_row_layout.addWidget(self._move_to_working_dir_cb)
+        _active_row_layout.addStretch(1)
+        form.addRow("", _active_row_layout)
 
         self._type_combo = QComboBox()
         self._type_combo.addItems([_("General"), _("Prevalidation")])
@@ -2498,6 +2508,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         final.name = name
         final.description = self._desc_edit.toPlainText().strip()
         final.is_active = self._active_cb.isChecked()
+        final.move_to_working_dir = self._move_to_working_dir_cb.isChecked()
         final.default_action = self._default_action_combo.currentData()
         final.default_reject_action = self._default_reject_combo.currentData()
         final.generation_type = self._gen_type_combo.currentData()

@@ -244,11 +244,21 @@ class ClassifierActionModifyWindow(SmartDialog):
 
         # -- Action -------------------------------------------------------
         grid.addWidget(self._lbl(_("Action")), row, 0, Qt.AlignLeft)
+        _action_row = QHBoxLayout()
         self._action_combo = QComboBox()
         action_options = [k.get_translation() for k in ClassifierActionType]
         self._action_combo.addItems(action_options)
         self._action_combo.setCurrentText(ca.action.get_translation())
-        grid.addWidget(self._action_combo, row, 1)
+        self._action_combo.currentTextChanged.connect(self._update_ui_for_validation_types)
+        _action_row.addWidget(self._action_combo)
+        self._move_to_same_dir_cb = QCheckBox(_("Move to same dir"))
+        self._move_to_same_dir_cb.setChecked(getattr(ca, "move_to_same_dir", False))
+        self._move_to_same_dir_cb.setToolTip(
+            _("Move the generated file into the same directory as the source image.")
+        )
+        _action_row.addWidget(self._move_to_same_dir_cb)
+        _action_row.addStretch(1)
+        grid.addLayout(_action_row, row, 1)
         row += 1
 
         # -- Action modifier ----------------------------------------------
@@ -426,6 +436,12 @@ class ClassifierActionModifyWindow(SmartDialog):
         use_bsm = self._use_base_stem_match_cb.isChecked()
         self._base_stem_require_match_cb.setVisible(use_bsm)
 
+        is_generate = (
+            ClassifierActionType.get_action(self._action_combo.currentText())
+            == ClassifierActionType.GENERATE
+        )
+        self._move_to_same_dir_cb.setVisible(is_generate)
+
         self._update_specific_ui_for_validation_types()
 
     # ------------------------------------------------------------------
@@ -542,6 +558,7 @@ class ClassifierActionModifyWindow(SmartDialog):
         ca.action = ClassifierActionType.get_action(
             self._action_combo.currentText()
         )
+        ca.move_to_same_dir = self._move_to_same_dir_cb.isChecked()
         ca.action_modifier = self._action_modifier_edit.text().strip()
 
         ca.image_classifier_selected_categories = [

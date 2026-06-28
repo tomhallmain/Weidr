@@ -462,6 +462,14 @@ class CompareMediaType(Enum):
             CompareMediaType.UNCONFIGURED,
         )
 
+    def is_interactive_crop_supported(self) -> bool:
+        """True for types that support interactive crop (image, GIF, video, PDF, SVG)."""
+        return self not in (
+            CompareMediaType.AUDIO,
+            CompareMediaType.HTML,
+            CompareMediaType.UNCONFIGURED,
+        )
+
 
 # UI-friendly alias (same members and methods as :class:`CompareMediaType`).
 MediaType = CompareMediaType

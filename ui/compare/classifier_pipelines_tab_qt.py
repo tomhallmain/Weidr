@@ -532,6 +532,7 @@ class ClassifierPipelinesTab(QWidget):
             batch = list(flush_scrambles)
             flush_scrambles.clear()
             from concurrent.futures import ThreadPoolExecutor
+            # 4 workers: modest parallelism without saturating I/O alongside the scan loop.
             with ThreadPoolExecutor(max_workers=4) as pool:
                 futures = [
                     pool.submit(ClassifierPipelinesTab._run_one_scramble, path, modifier)

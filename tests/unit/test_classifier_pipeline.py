@@ -1613,3 +1613,36 @@ class TestCategoryMapNumericSuffixValidation:
         errors = p.validate()
         assert any("Bad" in e and "numeric" in e for e in errors)
         assert not any("Apple" in e for e in errors)
+
+
+# ---------------------------------------------------------------------------
+# move_to_working_dir field
+# ---------------------------------------------------------------------------
+
+class TestMoveToWorkingDir:
+    def test_default_true(self):
+        p = ClassifierPipeline(name="p")
+        assert p.move_to_working_dir is True
+
+    def test_explicit_false_stored(self):
+        p = ClassifierPipeline(name="p", move_to_working_dir=False)
+        assert p.move_to_working_dir is False
+
+    def test_to_dict_includes_field(self):
+        p = ClassifierPipeline(name="p", move_to_working_dir=False)
+        assert p.to_dict()["move_to_working_dir"] is False
+
+    def test_from_dict_round_trip_false(self):
+        p = ClassifierPipeline(name="p", move_to_working_dir=False)
+        p2 = ClassifierPipeline.from_dict(p.to_dict())
+        assert p2.move_to_working_dir is False
+
+    def test_from_dict_round_trip_true(self):
+        p = ClassifierPipeline(name="p", move_to_working_dir=True)
+        p2 = ClassifierPipeline.from_dict(p.to_dict())
+        assert p2.move_to_working_dir is True
+
+    def test_backward_compat_missing_key_defaults_true(self):
+        d = {"name": "p", "nodes": []}
+        p = ClassifierPipeline.from_dict(d)
+        assert p.move_to_working_dir is True

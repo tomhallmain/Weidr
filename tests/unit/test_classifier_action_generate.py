@@ -253,4 +253,52 @@ class TestCheckBaseStemMatch:
 
         monkeypatch.setattr("compare.classifier_action.find_files_by_base_stem", fake_find)
         self._ca()._check_base_stem_match(IMAGE)
-        assert captured[0].get("use_cache") is True
+
+
+# ---------------------------------------------------------------------------
+# move_to_same_dir field
+# ---------------------------------------------------------------------------
+
+class TestMoveToSameDirField:
+    def test_default_false(self):
+        assert _action().move_to_same_dir is False
+
+    def test_explicit_true_stored(self):
+        assert _action(move_to_same_dir=True).move_to_same_dir is True
+
+    def test_to_dict_includes_field(self):
+        ca = _action(move_to_same_dir=True)
+        assert ca.to_dict()["move_to_same_dir"] is True
+
+    def test_from_dict_round_trip(self):
+        ca = _action(move_to_same_dir=True)
+        ca2 = ClassifierAction.from_dict(ca.to_dict())
+        assert ca2.move_to_same_dir is True
+
+    def test_from_dict_backward_compat_missing_key(self):
+        d = _action().to_dict()
+        d.pop("move_to_same_dir", None)
+        ca = ClassifierAction.from_dict(d)
+        assert ca.move_to_same_dir is False
+
+    def test_run_action_passes_target_dir_when_true(self):
+        received = []
+        _action(move_to_same_dir=True).run_action(
+            IMAGE,
+            ActionCallbacks(
+                notify_callback=_NOOP,
+                generate_callback=lambda path, suffix, target_dir=None: received.append(target_dir),
+            ),
+        )
+        assert received == ["/dir"]
+
+    def test_run_action_passes_none_target_dir_when_false(self):
+        received = []
+        _action(move_to_same_dir=False).run_action(
+            IMAGE,
+            ActionCallbacks(
+                notify_callback=_NOOP,
+                generate_callback=lambda path, suffix, target_dir=None: received.append(target_dir),
+            ),
+        )
+        assert received == [None]

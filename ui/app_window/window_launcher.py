@@ -359,7 +359,7 @@ class WindowLauncher:
         if not media_path:
             return
         media_type = get_media_type_for_path(media_path)
-        if media_type in (MediaType.AUDIO, MediaType.HTML, MediaType.UNCONFIGURED):
+        if not media_type.is_interactive_crop_supported():
             self._app.notification_ctrl.toast(_("Interactive crop not supported for this media type"))
             return
 
@@ -394,6 +394,9 @@ class WindowLauncher:
             media_frame._show_image_in_view(tmp_frame)
             source_path = media_path          # crop the original GIF
         elif is_video:
+            # VLC renders at the OS level below Qt's widget hierarchy, so a
+            # QRubberBand/QGraphicsItem overlay on a live video surface would
+            # be painted beneath VLC's output. Pause and snapshot instead.
             media_frame.pause_video_if_playing()
             tmp_snap = os.path.join(tempfile.gettempdir(), "weidr_video_crop_snap.png")
             ok, err = media_frame.save_media_screenshot(tmp_snap)

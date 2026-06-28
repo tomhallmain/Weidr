@@ -26,7 +26,7 @@ Keybinding map  (■ = bound  · = free | cols: Shift | Ctrl | Ctrl+Shift)
 
     A  ■ ■ ·   N  ■ ■ ■
     B  ■ ■ ·   O  ■ · ·
-    C  ■ ■ ■   P  ■ ■ ·
+    C  ■ ■ ■   P  ■ ■ ■
     D  ■ ■ ■   Q  ■ ■ ·
     E  ■ ■ ■   R  ■ ■ ·
     F  ■ ■ ·   S  ■ ■ ■
@@ -34,7 +34,7 @@ Keybinding map  (■ = bound  · = free | cols: Shift | Ctrl | Ctrl+Shift)
     H  ■ ■ ·   U  ■ · ·
     I  ■ ■ ·   V  ■ ■ ·
     J  ■ ■ ·   W  ■ ■ ·
-    K  ■ ■ ■   X  · ■ ■
+    K  ■ ■ ■   X  · ■ ·
     L  ■ ■ ·   Y  ■ ■ ■
     M  ■ ■ ■   Z  ■ ■ ·
 
@@ -341,7 +341,7 @@ class KeyBindingManager:
             "Ctrl+X",
             lambda: MarkedFileMover.undo_move_marks(None, app.app_actions),
         )
-        self._bind("Ctrl+Shift+X", app.window_launcher.interactive_crop, guarded=False)
+        self._bind("Ctrl+Shift+P", app.window_launcher.interactive_crop, guarded=False)
 
         # ==============================================================
         # Search presets / mode

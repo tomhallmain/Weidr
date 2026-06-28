@@ -966,6 +966,20 @@ class TestEditorSave:
         result = ClassifierPipelines.get_pipeline_by_name("no_action_test")
         assert result.default_action is None
 
+    def test_save_move_to_working_dir_persisted(self, qtbot, isolated_singletons):
+        dlg = _open_dialog(qtbot)
+        dlg._name_edit.setText("move_wd_test")
+        dlg._move_to_working_dir_cb.setChecked(False)
+        dlg._save()
+        result = ClassifierPipelines.get_pipeline_by_name("move_wd_test")
+        assert result.move_to_working_dir is False
+
+    def test_save_move_to_working_dir_default_true(self, qtbot, isolated_singletons):
+        pipeline = _make_pipeline("move_wd_default")
+        dlg = _open_dialog(qtbot, pipeline)
+        # Default should be checked (True)
+        assert dlg._move_to_working_dir_cb.isChecked() is True
+
 
 # ---------------------------------------------------------------------------
 # ClassifierPipelineEditorDialog — flow preview

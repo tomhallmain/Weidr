@@ -237,10 +237,12 @@ class TestFindFilesByBaseStemCache:
         d = _write(tmp_path, "stem_a.jpg")
         find_files_by_base_stem([str(tmp_path)], "stem", use_cache=True)
         (tmp_path / "stem_b.jpg").write_bytes(b"")
-        # Fake the cached timestamp to be expired
+        # Fake the cached timestamp to be expired (cache is now a 3-tuple)
         norm = os.path.normpath(os.path.abspath(str(tmp_path)))
+        entries, stems, _ = _ri_mod._base_stem_dir_cache[norm]
         _ri_mod._base_stem_dir_cache[norm] = (
-            _ri_mod._base_stem_dir_cache[norm][0],
+            entries,
+            stems,
             time.time() - _ri_mod._BASE_STEM_CACHE_TTL - 1,
         )
         r = find_files_by_base_stem([str(tmp_path)], "stem", use_cache=True)
@@ -276,3 +278,121 @@ class TestFindFilesByBaseStemCache:
             on_threshold_exceeded=lambda d, c: False,
         )
         assert norm not in _ri_mod._base_stem_dir_cache
+
+
+# ---------------------------------------------------------------------------
+# Cursor-based scan optimisation
+# ---------------------------------------------------------------------------
+
+class TestBaseStemCursorOptimisation:
+    """Tests for the sorted-entries + cursor optimisation in the use_cache path."""
+
+    def setup_method(self):
+        clear_base_stem_dir_cache()
+
+    def teardown_method(self):
+        clear_base_stem_dir_cache()
+
+    def _norm(self, p) -> str:
+        return os.path.normpath(os.path.abspath(str(p)))
+
+    def test_sorted_order_advances_cursor_monotonically(self, tmp_path):
+        d = str(tmp_path)
+        _write(tmp_path, "aaa_edit.jpg", "bbb_edit.jpg", "ccc_edit.jpg")
+        find_files_by_base_stem([d], "aaa", use_cache=True)
+        idx_after_aaa, _ = _ri_mod._base_stem_dir_cursor[self._norm(tmp_path)]
+        find_files_by_base_stem([d], "bbb", use_cache=True)
+        idx_after_bbb, _ = _ri_mod._base_stem_dir_cursor[self._norm(tmp_path)]
+        find_files_by_base_stem([d], "ccc", use_cache=True)
+        idx_after_ccc, _ = _ri_mod._base_stem_dir_cursor[self._norm(tmp_path)]
+        assert idx_after_aaa <= idx_after_bbb <= idx_after_ccc
+
+    def test_sorted_order_returns_correct_matches(self, tmp_path):
+        _write(tmp_path, "aaa_edit.jpg", "aaa_other.jpg", "bbb_edit.jpg", "zzz.jpg")
+        d = str(tmp_path)
+        r_aaa = find_files_by_base_stem([d], "aaa", use_cache=True)
+        r_bbb = find_files_by_base_stem([d], "bbb", use_cache=True)
+        assert {os.path.basename(p) for p in r_aaa} == {"aaa_edit.jpg", "aaa_other.jpg"}
+        assert {os.path.basename(p) for p in r_bbb} == {"bbb_edit.jpg"}
+
+    def test_out_of_order_query_falls_back_to_bisect(self, tmp_path):
+        _write(tmp_path, "aaa_edit.jpg", "bbb_edit.jpg")
+        d = str(tmp_path)
+        # Query bbb first (sets cursor past bbb), then aaa (out-of-order).
+        find_files_by_base_stem([d], "bbb", use_cache=True)
+        r_aaa = find_files_by_base_stem([d], "aaa", use_cache=True)
+        assert [os.path.basename(p) for p in r_aaa] == ["aaa_edit.jpg"]
+
+    def test_out_of_order_does_not_corrupt_cursor(self, tmp_path):
+        _write(tmp_path, "aaa_edit.jpg", "bbb_edit.jpg", "ccc_edit.jpg")
+        d = str(tmp_path)
+        norm = self._norm(tmp_path)
+        # Advance cursor to bbb.
+        find_files_by_base_stem([d], "bbb", use_cache=True)
+        cursor_before, _ = _ri_mod._base_stem_dir_cursor[norm]
+        # Out-of-order query; cursor must not move backward.
+        find_files_by_base_stem([d], "aaa", use_cache=True)
+        cursor_after, _ = _ri_mod._base_stem_dir_cursor[norm]
+        assert cursor_after == cursor_before
+
+    def test_repeated_query_returns_correct_results(self, tmp_path):
+        _write(tmp_path, "stem_edit.jpg")
+        d = str(tmp_path)
+        r1 = find_files_by_base_stem([d], "stem", use_cache=True)
+        r2 = find_files_by_base_stem([d], "stem", use_cache=True)
+        assert r1 == r2
+
+    def test_cursor_reset_on_cache_clear(self, tmp_path):
+        _write(tmp_path, "aaa_edit.jpg")
+        d = str(tmp_path)
+        norm = self._norm(tmp_path)
+        find_files_by_base_stem([d], "aaa", use_cache=True)
+        assert norm in _ri_mod._base_stem_dir_cursor
+        clear_base_stem_dir_cache(d)
+        assert norm not in _ri_mod._base_stem_dir_cursor
+
+    def test_cursor_reset_on_full_clear(self, tmp_path):
+        _write(tmp_path, "aaa_edit.jpg")
+        d = str(tmp_path)
+        find_files_by_base_stem([d], "aaa", use_cache=True)
+        clear_base_stem_dir_cache()
+        assert len(_ri_mod._base_stem_dir_cursor) == 0
+
+    def test_cursor_reset_on_ttl_expiry(self, tmp_path):
+        _write(tmp_path, "aaa_edit.jpg", "bbb_edit.jpg")
+        d = str(tmp_path)
+        norm = self._norm(tmp_path)
+        find_files_by_base_stem([d], "aaa", use_cache=True)
+        # Expire the cache.
+        entries, stems, _ = _ri_mod._base_stem_dir_cache[norm]
+        _ri_mod._base_stem_dir_cache[norm] = (entries, stems, time.time() - _ri_mod._BASE_STEM_CACHE_TTL - 1)
+        # Next query triggers a fresh scan; cursor is reset to 0 for that dir.
+        find_files_by_base_stem([d], "bbb", use_cache=True)
+        cursor_idx, _ = _ri_mod._base_stem_dir_cursor[norm]
+        # bbb was queried first after reset, so cursor advanced past bbb only.
+        # aaa sorts before bbb, so cursor must be past bbb's position (>= 1).
+        assert cursor_idx >= 1
+
+    def test_no_match_stem_advances_cursor_past_gap(self, tmp_path):
+        _write(tmp_path, "aaa_edit.jpg", "ccc_edit.jpg")
+        d = str(tmp_path)
+        # Query bbb which doesn't exist — cursor should advance past aaa and bbb's position.
+        r = find_files_by_base_stem([d], "bbb", use_cache=True)
+        assert r == []
+        # Subsequent in-order query for ccc must still find the file.
+        r_ccc = find_files_by_base_stem([d], "ccc", use_cache=True)
+        assert [os.path.basename(p) for p in r_ccc] == ["ccc_edit.jpg"]
+
+    def test_scale_correctness(self, tmp_path):
+        # 500 unique stems, sorted queries — verify correctness at scale.
+        stems = [f"CUI_{i:019d}" for i in range(500)]
+        for s in stems:
+            (tmp_path / f"{s}_edit.jpg").write_bytes(b"")
+            (tmp_path / f"{s}_other.png").write_bytes(b"")
+        d = str(tmp_path)
+        for s in stems:
+            results = find_files_by_base_stem([d], s, use_cache=True)
+            basenames = {os.path.basename(p) for p in results}
+            assert f"{s}_edit.jpg" in basenames, f"Missing edit for {s}"
+            assert f"{s}_other.png" in basenames, f"Missing other for {s}"
+            assert len(results) == 2, f"Expected 2 results for {s}, got {len(results)}"

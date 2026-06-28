@@ -1494,9 +1494,49 @@ class TestDebouncedGenerateQueue:
 
         cond = FilenameContainsCondition(["image"], case_sensitive=False)  # matches IMAGE
         p = _pipeline(_node("n1", cond, on_match=_execute(ClassifierActionType.GENERATE)))
-        callbacks = ActionCallbacks(generate_callback=lambda path, mod: None)
+        callbacks = ActionCallbacks(generate_callback=lambda path, mod, target_dir=None: None)
         run_pipeline(p, IMAGE, callbacks, generate_queue=FakeQueue())
         assert IMAGE in submitted
+
+    def test_move_to_working_dir_true_passes_base_dir_as_target(self):
+        from compare.classifier_pipeline_runner import _dispatch_action
+        received = []
+        callbacks = ActionCallbacks(
+            generate_callback=lambda path, mod, target_dir=None: received.append(target_dir)
+        )
+        _dispatch_action(
+            ClassifierActionType.GENERATE, None, "pipe", IMAGE,
+            callbacks, "/some/base/dir",
+            move_to_working_dir=True,
+        )
+        assert received == ["/some/base/dir"]
+
+    def test_move_to_working_dir_false_passes_none_as_target(self):
+        from compare.classifier_pipeline_runner import _dispatch_action
+        received = []
+        callbacks = ActionCallbacks(
+            generate_callback=lambda path, mod, target_dir=None: received.append(target_dir)
+        )
+        _dispatch_action(
+            ClassifierActionType.GENERATE, None, "pipe", IMAGE,
+            callbacks, "/some/base/dir",
+            move_to_working_dir=False,
+        )
+        assert received == [None]
+
+    def test_move_to_working_dir_falls_back_to_image_dir_when_no_base(self):
+        from compare.classifier_pipeline_runner import _dispatch_action
+        received = []
+        callbacks = ActionCallbacks(
+            generate_callback=lambda path, mod, target_dir=None: received.append(target_dir)
+        )
+        _dispatch_action(
+            ClassifierActionType.GENERATE, None, "pipe", IMAGE,
+            callbacks, None,
+            move_to_working_dir=True,
+        )
+        import os
+        assert received == [os.path.dirname(IMAGE)]
 
 
 # ---------------------------------------------------------------------------

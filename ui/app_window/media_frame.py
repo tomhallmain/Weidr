@@ -809,6 +809,28 @@ class MediaFrame(QFrame):
         else:
             self.vlc_media_player.set_xwindow(wid)
 
+    def detach_vlc_output(self) -> None:
+        """Disconnect VLC's video renderer from this widget's native window handle.
+
+        Zeroing the handle stops VLC from painting without a full stop/teardown.
+        The next ensure_video_frame() call reattaches when playback resumes.
+        """
+        if not _VLC_AVAILABLE or not self.vlc_media_player:
+            logger.debug("detach_vlc_output: skipped (VLC unavailable or no player)")
+            return
+        try:
+            if platform.system() == "Windows":
+                self.vlc_media_player.set_hwnd(0)
+                logger.debug("detach_vlc_output: set_hwnd(0) called on Windows")
+            elif platform.system() == "Darwin":
+                self.vlc_media_player.set_nsobject(0)
+                logger.debug("detach_vlc_output: set_nsobject(0) called on macOS")
+            else:
+                self.vlc_media_player.set_xwindow(0)
+                logger.debug("detach_vlc_output: set_xwindow(0) called on Linux")
+        except Exception as exc:
+            logger.warning("detach_vlc_output: failed — %s", exc)
+
     def video_display(self):
         """Start video playback (after ensure_video_frame)."""
         if not _VLC_AVAILABLE or not self.vlc_media_player or not self.path:

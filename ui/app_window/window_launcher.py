@@ -351,7 +351,6 @@ class WindowLauncher:
         from PIL import Image
         from image.frame_cache import FrameCache
         from image.image_ops import ImageOps
-        from image.video_ops import VideoOps
         from utils.media_utils import get_media_type_for_path
         from utils.constants import MediaType
 
@@ -366,21 +365,32 @@ class WindowLauncher:
         media_frame = self._app.media_frame
         gv = media_frame._graphics_view
 
-        # Tear down any previous crop session cleanly.
-        try:
-            gv.crop_confirmed.disconnect()
-        except (RuntimeError, RuntimeWarning):
-            pass
-        try:
-            gv.crop_cancelled.disconnect()
-        except (RuntimeError, RuntimeWarning):
-            pass
+        # Tear down any previous QGraphicsView crop session cleanly.
+        # PySide6 emits RuntimeWarning via warnings.warn() (not raise) when
+        # disconnecting a signal with no connections, so suppress at that level.
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            try:
+                gv.crop_confirmed.disconnect()
+            except RuntimeError:
+                pass
+            try:
+                gv.crop_cancelled.disconnect()
+            except RuntimeError:
+                pass
 
         is_animated_gif = (media_type == MediaType.GIF and media_frame._gif_is_animated)
-        is_video = media_type.is_video()
 
-        # For animated GIF or video: pause and load the first/current frame as a
-        # static PNG into the graphics view so the existing crop UI can be reused.
+        # Video: handled by a separate overlay module — see video_crop_overlay_qt.py.
+        if media_type.is_video():
+            from ui.app_window.video_crop_overlay_qt import launch_video_crop
+            launch_video_crop(media_frame, media_path, self._app)
+            return
+
+        # -------------------------------------------------------------------
+        # Static media (image, animated GIF, SVG, PDF): QGraphicsView crop mode
+        # -------------------------------------------------------------------
         if is_animated_gif:
             media_frame.pause_video_if_playing()
             tmp_frame = os.path.join(tempfile.gettempdir(), "weidr_gif_crop_frame.png")
@@ -392,26 +402,13 @@ class WindowLauncher:
                 self._app.notification_ctrl.toast(_("Could not read GIF frame: ") + str(e))
                 return
             media_frame._show_image_in_view(tmp_frame)
-            source_path = media_path          # crop the original GIF
-        elif is_video:
-            # VLC renders at the OS level below Qt's widget hierarchy, so a
-            # QRubberBand/QGraphicsItem overlay on a live video surface would
-            # be painted beneath VLC's output. Pause and snapshot instead.
-            media_frame.pause_video_if_playing()
-            tmp_snap = os.path.join(tempfile.gettempdir(), "weidr_video_crop_snap.png")
-            ok, err = media_frame.save_media_screenshot(tmp_snap)
-            if not ok:
-                self._app.notification_ctrl.toast(_("Could not capture frame: ") + err)
-                return
-            media_frame._show_image_in_view(tmp_snap)
-            source_path = media_path          # crop the original video
+            source_path = media_path
         else:
             # Static image, SVG, or PDF — FrameCache already has (or produces) a PNG/JPG.
             source_path = FrameCache.get_image_path(media_path)
 
         def _restore_original():
-            """Re-show the original media after a cancelled GIF/video crop session."""
-            if is_animated_gif or is_video:
+            if is_animated_gif:
                 media_frame.show_media(media_path)
 
         def _disconnect_crop_signals():
@@ -447,29 +444,6 @@ class WindowLauncher:
                 _restore_original()
                 return
 
-            if is_video:
-                x, y, w, h = left, upper, right - left, lower - upper
-                def _run():
-                    try:
-                        new_path = VideoOps.crop_video(source_path, x, y, w, h)
-                    except RuntimeError as exc:
-                        self._app.app_actions.warn(str(exc))
-                        return
-                    if new_path and os.path.exists(new_path):
-                        self._app.app_actions.refresh()
-                        self._app.app_actions.success(_("Video cropped"))
-                        from ui.image.media_details import MediaDetails
-                        MediaDetails.open_temp_media_canvas(
-                            master=self._app, media_path=new_path,
-                            app_actions=self._app.app_actions,
-                        )
-                    else:
-                        self._app.app_actions.warn(_("Video crop produced no output"))
-                from utils.running_tasks_registry import start_thread
-                start_thread(_run, use_asyncio=False)
-                return
-
-            # Raster crop (image, animated GIF, SVG, PDF).
             new_path = ImageOps.crop_image_to_rect(source_path, left, upper, right, lower)
 
             if media_type in (MediaType.SVG, MediaType.PDF) and new_path and os.path.exists(new_path):
@@ -484,7 +458,7 @@ class WindowLauncher:
                     os.replace(new_path, sibling)
                     new_path = sibling
                 except OSError:
-                    pass  # leave it in the temp location if the move fails
+                    pass
 
             if new_path and os.path.exists(new_path):
                 self._app.app_actions.refresh()

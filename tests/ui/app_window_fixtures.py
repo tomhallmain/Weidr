@@ -12,7 +12,9 @@ from ui.app_window.app_window import AppWindow
 def _teardown_app_window(win: AppWindow) -> None:
     """Stop timers, unregister, and drop the QWidget."""
     win.on_closing()
-    win.close()
+    # hide() rather than close() to avoid re-entering on_closing() via closeEvent
+    # and to prevent QApplication.quit() from being called during test teardown.
+    win.hide()
     win.deleteLater()
     app = QApplication.instance()
     if app is not None:

@@ -1380,7 +1380,9 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         resources; the primary window stores all caches, then destroys
         the application.
         """
-        # Stop periodic timers
+        # Stop all timers — notification timers must be stopped before the
+        # window is destroyed so their callbacks cannot fire against a dead object.
+        self.notification_ctrl.teardown()
         self.file_ops_ctrl.stop_file_check_timer()
         self.cache_ctrl.stop_periodic_store()
         # Ensure VLC playback is fully torn down before window destruction.

@@ -15,13 +15,12 @@ _tr = _
 
 def _close_mark_mover() -> None:
     win = MarkedFileMover._current_window
+    MarkedFileMover._current_window = None
     if win is not None:
         try:
-            win.close_windows()
             win.close()
         except RuntimeError:
             pass
-    MarkedFileMover._current_window = None
 
 
 @pytest.fixture

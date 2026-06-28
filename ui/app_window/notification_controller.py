@@ -266,6 +266,12 @@ class NotificationController:
         """
         notification_manager.cleanup_all_expired()
 
+    def teardown(self) -> None:
+        """Stop all owned timers.  Called from AppWindow.on_closing() so that
+        timer callbacks cannot fire against a partially-destroyed window."""
+        self._expiry_timer.stop()
+        self._cleanup_timer.stop()
+
     def set_status_title(self, message: Optional[str]) -> None:
         """
         Set/clear a non-accumulating status title override.

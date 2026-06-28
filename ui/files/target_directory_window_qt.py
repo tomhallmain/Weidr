@@ -1,11 +1,8 @@
 """
-PySide6 port of files/target_directory_window.py -- TargetDirectoryWindow.
+TargetDirectoryWindow -- directory picker with its own recent list (PySide6).
 
-A simple directory picker backed by its own recent-directory list
-(separate from ``RecentDirectories``).  Subclasses
-``DirectoryPickerDialog`` for the shared scrollable-directory-list UI.
-
-Non-UI data management is in ``files.target_directories.TargetDirectories``.
+Separate from ``RecentDirectories``.  Subclasses ``DirectoryPickerDialog``.
+Non-UI data in ``files.target_directories.TargetDirectories``.
 """
 
 from __future__ import annotations

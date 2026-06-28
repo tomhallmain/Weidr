@@ -1,17 +1,11 @@
 """
-PySide6 port of image/image_details.py -- MediaDetails.
+MediaDetails -- media metadata panel and image actions (PySide6).
 
-Displays media metadata, file info, prompt extraction, and provides
-actions for rotate/crop/flip/enhance/convert/generation/related media.
+Displays metadata, file info, prompt extraction, and actions for
+rotate/crop/flip/enhance/convert/generation/related media.
 
-Non-UI imports (reuse policy):
-  - FileBrowser        from files.file_browser
-  - FrameCache         from image.frame_cache
-  - image_data_extractor from image.image_data_extractor
-  - ImageOps           from image.image_ops
-  - VideoOps           from image.video_ops (ffprobe for video metadata)
-  - Cropper            from image.smart_crop
-  - app_info_cache     from utils.app_info_cache
+Non-UI: ``FileBrowser``, ``FrameCache``, ``image_data_extractor``,
+``ImageOps``, ``VideoOps``, ``Cropper``, ``app_info_cache``.
 """
 
 from __future__ import annotations
@@ -34,10 +28,9 @@ from PySide6.QtWidgets import (
 )
 
 from files.related_image import (
-    _VARIANT_SUFFIX_RE_STRICT as _VARIANT_SUFFIX_RE,
-    DEFAULT_NODE_ID as _DEFAULT_NODE_ID,
-    get_related_image_path as _get_related_image_path,
-    get_related_image_text as _get_related_image_text,
+    DEFAULT_NODE_ID,
+    get_related_image_path,
+    get_related_image_text,
 )
 from image.frame_cache import FrameCache
 from image.image_data_extractor import image_data_extractor
@@ -1394,7 +1387,7 @@ class MediaDetails(SmartWindow):
             return _("(Related image lookup is not available for video)")
         if self.media_type.is_audio():
             return _("(Related image lookup is not available for audio)")
-        return _get_related_image_text(self._image_path, _DEFAULT_NODE_ID)
+        return get_related_image_text(self._image_path, DEFAULT_NODE_ID)
 
     def open_related_image(self, event=None) -> None:
         if self.media_type.is_unconfigured():
@@ -1414,8 +1407,8 @@ class MediaDetails(SmartWindow):
         check_extra_directories: bool | None = True,
     ) -> tuple[str | None, bool]:
         if node_id is None or node_id == "":
-            node_id = _DEFAULT_NODE_ID
-        return _get_related_image_path(image_path, node_id, check_extra_directories)
+            node_id = DEFAULT_NODE_ID
+        return get_related_image_path(image_path, node_id, check_extra_directories)
 
     @staticmethod
     def show_related_image(

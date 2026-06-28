@@ -1,9 +1,8 @@
 """
-PySide6 port of files/directory_notes_window.py -- DirectoryNotesWindow.
+DirectoryNotesWindow -- per-directory marks and file notes (PySide6).
 
-Displays per-directory marked files and file notes with
-Open / Remove / Edit buttons, plus export and import support.
-The ``DirectoryNotes`` data class is imported from the original module.
+Open / Remove / Edit buttons, plus export and import.
+``DirectoryNotes`` from ``files.directory_notes``.
 """
 
 from __future__ import annotations

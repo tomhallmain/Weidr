@@ -1,10 +1,8 @@
 """
-PySide6 port of files/type_configuration_window.py -- TypeConfigurationWindow.
+TypeConfigurationWindow -- enable/disable media types in compare (PySide6).
 
-Singleton dialog with a checkbox grid for enabling/disabling media types
-in the compare pipeline.  Non-UI logic (apply_changes, pending-change
-tracking, config mutations) is kept here because it's tightly coupled to
-the UI state; persistence delegates to app_info_cache.
+Singleton dialog with a checkbox grid.  Apply/pending-change logic is
+coupled to UI state here; persistence uses app_info_cache.
 """
 
 from __future__ import annotations

@@ -18,6 +18,8 @@ class ZoomableGraphicsView(QGraphicsView):
     crop_selection_ready = Signal(QRectF)
     # Emitted when the user presses Enter/Return to confirm the selection.
     crop_confirmed = Signal(QRectF)
+    # Emitted when the user presses Escape to cancel without confirming.
+    crop_cancelled = Signal()
 
     def __init__(
         self,
@@ -177,6 +179,7 @@ class ZoomableGraphicsView(QGraphicsView):
         if self._crop_mode:
             if event.key() == Qt.Key.Key_Escape:
                 self.end_crop_mode()
+                self.crop_cancelled.emit()
                 event.accept()
                 return
             if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):

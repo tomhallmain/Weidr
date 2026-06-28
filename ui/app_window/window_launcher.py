@@ -1,7 +1,8 @@
 """
 WindowLauncher -- opens secondary windows and dialogs.
 
-A thin class where each method creates the appropriate dialog/window.
+Each method constructs and shows the appropriate dialog or secondary window,
+wiring AppActions and password gates as needed.
 """
 
 from __future__ import annotations
@@ -344,63 +345,157 @@ class WindowLauncher:
         )
 
     def interactive_crop(self, event=None) -> None:
-        """Enter interactive crop mode on the current graphics view (images only)."""
+        """Enter interactive crop mode for the current media (image, GIF, SVG, PDF, or video)."""
         import os
+        import tempfile
+        from PIL import Image
         from image.frame_cache import FrameCache
         from image.image_ops import ImageOps
+        from image.video_ops import VideoOps
         from utils.media_utils import get_media_type_for_path
+        from utils.constants import MediaType
 
         media_path = self._app.media_path
         if not media_path:
             return
         media_type = get_media_type_for_path(media_path)
-        if not media_type.is_image():
-            self._app.notification_ctrl.toast(_("Interactive crop only supports images"))
+        if media_type in (MediaType.AUDIO, MediaType.HTML, MediaType.UNCONFIGURED):
+            self._app.notification_ctrl.toast(_("Interactive crop not supported for this media type"))
             return
 
-        image_path = FrameCache.get_image_path(media_path)
         media_frame = self._app.media_frame
         gv = media_frame._graphics_view
 
+        # Tear down any previous crop session cleanly.
         try:
             gv.crop_confirmed.disconnect()
         except (RuntimeError, RuntimeWarning):
             pass
+        try:
+            gv.crop_cancelled.disconnect()
+        except (RuntimeError, RuntimeWarning):
+            pass
+
+        is_animated_gif = (media_type == MediaType.GIF and media_frame._gif_is_animated)
+        is_video = media_type.is_video()
+
+        # For animated GIF or video: pause and load the first/current frame as a
+        # static PNG into the graphics view so the existing crop UI can be reused.
+        if is_animated_gif:
+            media_frame.pause_video_if_playing()
+            tmp_frame = os.path.join(tempfile.gettempdir(), "weidr_gif_crop_frame.png")
+            try:
+                with Image.open(media_path) as _img:
+                    _img.seek(0)
+                    _img.copy().save(tmp_frame, format="PNG")
+            except Exception as e:
+                self._app.notification_ctrl.toast(_("Could not read GIF frame: ") + str(e))
+                return
+            media_frame._show_image_in_view(tmp_frame)
+            source_path = media_path          # crop the original GIF
+        elif is_video:
+            media_frame.pause_video_if_playing()
+            tmp_snap = os.path.join(tempfile.gettempdir(), "weidr_video_crop_snap.png")
+            ok, err = media_frame.save_media_screenshot(tmp_snap)
+            if not ok:
+                self._app.notification_ctrl.toast(_("Could not capture frame: ") + err)
+                return
+            media_frame._show_image_in_view(tmp_snap)
+            source_path = media_path          # crop the original video
+        else:
+            # Static image, SVG, or PDF — FrameCache already has (or produces) a PNG/JPG.
+            source_path = FrameCache.get_image_path(media_path)
+
+        def _restore_original():
+            """Re-show the original media after a cancelled GIF/video crop session."""
+            if is_animated_gif or is_video:
+                media_frame.show_media(media_path)
+
+        def _disconnect_crop_signals():
+            for sig, slot in ((gv.crop_confirmed, _on_confirmed), (gv.crop_cancelled, _on_cancelled)):
+                try:
+                    sig.disconnect(slot)
+                except (RuntimeError, RuntimeWarning):
+                    pass
+
+        def _on_cancelled():
+            _disconnect_crop_signals()
+            _restore_original()
 
         def _on_confirmed(rect):
-            try:
-                gv.crop_confirmed.disconnect(_on_confirmed)
-            except RuntimeError:
-                pass
+            _disconnect_crop_signals()
             gv.end_crop_mode()
+
             pixmap = media_frame._current_pixmap
             if pixmap is None or pixmap.isNull():
+                _restore_original()
                 return
             pix_w, pix_h = pixmap.width(), pixmap.height()
-            img_w, img_h = media_frame.imwidth, media_frame.imheight
+            img_w = media_frame.imwidth if media_frame.imwidth > 0 else pix_w
+            img_h = media_frame.imheight if media_frame.imheight > 0 else pix_h
             scale_x = img_w / pix_w if pix_w > 0 else 1.0
             scale_y = img_h / pix_h if pix_h > 0 else 1.0
-            left   = max(0,     int(rect.x() * scale_x))
-            upper  = max(0,     int(rect.y() * scale_y))
-            right  = min(img_w, int((rect.x() + rect.width())  * scale_x))
-            lower  = min(img_h, int((rect.y() + rect.height()) * scale_y))
+            left  = max(0,     int(rect.x() * scale_x))
+            upper = max(0,     int(rect.y() * scale_y))
+            right = min(img_w, int((rect.x() + rect.width())  * scale_x))
+            lower = min(img_h, int((rect.y() + rect.height()) * scale_y))
             if right <= left or lower <= upper:
                 self._app.notification_ctrl.toast(_("Crop selection too small"))
+                _restore_original()
                 return
-            new_path = ImageOps.crop_image_to_rect(image_path, left, upper, right, lower)
+
+            if is_video:
+                x, y, w, h = left, upper, right - left, lower - upper
+                def _run():
+                    try:
+                        new_path = VideoOps.crop_video(source_path, x, y, w, h)
+                    except RuntimeError as exc:
+                        self._app.app_actions.warn(str(exc))
+                        return
+                    if new_path and os.path.exists(new_path):
+                        self._app.app_actions.refresh()
+                        self._app.app_actions.success(_("Video cropped"))
+                        from ui.image.media_details import MediaDetails
+                        MediaDetails.open_temp_media_canvas(
+                            master=self._app, media_path=new_path,
+                            app_actions=self._app.app_actions,
+                        )
+                    else:
+                        self._app.app_actions.warn(_("Video crop produced no output"))
+                from utils.running_tasks_registry import start_thread
+                start_thread(_run, use_asyncio=False)
+                return
+
+            # Raster crop (image, animated GIF, SVG, PDF).
+            new_path = ImageOps.crop_image_to_rect(source_path, left, upper, right, lower)
+
+            if media_type in (MediaType.SVG, MediaType.PDF) and new_path and os.path.exists(new_path):
+                # Output lives next to the temp PNG; move it beside the original file.
+                orig_base = os.path.splitext(media_path)[0]
+                sibling = orig_base + "_crop.png"
+                n = 1
+                while os.path.exists(sibling):
+                    sibling = f"{orig_base}_crop_{n}.png"
+                    n += 1
+                try:
+                    os.replace(new_path, sibling)
+                    new_path = sibling
+                except OSError:
+                    pass  # leave it in the temp location if the move fails
+
             if new_path and os.path.exists(new_path):
                 self._app.app_actions.refresh()
-                self._app.app_actions.success(_("Cropped image"))
+                self._app.app_actions.success(_("Cropped"))
                 from ui.image.media_details import MediaDetails
                 MediaDetails.open_temp_media_canvas(
-                    master=self._app,
-                    media_path=new_path,
+                    master=self._app, media_path=new_path,
                     app_actions=self._app.app_actions,
                 )
             else:
                 self._app.notification_ctrl.toast(_("Crop failed"))
 
         gv.crop_confirmed.connect(_on_confirmed)
+        gv.crop_cancelled.connect(_on_cancelled)
         gv.start_crop_mode()
         self._app.notification_ctrl.toast(_("Drag to select crop, Enter to confirm, Escape to cancel"))
 

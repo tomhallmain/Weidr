@@ -1,8 +1,7 @@
 """
-PySide6 port of files/pdf_options_window.py -- PDFOptionsWindow.
+PDFOptionsWindow -- PDF export options before creating from marks (PySide6).
 
-Simple singleton dialog for PDF export options (quality, filename)
-before creating a PDF from marked files.
+Singleton dialog for quality and filename settings.
 """
 
 from __future__ import annotations

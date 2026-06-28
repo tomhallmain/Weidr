@@ -1,7 +1,9 @@
 """
 MediaNavigator -- media browsing logic controller.
 
-Owns the "what to show" without "how to show it" (that's MediaFrame).
+Decides which file or page to show next (full ``MediaFrame`` viewer or
+``MasonryBrowser`` grid) and coordinates slideshow timing; rendering stays
+in the view widgets.
 """
 
 from __future__ import annotations

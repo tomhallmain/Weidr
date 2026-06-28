@@ -1,10 +1,9 @@
 """
-PySide6 port of files/favorites_window.py -- FavoritesWindow.
+FavoritesWindow -- favourited images grouped by directory (PySide6).
 
-Shows favourited images grouped by directory with Open / Remove buttons
-inside a scrollable area.  Class-level persistence helpers
-(store/load_favorites, add_favorite, get_favorites) delegate to the
-original module via app_info_cache.
+Shows favourited images with Open / Remove buttons inside a scrollable area.
+Class-level persistence helpers (store/load_favorites, add_favorite,
+get_favorites) read and write per-directory lists via app_info_cache.
 """
 
 from __future__ import annotations
@@ -37,7 +36,7 @@ class FavoritesWindow(SmartDialog):
     has_any_favorites: bool = False
 
     # ------------------------------------------------------------------
-    # Persistence (class-level, same API as original)
+    # Persistence (class-level)
     # ------------------------------------------------------------------
     @staticmethod
     def store_favorites() -> None:

@@ -22,7 +22,7 @@ from utils.utils import Utils
 
 
 class TempMediaWindow(SmartWindow):
-    """Lightweight media viewer window.  Qt replacement for TempImageCanvas."""
+    """Standalone media viewer for temporary and generated files."""
 
     _instance: Optional[TempMediaWindow] = None
 

@@ -1,14 +1,10 @@
 """
-PySide6 port of compare/classifier_actions_tab.py -- ClassifierActionsTab.
+ClassifierActionsTab -- tab listing classifier actions (PySide6).
 
-Tab-page QWidget listing classifier actions with buttons for add / modify /
-delete / copy / run, plus batch validation controls.
+Buttons for add / modify / delete / copy / run, plus batch validation controls.
 
-Non-UI imports:
-  - ClassifierAction from compare.classifier_action
-  - ClassifierActionsManager from compare.classifier_actions_manager
-    from compare.classifier_actions_manager (reuse policy)
-  - DirectoryProfile from compare.directory_profile (reuse policy)
+Non-UI: ``ClassifierAction``, ``ClassifierActionsManager``,
+``DirectoryProfile`` (``files.directory_profile``).
 """
 
 from __future__ import annotations

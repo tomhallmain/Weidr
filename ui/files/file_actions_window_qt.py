@@ -1,13 +1,12 @@
 """
-PySide6 port of files/file_actions_window.py -- FileActionsWindow.
+FileActionsWindow -- file action history and setup (PySide6).
 
-Fully self-contained: ``Action`` data class, module-level setup helpers,
-persistence, static state management, and the Qt UI.
+Self-contained: ``FileAction`` integration, module-level setup helpers,
+persistence, static state management, and Qt UI.
 
-Key improvement over original: the action history list uses a **Load More**
-pattern so that only a small initial page of rows is created on open,
-keeping widget count and memory low.  Statistics always reflect the
-full (or today-filtered) action collection regardless of visible page.
+Uses a **Load More** pattern for the action history list so only a small
+initial page of rows is created on open, keeping widget count low.
+Statistics always reflect the full (or today-filtered) collection.
 """
 
 from __future__ import annotations

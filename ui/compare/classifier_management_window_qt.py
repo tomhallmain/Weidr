@@ -1,18 +1,13 @@
 """
-PySide6 port of compare/classifier_management_window.py.
+Classifier management dialogs (PySide6).
 
-Contains two classes:
-  - ClassifierActionModifyWindow  -- base modify dialog for classifier
+  - ClassifierActionModifyWindow -- base modify dialog for classifier
     actions and prevalidations (shared fields, prototype support).
-  - ClassifierManagementWindow    -- tabbed management window hosting
-    ClassifierActionsTab and PrevalidationsTab.
+  - ClassifierManagementWindow -- tabbed window hosting ClassifierActionsTab
+    and PrevalidationsTab.
 
-Non-UI imports:
-  - ClassifierAction, Prevalidation, ImageClassifierClassificationMode
-    from compare.classifier_action
-  - ClassifierActionsManager from compare.classifier_actions_manager
-  - image_classifier_manager
-    from image.image_classifier_manager (reuse policy)
+Non-UI: ``ClassifierAction``, ``Prevalidation``, ``ClassifierActionsManager``,
+``image_classifier_manager``.
 """
 
 from __future__ import annotations

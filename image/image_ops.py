@@ -54,13 +54,33 @@ class ImageOps:
 
     @staticmethod
     def crop_image_to_rect(image_path: str, left: int, upper: int, right: int, lower: int) -> str:
-        """Crop image to the given pixel bounding box and save as a new file."""
+        """Crop image to the given pixel bounding box and save as a new sibling file.
+
+        Animated GIFs are handled frame-by-frame with original durations preserved.
+        """
         try:
+            from PIL import ImageSequence
+            new_path = ImageOps.new_filepath(image_path, append_part="_crop")
             with Image.open(image_path) as img:
-                cropped = img.crop((left, upper, right, lower))
-                new_path = ImageOps.new_filepath(image_path, append_part="_crop")
-                cropped.save(new_path)
-                return new_path
+                n_frames = getattr(img, "n_frames", 1)
+                if n_frames > 1:
+                    loop = img.info.get("loop", 0)
+                    frames, durations = [], []
+                    for frame in ImageSequence.Iterator(img):
+                        frames.append(frame.convert("RGBA").crop((left, upper, right, lower)))
+                        durations.append(frame.info.get("duration", 100))
+                    frames[0].save(
+                        new_path,
+                        format="GIF",
+                        save_all=True,
+                        append_images=frames[1:],
+                        duration=durations,
+                        loop=loop,
+                        optimize=False,
+                    )
+                else:
+                    img.crop((left, upper, right, lower)).save(new_path)
+            return new_path
         except Exception as e:
             logger.error("Error in crop_image_to_rect: %s", e)
             return ""

@@ -1,8 +1,8 @@
 """
-PySide6 port of image/metadata_viewer_window.py -- MetadataViewerWindow.
+MetadataViewerWindow -- read-only image metadata display (PySide6).
 
-Displays raw image metadata in a read-only text area with a copy-to-clipboard
-button.  Singleton pattern: re-uses the existing window when already open.
+Text area with copy-to-clipboard button.  Singleton: reuses existing window
+when already open.
 """
 
 from __future__ import annotations

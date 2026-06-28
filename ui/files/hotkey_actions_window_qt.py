@@ -1,8 +1,8 @@
 """
-PySide6 port of files/hotkey_actions_window.py -- HotkeyActionsWindow.
+HotkeyActionsWindow -- configure hotkey target directories (PySide6).
 
-Displays the configured hotkey actions (T for permanent, 0-9 for numbered)
-with their current target directories and "Set" buttons.
+Displays configured hotkey actions (T for permanent, 0-9 for numbered)
+with their current target directories and Set buttons.
 """
 
 from __future__ import annotations

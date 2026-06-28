@@ -1,9 +1,8 @@
 """
-PySide6 port of files/recent_directory_window.py -- RecentDirectoryWindow.
+RecentDirectoryWindow -- pick from recently used base directories (PySide6).
 
-The non-UI data class ``RecentDirectories`` is imported directly from the
-original module (non-UI class reuse policy).  The window subclasses
-``DirectoryPickerDialog`` for the shared scrollable-directory-list UI.
+Uses ``RecentDirectories`` from ``files.recent_directories`` for history
+and subclasses ``DirectoryPickerDialog`` for the scrollable list UI.
 """
 
 from __future__ import annotations
@@ -45,7 +44,7 @@ class RecentDirectoryWindow(DirectoryPickerDialog):
     N_DIRECTORIES_CUTOFF = 30
 
     # ------------------------------------------------------------------
-    # History helpers (static, same API as original)
+    # History helpers (static)
     # ------------------------------------------------------------------
     @staticmethod
     def get_history_directory(start_index: int = 0) -> Optional[str]:

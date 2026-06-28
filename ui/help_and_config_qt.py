@@ -1,9 +1,8 @@
 """
-PySide6 port of utils/help_and_config.py -- HelpAndConfig window.
+HelpAndConfig -- keyboard shortcuts and editable settings (PySide6).
 
-Displays keyboard shortcut reference tables (Main Window, Move Marks window,
-Image Details, Go To File) on a Help tab and editable config settings on a
-Config tab inside a tabbed dialog.
+Help tab: shortcut reference tables (main window, move marks, media details,
+go to file).  Config tab: editable application settings.
 """
 
 from __future__ import annotations

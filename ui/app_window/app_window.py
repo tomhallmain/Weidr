@@ -1,12 +1,20 @@
 """
 AppWindow -- main application window orchestrator (PySide6).
 
-This is the thin shell described in APP_DECOMPOSITION.md. It owns the
-top-level SmartMainWindow, instantiates all controller objects, assembles
-the AppActions dict, and handles top-level lifecycle events.
+Each AppWindow instance is scoped to a single working base directory
+(``base_dir``); secondary windows are separate instances with their own
+``base_dir``.  The class owns the top-level SmartMainWindow, builds the
+widget layout, instantiates controller objects, assembles the AppActions
+dict, and coordinates top-level lifecycle and cross-cutting state (mode,
+directory changes, navigation).
 
-All substantial logic lives in the controller modules:
-    SidebarPanel, MediaNavigator, SearchController, FileMarksController,
+UI layout is a horizontal splitter: ``SidebarPanel`` on the left (directory
+and search controls) and a stacked media area on the right whose primary
+pane is ``MediaFrame`` (full viewer).  The sidebar is a widget and may be
+hidden at construction time.
+
+Domain logic is delegated to controller modules:
+    MediaNavigator, SearchController, FileMarksController,
     FileOpsController, WindowLauncher, KeyBindingManager, ContextMenuBuilder,
     NotificationController, WindowManager, CacheController.
 """
@@ -104,9 +112,10 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
     """
     Main application window.
 
-    Orchestrates controllers via composition. Each controller receives the
-    dependencies it needs at construction time; the AppWindow itself keeps
-    only cross-cutting state (mode, fullscreen flag, direction).
+    Scoped to a single ``base_dir`` (see module docstring for layout).
+    Orchestrates controllers via composition and also holds window-level
+    state: mode, view mode, search directory, slideshow config, media path,
+    navigation direction, and fullscreen.
 
     Inherits FramelessWindowMixin for a custom draggable title bar, and
     SmartMainWindow for automatic geometry persistence.
@@ -638,7 +647,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         return self.get_base_dir() if self.search_dir is None else self.search_dir
 
     # ------------------------------------------------------------------
-    # Top-level actions (kept on AppWindow per decomposition doc)
+    # Top-level actions
     # ------------------------------------------------------------------
     def set_base_dir(self, base_dir_from_dir_window: Optional[str] = None) -> None:
         """

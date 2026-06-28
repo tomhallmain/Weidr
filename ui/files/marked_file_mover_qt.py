@@ -1,17 +1,12 @@
 """
-PySide6 port of files/marked_file_mover.py -- MarkedFiles.
+MarkedFiles window -- move/copy marked files to target directories (PySide6).
 
-Fully self-contained: all class-level state, persistence, action runners,
-core file-operation logic, and the two-mode window UI (GUI with scrollable
-directory list, and non-GUI translucent mode).
+Self-contained: class-level state, persistence, action runners, core file
+operations, and two-mode UI (scrollable directory list or translucent
+non-GUI mode).
 
-Key improvements over original:
-  - Single-column scrollable list replaces the multi-column grid.
-  - Per-directory **Remove** button for easy target removal.
-  - No keystroke buffering needed (Qt constructor completes before show).
-
-``Action`` data class is imported from the original module (non-UI reuse
-policy).  ``FileActionsWindow`` is imported from the Qt port.
+Uses ``FileAction`` from ``files.file_action`` and
+``FileActionsWindow`` from ``ui.files.file_actions_window_qt``.
 """
 
 from __future__ import annotations

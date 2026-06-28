@@ -55,10 +55,17 @@ def test_get_random_texture_type_is_known():
         assert ImageOps.get_random_texture_type() in ImageOps.TEXTURE_DRAW_TYPES
 
 
-def test_rotate_image_partial_preserves_shape_texture_and_solid(tmp_path):
+def test_rotate_image_partial_preserves_shape_texture_and_solid(tmp_path, monkeypatch):
     src = tmp_path / "sample.png"
     original = _sample_bgr_image()
     cv2.imwrite(str(src), original)
+
+    # Without pinning, get_random_color() has a 25% chance of returning black,
+    # which can make both paths produce near-identical all-dark arrays.
+    monkeypatch.setattr(
+        ImageOps, "get_random_color",
+        staticmethod(lambda true_random_chance=0.75: (200, 100, 50)),
+    )
 
     textured = ImageOps._rotate_image_partial(original.copy(), angle=45, use_texture=True)
     solid = ImageOps._rotate_image_partial(original.copy(), angle=45, use_texture=False)

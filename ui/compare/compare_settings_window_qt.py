@@ -1,13 +1,10 @@
 """
-PySide6 port of compare/compare_settings_window.py -- CompareSettingsWindow.
+CompareSettingsWindow -- configure comparison modes and filters (PySide6).
 
-Singleton dialog per CompareManager for configuring comparison modes,
-filters, and composite search settings.
+Singleton dialog per CompareManager for modes, filters, and composite search.
 
-Non-UI imports:
-  - CompareManager, CombinationLogic from compare.compare_manager
-  - FilterBuilderPanel from ui.compare.filter_builder_panel_qt
-  - AddInstanceDialog from ui.compare.add_instance_dialog_qt
+Non-UI: ``CompareManager``, ``CombinationLogic``, ``FilterBuilderPanel``,
+``AddInstanceDialog``.
 """
 
 from __future__ import annotations

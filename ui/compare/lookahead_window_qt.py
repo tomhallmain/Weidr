@@ -1,11 +1,8 @@
 """
-PySide6 port of the LookaheadWindow from compare/lookahead.py.
+LookaheadWindow -- configure compare lookahead settings (PySide6).
 
-Only the UI class is ported here. The non-UI ``Lookahead`` data class
-is imported from the original module per the reuse policy.
-
-Non-UI imports:
-  - Lookahead from compare.lookahead (reuse policy)
+UI for lookahead options; non-UI data class ``Lookahead`` lives in
+``compare.lookahead``.
 """
 
 from __future__ import annotations

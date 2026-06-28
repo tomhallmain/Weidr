@@ -1,13 +1,10 @@
 """
-PySide6 port of compare/classifier_action_copy_window.py --
-ClassifierActionCopyWindow.
+ClassifierActionCopyWindow -- copy classifier actions and prevalidations (PySide6).
 
-Intermediary dialog for copying ClassifierAction and Prevalidation objects
-into new instances of either type.
+Intermediary dialog for copying ``ClassifierAction`` and ``Prevalidation``
+objects into new instances of either type.
 
-Non-UI imports:
-  - ClassifierAction, Prevalidation from compare.classifier_action
-  - ClassifierActionsManager from compare.classifier_actions_manager
+Non-UI: ``ClassifierAction``, ``Prevalidation``, ``ClassifierActionsManager``.
 """
 
 from __future__ import annotations

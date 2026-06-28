@@ -1,11 +1,8 @@
 """
-PySide6 port of the DirectoryProfileWindow from compare/directory_profile.py.
+DirectoryProfileWindow -- create and edit directory profiles (PySide6).
 
-Only the UI class is ported here. The non-UI ``DirectoryProfile`` data class
-is imported from the original module per the reuse policy.
-
-Non-UI imports:
-  - DirectoryProfile from compare.directory_profile (reuse policy)
+UI for grouping directories into named profiles.  Non-UI logic lives in
+``files.directory_profile.DirectoryProfile``.
 """
 
 from __future__ import annotations

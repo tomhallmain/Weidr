@@ -1,15 +1,23 @@
 """
-QGraphicsView with Ctrl+wheel zoom and drag-pan for static image display.
+QGraphicsView with Ctrl+wheel zoom, drag-pan, and crop-selection mode for
+static image display.
 """
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsView
+from PySide6.QtCore import Qt, QRectF, Signal
+from PySide6.QtGui import QBrush, QColor, QPen
+from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsView
 
 
 class ZoomableGraphicsView(QGraphicsView):
-    """QGraphicsView wrapper that provides modular wheel-zoom and drag-pan."""
+    """QGraphicsView wrapper that provides modular wheel-zoom, drag-pan, and
+    an interactive crop-selection mode."""
+
+    # Emitted when the user releases the mouse after drawing a selection.
+    crop_selection_ready = Signal(QRectF)
+    # Emitted when the user presses Enter/Return to confirm the selection.
+    crop_confirmed = Signal(QRectF)
 
     def __init__(
         self,
@@ -28,16 +36,29 @@ class ZoomableGraphicsView(QGraphicsView):
         self._zoom_factor = 1.0
         self._has_user_zoom = False
         self._interaction_enabled = False
+
+        # Crop-selection state
+        self._crop_mode = False
+        self._crop_anchor = None          # QPointF — scene-coord anchor on press
+        self._crop_rect_item: QGraphicsRectItem | None = None
+        self._crop_rect_scene: QRectF | None = None
+        self._pre_crop_drag_mode = QGraphicsView.DragMode.NoDrag
+
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
         self.setDragMode(QGraphicsView.DragMode.NoDrag)
 
+    # ------------------------------------------------------------------
+    # Pan / zoom interaction
+    # ------------------------------------------------------------------
+
     def set_interaction_enabled(self, enabled: bool) -> None:
         self._interaction_enabled = bool(enabled)
-        if self._interaction_enabled:
-            self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
-        else:
-            self.setDragMode(QGraphicsView.DragMode.NoDrag)
+        if not self._crop_mode:
+            if self._interaction_enabled:
+                self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+            else:
+                self.setDragMode(QGraphicsView.DragMode.NoDrag)
 
     def reset_interaction(self, *, reset_transform: bool = True) -> None:
         if reset_transform:
@@ -63,7 +84,113 @@ class ZoomableGraphicsView(QGraphicsView):
     def is_user_zoom_active(self) -> bool:
         return self._has_user_zoom
 
-    def wheelEvent(self, event):
+    # ------------------------------------------------------------------
+    # Crop-selection mode
+    # ------------------------------------------------------------------
+
+    def start_crop_mode(self) -> None:
+        """Enter crop-selection mode. Disables pan/zoom until cancelled or confirmed."""
+        if self._crop_mode:
+            return
+        self._crop_mode = True
+        self._pre_crop_drag_mode = self.dragMode()
+        self.setDragMode(QGraphicsView.DragMode.NoDrag)
+        self.setCursor(Qt.CursorShape.CrossCursor)
+        self.setFocus()
+
+    def end_crop_mode(self) -> None:
+        """Exit crop-selection mode, clear the overlay, and restore prior drag mode."""
+        if not self._crop_mode:
+            return
+        self._crop_mode = False
+        self._crop_anchor = None
+        self._crop_rect_scene = None
+        self._remove_crop_overlay()
+        self.setDragMode(self._pre_crop_drag_mode)
+        self.unsetCursor()
+
+    def get_crop_rect_scene(self) -> QRectF | None:
+        """Return the current selection rect in scene coordinates, or None."""
+        return self._crop_rect_scene
+
+    def _update_crop_overlay(self) -> None:
+        scene = self.scene()
+        if scene is None or self._crop_rect_scene is None:
+            return
+        if self._crop_rect_item is None:
+            pen = QPen(QColor(255, 255, 255), 1)
+            pen.setCosmetic(True)  # 1 px regardless of zoom level
+            brush = QBrush(QColor(100, 150, 255, 70))
+            item = QGraphicsRectItem()
+            item.setPen(pen)
+            item.setBrush(brush)
+            item.setZValue(10)
+            scene.addItem(item)
+            self._crop_rect_item = item
+        try:
+            self._crop_rect_item.setRect(self._crop_rect_scene)
+        except RuntimeError:
+            # C++ object was deleted externally (e.g. scene.clear()) — recreate next move
+            self._crop_rect_item = None
+
+    def _remove_crop_overlay(self) -> None:
+        if self._crop_rect_item is not None:
+            scene = self.scene()
+            if scene is not None:
+                try:
+                    scene.removeItem(self._crop_rect_item)
+                except RuntimeError:
+                    pass
+            self._crop_rect_item = None
+
+    # ------------------------------------------------------------------
+    # Event overrides
+    # ------------------------------------------------------------------
+
+    def mousePressEvent(self, event) -> None:
+        if self._crop_mode and event.button() == Qt.MouseButton.LeftButton:
+            self._crop_anchor = self.mapToScene(event.position().toPoint())
+            self._crop_rect_scene = QRectF(self._crop_anchor, self._crop_anchor)
+            self._update_crop_overlay()
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event) -> None:
+        if self._crop_mode and self._crop_anchor is not None:
+            current = self.mapToScene(event.position().toPoint())
+            self._crop_rect_scene = QRectF(self._crop_anchor, current).normalized()
+            self._update_crop_overlay()
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event) -> None:
+        if self._crop_mode and event.button() == Qt.MouseButton.LeftButton:
+            if self._crop_rect_scene and not self._crop_rect_scene.isEmpty():
+                self.crop_selection_ready.emit(self._crop_rect_scene)
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
+    def keyPressEvent(self, event) -> None:
+        if self._crop_mode:
+            if event.key() == Qt.Key.Key_Escape:
+                self.end_crop_mode()
+                event.accept()
+                return
+            if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+                if self._crop_rect_scene and not self._crop_rect_scene.isEmpty():
+                    self.crop_confirmed.emit(self._crop_rect_scene)
+                event.accept()
+                return
+        super().keyPressEvent(event)
+
+    def wheelEvent(self, event) -> None:
+        if self._crop_mode:
+            # Swallow wheel events during crop to keep the coordinate system stable.
+            event.accept()
+            return
         if not self._interaction_enabled:
             super().wheelEvent(event)
             return

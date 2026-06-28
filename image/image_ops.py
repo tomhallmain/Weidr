@@ -53,6 +53,19 @@ class ImageOps:
         return new_filepath
 
     @staticmethod
+    def crop_image_to_rect(image_path: str, left: int, upper: int, right: int, lower: int) -> str:
+        """Crop image to the given pixel bounding box and save as a new file."""
+        try:
+            with Image.open(image_path) as img:
+                cropped = img.crop((left, upper, right, lower))
+                new_path = ImageOps.new_filepath(image_path, append_part="_crop")
+                cropped.save(new_path)
+                return new_path
+        except Exception as e:
+            logger.error("Error in crop_image_to_rect: %s", e)
+            return ""
+
+    @staticmethod
     def rotate_image(image_path, right=False):
         try:
             #loading the image into a numpy array 

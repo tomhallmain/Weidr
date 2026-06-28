@@ -343,6 +343,67 @@ class WindowLauncher:
             app_actions=self._app.app_actions,
         )
 
+    def interactive_crop(self, event=None) -> None:
+        """Enter interactive crop mode on the current graphics view (images only)."""
+        import os
+        from image.frame_cache import FrameCache
+        from image.image_ops import ImageOps
+        from utils.media_utils import get_media_type_for_path
+
+        media_path = self._app.media_path
+        if not media_path:
+            return
+        media_type = get_media_type_for_path(media_path)
+        if not media_type.is_image():
+            self._app.notification_ctrl.toast(_("Interactive crop only supports images"))
+            return
+
+        image_path = FrameCache.get_image_path(media_path)
+        media_frame = self._app.media_frame
+        gv = media_frame._graphics_view
+
+        try:
+            gv.crop_confirmed.disconnect()
+        except (RuntimeError, RuntimeWarning):
+            pass
+
+        def _on_confirmed(rect):
+            try:
+                gv.crop_confirmed.disconnect(_on_confirmed)
+            except RuntimeError:
+                pass
+            gv.end_crop_mode()
+            pixmap = media_frame._current_pixmap
+            if pixmap is None or pixmap.isNull():
+                return
+            pix_w, pix_h = pixmap.width(), pixmap.height()
+            img_w, img_h = media_frame.imwidth, media_frame.imheight
+            scale_x = img_w / pix_w if pix_w > 0 else 1.0
+            scale_y = img_h / pix_h if pix_h > 0 else 1.0
+            left   = max(0,     int(rect.x() * scale_x))
+            upper  = max(0,     int(rect.y() * scale_y))
+            right  = min(img_w, int((rect.x() + rect.width())  * scale_x))
+            lower  = min(img_h, int((rect.y() + rect.height()) * scale_y))
+            if right <= left or lower <= upper:
+                self._app.notification_ctrl.toast(_("Crop selection too small"))
+                return
+            new_path = ImageOps.crop_image_to_rect(image_path, left, upper, right, lower)
+            if new_path and os.path.exists(new_path):
+                self._app.app_actions.refresh()
+                self._app.app_actions.success(_("Cropped image"))
+                from ui.image.media_details import MediaDetails
+                MediaDetails.open_temp_media_canvas(
+                    master=self._app,
+                    media_path=new_path,
+                    app_actions=self._app.app_actions,
+                )
+            else:
+                self._app.notification_ctrl.toast(_("Crop failed"))
+
+        gv.crop_confirmed.connect(_on_confirmed)
+        gv.start_crop_mode()
+        self._app.notification_ctrl.toast(_("Drag to select crop, Enter to confirm, Escape to cancel"))
+
     def get_help_and_config(self, event=None) -> None:
         """Open the help and configuration window."""
         try:

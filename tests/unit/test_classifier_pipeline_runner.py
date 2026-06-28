@@ -739,7 +739,7 @@ class TestRunPipelineControlFlow:
             _cat_node("Generate cherry", "_cherry"),
         )
         callbacks = ActionCallbacks(
-            generate_callback=lambda path, suffix=None: generated.append((path, suffix))
+            generate_callback=lambda path, suffix=None, target_dir=None: generated.append((path, suffix))
         )
         run_pipeline(p, "/fake/seed_image.jpg", callbacks)
 
@@ -1477,7 +1477,7 @@ class TestDebouncedGenerateQueue:
     def test_generate_dispatched_directly_without_queue(self):
         from compare.classifier_pipeline_runner import _dispatch_action
         called = []
-        callbacks = ActionCallbacks(generate_callback=lambda path, mod: called.append(path))
+        callbacks = ActionCallbacks(generate_callback=lambda path, mod, target_dir=None: called.append(path))
         _dispatch_action(
             ClassifierActionType.GENERATE, None, "pipe", IMAGE,
             callbacks, None,

@@ -488,6 +488,7 @@ class SearchController:
         modify_call: bool = False,
         edit_suffix: Optional[str] = None,
         suppress_toast: bool = False,
+        target_dir: Optional[str] = None,
     ) -> None:
         """Trigger image generation via SD runner.
 
@@ -519,6 +520,8 @@ class SearchController:
                 run_kwargs["negative_prompt"] = prompt_overrides[1]
             if edit_suffix is not None:
                 run_kwargs["edit_suffix"] = edit_suffix
+            if target_dir is not None:
+                run_kwargs["target_dir"] = target_dir
             sd_client.run(_type, media_path, **run_kwargs)
             MediaDetails.previous_image_generation_adapter_path = media_path
             from files.related_image import clear_generate_gate_cache, clear_base_stem_dir_cache

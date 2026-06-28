@@ -364,6 +364,7 @@ def run_pipeline(
                 callbacks,
                 base_directory,
                 generate_queue=generate_queue,
+                move_to_working_dir=pipeline.move_to_working_dir,
             )
             if should_mark_done and base_stem:
                 processed_stems.add(base_stem)
@@ -378,6 +379,7 @@ def run_pipeline(
                 callbacks,
                 base_directory,
                 generate_queue=generate_queue,
+                move_to_working_dir=pipeline.move_to_working_dir,
             )
             last_etc_action = outcome.action_type
             # Fall through to CONTINUE — advance to the next node.
@@ -399,6 +401,7 @@ def run_pipeline(
                 callbacks,
                 base_directory,
                 generate_queue=generate_queue,
+                move_to_working_dir=pipeline.move_to_working_dir,
             )
             if should_mark_done and base_stem:
                 processed_stems.add(base_stem)
@@ -424,6 +427,7 @@ def run_pipeline(
         callbacks,
         base_directory,
         generate_queue=generate_queue,
+        move_to_working_dir=pipeline.move_to_working_dir,
     )
     if should_mark_done and base_stem:
         processed_stems.add(base_stem)
@@ -992,6 +996,7 @@ def _dispatch_action(
     base_directory: Optional[str],
     *,
     generate_queue: Optional[DebouncedGenerateQueue] = None,
+    move_to_working_dir: bool = True,
 ) -> None:
     if action_type is None:
         return
@@ -1105,10 +1110,11 @@ def _dispatch_action(
             base_message=base_message, action_type=ActionType.GENERATE_IMAGE, is_manual=False,
         )
         if generate_callback:
+            target_dir = (base_directory or os.path.dirname(image_path)) if move_to_working_dir else None
             if generate_queue is not None:
-                generate_queue.submit(generate_callback, image_path, action_modifier or None)
+                generate_queue.submit(generate_callback, image_path, action_modifier or None, target_dir=target_dir)
             else:
-                generate_callback(image_path, action_modifier or None)
+                generate_callback(image_path, action_modifier or None, target_dir=target_dir)
 
     elif action_type == ClassifierActionType.SCRAMBLE:
         _notify(

@@ -844,6 +844,9 @@ class ClassifierPipeline:
     # ImageGenerationType to use for GENERATE actions; None inherits the application's
     # current global generation mode at run time.
     generation_type: Optional[ImageGenerationType] = None
+    # When True (default), GENERATE actions include the current working directory as
+    # the target directory in the sd-runner request so generated files land there.
+    move_to_working_dir: bool = True
     # Optional mapping of human-readable category name → filesystem suffix.
     # e.g. {"Apple": "_apple", "Banana": "_banana"}
     # The suffix values are the identifiers used by BaseStemMatchCondition / UnknownSuffixCondition.
@@ -1273,6 +1276,7 @@ class ClassifierPipeline:
                 if self.applies_to_media_types is not None else None
             ),
             "generation_type": self.generation_type.value if self.generation_type else None,
+            "move_to_working_dir": self.move_to_working_dir,
         }
         if self.category_map:
             d["category_map"] = dict(self.category_map)
@@ -1306,6 +1310,7 @@ class ClassifierPipeline:
             ),
             category_map=raw_map,
             seed_category=d.get("seed_category", ""),
+            move_to_working_dir=d.get("move_to_working_dir", True),
         )
 
 

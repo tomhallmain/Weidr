@@ -95,6 +95,7 @@ class ClassifierAction:
     use_prompts: bool = False
     use_blacklist: bool = False
     use_pseudostatic_dynamic_media: bool = False
+    move_to_same_dir: bool = False
     is_active: bool = True
     use_prototype: bool = False
     prototype_directory: str = ""
@@ -967,7 +968,8 @@ class ClassifierAction:
                     return None
             notify_callback("\n" + base_message + _(" - generating"), base_message=base_message, action_type=ActionType.GENERATE_IMAGE, is_manual=False)
             if generate_callback is not None:
-                generate_callback(image_path, self.related_image_edit_suffix or None)
+                target_dir = os.path.dirname(image_path) if self.move_to_same_dir else None
+                generate_callback(image_path, self.related_image_edit_suffix or None, target_dir=target_dir)
         elif self.action == ClassifierActionType.SCRAMBLE:
             notify_callback("\n" + base_message + _(" - scrambling"), base_message=base_message, action_type=ActionType.SYSTEM, is_manual=False)
             scramble_callback = callbacks.scramble_callback
@@ -1127,6 +1129,7 @@ class ClassifierAction:
             "use_prompts": self.use_prompts,
             "use_blacklist": self.use_blacklist,
             "use_pseudostatic_dynamic_media": self.use_pseudostatic_dynamic_media,
+            "move_to_same_dir": self.move_to_same_dir,
             "use_prototype": self.use_prototype,
             "prototype_directory": self.prototype_directory,
             "negative_prototype_directory": self.negative_prototype_directory,
@@ -1171,6 +1174,8 @@ class ClassifierAction:
             d['use_blacklist'] = False
         if 'use_pseudostatic_dynamic_media' not in d:
             d['use_pseudostatic_dynamic_media'] = False
+        if 'move_to_same_dir' not in d:
+            d['move_to_same_dir'] = False
         if 'is_active' not in d:
             d['is_active'] = True
         if 'use_prototype' not in d:

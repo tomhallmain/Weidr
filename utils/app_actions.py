@@ -102,7 +102,7 @@ class AppActions:
             notify_callback=self.title_notify,
             add_mark_callback=add_mark_callback,
             blur_callback=self.request_media_blur,
-            generate_callback=lambda path, edit_suffix=None: self.run_image_generation(
-                media_path=path, edit_suffix=edit_suffix, suppress_toast=True
+            generate_callback=lambda path, edit_suffix=None, target_dir=None: self.run_image_generation(
+                media_path=path, edit_suffix=edit_suffix, suppress_toast=True, target_dir=target_dir
             ),
         )

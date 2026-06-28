@@ -572,7 +572,7 @@ class ClassifierPipelinesTab(QWidget):
         at end-of-run.  Setting pipeline_generate_batch_size=0 in config produces None.
         """
         all_generates: list[tuple[str, str | None]] = []
-        flush_generates: list[tuple[str, str | None]] = []
+        flush_generates: list[tuple[str, str | None, str | None]] = []
 
         def dispatch_batch() -> None:
             if not flush_generates:
@@ -584,8 +584,9 @@ class ClassifierPipelinesTab(QWidget):
                     'image': path,
                     'append': False,
                     **({'edit_suffix': suffix} if suffix else {}),
+                    **({'target_dir': tdir} if tdir else {}),
                 }
-                for path, suffix in batch
+                for path, suffix, tdir in batch
             ]
             try:
                 from extensions.sd_runner_client import SDRunnerClient
@@ -595,9 +596,9 @@ class ClassifierPipelinesTab(QWidget):
                     "Intermediate generate batch failed; items in all_generates for rerun"
                 )
 
-        def on_generate(path: str, edit_suffix: str | None = None) -> None:
+        def on_generate(path: str, edit_suffix: str | None = None, target_dir: str | None = None) -> None:
             all_generates.append((path, edit_suffix))
-            flush_generates.append((path, edit_suffix))
+            flush_generates.append((path, edit_suffix, target_dir))
             if generate_batch_size is not None and len(flush_generates) >= generate_batch_size:
                 dispatch_batch()
 

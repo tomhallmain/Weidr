@@ -37,7 +37,7 @@ def _action(**kwargs) -> ClassifierAction:
 def _run(ca, generate_cb=None, base_directory=None):
     received = []
     if generate_cb is None:
-        generate_cb = lambda path, suffix: received.append((path, suffix))
+        generate_cb = lambda path, suffix, target_dir=None: received.append((path, suffix))
     result = ca.run_action(
         IMAGE,
         ActionCallbacks(notify_callback=_NOOP, generate_callback=generate_cb),
@@ -87,7 +87,7 @@ class TestGenerateNoSuffix:
         received = []
         _action().run_action(IMAGE, ActionCallbacks(
             notify_callback=_NOOP,
-            generate_callback=lambda path, suffix: received.append(suffix),
+            generate_callback=lambda path, suffix, target_dir=None: received.append(suffix),
         ))
         assert received == [None]
 
@@ -117,7 +117,7 @@ class TestGenerateWithSuffixGate:
         with patch("files.related_image.should_run_generate_action", return_value=True):
             ca.run_action(IMAGE, ActionCallbacks(
                 notify_callback=_NOOP,
-                generate_callback=lambda path, suffix: received.append(suffix),
+                generate_callback=lambda path, suffix, target_dir=None: received.append(suffix),
             ))
         assert received == ["_v2"]
 

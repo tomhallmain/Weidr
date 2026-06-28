@@ -40,6 +40,7 @@ class CompareWrapper:
         self.compare_mode = compare_mode
         self._app_actions = app_actions
 
+        self.prevalidations_running = config.enable_prevalidations
         self.files_grouped = {}
         self.file_groups = {}
         self.files_matched = []
@@ -166,7 +167,7 @@ class CompareWrapper:
     def skip_media(self, media_path):
         if media_path in self.hidden_media:
             return True
-        if config.enable_prevalidations:
+        if self.prevalidations_running:
             if is_audio_for_display(media_path):
                 return False
             if ClassifierActionsManager.is_dynamic_prevalidation_media(media_path):

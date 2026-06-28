@@ -138,7 +138,7 @@ class ContextMenuBuilder:
         # ------------------------------------------------------------------
         prevalidations_toggle_text = (
             _("Disable Prevalidations")
-            if config.enable_prevalidations
+            if app.compare_manager.prevalidations_running
             else _("Enable Prevalidations")
         )
         menu.addAction(

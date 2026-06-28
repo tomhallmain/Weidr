@@ -1,8 +1,10 @@
 """
 Tests for ClassifierManagementWindow.
 
-Covers tab layout (count and labels), last-selected-tab persistence via
-app_info_cache, and the disabled-tab behaviour when prevalidations are off.
+Covers tab layout (count and labels) and last-selected-tab persistence via
+app_info_cache.  All tabs are always enabled regardless of the global
+enable_prevalidations setting; per-directory control is handled via the
+prevalidations_running cache key and CompareManager, not the window UI.
 
 Tab indices expected:
   0  Classifier Actions
@@ -75,26 +77,22 @@ class TestTabLayout:
 
 
 # ---------------------------------------------------------------------------
-# Disabled-tab behaviour when prevalidations are off
+# Tab enabled state — all tabs always accessible
 # ---------------------------------------------------------------------------
 
-class TestDisabledTabs:
-    def test_prevalidations_off_disables_prevalidations_tab(self, qtbot, monkeypatch):
-        monkeypatch.setattr(config, "enable_prevalidations", False)
-        win = _make_window(qtbot)
-        assert not win._tabs.isTabEnabled(2), "Prevalidations tab should be disabled"
-
-    def test_prevalidations_off_leaves_all_other_tabs_enabled(self, qtbot, monkeypatch):
-        monkeypatch.setattr(config, "enable_prevalidations", False)
-        win = _make_window(qtbot)
-        for i in (0, 1, 3, 4, 5):
-            assert win._tabs.isTabEnabled(i), f"Tab {i} should be enabled"
-
-    def test_prevalidations_on_all_tabs_enabled(self, qtbot, monkeypatch):
+class TestTabEnabledState:
+    def test_all_tabs_enabled_when_prevalidations_on(self, qtbot, monkeypatch):
         monkeypatch.setattr(config, "enable_prevalidations", True)
         win = _make_window(qtbot)
         for i in range(win._tabs.count()):
             assert win._tabs.isTabEnabled(i), f"Tab {i} should be enabled"
+
+    def test_all_tabs_enabled_when_prevalidations_off(self, qtbot, monkeypatch):
+        """Global disable no longer gates the window — per-dir cache does that instead."""
+        monkeypatch.setattr(config, "enable_prevalidations", False)
+        win = _make_window(qtbot)
+        for i in range(win._tabs.count()):
+            assert win._tabs.isTabEnabled(i), f"Tab {i} should be enabled regardless of global flag"
 
 
 # ---------------------------------------------------------------------------
@@ -102,9 +100,9 @@ class TestDisabledTabs:
 # ---------------------------------------------------------------------------
 
 class TestTabPersistence:
-    def test_defaults_to_tab_0_when_no_cached_value(self, qtbot):
+    def test_defaults_to_prevalidations_tab_when_no_cached_value(self, qtbot):
         win = _make_window(qtbot)
-        assert win._tabs.currentIndex() == 0
+        assert win._tabs.currentIndex() == 2
 
     def test_restores_saved_tab_index(self, qtbot):
         import ui.compare.classifier_management_window_qt as _cmw

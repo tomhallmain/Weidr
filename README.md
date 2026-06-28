@@ -118,7 +118,7 @@ Prevalidation rules and classifier actions can be configured with:
 </ul>
 </details>
 
-Prevalidations automatically run on media as you browse, while classifier actions can be executed manually on selected media directories when needed. These features are particularly useful for maintaining clean media collections and automating local content filtering, but can be disabled at any time if desired. The classifier action management window allows copying between types of classifier action to reduce the burden of action configuration.
+Prevalidations automatically run on media as you browse, while classifier actions can be executed manually on selected media directories when needed. These features are particularly useful for maintaining clean media collections and automating local content filtering. Prevalidations can be toggled on or off per directory/window via the context menu or the dedicated keybind — the setting is remembered per directory and defaults to the global `enable_prevalidations` config value for directories opened for the first time. The classifier action management window allows copying between types of classifier action to reduce the burden of action configuration.
 
 Classifier models can be added manually or discovered through the in-app model manager, which supports searching Hugging Face repositories, viewing model cards, and installing selected model files.
 

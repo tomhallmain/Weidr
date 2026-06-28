@@ -54,7 +54,11 @@ class CompareManager:
         
         # Instance counter for generating unique IDs
         self._instance_counter: int = 0
-        
+
+        # Per-directory prevalidations toggle (inherits global default; updated via set_base_dir)
+        # Must be set before set_primary_mode, which calls _ensure_wrapper.
+        self._prevalidations_running: bool = config.enable_prevalidations
+
         # Current primary mode (for backward compatibility)
         # Set default to CLIP_EMBEDDING (matches CompareArgs default and config default)
         self._primary_mode: Optional[CompareMode] = None
@@ -275,12 +279,22 @@ class CompareManager:
         return [config for config in self._mode_configs.values() 
                 if config.compare_mode == compare_mode and config.enabled]
     
+    @property
+    def prevalidations_running(self) -> bool:
+        return self._prevalidations_running
+
+    def set_prevalidations_running(self, value: bool) -> None:
+        """Update the prevalidations toggle for all current and future wrappers."""
+        self._prevalidations_running = value
+        for wrapper in self._wrappers.values():
+            wrapper.prevalidations_running = value
+
     def _ensure_wrapper(self, instance_id: str, compare_mode: CompareMode) -> CompareWrapper:
         """Get or create a CompareWrapper for a specific instance."""
         if instance_id not in self._wrappers:
-            self._wrappers[instance_id] = CompareWrapper(
-                self._master, compare_mode, self._app_actions
-            )
+            wrapper = CompareWrapper(self._master, compare_mode, self._app_actions)
+            wrapper.prevalidations_running = self._prevalidations_running
+            self._wrappers[instance_id] = wrapper
         return self._wrappers[instance_id]
     
     # ========== Filtering ==========

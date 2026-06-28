@@ -179,9 +179,6 @@ class WindowLauncher:
         default in ClassifierManagementWindow.__init__.  Subsequent opens
         restore whatever tab the user was on when they last closed the window.
         """
-        from utils.config import config as _config
-        if not _config.enable_prevalidations:
-            return
         try:
             from ui.compare.classifier_management_window_qt import ClassifierManagementWindow
             ClassifierManagementWindow.show_window(self._app, self._app.app_actions)
@@ -468,11 +465,16 @@ class WindowLauncher:
 
     @require_password(ProtectedActions.RUN_PREVALIDATIONS)
     def toggle_prevalidations(self, event=None) -> None:
-        """Toggle prevalidations on or off."""
-        from utils.config import config as _config
-        _config.enable_prevalidations = not _config.enable_prevalidations
+        """Toggle prevalidations on or off for the current base directory."""
+        from utils.app_info_cache import app_info_cache
+        base_dir = self._app.get_base_dir()
+        new_val = not self._app.compare_manager.prevalidations_running
+        if base_dir:
+            app_info_cache.set(base_dir, "prevalidations_running", new_val)
+        self._app.compare_manager.set_prevalidations_running(new_val)
+        self._app.setWindowTitle(self._app.get_title_from_base_dir())
         self._app.notification_ctrl.toast(
-            _("Prevalidations now running") if _config.enable_prevalidations
+            _("Prevalidations now running") if new_val
             else _("Prevalidations turned off")
         )
 

@@ -700,6 +700,10 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             sort_by_text = base_cache.get(new_dir, "sort_by", default_val=None)
             sort_text = base_cache.get(new_dir, "sort", default_val=None)
             compare_mode_text = base_cache.get(new_dir, "compare_mode", default_val=None)
+            prevalidations_running = base_cache.get(
+                new_dir, "prevalidations_running", default_val=config.enable_prevalidations
+            )
+            self.compare_manager.set_prevalidations_running(prevalidations_running)
 
             # Clear stale compare if the directory changed
             if self.compare_manager.has_compare() and new_dir != self.compare_manager.compare().base_dir:
@@ -846,7 +850,10 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         if overwrite:
             relative_dirpath = Utils.get_relative_dirpath(self.base_dir, levels=2)
             self.base_title = _(" Weidr - Media Handler ") + "- " + relative_dirpath
-        return self.base_title
+        title = self.base_title
+        if self.is_prevalidations_suppressed():
+            title += _(" [PV DISABLED]")
+        return title
 
     def _check_large_directory_before_load(self, base_dir: str, threshold: int = 5000) -> bool:
         """
@@ -1096,6 +1103,19 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
     def is_compare_running(self) -> bool:
         """Return True while a compare worker is active in the background."""
         return self.search_ctrl.is_compare_running()
+
+    def is_prevalidations_suppressed(self) -> bool:
+        """Return True when prevalidation rules exist but are disabled for this window.
+
+        This is a quick heuristic for surfacing a warning — the rules may not
+        actually apply to the current base directory, but their presence combined
+        with the per-window disabled state is sufficient signal.
+        """
+        from compare.classifier_actions_manager import ClassifierActionsManager
+        return (
+            not self.compare_manager.prevalidations_running
+            and bool(ClassifierActionsManager.prevalidations)
+        )
 
     def release_media_canvas(self) -> None:
         """Release media resources and flush deferred Qt cleanup work."""

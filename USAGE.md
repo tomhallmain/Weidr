@@ -99,7 +99,7 @@ You can change extension lists in `config.json` or the **type configuration** wi
 
 `trash_folder` defines the target folder for media deletion. If not set, deletion will send the file to your system's default trash folder.
 
-`enable_prevalidations` enables the prevalidation system. When enabled, prevalidation rules will be applied to media before they are shown.
+`enable_prevalidations` sets the global default for the prevalidation system. The active state is tracked per directory/window — each directory inherits this default the first time it is opened, and any subsequent toggle (via the context menu or keybind) is remembered for that directory independently.
 
 `image_classifier_models` defines a list of classifier model definitions used by prevalidations and classifier actions. These can now be managed directly in the UI (see the **Hugging Face Model Manager** section below), but manual config editing is still supported.
 

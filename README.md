@@ -45,6 +45,7 @@ The UI can be used as a media file browser. The following features are available
     <li>In-window media playback controls (timeline and play/pause) for video and animated GIF files</li>
     <li>Apply custom aspect ratio settings to image display</li>
     <li>Capture screenshots from time-based media with a keyboard shortcut and configurable save directory</li>
+    <li>Interactively crop images, animated GIFs, SVGs, PDFs, and videos</li>
     <li><a href="https://github.com/vslavik/diff-pdf" target="_blank">diff-pdf</a> integration for creating visual diffs from two files (including non-PDF)</li>
 </ul>
 </details>

@@ -150,3 +150,112 @@ class TestNavigation:
         qtbot.waitUntil(lambda: win.media_path is not None and "img03" in win.media_path, timeout=2000)
         qtbot.keyClick(win, Qt.Key.Key_Right)
         qtbot.waitUntil(lambda: win.media_path is not None and "img01" in win.media_path, timeout=2000)
+
+
+# ---------------------------------------------------------------------------
+# _check_large_directory_before_load
+# ---------------------------------------------------------------------------
+
+class TestCheckLargeDirectoryBeforeLoad:
+    """Guard against the sort-cache corruption bug.
+
+    The fix ensures file_browser.directory is restored to the original directory
+    BEFORE the confirmation dialog runs.  If the periodic store_info_cache() timer
+    fires while the modal is open, it must target the original directory — not the
+    new large directory whose cache entry is about to be read.
+    """
+
+    def _patch_for_large_dir(self, monkeypatch, window, alert_side_effect):
+        """Patch _gather_files and is_slow_total_files so the check always
+        reaches the confirmation dialog, and replace alert() with *alert_side_effect*."""
+        monkeypatch.setattr(
+            window.file_browser, "_gather_files", lambda files=None: None
+        )
+        monkeypatch.setattr(
+            window.file_browser, "is_slow_total_files", lambda threshold=5000: True
+        )
+        monkeypatch.setattr(window.notification_ctrl, "alert", alert_side_effect)
+
+    def test_directory_restored_before_alert_fires(self, window, tmp_path, monkeypatch):
+        """file_browser.directory must equal the original dir when the modal opens."""
+        old_dir = str(tmp_path / "old")
+        new_dir = str(tmp_path / "new")
+        os.makedirs(old_dir)
+        os.makedirs(new_dir)
+        window.file_browser.directory = old_dir
+
+        dir_during_alert = []
+
+        def _capture(*args, **kwargs):
+            dir_during_alert.append(window.file_browser.directory)
+            return True
+
+        self._patch_for_large_dir(monkeypatch, window, _capture)
+        result = window._check_large_directory_before_load(new_dir)
+
+        assert result is False  # user confirmed
+        assert dir_during_alert == [old_dir], (
+            "file_browser.directory was not restored before the alert; "
+            "a periodic cache-store during the dialog would corrupt the new dir's sort"
+        )
+
+    def test_sort_cache_not_corrupted_by_timer_during_alert(
+        self, window, tmp_path, monkeypatch, isolated_singletons
+    ):
+        """Simulates the periodic timer firing during the dialog.
+
+        Before the fix, file_browser.directory pointed at new_dir during the modal,
+        so a store_info_cache() call would overwrite new_dir's cached sort with the
+        current (old) sort.  After the fix the write targets old_dir only.
+        """
+        old_dir = str(tmp_path / "old")
+        new_dir = str(tmp_path / "new")
+        os.makedirs(old_dir)
+        os.makedirs(new_dir)
+
+        cache = isolated_singletons
+        cache.set(new_dir, "sort_by", SortBy.MODIFY_TIME.get_text())
+
+        window.file_browser.directory = old_dir
+        window.file_browser.sort_by = SortBy.NAME
+
+        def _timer_fires(*args, **kwargs):
+            # Reproduce what store_info_cache() does for the sort key.
+            cache.set(
+                window.file_browser.directory,
+                "sort_by",
+                window.file_browser.get_sort_by().get_text(),
+            )
+            return True
+
+        self._patch_for_large_dir(monkeypatch, window, _timer_fires)
+        window._check_large_directory_before_load(new_dir)
+
+        assert cache.get(new_dir, "sort_by") == SortBy.MODIFY_TIME.get_text(), (
+            "new_dir's cached sort was overwritten during the alert dialog"
+        )
+
+    def test_new_dir_marked_confirmed_after_user_accepts(self, window, tmp_path, monkeypatch):
+        old_dir = str(tmp_path / "old")
+        new_dir = str(tmp_path / "new")
+        os.makedirs(old_dir)
+        os.makedirs(new_dir)
+        window.file_browser.directory = old_dir
+
+        from files.file_browser import FileBrowser
+        self._patch_for_large_dir(monkeypatch, window, lambda *a, **kw: True)
+        window._check_large_directory_before_load(new_dir)
+
+        assert new_dir in FileBrowser.have_confirmed_directories
+
+    def test_returns_true_when_user_cancels(self, window, tmp_path, monkeypatch):
+        old_dir = str(tmp_path / "old")
+        new_dir = str(tmp_path / "new")
+        os.makedirs(old_dir)
+        os.makedirs(new_dir)
+        window.file_browser.directory = old_dir
+
+        self._patch_for_large_dir(monkeypatch, window, lambda *a, **kw: False)
+        result = window._check_large_directory_before_load(new_dir)
+
+        assert result is True

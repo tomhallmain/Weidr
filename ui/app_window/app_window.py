@@ -877,6 +877,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         original_files = self.file_browser._files.copy()
         original_filepaths = self.file_browser.filepaths.copy()
 
+        is_slow = False
         try:
             self.file_browser.directory = base_dir
             # Must match drive to *base_dir*: is_slow_total_files() uses a 5× factor for
@@ -886,24 +887,36 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             if self.file_browser.has_confirmed_dir():
                 return False
             self.file_browser._gather_files()
-            if self.file_browser.is_slow_total_files(threshold=threshold):
-                ok = self.notification_ctrl.alert(
-                    _("Large Directory Detected: {0}").format(base_dir),
-                    _("A directory with a large number of files or a directory with a fair-sized number "
-                      "of files on external storage was detected, which may result in a slow load time. "
-                      "Please confirm you want to load the full directory."),
-                    kind="askokcancel",
-                )
-                if not ok:
-                    logger.info(f"User canceled loading large directory: {base_dir}")
-                    return True
-                self.file_browser.set_dir_confirmed()
+            is_slow = self.file_browser.is_slow_total_files(threshold=threshold)
         finally:
-            # Restore ALL mutated state so the file browser is unchanged
+            # Restore ALL mutated state BEFORE the modal dialog runs.
+            # The alert() below pumps the Qt event loop, which can fire the
+            # periodic store_info_cache() timer.  If file_browser.directory
+            # still pointed at base_dir at that moment, the timer would write
+            # the current (old) sort into base_dir's cache entry, corrupting
+            # the sort that is about to be read back in set_base_dir().
             self.file_browser.directory = original_directory
             self.file_browser._files = original_files
             self.file_browser.filepaths = original_filepaths
             self.file_browser._update_drive_characteristics()
+
+        if not is_slow:
+            return False
+
+        ok = self.notification_ctrl.alert(
+            _("Large Directory Detected: {0}").format(base_dir),
+            _("A directory with a large number of files or a directory with a fair-sized number "
+              "of files on external storage was detected, which may result in a slow load time. "
+              "Please confirm you want to load the full directory."),
+            kind="askokcancel",
+        )
+        if not ok:
+            logger.info(f"User canceled loading large directory: {base_dir}")
+            return True
+        # file_browser.directory is original_directory here (restored above), so
+        # set_dir_confirmed() would mark the wrong dir; append base_dir directly.
+        if base_dir not in self.file_browser.have_confirmed_directories:
+            self.file_browser.have_confirmed_directories.append(base_dir)
         return False
 
     def set_mode(self, mode: Mode, do_update: bool = True) -> None:

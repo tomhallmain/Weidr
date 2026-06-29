@@ -94,7 +94,7 @@ class VideoCropOverlay(QWidget):
             self.update()
 
     def mouseMoveEvent(self, event) -> None:  # noqa: N802
-        if self._anchor and (event.buttons() & Qt.MouseButton.LeftButton):
+        if self._anchor is not None and (event.buttons() & Qt.MouseButton.LeftButton):
             self._sel = QRect(self._anchor, event.position().toPoint()).normalized()
             self.update()
 

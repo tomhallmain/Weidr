@@ -178,6 +178,8 @@ class CompareWrapper:
                     self._app_actions.get_base_dir,
                     self._app_actions.prevalidation_callbacks_with_mark,
                 )
+                from PySide6.QtWidgets import QApplication
+                QApplication.processEvents()
             if prevalidation_action is not None:
                 if prevalidation_action == ClassifierActionType.BLUR:
                     self._app_actions.request_media_blur(media_path)

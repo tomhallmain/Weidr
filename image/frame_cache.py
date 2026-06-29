@@ -582,35 +582,43 @@ class FrameCache:
             cls.cache[media_path] = media_path
 
     @classmethod
-    def _extract_pdf_frame(cls, pdf_path: str) -> None:
-        """
-        Extract the first page from a PDF as an image.
+    def get_pdf_page(cls, pdf_path: str, page_index: int) -> str:
+        """Return the temp JPEG path for *page_index* of *pdf_path*, rendering on demand.
 
-        Args:
-            pdf_path: Path to the PDF file
+        Caches in the temp directory; repeated calls for the same page are instant.
+        Also populates ``media_stats_cache`` with the total page count and, for
+        page 0, updates ``cls.cache[pdf_path]`` so masonry thumbnails stay current.
         """
+        mh = _stable_media_path_hash(pdf_path)
+        page_path = os.path.join(cls.temporary_directory.name, f"{mh}_page_{page_index}.jpg")
+        if os.path.isfile(page_path):
+            if pdf_path not in cls.media_stats_cache:
+                pdf = pdfium.PdfDocument(pdf_path)
+                cls.media_stats_cache[pdf_path] = MediaStats(media_type="pdf", total_items=len(pdf))
+            if page_index == 0:
+                cls.cache[pdf_path] = page_path
+            return page_path
+        pdf = pdfium.PdfDocument(pdf_path)
+        n_pages = len(pdf)
+        if n_pages == 0:
+            raise ValueError(f"PDF has no pages: {pdf_path}")
+        if page_index >= n_pages:
+            raise IndexError(f"Page {page_index} out of range for {pdf_path} ({n_pages} pages)")
+        cls.media_stats_cache[pdf_path] = MediaStats(media_type="pdf", total_items=n_pages)
+        image = pdf[page_index].render(scale=4, fill_color=(255, 255, 255, 255)).to_pil()
+        resolved = cls._write_pil_image(image, page_path, quality=95)
+        if resolved is None:
+            raise OSError(f"Could not write PDF page {page_index} for {pdf_path}")
+        if page_index == 0:
+            cls.cache[pdf_path] = resolved
+        return resolved
+
+    @classmethod
+    def _extract_pdf_frame(cls, pdf_path: str) -> None:
+        """Extract the first page from a PDF as an image (thumbnail path)."""
         try:
             logger.info(f"Extracting first page from PDF: {pdf_path}")
-            pdf = pdfium.PdfDocument(pdf_path)
-            if len(pdf) > 0:
-                cls.media_stats_cache[pdf_path] = MediaStats(
-                    media_type="pdf", total_items=len(pdf)
-                )
-                page = pdf[0]
-                # Use a higher scale for better quality. Fill with white so pages
-                # with no background specification (e.g. Wikipedia print exports)
-                # are readable on dark-themed UIs.
-                image = page.render(scale=4, fill_color=(255, 255, 255, 255)).to_pil()
-                
-                mh = _stable_media_path_hash(pdf_path)
-                frame_path = os.path.join(cls.temporary_directory.name, f"{mh}_first.jpg")
-
-                resolved = cls._write_pil_image(image, frame_path, quality=95)
-                if resolved is None:
-                    raise OSError(f"Could not write or resolve PDF frame path: {frame_path}")
-                cls.cache[pdf_path] = resolved
-            else:
-                raise ValueError("PDF has no pages")
+            cls.get_pdf_page(pdf_path, 0)
         except Exception as e:
             logger.error(f"Error processing PDF {pdf_path}: {str(e)}")
             raise

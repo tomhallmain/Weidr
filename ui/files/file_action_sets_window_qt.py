@@ -535,6 +535,10 @@ class FileActionSetsWindow(SmartWindow):
     # ==================================================================
     # Lifecycle
     # ==================================================================
+    def reject(self) -> None:  # noqa: N802
+        FileActionSetsWindow._instance = None
+        super().reject()
+
     def closeEvent(self, event) -> None:  # noqa: N802
         FileActionSetsWindow._instance = None
         super().closeEvent(event)

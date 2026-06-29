@@ -11,6 +11,13 @@ from PySide6.QtWidgets import QApplication
 def _teardown_media_frame(frame) -> None:
     """Stop timers, tear down VLC without blocking on hung libvlc stop threads, destroy UI."""
     try:
+        pdf_viewer = frame._pdf_viewer
+        if pdf_viewer is not None:
+            frame._pdf_viewer = None
+            pdf_viewer.deactivate()
+    except Exception:
+        pass
+    try:
         frame._invalidate_pending_image_promotion()
     except Exception:
         pass
@@ -20,6 +27,11 @@ def _teardown_media_frame(frame) -> None:
         pass
     try:
         frame._playback_timer.stop()
+    except Exception:
+        pass
+    try:
+        if getattr(frame, "_gif_movie", None) is not None:
+            frame._teardown_gif_movie()
     except Exception:
         pass
     try:

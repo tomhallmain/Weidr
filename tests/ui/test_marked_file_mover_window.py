@@ -148,36 +148,27 @@ class TestMarkedFileMoverProgress:
         progress, callback = MarkedFileMover.build_marks_progress(
             None, self.THRESHOLD, Utils.move_file
         )
-        try:
-            assert progress is not None
-            assert callback is not None
-        finally:
-            if progress:
-                progress.close()
+        qtbot.addWidget(progress)
+        assert progress is not None
+        assert callback is not None
 
     def test_move_label_mentions_moving(self, qtbot):
         """Progress dialog for a move operation says 'Moving'."""
         progress, _ = MarkedFileMover.build_marks_progress(None, 200, Utils.move_file)
-        try:
-            assert "Moving" in progress.labelText()
-        finally:
-            progress.close()
+        qtbot.addWidget(progress)
+        assert "Moving" in progress.labelText()
 
     def test_copy_label_mentions_copying(self, qtbot):
         """Progress dialog for a copy operation says 'Copying'."""
         progress, _ = MarkedFileMover.build_marks_progress(None, 200, Utils.copy_file)
-        try:
-            assert "Copying" in progress.labelText()
-        finally:
-            progress.close()
+        qtbot.addWidget(progress)
+        assert "Copying" in progress.labelText()
 
     def test_generic_label_when_move_func_is_none(self, qtbot):
         """Progress dialog with no move_func falls back to 'Processing'."""
         progress, _ = MarkedFileMover.build_marks_progress(None, 200, None)
-        try:
-            assert "Processing" in progress.labelText()
-        finally:
-            progress.close()
+        qtbot.addWidget(progress)
+        assert "Processing" in progress.labelText()
 
     def test_callback_sets_cancelled_flag_when_dialog_wasCanceled(
         self, qtbot, monkeypatch
@@ -187,12 +178,10 @@ class TestMarkedFileMoverProgress:
         progress, callback = MarkedFileMover.build_marks_progress(
             None, 200, Utils.move_file
         )
-        try:
-            monkeypatch.setattr(progress, "wasCanceled", lambda: True)
-            callback(50, 200)
-            assert MarkedFiles.is_cancelled_action is True
-        finally:
-            progress.close()
+        qtbot.addWidget(progress)
+        monkeypatch.setattr(progress, "wasCanceled", lambda: True)
+        callback(50, 200)
+        assert MarkedFiles.is_cancelled_action is True
 
     def test_callback_does_not_set_cancelled_flag_when_dialog_not_cancelled(
         self, qtbot, monkeypatch
@@ -202,9 +191,7 @@ class TestMarkedFileMoverProgress:
         progress, callback = MarkedFileMover.build_marks_progress(
             None, 200, Utils.move_file
         )
-        try:
-            monkeypatch.setattr(progress, "wasCanceled", lambda: False)
-            callback(50, 200)
-            assert MarkedFiles.is_cancelled_action is False
-        finally:
-            progress.close()
+        qtbot.addWidget(progress)
+        monkeypatch.setattr(progress, "wasCanceled", lambda: False)
+        callback(50, 200)
+        assert MarkedFiles.is_cancelled_action is False

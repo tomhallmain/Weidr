@@ -119,6 +119,8 @@ class KeyBindingManager:
         # ==============================================================
         self._bind("Left", app.media_navigator.show_prev_media)
         self._bind("Right", app.media_navigator.show_next_media)
+        self._bind("Up", lambda: app.media_frame.pdf_navigate(-1))
+        self._bind("Down", lambda: app.media_frame.pdf_navigate(1))
         self._bind("Shift+Backspace", app.media_navigator.go_to_previous_media)
         self._bind(
             "Shift+Left",

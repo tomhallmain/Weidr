@@ -28,7 +28,7 @@ from ui.app_style import AppStyle
 from ui.app_window.media_controls_overlay import MediaControlsOverlay, OVERLAY_HEIGHT
 from utils.config import config
 from utils.logging_setup import get_logger
-from image.frame_cache import FrameCache
+from image.frame_cache import FrameCache, has_imported_pypdfium2
 from image.video_ops import probe_has_video_stream
 from utils.media_utils import (
     MATROSKA_EXTENSIONS,
@@ -219,6 +219,7 @@ class MediaFrame(QFrame):
 
         self._blur_overlay = BlurOverlay(self)
         self._blur_overlay.attach(self)
+        self._pdf_viewer = None  # PdfPageViewer, created on first PDF
         self._pending_blur_path: str | None = None
         self._window_filter_installed = False
         self._mouse_inside = False
@@ -676,6 +677,8 @@ class MediaFrame(QFrame):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._position_overlay()
+        if self._pdf_viewer is not None:
+            self._pdf_viewer.reposition_label()
         if not self.media_displayed or isinstance(self._video_ui, VideoUI):
             return
         if self._gif_movie is not None:
@@ -691,6 +694,8 @@ class MediaFrame(QFrame):
             self.video_stop()
         if self._gif_movie is not None:
             self._teardown_gif_movie()
+        if self._pdf_viewer is not None:
+            self._pdf_viewer.deactivate()
         self.path = path or "."
         if not path or path == "." or path.strip() == "" or not os.path.exists(path):
             self.clear()
@@ -724,11 +729,28 @@ class MediaFrame(QFrame):
             return
         self._video_ui = None
         self.imscale = 1.0
+        if path.lower().endswith('.pdf') and has_imported_pypdfium2:
+            if self._pdf_viewer is None:
+                from ui.app_window.pdf_page_viewer import PdfPageViewer
+                self._pdf_viewer = PdfPageViewer(self)
+            self._pdf_viewer.show(path)
+            return
         try:
             self._show_image_in_view(self.path)
         except Exception as e:
             logger.warning("Failed to render media path=%s error=%s", self.path, e)
             self._show_placeholder(_("Unable to display this file: ") + os.path.basename(path))
+
+    def pdf_navigate(self, delta: int) -> None:
+        """Forward a page-turn request to the active PDF viewer, if any."""
+        if self._pdf_viewer is not None:
+            self._pdf_viewer.navigate(delta)
+
+    def pdf_current_page_path(self) -> str | None:
+        """Return the JPEG path of the currently displayed PDF page, or None."""
+        if self._pdf_viewer is not None:
+            return self._pdf_viewer.current_jpeg_path()
+        return None
 
     def set_fill_canvas(self, fill_canvas: bool):
         self.fill_canvas = bool(fill_canvas)

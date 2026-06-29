@@ -17,6 +17,10 @@ def _format_group_sizes(group_sizes: dict, summary_threshold: int = 8, top_n: in
     return f"{len(group_sizes)} groups; largest: {top}"
 
 
+class CheckpointCorruptedError(ValueError):
+    """Raised when a checkpoint file exists but contains corrupt index data."""
+
+
 class CompareResult:
     # TODO: Re-enable file output in a more usable form — JSON, written only when
     # a config setting (e.g. `save_compare_output`) is enabled, with a filename

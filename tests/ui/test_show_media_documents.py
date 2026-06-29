@@ -41,6 +41,11 @@ class TestShowMediaDocumentPaths:
             return img
 
         monkeypatch.setattr(media_frame, "_load_image_to_qimage", _fake_load)
+        # When pypdfium2 is installed, show_media routes PDF through PdfPageViewer
+        # (bypassing _load_image_to_qimage). Force the fallback path so this test
+        # can verify the mocked-decode contract regardless of pypdfium2 availability.
+        if kind == "pdf":
+            monkeypatch.setattr("ui.app_window.media_frame.has_imported_pypdfium2", False)
         media_frame.show_media(path)
 
         qtbot.waitUntil(lambda: media_frame.media_displayed, timeout=8000)
@@ -73,6 +78,7 @@ class TestShowMediaDocumentPaths:
             raise OSError("simulated decode failure")
 
         monkeypatch.setattr(media_frame, "_load_image_to_qimage", _raise_on_load)
+        monkeypatch.setattr("ui.app_window.media_frame.has_imported_pypdfium2", False)
         media_frame.show_media(path)
         qtbot.waitUntil(
             lambda: not media_frame.media_displayed

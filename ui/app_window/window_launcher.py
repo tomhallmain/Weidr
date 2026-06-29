@@ -226,9 +226,13 @@ class WindowLauncher:
             if FileActionSetsWindow._instance is not None:
                 try:
                     if FileActionSetsWindow._instance.isVisible():
+                        if FileActionSetsWindow._instance.isMinimized():
+                            FileActionSetsWindow._instance.showNormal()
                         FileActionSetsWindow._instance.raise_()
                         FileActionSetsWindow._instance.activateWindow()
                         return
+                    else:
+                        FileActionSetsWindow._instance = None
                 except (RuntimeError, AttributeError):
                     FileActionSetsWindow._instance = None
             window = FileActionSetsWindow(
@@ -404,8 +408,12 @@ class WindowLauncher:
             media_frame._show_image_in_view(tmp_frame)
             source_path = media_path
         else:
-            # Static image, SVG, or PDF — FrameCache already has (or produces) a PNG/JPG.
-            source_path = FrameCache.get_image_path(media_path)
+            # For PDFs, use the currently displayed page rather than always page 0.
+            if media_type == MediaType.PDF:
+                source_path = (self._app.media_frame.pdf_current_page_path()
+                               or FrameCache.get_image_path(media_path))
+            else:
+                source_path = FrameCache.get_image_path(media_path)
 
         def _restore_original():
             if is_animated_gif:

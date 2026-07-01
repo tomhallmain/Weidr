@@ -14,6 +14,7 @@ Covers:
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -494,6 +495,15 @@ class TestVideoBoxAppliesDrawBoxOnVideo:
         monkeypatch.setattr(
             "utils.running_tasks_registry.start_thread",
             lambda fn, use_asyncio=False: fn(),
+        )
+        # start_thread now runs _run() synchronously (above), so it reaches
+        # QTimer.singleShot(0, app, ...) inside this same test call. `app` here
+        # is a MagicMock, not a real QObject; passing it as the Qt receiver
+        # crashes the process with a native access violation instead of a
+        # Python exception. Replace QTimer with a stand-in that just invokes
+        # the callback directly, so no MagicMock ever reaches PySide6/shiboken.
+        monkeypatch.setattr(
+            _mod, "QTimer", SimpleNamespace(singleShot=lambda *args: args[-1]())
         )
 
         frame = MagicMock()

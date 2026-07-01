@@ -53,6 +53,31 @@ class TestCropStaticImage:
         assert result == ""
 
 
+class TestCropDoesNotOverwrite:
+    def test_second_crop_of_same_source_does_not_overwrite_first(self, tmp_path):
+        src = str(tmp_path / "photo.png")
+        Image.new("RGB", (100, 100), color=(10, 20, 30)).save(src)
+
+        first = ImageOps.crop_image_to_rect(src, 0, 0, 50, 50)
+        second = ImageOps.crop_image_to_rect(src, 0, 0, 40, 40)
+
+        assert first != second
+        assert os.path.exists(first)
+        assert os.path.exists(second)
+        with Image.open(first) as out:
+            assert out.size == (50, 50)
+
+    def test_source_file_untouched_by_repeated_crops(self, tmp_path):
+        src = tmp_path / "photo.png"
+        Image.new("RGB", (100, 100), color=(1, 2, 3)).save(src)
+        original_bytes = src.read_bytes()
+
+        ImageOps.crop_image_to_rect(str(src), 0, 0, 50, 50)
+        ImageOps.crop_image_to_rect(str(src), 0, 0, 50, 50)
+
+        assert src.read_bytes() == original_bytes
+
+
 class TestCropAnimatedGif:
     def _make_gif(self, path: str, n_frames: int, size=(50, 50)) -> None:
         frames = [Image.new("RGB", size, color=(i * 30, i * 30, i * 30)) for i in range(n_frames)]

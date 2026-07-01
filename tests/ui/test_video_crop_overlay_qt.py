@@ -22,7 +22,7 @@ from PySide6.QtGui import QKeyEvent, QMouseEvent
 from PySide6.QtWidgets import QApplication
 
 import ui.app_window.video_crop_overlay_qt as _mod
-from ui.app_window.video_crop_overlay_qt import VideoCropOverlay, launch_video_crop
+from ui.app_window.video_crop_overlay_qt import VideoCropOverlay, launch_video_crop, launch_video_box
 
 
 # ---------------------------------------------------------------------------
@@ -411,3 +411,106 @@ class TestLaunchVideoCropOverlay:
         assert overlay is not None
         qtbot.addWidget(overlay)
         assert overlay.isVisible()
+
+
+# ---------------------------------------------------------------------------
+# launch_video_box — reuses _launch_video_rect_selector, same as launch_video_crop
+# ---------------------------------------------------------------------------
+
+class TestLaunchVideoBoxGuards:
+    def test_no_player_shows_toast_and_no_overlay(self, qtbot):
+        frame = MagicMock()
+        frame.vlc_media_player = None
+        app = MagicMock()
+        launch_video_box(frame, "/fake/video.mp4", app)
+        app.notification_ctrl.toast.assert_called_once()
+        assert _mod._active_overlay is None
+
+    def test_zero_video_dimensions_shows_toast_and_no_overlay(self, qtbot):
+        frame = MagicMock()
+        frame.vlc_media_player.video_get_size.return_value = (0, 0)
+        app = MagicMock()
+        launch_video_box(frame, "/fake/video.mp4", app)
+        app.notification_ctrl.toast.assert_called_once()
+        assert _mod._active_overlay is None
+
+
+class TestLaunchVideoBoxOverlay:
+    def _make_frame(self, vid_w=1920, vid_h=1080, mf_w=960, mf_h=540):
+        frame = MagicMock()
+        frame.vlc_media_player.video_get_size.return_value = (vid_w, vid_h)
+        frame.width.return_value = mf_w
+        frame.height.return_value = mf_h
+        frame.mapToGlobal.side_effect = lambda p: QPoint(p.x() + 100, p.y() + 50)
+        return frame
+
+    def test_valid_dimensions_creates_overlay(self, qtbot):
+        frame = self._make_frame()
+        app = MagicMock()
+        launch_video_box(frame, "/fake/video.mp4", app)
+        assert _mod._active_overlay is not None
+        assert isinstance(_mod._active_overlay, VideoCropOverlay)
+        qtbot.addWidget(_mod._active_overlay)
+
+    def test_overlay_size_matches_display_area(self, qtbot):
+        frame = self._make_frame(vid_w=1920, vid_h=1080, mf_w=960, mf_h=540)
+        app = MagicMock()
+        launch_video_box(frame, "/fake/video.mp4", app)
+        overlay = _mod._active_overlay
+        qtbot.addWidget(overlay)
+        assert overlay.width() == 960
+        assert overlay.height() == 540
+
+    def test_pause_called_before_overlay(self, qtbot):
+        frame = self._make_frame()
+        app = MagicMock()
+        launch_video_box(frame, "/fake/video.mp4", app)
+        frame.pause_video_if_playing.assert_called_once()
+        if _mod._active_overlay:
+            qtbot.addWidget(_mod._active_overlay)
+
+    def test_hint_toast_shown(self, qtbot):
+        frame = self._make_frame()
+        app = MagicMock()
+        launch_video_box(frame, "/fake/video.mp4", app)
+        app.notification_ctrl.toast.assert_called_once()
+        if _mod._active_overlay:
+            qtbot.addWidget(_mod._active_overlay)
+
+
+class TestVideoBoxAppliesDrawBoxOnVideo:
+    def test_enter_confirms_and_calls_draw_box_on_video(self, qtbot, monkeypatch):
+        """Confirming a selection under launch_video_box must invoke
+        VideoOps.draw_box_on_video (not crop_video) with the mapped video-pixel rect."""
+        import image.video_ops as _video_ops_mod
+
+        recorded = {}
+
+        def _fake_draw_box(video_path, x, y, w, h, output_path=None):
+            recorded["args"] = (video_path, x, y, w, h)
+            return ""  # no output produced; avoids touching MediaDetails/threading paths
+
+        monkeypatch.setattr(_video_ops_mod.VideoOps, "draw_box_on_video", _fake_draw_box)
+        monkeypatch.setattr(
+            "utils.running_tasks_registry.start_thread",
+            lambda fn, use_asyncio=False: fn(),
+        )
+
+        frame = MagicMock()
+        frame.vlc_media_player.video_get_size.return_value = (1920, 1080)
+        frame.width.return_value = 960
+        frame.height.return_value = 540
+        frame.mapToGlobal.side_effect = lambda p: QPoint(p.x(), p.y())
+        app = MagicMock()
+
+        launch_video_box(frame, "/fake/video.mp4", app)
+        overlay = _mod._active_overlay
+        qtbot.addWidget(overlay)
+
+        _press(overlay, QPoint(50, 50))
+        _move(overlay, QPoint(200, 150))
+        _release(overlay, QPoint(200, 150))
+        _key(overlay, Qt.Key.Key_Return)
+        QApplication.processEvents()
+
+        assert recorded["args"][0] == "/fake/video.mp4"

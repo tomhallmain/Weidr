@@ -135,6 +135,10 @@ class ContextMenuBuilder:
                 _("Interactive Crop…"),
                 lambda: app.window_launcher.interactive_crop(),
             )
+            menu.addAction(
+                _("Interactive Box…"),
+                lambda: app.window_launcher.interactive_box(),
+            )
 
         menu.addSeparator()
 

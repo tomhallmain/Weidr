@@ -141,6 +141,11 @@ class TestShortcutRegistration:
                     "Ctrl+Shift+D", "Ctrl+Return"]:
             assert _has_shortcut(km, key), f"{key!r} not registered"
 
+    def test_interactive_crop_and_box_shortcuts_present(self, window):
+        km = window.key_binding_mgr
+        assert _has_shortcut(km, "Ctrl+Shift+P"), "Interactive Crop shortcut not registered"
+        assert _has_shortcut(km, "Ctrl+Shift+B"), "Interactive Box shortcut not registered"
+
 
 # ---------------------------------------------------------------------------
 # TestGuardIntegration — full Qt path: keyClick + AwareEntry focus state

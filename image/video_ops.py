@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import shutil
 import subprocess
 from enum import Enum
@@ -25,6 +26,7 @@ from typing import Any
 from utils.logging_setup import get_logger
 from utils.media_utils import is_video_file
 from utils.translations import _
+from utils.utils import Utils
 
 logger = get_logger("video_ops")
 
@@ -48,43 +50,24 @@ class VideoOps:
         """
         ``dir/foo.ext`` → ``dir/foo_nometa.ext``, or ``foo_nometa_N.ext`` if that exists.
         """
-        dirname = os.path.dirname(os.path.abspath(video_path)) or "."
-        stem, ext = os.path.splitext(os.path.basename(video_path))
-        base = os.path.join(dirname, f"{stem}_nometa")
-        candidate = f"{base}{ext}"
-        n = 1
-        while os.path.exists(candidate):
-            candidate = f"{base}_{n}{ext}"
-            n += 1
-        return candidate
+        return Utils.unique_sibling_path(video_path, "_nometa")
 
     @staticmethod
     def default_output_path_copy_without_audio(video_path: str) -> str:
         """
         ``dir/foo.ext`` → ``dir/foo_noaudio.ext``, or ``foo_noaudio_N.ext`` if that exists.
         """
-        dirname = os.path.dirname(os.path.abspath(video_path)) or "."
-        stem, ext = os.path.splitext(os.path.basename(video_path))
-        base = os.path.join(dirname, f"{stem}_noaudio")
-        candidate = f"{base}{ext}"
-        n = 1
-        while os.path.exists(candidate):
-            candidate = f"{base}_{n}{ext}"
-            n += 1
-        return candidate
+        return Utils.unique_sibling_path(video_path, "_noaudio")
 
     @staticmethod
     def default_output_path_crop(video_path: str) -> str:
         """``dir/foo.ext`` → ``dir/foo_crop.ext`` (collision-safe)."""
-        dirname = os.path.dirname(os.path.abspath(video_path)) or "."
-        stem, ext = os.path.splitext(os.path.basename(video_path))
-        base = os.path.join(dirname, f"{stem}_crop")
-        candidate = f"{base}{ext}"
-        n = 1
-        while os.path.exists(candidate):
-            candidate = f"{base}_{n}{ext}"
-            n += 1
-        return candidate
+        return Utils.unique_sibling_path(video_path, "_crop")
+
+    @staticmethod
+    def default_output_path_box(video_path: str) -> str:
+        """``dir/foo.ext`` → ``dir/foo_box.ext`` (collision-safe)."""
+        return Utils.unique_sibling_path(video_path, "_box")
 
     @staticmethod
     def crop_video(
@@ -149,6 +132,78 @@ class VideoOps:
             raise RuntimeError(f"ffmpeg crop failed{detail}")
 
         logger.info("Wrote cropped video: %s", out_path)
+        return out_path
+
+    @staticmethod
+    def _random_box_color() -> str:
+        """Random opaque fill color in FFmpeg ``0xRRGGBB`` form."""
+        return "0x{:02X}{:02X}{:02X}".format(*(random.randint(0, 255) for _ in range(3)))
+
+    @staticmethod
+    def draw_box_on_video(
+        video_path: str,
+        x: int,
+        y: int,
+        w: int,
+        h: int,
+        output_path: str | None = None,
+    ) -> str:
+        """Write a new sibling file with a solid random-color box painted over the
+        rectangle (x, y, w, h) for the whole duration of the video.
+
+        Uses FFmpeg's ``drawbox`` filter (filled) with libx264 re-encode.
+        Returns the output path on success.
+        Raises RuntimeError if ffmpeg is missing, inputs are invalid, or ffmpeg fails.
+        """
+        if not is_video_file(video_path):
+            raise RuntimeError("Not a video file")
+        if w <= 0 or h <= 0:
+            raise RuntimeError(f"Invalid box dimensions: w={w} h={h}")
+        ffmpeg = VideoOps.find_ffmpeg_executable()
+        if not ffmpeg:
+            raise RuntimeError("ffmpeg not found on PATH")
+
+        out_path = output_path or VideoOps.default_output_path_box(video_path)
+        if os.path.exists(out_path):
+            try:
+                os.unlink(out_path)
+            except OSError as e:
+                raise RuntimeError(f"Could not remove existing output file: {e}") from e
+
+        color = VideoOps._random_box_color()
+        cmd = [
+            ffmpeg,
+            "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
+            "-i", video_path,
+            "-vf", f"drawbox=x={x}:y={y}:w={w}:h={h}:color={color}:t=fill",
+            "-c:v", "libx264", "-crf", "18", "-preset", "fast",
+            "-c:a", "copy",
+            out_path,
+        ]
+        try:
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                stdin=subprocess.DEVNULL,
+                timeout=3600,
+            )
+        except subprocess.TimeoutExpired as e:
+            try:
+                if os.path.isfile(out_path):
+                    os.unlink(out_path)
+            except OSError:
+                pass
+            raise RuntimeError("ffmpeg timed out while drawing box on video") from e
+        except OSError as e:
+            raise RuntimeError(f"Failed to run ffmpeg: {e}") from e
+
+        if proc.returncode != 0:
+            stderr = (proc.stderr or proc.stdout or "").strip()
+            detail = f": {stderr}" if stderr else ""
+            raise RuntimeError(f"ffmpeg box draw failed{detail}")
+
+        logger.info("Wrote video with box: %s", out_path)
         return out_path
 
     @staticmethod

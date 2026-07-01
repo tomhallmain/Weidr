@@ -228,6 +228,23 @@ class Utils:
         return s[:max_left_index] + "..." + s[min_right_index:]
 
     @staticmethod
+    def unique_sibling_path(path: str, append_part: str) -> str:
+        """Build a collision-safe sibling path: ``dir/stem<append_part>.ext``.
+
+        If that path already exists, ``_1``, ``_2``, ... is appended until a free
+        path is found, so repeated operations on the same source (e.g. cropping
+        the same image/video twice) never overwrite a previous output.
+        """
+        dirname = os.path.dirname(os.path.abspath(path)) or "."
+        stem, ext = os.path.splitext(os.path.basename(path))
+        candidate = os.path.join(dirname, f"{stem}{append_part}{ext}")
+        n = 1
+        while os.path.exists(candidate):
+            candidate = os.path.join(dirname, f"{stem}{append_part}_{n}{ext}")
+            n += 1
+        return candidate
+
+    @staticmethod
     # NOTE: Maybe want to raise Exception if either existing filepath or target dir are not valid
     def move_file(existing_filepath, target_dir, overwrite_existing=False):
         new_filepath = os.path.join(

@@ -120,10 +120,20 @@ class VideoCropOverlay(QWidget):
         super().keyPressEvent(event)
 
 
-def launch_video_crop(media_frame: MediaFrame, media_path: str, app: AppWindow) -> None:
-    """Pause VLC, compute the video display rect, and open a VideoCropOverlay above it."""
-    from image.video_ops import VideoOps
-
+def _launch_video_rect_selector(
+    media_frame: MediaFrame,
+    media_path: str,
+    app: AppWindow,
+    *,
+    apply_fn: Callable[[str, int, int, int, int], str],
+    no_output_msg: str,
+    success_msg: str,
+    toast_msg: str,
+) -> None:
+    """Shared setup for a video rect-selection action: pause VLC, compute the video
+    display rect, open a VideoCropOverlay above it, and run
+    ``apply_fn(media_path, x, y, w, h)`` on a background thread once confirmed.
+    """
     media_frame.pause_video_if_playing()
 
     player = media_frame.vlc_media_player
@@ -148,10 +158,10 @@ def launch_video_crop(media_frame: MediaFrame, media_path: str, app: AppWindow) 
     geo = QRect(origin, QSize(disp_w, disp_h))
     inv_scale = 1.0 / disp_scale   # overlay pixels → video pixels
 
-    def _do_crop(x: int, y: int, w: int, h: int) -> None:
+    def _do_action(x: int, y: int, w: int, h: int) -> None:
         def _run() -> None:
             try:
-                new_path = VideoOps.crop_video(media_path, x, y, w, h)
+                new_path = apply_fn(media_path, x, y, w, h)
             except RuntimeError as exc:
                 _msg = str(exc)
                 QTimer.singleShot(0, app, lambda: app.app_actions.warn(_msg))
@@ -160,7 +170,7 @@ def launch_video_crop(media_frame: MediaFrame, media_path: str, app: AppWindow) 
                 _p = new_path
                 def _on_done() -> None:
                     app.app_actions.refresh()
-                    app.app_actions.success(_("Video cropped"))
+                    app.app_actions.success(success_msg)
                     from ui.image.media_details import MediaDetails
                     MediaDetails.open_temp_media_canvas(
                         master=app, media_path=_p,
@@ -168,16 +178,39 @@ def launch_video_crop(media_frame: MediaFrame, media_path: str, app: AppWindow) 
                     )
                 QTimer.singleShot(0, app, _on_done)
             else:
-                QTimer.singleShot(0, app, lambda: app.app_actions.warn(
-                    _("Video crop produced no output")
-                ))
+                QTimer.singleShot(0, app, lambda: app.app_actions.warn(no_output_msg))
         from utils.running_tasks_registry import start_thread
         start_thread(_run, use_asyncio=False)
 
     logger.debug(
-        "launch_video_crop: vid=%dx%d disp=%dx%d inv_scale=%.4f geo=%s",
+        "launch_video_rect_selector: vid=%dx%d disp=%dx%d inv_scale=%.4f geo=%s",
         vid_w, vid_h, disp_w, disp_h, inv_scale, geo,
     )
-    overlay = VideoCropOverlay(geo, vid_w, vid_h, inv_scale, _do_crop)
+    overlay = VideoCropOverlay(geo, vid_w, vid_h, inv_scale, _do_action)
     _set_active(overlay)
-    app.notification_ctrl.toast(_("Drag to select crop, Enter to confirm, Escape to cancel"))
+    app.notification_ctrl.toast(toast_msg)
+
+
+def launch_video_crop(media_frame: MediaFrame, media_path: str, app: AppWindow) -> None:
+    """Pause VLC, compute the video display rect, and open a VideoCropOverlay above it for cropping."""
+    from image.video_ops import VideoOps
+    _launch_video_rect_selector(
+        media_frame, media_path, app,
+        apply_fn=VideoOps.crop_video,
+        no_output_msg=_("Video crop produced no output"),
+        success_msg=_("Video cropped"),
+        toast_msg=_("Drag to select crop, Enter to confirm, Escape to cancel"),
+    )
+
+
+def launch_video_box(media_frame: MediaFrame, media_path: str, app: AppWindow) -> None:
+    """Pause VLC, compute the video display rect, and open a VideoCropOverlay above it for
+    painting a random color box, reusing the same overlay as :func:`launch_video_crop`."""
+    from image.video_ops import VideoOps
+    _launch_video_rect_selector(
+        media_frame, media_path, app,
+        apply_fn=VideoOps.draw_box_on_video,
+        no_output_msg=_("Video box draw produced no output"),
+        success_msg=_("Video box added"),
+        toast_msg=_("Drag to select box location, Enter to confirm, Escape to cancel"),
+    )

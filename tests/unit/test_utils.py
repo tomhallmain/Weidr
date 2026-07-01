@@ -268,6 +268,55 @@ class TestCalculateHash:
         assert len(h) == 64  # SHA-256 hex digest
 
 
+class TestUniqueSiblingPath:
+    def test_contains_append_part(self, tmp_path):
+        src = str(tmp_path / "photo.png")
+        open(src, "w").close()
+        out = Utils.unique_sibling_path(src, "_crop")
+        assert "_crop" in out
+
+    def test_preserves_extension(self, tmp_path):
+        src = str(tmp_path / "clip.mkv")
+        open(src, "w").close()
+        out = Utils.unique_sibling_path(src, "_box")
+        assert out.endswith(".mkv")
+
+    def test_sibling_of_source(self, tmp_path):
+        src = str(tmp_path / "clip.mp4")
+        open(src, "w").close()
+        out = Utils.unique_sibling_path(src, "_crop")
+        assert os.path.dirname(os.path.abspath(out)) == os.path.dirname(os.path.abspath(src))
+
+    def test_no_collision_returns_bare_suffix(self, tmp_path):
+        src = str(tmp_path / "photo.png")
+        open(src, "w").close()
+        out = Utils.unique_sibling_path(src, "_crop")
+        assert out == str(tmp_path / "photo_crop.png")
+
+    def test_collision_avoidance(self, tmp_path):
+        src = str(tmp_path / "clip.mp4")
+        open(src, "w").close()
+        first = Utils.unique_sibling_path(src, "_crop")
+        open(first, "w").close()
+        second = Utils.unique_sibling_path(src, "_crop")
+        assert second != first
+        assert not os.path.exists(second)
+
+    def test_increments_past_multiple_collisions(self, tmp_path):
+        src = str(tmp_path / "clip.mp4")
+        open(src, "w").close()
+        open(tmp_path / "clip_crop.mp4", "w").close()
+        open(tmp_path / "clip_crop_1.mp4", "w").close()
+        out = Utils.unique_sibling_path(src, "_crop")
+        assert out == str(tmp_path / "clip_crop_2.mp4")
+
+    def test_does_not_touch_source_file(self, tmp_path):
+        src = tmp_path / "photo.png"
+        src.write_bytes(b"original")
+        Utils.unique_sibling_path(str(src), "_crop")
+        assert src.read_bytes() == b"original"
+
+
 class TestRoundUp:
     def test_already_multiple(self):
         assert Utils.round_up(10, 5) == 10

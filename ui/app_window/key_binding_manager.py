@@ -344,6 +344,7 @@ class KeyBindingManager:
             lambda: MarkedFileMover.undo_move_marks(None, app.app_actions),
         )
         self._bind("Ctrl+Shift+P", app.window_launcher.interactive_crop, guarded=False)
+        self._bind("Ctrl+Shift+B", app.window_launcher.interactive_box, guarded=False)
 
         # ==============================================================
         # Search presets / mode

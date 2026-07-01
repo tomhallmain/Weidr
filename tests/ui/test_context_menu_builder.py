@@ -71,6 +71,8 @@ _SAVE_WITHOUT_AUDIO     = _("Save copy without audio")
 _SAVE_WITHOUT_METADATA  = _("Save copy without metadata")
 _CUT_VIDEO              = _("Cut video at current position…")
 _RUN_PREVALIDATIONS_DIR = _("Run Prevalidations on Directory")
+_INTERACTIVE_CROP       = _("Interactive Crop…")
+_INTERACTIVE_BOX        = _("Interactive Box…")
 
 _SET_RELATED  = _("Set Marked File as Related Image of Current")
 
@@ -91,6 +93,8 @@ class TestImageMediaType:
         assert _REDO_EDIT_SUFFIX in actions
         assert not _VIDEO_ONLY & set(actions)
         assert _DIR_SCOPED <= set(actions)
+        assert _INTERACTIVE_CROP in actions
+        assert _INTERACTIVE_BOX in actions
 
 
 class TestVideoMediaType:
@@ -102,6 +106,8 @@ class TestVideoMediaType:
         assert _OPEN_IN_GIMP not in actions
         assert not _IMAGE_ONLY & set(actions)
         assert _DIR_SCOPED <= set(actions)
+        assert _INTERACTIVE_CROP in actions
+        assert _INTERACTIVE_BOX in actions
 
 
 class TestGifMediaType:
@@ -110,6 +116,8 @@ class TestGifMediaType:
         assert _OPEN_IN_GIMP in actions
         assert not _IMAGE_ONLY & set(actions)
         assert not _VIDEO_ONLY & set(actions)
+        assert _INTERACTIVE_CROP in actions
+        assert _INTERACTIVE_BOX in actions
 
 
 class TestSvgMediaType:
@@ -118,6 +126,8 @@ class TestSvgMediaType:
         assert _OPEN_IN_GIMP in actions
         assert not _IMAGE_ONLY & set(actions)
         assert not _VIDEO_ONLY & set(actions)
+        assert _INTERACTIVE_CROP in actions
+        assert _INTERACTIVE_BOX in actions
 
 
 class TestPdfMediaType:
@@ -127,6 +137,8 @@ class TestPdfMediaType:
         assert not _IMAGE_ONLY & set(actions)
         assert not _VIDEO_ONLY & set(actions)
         assert _DIR_SCOPED <= set(actions)
+        assert _INTERACTIVE_CROP in actions
+        assert _INTERACTIVE_BOX in actions
 
 
 class TestSetAsRelatedImageMenuItem:

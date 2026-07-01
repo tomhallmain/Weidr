@@ -348,23 +348,30 @@ class WindowLauncher:
             app_actions=self._app.app_actions,
         )
 
-    def interactive_crop(self, event=None) -> None:
-        """Enter interactive crop mode for the current media (image, GIF, SVG, PDF, or video)."""
+    def _setup_rect_selection(self, media_path: str, video_launch_fn) -> Optional[tuple]:
+        """Shared preamble for interactive rect-selection actions (crop / box).
+
+        Validates media-type support, tears down any previous QGraphicsView
+        crop-selection session, and either dispatches to *video_launch_fn* for
+        video (returning None) or resolves the pixel-space source path for
+        static media (image, animated GIF, SVG, PDF).
+
+        Returns ``(gv, media_frame, source_path, media_type, restore_original)``
+        for static media, or ``None`` if handled elsewhere / unsupported / on error.
+        """
         import os
         import tempfile
         from PIL import Image
         from image.frame_cache import FrameCache
-        from image.image_ops import ImageOps
         from utils.media_utils import get_media_type_for_path
         from utils.constants import MediaType
 
-        media_path = self._app.media_path
         if not media_path:
-            return
+            return None
         media_type = get_media_type_for_path(media_path)
         if not media_type.is_interactive_crop_supported():
             self._app.notification_ctrl.toast(_("Interactive crop not supported for this media type"))
-            return
+            return None
 
         media_frame = self._app.media_frame
         gv = media_frame._graphics_view
@@ -388,9 +395,8 @@ class WindowLauncher:
 
         # Video: handled by a separate overlay module — see video_crop_overlay_qt.py.
         if media_type.is_video():
-            from ui.app_window.video_crop_overlay_qt import launch_video_crop
-            launch_video_crop(media_frame, media_path, self._app)
-            return
+            video_launch_fn(media_frame, media_path, self._app)
+            return None
 
         # -------------------------------------------------------------------
         # Static media (image, animated GIF, SVG, PDF): QGraphicsView crop mode
@@ -404,7 +410,7 @@ class WindowLauncher:
                     _img.copy().save(tmp_frame, format="PNG")
             except Exception as e:
                 self._app.notification_ctrl.toast(_("Could not read GIF frame: ") + str(e))
-                return
+                return None
             media_frame._show_image_in_view(tmp_frame)
             source_path = media_path
         else:
@@ -419,7 +425,32 @@ class WindowLauncher:
             if is_animated_gif:
                 media_frame.show_media(media_path)
 
-        def _disconnect_crop_signals():
+        return gv, media_frame, source_path, media_type, _restore_original
+
+    def _run_static_rect_action(
+        self,
+        gv,
+        media_frame,
+        media_path: str,
+        source_path: str,
+        media_type,
+        restore_original,
+        *,
+        apply_fn,
+        output_suffix: str,
+        too_small_msg: str,
+        success_msg: str,
+        failed_msg: str,
+    ) -> None:
+        """Wire crop_confirmed/crop_cancelled for one rect-selection action (crop / box)
+        on static media. *apply_fn* receives (source_path, left, upper, right, lower)
+        and returns the new file path (or "" on failure).
+        """
+        import os
+        from utils.constants import MediaType
+        from utils.utils import Utils
+
+        def _disconnect_signals():
             for sig, slot in ((gv.crop_confirmed, _on_confirmed), (gv.crop_cancelled, _on_cancelled)):
                 try:
                     sig.disconnect(slot)
@@ -427,16 +458,16 @@ class WindowLauncher:
                     pass
 
         def _on_cancelled():
-            _disconnect_crop_signals()
-            _restore_original()
+            _disconnect_signals()
+            restore_original()
 
         def _on_confirmed(rect):
-            _disconnect_crop_signals()
+            _disconnect_signals()
             gv.end_crop_mode()
 
             pixmap = media_frame._current_pixmap
             if pixmap is None or pixmap.isNull():
-                _restore_original()
+                restore_original()
                 return
             pix_w, pix_h = pixmap.width(), pixmap.height()
             img_w = media_frame.imwidth if media_frame.imwidth > 0 else pix_w
@@ -448,20 +479,15 @@ class WindowLauncher:
             right = min(img_w, int((rect.x() + rect.width())  * scale_x))
             lower = min(img_h, int((rect.y() + rect.height()) * scale_y))
             if right <= left or lower <= upper:
-                self._app.notification_ctrl.toast(_("Crop selection too small"))
-                _restore_original()
+                self._app.notification_ctrl.toast(too_small_msg)
+                restore_original()
                 return
 
-            new_path = ImageOps.crop_image_to_rect(source_path, left, upper, right, lower)
+            new_path = apply_fn(source_path, left, upper, right, lower)
 
             if media_type in (MediaType.SVG, MediaType.PDF) and new_path and os.path.exists(new_path):
                 # Output lives next to the temp PNG; move it beside the original file.
-                orig_base = os.path.splitext(media_path)[0]
-                sibling = orig_base + "_crop.png"
-                n = 1
-                while os.path.exists(sibling):
-                    sibling = f"{orig_base}_crop_{n}.png"
-                    n += 1
+                sibling = Utils.unique_sibling_path(media_path, output_suffix)
                 try:
                     os.replace(new_path, sibling)
                     new_path = sibling
@@ -470,19 +496,58 @@ class WindowLauncher:
 
             if new_path and os.path.exists(new_path):
                 self._app.app_actions.refresh()
-                self._app.app_actions.success(_("Cropped"))
+                self._app.app_actions.success(success_msg)
                 from ui.image.media_details import MediaDetails
                 MediaDetails.open_temp_media_canvas(
                     master=self._app, media_path=new_path,
                     app_actions=self._app.app_actions,
                 )
             else:
-                self._app.notification_ctrl.toast(_("Crop failed"))
+                self._app.notification_ctrl.toast(failed_msg)
 
         gv.crop_confirmed.connect(_on_confirmed)
         gv.crop_cancelled.connect(_on_cancelled)
         gv.start_crop_mode()
+
+    def interactive_crop(self, event=None) -> None:
+        """Enter interactive crop mode for the current media (image, GIF, SVG, PDF, or video)."""
+        from image.image_ops import ImageOps
+        from ui.app_window.video_crop_overlay_qt import launch_video_crop
+
+        ctx = self._setup_rect_selection(self._app.media_path, launch_video_crop)
+        if ctx is None:
+            return
+        gv, media_frame, source_path, media_type, restore_original = ctx
+        self._run_static_rect_action(
+            gv, media_frame, self._app.media_path, source_path, media_type, restore_original,
+            apply_fn=ImageOps.crop_image_to_rect,
+            output_suffix="_crop",
+            too_small_msg=_("Crop selection too small"),
+            success_msg=_("Cropped"),
+            failed_msg=_("Crop failed"),
+        )
         self._app.notification_ctrl.toast(_("Drag to select crop, Enter to confirm, Escape to cancel"))
+
+    def interactive_box(self, event=None) -> None:
+        """Enter interactive box mode for the current media (image, GIF, SVG, PDF, or video):
+        paint a random color/pattern box over a selected rectangle, reusing the same
+        rect-selection handlers as :meth:`interactive_crop`."""
+        from image.image_ops import ImageOps
+        from ui.app_window.video_crop_overlay_qt import launch_video_box
+
+        ctx = self._setup_rect_selection(self._app.media_path, launch_video_box)
+        if ctx is None:
+            return
+        gv, media_frame, source_path, media_type, restore_original = ctx
+        self._run_static_rect_action(
+            gv, media_frame, self._app.media_path, source_path, media_type, restore_original,
+            apply_fn=ImageOps.draw_box_at_rect,
+            output_suffix="_box",
+            too_small_msg=_("Box selection too small"),
+            success_msg=_("Box added"),
+            failed_msg=_("Box draw failed"),
+        )
+        self._app.notification_ctrl.toast(_("Drag to select box location, Enter to confirm, Escape to cancel"))
 
     def get_help_and_config(self, event=None) -> None:
         """Open the help and configuration window."""

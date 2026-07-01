@@ -838,11 +838,17 @@ class CompareWrapper:
             compare_result._dir_files_hash.remove(filepath)
         except (ValueError, AttributeError):
             pass
-        active_group_indexes = set(self.file_groups.keys())
-        compare_result.files_grouped = {
-            k: v for k, v in compare_result.files_grouped.items()
-            if v[0] in active_group_indexes
-        }
+        if self._compare.is_run_search:
+            # Search-mode files_grouped is keyed by filepath with a plain score
+            # value (not a (group_index, score) tuple), so just drop the deleted
+            # file's own entry rather than indexing into the score with v[0].
+            compare_result.files_grouped.pop(filepath, None)
+        else:
+            active_group_indexes = set(self.file_groups.keys())
+            compare_result.files_grouped = {
+                k: v for k, v in compare_result.files_grouped.items()
+                if v[0] in active_group_indexes
+            }
         compare_result.prune_stale_supergroups()
         try:
             compare_result.store()

@@ -187,6 +187,102 @@ class ImageOps:
             return ""
 
     @staticmethod
+    def _polygon_mask(size: tuple[int, int], points) -> "PIL.Image.Image":
+        """Grayscale ("L") mask the size of the image: 255 inside the polygon
+        defined by *points* (pixel coordinates), 0 elsewhere."""
+        mask = PIL.Image.new("L", size, 0)
+        ImageDraw.Draw(mask).polygon([tuple(p) for p in points], fill=255)
+        return mask
+
+    @staticmethod
+    def draw_box_at_polygon(image_path: str, points) -> str:
+        """Paint a random color/pattern fill inside the given polygon (a list of
+        (x, y) pixel coordinates) and save as a new sibling file. Does not
+        modify *image_path*. The freeform counterpart to :meth:`draw_box_at_rect`.
+
+        Animated GIFs are handled frame-by-frame with original durations preserved.
+        """
+        try:
+            from PIL import ImageSequence
+            from utils.utils import Utils
+            new_path = Utils.unique_sibling_path(image_path, "_box")
+            with Image.open(image_path) as img:
+                n_frames = getattr(img, "n_frames", 1)
+                if n_frames > 1:
+                    loop = img.info.get("loop", 0)
+                    frames, durations = [], []
+                    for frame in ImageSequence.Iterator(img):
+                        frame_rgba = frame.convert("RGBA")
+                        mask = ImageOps._polygon_mask(frame_rgba.size, points)
+                        fill = ImageOps.generate_box_fill_image(*frame_rgba.size).convert("RGBA")
+                        frames.append(Image.composite(fill, frame_rgba, mask))
+                        durations.append(frame.info.get("duration", 100))
+                    frames[0].save(
+                        new_path,
+                        format="GIF",
+                        save_all=True,
+                        append_images=frames[1:],
+                        duration=durations,
+                        loop=loop,
+                        optimize=False,
+                    )
+                else:
+                    src = img.convert("RGB")
+                    mask = ImageOps._polygon_mask(src.size, points)
+                    fill = ImageOps.generate_box_fill_image(*src.size)
+                    Image.composite(fill, src, mask).save(new_path)
+            return new_path
+        except Exception as e:
+            logger.error("Error in draw_box_at_polygon: %s", e)
+            return ""
+
+    @staticmethod
+    def draw_background_box_at_polygon(image_path: str, points) -> str:
+        """Paint a random color/pattern fill everywhere *outside* the given
+        polygon (a list of (x, y) pixel coordinates) -- the "background" --
+        leaving the polygon's interior unchanged, and save as a new sibling
+        file. Does not modify *image_path*. The freeform counterpart to
+        :meth:`draw_background_box_at_rect`.
+
+        Animated GIFs are handled frame-by-frame with original durations preserved.
+        """
+        try:
+            from PIL import ImageSequence
+            from utils.utils import Utils
+            new_path = Utils.unique_sibling_path(image_path, "_bgbox")
+            with Image.open(image_path) as img:
+                n_frames = getattr(img, "n_frames", 1)
+                if n_frames > 1:
+                    loop = img.info.get("loop", 0)
+                    frames, durations = [], []
+                    for frame in ImageSequence.Iterator(img):
+                        frame_rgba = frame.convert("RGBA")
+                        mask = ImageOps._polygon_mask(frame_rgba.size, points)
+                        inverted_mask = mask.point(lambda p: 255 - p)
+                        fill = ImageOps.generate_box_fill_image(*frame_rgba.size).convert("RGBA")
+                        frames.append(Image.composite(fill, frame_rgba, inverted_mask))
+                        durations.append(frame.info.get("duration", 100))
+                    frames[0].save(
+                        new_path,
+                        format="GIF",
+                        save_all=True,
+                        append_images=frames[1:],
+                        duration=durations,
+                        loop=loop,
+                        optimize=False,
+                    )
+                else:
+                    src = img.convert("RGB")
+                    mask = ImageOps._polygon_mask(src.size, points)
+                    inverted_mask = mask.point(lambda p: 255 - p)
+                    fill = ImageOps.generate_box_fill_image(*src.size)
+                    Image.composite(fill, src, inverted_mask).save(new_path)
+            return new_path
+        except Exception as e:
+            logger.error("Error in draw_background_box_at_polygon: %s", e)
+            return ""
+
+    @staticmethod
     def rotate_image(image_path, right=False):
         try:
             #loading the image into a numpy array 

@@ -74,6 +74,8 @@ _RUN_PREVALIDATIONS_DIR = _("Run Prevalidations on Directory")
 _INTERACTIVE_CROP       = _("Interactive Crop…")
 _INTERACTIVE_BOX        = _("Interactive Box…")
 _INTERACTIVE_BG_BOX     = _("Interactive Background Box…")
+_INTERACTIVE_BOX_FREEFORM    = _("Interactive Box (Freeform)…")
+_INTERACTIVE_BG_BOX_FREEFORM = _("Interactive Background Box (Freeform)…")
 
 _SET_RELATED  = _("Set Marked File as Related Image of Current")
 
@@ -97,6 +99,8 @@ class TestImageMediaType:
         assert _INTERACTIVE_CROP in actions
         assert _INTERACTIVE_BOX in actions
         assert _INTERACTIVE_BG_BOX in actions
+        assert _INTERACTIVE_BOX_FREEFORM in actions
+        assert _INTERACTIVE_BG_BOX_FREEFORM in actions
 
 
 class TestVideoMediaType:
@@ -111,6 +115,9 @@ class TestVideoMediaType:
         assert _INTERACTIVE_CROP in actions
         assert _INTERACTIVE_BOX in actions
         assert _INTERACTIVE_BG_BOX in actions
+        # Freeform (click-to-add-points) selection is not supported for video.
+        assert _INTERACTIVE_BOX_FREEFORM not in actions
+        assert _INTERACTIVE_BG_BOX_FREEFORM not in actions
 
 
 class TestGifMediaType:
@@ -122,6 +129,8 @@ class TestGifMediaType:
         assert _INTERACTIVE_CROP in actions
         assert _INTERACTIVE_BOX in actions
         assert _INTERACTIVE_BG_BOX in actions
+        assert _INTERACTIVE_BOX_FREEFORM in actions
+        assert _INTERACTIVE_BG_BOX_FREEFORM in actions
 
 
 class TestSvgMediaType:
@@ -133,6 +142,8 @@ class TestSvgMediaType:
         assert _INTERACTIVE_CROP in actions
         assert _INTERACTIVE_BOX in actions
         assert _INTERACTIVE_BG_BOX in actions
+        assert _INTERACTIVE_BOX_FREEFORM in actions
+        assert _INTERACTIVE_BG_BOX_FREEFORM in actions
 
 
 class TestPdfMediaType:
@@ -145,6 +156,8 @@ class TestPdfMediaType:
         assert _INTERACTIVE_CROP in actions
         assert _INTERACTIVE_BOX in actions
         assert _INTERACTIVE_BG_BOX in actions
+        assert _INTERACTIVE_BOX_FREEFORM in actions
+        assert _INTERACTIVE_BG_BOX_FREEFORM in actions
 
 
 class TestSetAsRelatedImageMenuItem:

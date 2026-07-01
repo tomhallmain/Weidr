@@ -348,12 +348,12 @@ class WindowLauncher:
             app_actions=self._app.app_actions,
         )
 
-    def _setup_rect_selection(self, media_path: str, video_launch_fn) -> Optional[tuple]:
-        """Shared preamble for interactive rect-selection actions (crop / box).
+    def _setup_static_selection(self, media_path: str, video_launch_fn) -> Optional[tuple]:
+        """Shared preamble for interactive selection actions (crop / box / freeform).
 
         Validates media-type support, tears down any previous QGraphicsView
-        crop-selection session, and either dispatches to *video_launch_fn* for
-        video (returning None) or resolves the pixel-space source path for
+        crop/polygon-selection session, and either dispatches to *video_launch_fn*
+        for video (returning None) or resolves the pixel-space source path for
         static media (image, animated GIF, SVG, PDF).
 
         Returns ``(gv, media_frame, source_path, media_type, restore_original)``
@@ -376,20 +376,17 @@ class WindowLauncher:
         media_frame = self._app.media_frame
         gv = media_frame._graphics_view
 
-        # Tear down any previous QGraphicsView crop session cleanly.
+        # Tear down any previous QGraphicsView crop/polygon session cleanly.
         # PySide6 emits RuntimeWarning via warnings.warn() (not raise) when
         # disconnecting a signal with no connections, so suppress at that level.
         import warnings
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
-            try:
-                gv.crop_confirmed.disconnect()
-            except RuntimeError:
-                pass
-            try:
-                gv.crop_cancelled.disconnect()
-            except RuntimeError:
-                pass
+            for sig in (gv.crop_confirmed, gv.crop_cancelled, gv.polygon_confirmed):
+                try:
+                    sig.disconnect()
+                except RuntimeError:
+                    pass
 
         is_animated_gif = (media_type == MediaType.GIF and media_frame._gif_is_animated)
 
@@ -399,7 +396,7 @@ class WindowLauncher:
             return None
 
         # -------------------------------------------------------------------
-        # Static media (image, animated GIF, SVG, PDF): QGraphicsView crop mode
+        # Static media (image, animated GIF, SVG, PDF): QGraphicsView selection modes
         # -------------------------------------------------------------------
         if is_animated_gif:
             media_frame.pause_video_if_playing()
@@ -427,6 +424,52 @@ class WindowLauncher:
 
         return gv, media_frame, source_path, media_type, _restore_original
 
+    def _finish_static_edit(
+        self,
+        new_path: str,
+        media_path: str,
+        media_type,
+        output_suffix: str,
+        success_msg: str,
+        failed_msg: str,
+    ) -> None:
+        """Shared tail for crop/box/background-box/freeform actions on static media:
+        fix up the SVG/PDF sibling extension if needed, then open the result or
+        report failure. *new_path* is whatever apply_fn returned.
+        """
+        import os
+        from utils.constants import MediaType
+        from utils.utils import Utils
+
+        if media_type in (MediaType.SVG, MediaType.PDF) and new_path and os.path.exists(new_path):
+            # SVG/PDF sources are rendered to a raster image for editing (PDF's
+            # rendered page is JPEG, SVG's is PNG -- see pdf_current_page_path /
+            # FrameCache.get_image_path), and apply_fn writes a real image file
+            # in that same format. os.replace() below is a plain rename, not a
+            # re-encode, so the sibling must keep apply_fn's actual output
+            # extension -- not adopt the original .pdf/.svg extension, which
+            # would just mislabel that image as a format it isn't (PDFium then
+            # rejects it with a "Data format error" when trying to open it).
+            image_ext = os.path.splitext(new_path)[1] or ".png"
+            image_stem = os.path.splitext(media_path)[0] + image_ext
+            sibling = Utils.unique_sibling_path(image_stem, output_suffix)
+            try:
+                os.replace(new_path, sibling)
+                new_path = sibling
+            except OSError:
+                pass
+
+        if new_path and os.path.exists(new_path):
+            self._app.app_actions.refresh()
+            self._app.app_actions.success(success_msg)
+            from ui.image.media_details import MediaDetails
+            MediaDetails.open_temp_media_canvas(
+                master=self._app, media_path=new_path,
+                app_actions=self._app.app_actions,
+            )
+        else:
+            self._app.notification_ctrl.toast(failed_msg)
+
     def _run_static_rect_action(
         self,
         gv,
@@ -442,14 +485,11 @@ class WindowLauncher:
         success_msg: str,
         failed_msg: str,
     ) -> None:
-        """Wire crop_confirmed/crop_cancelled for one rect-selection action (crop / box)
-        on static media. *apply_fn* receives (source_path, left, upper, right, lower)
-        and returns the new file path (or "" on failure).
+        """Wire crop_confirmed/crop_cancelled for one rectangle-selection action
+        (crop / box / background box) on static media. *apply_fn* receives
+        (source_path, left, upper, right, lower) and returns the new file path
+        (or "" on failure).
         """
-        import os
-        from utils.constants import MediaType
-        from utils.utils import Utils
-
         def _disconnect_signals():
             for sig, slot in ((gv.crop_confirmed, _on_confirmed), (gv.crop_cancelled, _on_cancelled)):
                 try:
@@ -484,46 +524,81 @@ class WindowLauncher:
                 return
 
             new_path = apply_fn(source_path, left, upper, right, lower)
-
-            if media_type in (MediaType.SVG, MediaType.PDF) and new_path and os.path.exists(new_path):
-                # SVG/PDF sources are rendered to a raster image for editing (PDF's
-                # rendered page is JPEG, SVG's is PNG -- see pdf_current_page_path /
-                # FrameCache.get_image_path), and apply_fn writes a real image file
-                # in that same format. os.replace() below is a plain rename, not a
-                # re-encode, so the sibling must keep apply_fn's actual output
-                # extension -- not adopt the original .pdf/.svg extension, which
-                # would just mislabel that image as a format it isn't (PDFium then
-                # rejects it with a "Data format error" when trying to open it).
-                image_ext = os.path.splitext(new_path)[1] or ".png"
-                image_stem = os.path.splitext(media_path)[0] + image_ext
-                sibling = Utils.unique_sibling_path(image_stem, output_suffix)
-                try:
-                    os.replace(new_path, sibling)
-                    new_path = sibling
-                except OSError:
-                    pass
-
-            if new_path and os.path.exists(new_path):
-                self._app.app_actions.refresh()
-                self._app.app_actions.success(success_msg)
-                from ui.image.media_details import MediaDetails
-                MediaDetails.open_temp_media_canvas(
-                    master=self._app, media_path=new_path,
-                    app_actions=self._app.app_actions,
-                )
-            else:
-                self._app.notification_ctrl.toast(failed_msg)
+            self._finish_static_edit(new_path, media_path, media_type, output_suffix, success_msg, failed_msg)
 
         gv.crop_confirmed.connect(_on_confirmed)
         gv.crop_cancelled.connect(_on_cancelled)
         gv.start_crop_mode()
+
+    def _run_static_polygon_action(
+        self,
+        gv,
+        media_frame,
+        media_path: str,
+        source_path: str,
+        media_type,
+        restore_original,
+        *,
+        apply_fn,
+        output_suffix: str,
+        too_small_msg: str,
+        success_msg: str,
+        failed_msg: str,
+    ) -> None:
+        """Wire polygon_confirmed/crop_cancelled for one freeform-selection action
+        (box / background box) on static media. *apply_fn* receives
+        (source_path, points) where points is a list of (x, y) pixel-space
+        coordinates, and returns the new file path (or "" on failure).
+        """
+        def _disconnect_signals():
+            for sig, slot in ((gv.polygon_confirmed, _on_confirmed), (gv.crop_cancelled, _on_cancelled)):
+                try:
+                    sig.disconnect(slot)
+                except (RuntimeError, RuntimeWarning):
+                    pass
+
+        def _on_cancelled():
+            _disconnect_signals()
+            restore_original()
+
+        def _on_confirmed(scene_points):
+            _disconnect_signals()
+            gv.end_polygon_mode()
+
+            pixmap = media_frame._current_pixmap
+            if pixmap is None or pixmap.isNull():
+                restore_original()
+                return
+            pix_w, pix_h = pixmap.width(), pixmap.height()
+            img_w = media_frame.imwidth if media_frame.imwidth > 0 else pix_w
+            img_h = media_frame.imheight if media_frame.imheight > 0 else pix_h
+            scale_x = img_w / pix_w if pix_w > 0 else 1.0
+            scale_y = img_h / pix_h if pix_h > 0 else 1.0
+            points = [
+                (
+                    max(0, min(img_w, int(pt.x() * scale_x))),
+                    max(0, min(img_h, int(pt.y() * scale_y))),
+                )
+                for pt in scene_points
+            ]
+            if len(points) < 3:
+                self._app.notification_ctrl.toast(too_small_msg)
+                restore_original()
+                return
+
+            new_path = apply_fn(source_path, points)
+            self._finish_static_edit(new_path, media_path, media_type, output_suffix, success_msg, failed_msg)
+
+        gv.polygon_confirmed.connect(_on_confirmed)
+        gv.crop_cancelled.connect(_on_cancelled)
+        gv.start_polygon_mode()
 
     def interactive_crop(self, event=None) -> None:
         """Enter interactive crop mode for the current media (image, GIF, SVG, PDF, or video)."""
         from image.image_ops import ImageOps
         from ui.app_window.video_crop_overlay_qt import launch_video_crop
 
-        ctx = self._setup_rect_selection(self._app.media_path, launch_video_crop)
+        ctx = self._setup_static_selection(self._app.media_path, launch_video_crop)
         if ctx is None:
             return
         gv, media_frame, source_path, media_type, restore_original = ctx
@@ -544,7 +619,7 @@ class WindowLauncher:
         from image.image_ops import ImageOps
         from ui.app_window.video_crop_overlay_qt import launch_video_box
 
-        ctx = self._setup_rect_selection(self._app.media_path, launch_video_box)
+        ctx = self._setup_static_selection(self._app.media_path, launch_video_box)
         if ctx is None:
             return
         gv, media_frame, source_path, media_type, restore_original = ctx
@@ -566,7 +641,7 @@ class WindowLauncher:
         from image.image_ops import ImageOps
         from ui.app_window.video_crop_overlay_qt import launch_video_background_box
 
-        ctx = self._setup_rect_selection(self._app.media_path, launch_video_background_box)
+        ctx = self._setup_static_selection(self._app.media_path, launch_video_background_box)
         if ctx is None:
             return
         gv, media_frame, source_path, media_type, restore_original = ctx
@@ -579,6 +654,59 @@ class WindowLauncher:
             failed_msg=_("Background box draw failed"),
         )
         self._app.notification_ctrl.toast(_("Drag to select area to keep, Enter to confirm, Escape to cancel"))
+
+    def _freeform_video_unsupported(self, media_frame, media_path, app) -> None:
+        app.notification_ctrl.toast(_("Freeform selection is not supported for video"))
+
+    def interactive_box_freeform(self, event=None) -> None:
+        """Enter freeform polygon box mode for the current media (image, GIF, SVG,
+        or PDF -- video is not supported). Click to add points tracing an outline;
+        click back near the first point (or press Enter with 3+ points placed,
+        Backspace to undo the last point) to close and paint a random
+        color/pattern fill inside it. A separate option from the rectangle-based
+        :meth:`interactive_box`, which is left unchanged."""
+        from image.image_ops import ImageOps
+
+        ctx = self._setup_static_selection(self._app.media_path, self._freeform_video_unsupported)
+        if ctx is None:
+            return
+        gv, media_frame, source_path, media_type, restore_original = ctx
+        self._run_static_polygon_action(
+            gv, media_frame, self._app.media_path, source_path, media_type, restore_original,
+            apply_fn=ImageOps.draw_box_at_polygon,
+            output_suffix="_box",
+            too_small_msg=_("Need at least 3 points"),
+            success_msg=_("Box added"),
+            failed_msg=_("Box draw failed"),
+        )
+        self._app.notification_ctrl.toast(
+            _("Click to add points, click near the start to close, Enter to confirm, Escape to cancel")
+        )
+
+    def interactive_background_box_freeform(self, event=None) -> None:
+        """Enter freeform polygon background-box mode for the current media (image,
+        GIF, SVG, or PDF -- video is not supported). Click to add points tracing an
+        outline; click back near the first point (or press Enter with 3+ points
+        placed, Backspace to undo the last point) to close and paint a random
+        color/pattern fill everywhere *outside* it. A separate option from the
+        rectangle-based :meth:`interactive_background_box`, which is left unchanged."""
+        from image.image_ops import ImageOps
+
+        ctx = self._setup_static_selection(self._app.media_path, self._freeform_video_unsupported)
+        if ctx is None:
+            return
+        gv, media_frame, source_path, media_type, restore_original = ctx
+        self._run_static_polygon_action(
+            gv, media_frame, self._app.media_path, source_path, media_type, restore_original,
+            apply_fn=ImageOps.draw_background_box_at_polygon,
+            output_suffix="_bgbox",
+            too_small_msg=_("Need at least 3 points"),
+            success_msg=_("Background box added"),
+            failed_msg=_("Background box draw failed"),
+        )
+        self._app.notification_ctrl.toast(
+            _("Click to add points, click near the start to close, Enter to confirm, Escape to cancel")
+        )
 
     def get_help_and_config(self, event=None) -> None:
         """Open the help and configuration window."""

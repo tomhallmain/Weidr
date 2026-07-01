@@ -136,6 +136,22 @@ class TestCompareMediaType:
             t = media_type.get_translation()
             assert isinstance(t, str) and len(t) > 0
 
+    def test_freeform_selection_supported_for_image(self):
+        assert CompareMediaType.IMAGE.is_freeform_selection_supported() is True
+
+    def test_freeform_selection_supported_for_gif_pdf_svg(self):
+        assert CompareMediaType.GIF.is_freeform_selection_supported() is True
+        assert CompareMediaType.PDF.is_freeform_selection_supported() is True
+        assert CompareMediaType.SVG.is_freeform_selection_supported() is True
+
+    def test_freeform_selection_not_supported_for_video(self):
+        assert CompareMediaType.VIDEO.is_freeform_selection_supported() is False
+
+    def test_freeform_selection_not_supported_for_audio_html_unconfigured(self):
+        assert CompareMediaType.AUDIO.is_freeform_selection_supported() is False
+        assert CompareMediaType.HTML.is_freeform_selection_supported() is False
+        assert CompareMediaType.UNCONFIGURED.is_freeform_selection_supported() is False
+
 
 class TestActionType:
     def test_get_translation_non_empty_for_all(self):

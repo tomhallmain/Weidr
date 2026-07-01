@@ -143,6 +143,15 @@ class ContextMenuBuilder:
                 _("Interactive Background Box…"),
                 lambda: app.window_launcher.interactive_background_box(),
             )
+        if media_type.is_freeform_selection_supported():
+            menu.addAction(
+                _("Interactive Box (Freeform)…"),
+                lambda: app.window_launcher.interactive_box_freeform(),
+            )
+            menu.addAction(
+                _("Interactive Background Box (Freeform)…"),
+                lambda: app.window_launcher.interactive_background_box_freeform(),
+            )
 
         menu.addSeparator()
 

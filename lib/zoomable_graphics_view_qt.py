@@ -5,21 +5,29 @@ static image display.
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, QRectF, Signal
-from PySide6.QtGui import QBrush, QColor, QPen
-from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsView
+from PySide6.QtCore import Qt, QPointF, QRectF, Signal
+from PySide6.QtGui import QBrush, QColor, QPainterPath, QPen
+from PySide6.QtWidgets import (
+    QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsView,
+)
 
 
 class ZoomableGraphicsView(QGraphicsView):
-    """QGraphicsView wrapper that provides modular wheel-zoom, drag-pan, and
-    an interactive crop-selection mode."""
+    """QGraphicsView wrapper that provides modular wheel-zoom, drag-pan, and two
+    mutually-exclusive interactive selection modes: a rubber-band rectangle
+    ("crop" mode) and a click-to-add-points freeform polygon ("polygon" mode)."""
 
-    # Emitted when the user releases the mouse after drawing a selection.
+    # Emitted when the user releases the mouse after drawing a rectangle selection.
     crop_selection_ready = Signal(QRectF)
-    # Emitted when the user presses Enter/Return to confirm the selection.
+    # Emitted when the user presses Enter/Return to confirm a rectangle selection.
     crop_confirmed = Signal(QRectF)
-    # Emitted when the user presses Escape to cancel without confirming.
+    # Emitted when the user presses Escape to cancel a rectangle or polygon
+    # selection without confirming.
     crop_cancelled = Signal()
+    # Emitted when the user closes a freeform polygon selection (click back near
+    # the start point, or Enter once at least 3 points are placed). Payload is
+    # a list of QPointF in scene coordinates.
+    polygon_confirmed = Signal(list)
 
     def __init__(
         self,
@@ -46,6 +54,12 @@ class ZoomableGraphicsView(QGraphicsView):
         self._crop_rect_scene: QRectF | None = None
         self._pre_crop_drag_mode = QGraphicsView.DragMode.NoDrag
 
+        # Freeform polygon-selection state
+        self._polygon_mode = False
+        self._polygon_points: list[QPointF] = []  # scene-coord points placed so far
+        self._polygon_path_item: QGraphicsPathItem | None = None
+        self._polygon_close_radius_px = 10  # view-pixel radius for "click near start to close"
+
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
         self.setDragMode(QGraphicsView.DragMode.NoDrag)
@@ -56,7 +70,7 @@ class ZoomableGraphicsView(QGraphicsView):
 
     def set_interaction_enabled(self, enabled: bool) -> None:
         self._interaction_enabled = bool(enabled)
-        if not self._crop_mode:
+        if not self._crop_mode and not self._polygon_mode:
             if self._interaction_enabled:
                 self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
             else:
@@ -146,10 +160,89 @@ class ZoomableGraphicsView(QGraphicsView):
             self._crop_rect_item = None
 
     # ------------------------------------------------------------------
+    # Freeform polygon-selection mode
+    # ------------------------------------------------------------------
+
+    def start_polygon_mode(self) -> None:
+        """Enter freeform polygon-selection mode: click to add points, then
+        click back near the first point (or press Enter with 3+ points placed)
+        to close and confirm. Escape cancels. Disables pan/zoom meanwhile."""
+        if self._polygon_mode:
+            return
+        self._polygon_mode = True
+        self._polygon_points = []
+        self._pre_crop_drag_mode = self.dragMode()
+        self.setDragMode(QGraphicsView.DragMode.NoDrag)
+        self.setCursor(Qt.CursorShape.CrossCursor)
+        self.setFocus()
+
+    def end_polygon_mode(self) -> None:
+        """Exit polygon-selection mode, clear the overlay, and restore prior drag mode."""
+        if not self._polygon_mode:
+            return
+        self._polygon_mode = False
+        self._polygon_points = []
+        self._remove_polygon_overlay()
+        self.setDragMode(self._pre_crop_drag_mode)
+        self.unsetCursor()
+
+    def _update_polygon_overlay(self, preview_point: QPointF | None = None) -> None:
+        scene = self.scene()
+        if scene is None or not self._polygon_points:
+            return
+        path = QPainterPath(self._polygon_points[0])
+        for pt in self._polygon_points[1:]:
+            path.lineTo(pt)
+        if preview_point is not None:
+            path.lineTo(preview_point)
+        # Close the path visually (line back to the first point) so the fill
+        # brush previews the eventual polygon area, not just an open outline.
+        path.closeSubpath()
+        if self._polygon_path_item is None:
+            pen = QPen(QColor(255, 255, 255), 1)
+            pen.setCosmetic(True)  # 1 px regardless of zoom level
+            brush = QBrush(QColor(100, 150, 255, 70))
+            item = QGraphicsPathItem()
+            item.setPen(pen)
+            item.setBrush(brush)
+            item.setZValue(10)
+            scene.addItem(item)
+            self._polygon_path_item = item
+        try:
+            self._polygon_path_item.setPath(path)
+        except RuntimeError:
+            # C++ object was deleted externally (e.g. scene.clear()) — recreate next move
+            self._polygon_path_item = None
+
+    def _remove_polygon_overlay(self) -> None:
+        if self._polygon_path_item is not None:
+            scene = self.scene()
+            if scene is not None:
+                try:
+                    scene.removeItem(self._polygon_path_item)
+                except RuntimeError:
+                    pass
+            self._polygon_path_item = None
+
+    # ------------------------------------------------------------------
     # Event overrides
     # ------------------------------------------------------------------
 
     def mousePressEvent(self, event) -> None:
+        if self._polygon_mode and event.button() == Qt.MouseButton.LeftButton:
+            pos_view = event.position().toPoint()
+            if len(self._polygon_points) >= 3:
+                first_view = self.mapFromScene(self._polygon_points[0])
+                dx = pos_view.x() - first_view.x()
+                dy = pos_view.y() - first_view.y()
+                if (dx * dx + dy * dy) ** 0.5 <= self._polygon_close_radius_px:
+                    self.polygon_confirmed.emit(list(self._polygon_points))
+                    event.accept()
+                    return
+            self._polygon_points.append(self.mapToScene(pos_view))
+            self._update_polygon_overlay()
+            event.accept()
+            return
         if self._crop_mode and event.button() == Qt.MouseButton.LeftButton:
             self._crop_anchor = self.mapToScene(event.position().toPoint())
             self._crop_rect_scene = QRectF(self._crop_anchor, self._crop_anchor)
@@ -159,6 +252,11 @@ class ZoomableGraphicsView(QGraphicsView):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event) -> None:
+        if self._polygon_mode and self._polygon_points:
+            current = self.mapToScene(event.position().toPoint())
+            self._update_polygon_overlay(preview_point=current)
+            event.accept()
+            return
         if self._crop_mode and self._crop_anchor is not None:
             current = self.mapToScene(event.position().toPoint())
             self._crop_rect_scene = QRectF(self._crop_anchor, current).normalized()
@@ -168,6 +266,11 @@ class ZoomableGraphicsView(QGraphicsView):
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event) -> None:
+        if self._polygon_mode:
+            # Polygon points are placed on press, not release; swallow release
+            # so it doesn't fall through to pan/selection handling.
+            event.accept()
+            return
         if self._crop_mode and event.button() == Qt.MouseButton.LeftButton:
             if self._crop_rect_scene and not self._crop_rect_scene.isEmpty():
                 self.crop_selection_ready.emit(self._crop_rect_scene)
@@ -176,6 +279,26 @@ class ZoomableGraphicsView(QGraphicsView):
         super().mouseReleaseEvent(event)
 
     def keyPressEvent(self, event) -> None:
+        if self._polygon_mode:
+            if event.key() == Qt.Key.Key_Escape:
+                self.end_polygon_mode()
+                self.crop_cancelled.emit()
+                event.accept()
+                return
+            if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+                if len(self._polygon_points) >= 3:
+                    self.polygon_confirmed.emit(list(self._polygon_points))
+                event.accept()
+                return
+            if event.key() == Qt.Key.Key_Backspace:
+                if self._polygon_points:
+                    self._polygon_points.pop()
+                    if self._polygon_points:
+                        self._update_polygon_overlay()
+                    else:
+                        self._remove_polygon_overlay()
+                event.accept()
+                return
         if self._crop_mode:
             if event.key() == Qt.Key.Key_Escape:
                 self.end_crop_mode()
@@ -190,8 +313,8 @@ class ZoomableGraphicsView(QGraphicsView):
         super().keyPressEvent(event)
 
     def wheelEvent(self, event) -> None:
-        if self._crop_mode:
-            # Swallow wheel events during crop to keep the coordinate system stable.
+        if self._crop_mode or self._polygon_mode:
+            # Swallow wheel events during selection to keep the coordinate system stable.
             event.accept()
             return
         if not self._interaction_enabled:

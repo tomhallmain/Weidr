@@ -470,6 +470,12 @@ class CompareMediaType(Enum):
             CompareMediaType.UNCONFIGURED,
         )
 
+    def is_freeform_selection_supported(self) -> bool:
+        """True for types that support freeform (click-to-add-points polygon)
+        box / background-box selection (image, GIF, PDF, SVG). Video is
+        rectangle-selection only for now."""
+        return self.is_interactive_crop_supported() and not self.is_video()
+
 
 # UI-friendly alias (same members and methods as :class:`CompareMediaType`).
 MediaType = CompareMediaType

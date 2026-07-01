@@ -195,6 +195,61 @@ class ImageOps:
         return mask
 
     @staticmethod
+    def crop_image_to_polygon(image_path: str, points) -> str:
+        """Crop image to the bounding box of the given polygon (a list of (x, y)
+        pixel coordinates), with everything inside that box but outside the
+        polygon itself made transparent, and save as a new sibling file. Does
+        not modify *image_path*. The freeform counterpart to :meth:`crop_image_to_rect`.
+
+        Transparency requires an alpha channel, which GIF can only approximate
+        with a single on/off palette index (visibly jagged on an arbitrary
+        polygon edge), so the output format differs from crop_image_to_rect:
+        static images save as PNG; animated GIFs save as animated WebP, which
+        (unlike GIF) supports true per-pixel alpha across frames. Original
+        per-frame durations are preserved either way.
+        """
+        try:
+            from PIL import ImageSequence
+            from utils.utils import Utils
+            xs = [p[0] for p in points]
+            ys = [p[1] for p in points]
+            left, upper, right, lower = min(xs), min(ys), max(xs), max(ys)
+            if right <= left or lower <= upper:
+                return ""
+            local_points = [(x - left, y - upper) for x, y in points]
+
+            with Image.open(image_path) as img:
+                n_frames = getattr(img, "n_frames", 1)
+                if n_frames > 1:
+                    webp_stem = os.path.splitext(image_path)[0] + ".webp"
+                    new_path = Utils.unique_sibling_path(webp_stem, "_crop")
+                    loop = img.info.get("loop", 0)
+                    frames, durations = [], []
+                    for frame in ImageSequence.Iterator(img):
+                        cropped = frame.convert("RGBA").crop((left, upper, right, lower))
+                        cropped.putalpha(ImageOps._polygon_mask(cropped.size, local_points))
+                        frames.append(cropped)
+                        durations.append(frame.info.get("duration", 100))
+                    frames[0].save(
+                        new_path,
+                        format="WEBP",
+                        save_all=True,
+                        append_images=frames[1:],
+                        duration=durations,
+                        loop=loop,
+                    )
+                else:
+                    png_stem = os.path.splitext(image_path)[0] + ".png"
+                    new_path = Utils.unique_sibling_path(png_stem, "_crop")
+                    cropped = img.convert("RGBA").crop((left, upper, right, lower))
+                    cropped.putalpha(ImageOps._polygon_mask(cropped.size, local_points))
+                    cropped.save(new_path)
+            return new_path
+        except Exception as e:
+            logger.error("Error in crop_image_to_polygon: %s", e)
+            return ""
+
+    @staticmethod
     def draw_box_at_polygon(image_path: str, points) -> str:
         """Paint a random color/pattern fill inside the given polygon (a list of
         (x, y) pixel coordinates) and save as a new sibling file. Does not

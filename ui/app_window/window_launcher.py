@@ -658,6 +658,35 @@ class WindowLauncher:
     def _freeform_video_unsupported(self, media_frame, media_path, app) -> None:
         app.notification_ctrl.toast(_("Freeform selection is not supported for video"))
 
+    def interactive_crop_freeform(self, event=None) -> None:
+        """Enter freeform polygon crop mode for the current media (image, GIF,
+        SVG, or PDF -- video is not supported). Click to add points tracing an
+        outline (or click-drag to sweep); close the same way as the other
+        freeform actions to crop to the polygon's bounding box, with everything
+        outside the polygon itself made transparent. Requires an alpha channel,
+        so the output is saved as PNG (static) or animated WebP (GIF) rather
+        than matching the source format -- see
+        :meth:`image.image_ops.ImageOps.crop_image_to_polygon`. A separate
+        option from the rectangle-based :meth:`interactive_crop`, which is left
+        unchanged."""
+        from image.image_ops import ImageOps
+
+        ctx = self._setup_static_selection(self._app.media_path, self._freeform_video_unsupported)
+        if ctx is None:
+            return
+        gv, media_frame, source_path, media_type, restore_original = ctx
+        self._run_static_polygon_action(
+            gv, media_frame, self._app.media_path, source_path, media_type, restore_original,
+            apply_fn=ImageOps.crop_image_to_polygon,
+            output_suffix="_crop",
+            too_small_msg=_("Need at least 3 points"),
+            success_msg=_("Cropped"),
+            failed_msg=_("Crop failed"),
+        )
+        self._app.notification_ctrl.toast(
+            _("Click or click-drag to add points, click near the start to close, Enter to confirm, Escape to cancel")
+        )
+
     def interactive_box_freeform(self, event=None) -> None:
         """Enter freeform polygon box mode for the current media (image, GIF, SVG,
         or PDF -- video is not supported). Click to add points tracing an outline;
@@ -680,7 +709,7 @@ class WindowLauncher:
             failed_msg=_("Box draw failed"),
         )
         self._app.notification_ctrl.toast(
-            _("Click to add points, click near the start to close, Enter to confirm, Escape to cancel")
+            _("Click or click-drag to add points, click near the start to close, Enter to confirm, Escape to cancel")
         )
 
     def interactive_background_box_freeform(self, event=None) -> None:
@@ -705,7 +734,7 @@ class WindowLauncher:
             failed_msg=_("Background box draw failed"),
         )
         self._app.notification_ctrl.toast(
-            _("Click to add points, click near the start to close, Enter to confirm, Escape to cancel")
+            _("Click or click-drag to add points, click near the start to close, Enter to confirm, Escape to cancel")
         )
 
     def get_help_and_config(self, event=None) -> None:

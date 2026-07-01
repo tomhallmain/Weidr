@@ -145,6 +145,10 @@ class ContextMenuBuilder:
             )
         if media_type.is_freeform_selection_supported():
             menu.addAction(
+                _("Interactive Crop (Freeform)…"),
+                lambda: app.window_launcher.interactive_crop_freeform(),
+            )
+            menu.addAction(
                 _("Interactive Box (Freeform)…"),
                 lambda: app.window_launcher.interactive_box_freeform(),
             )

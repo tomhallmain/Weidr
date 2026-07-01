@@ -49,11 +49,37 @@ def _click(view: ZoomableGraphicsView, pos: QPoint) -> None:
 
 
 def _move(view: ZoomableGraphicsView, pos: QPoint) -> None:
+    """Hover move with no button held (preview only, never adds a sweep point)."""
     event = QMouseEvent(
         QMouseEvent.Type.MouseMove,
         QPointF(pos),
         QPointF(pos),
         Qt.MouseButton.NoButton,
+        Qt.MouseButton.NoButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+    QApplication.sendEvent(view.viewport(), event)
+
+
+def _drag_move(view: ZoomableGraphicsView, pos: QPoint) -> None:
+    """Mouse-move with the left button held (simulates an active drag/sweep)."""
+    event = QMouseEvent(
+        QMouseEvent.Type.MouseMove,
+        QPointF(pos),
+        QPointF(pos),
+        Qt.MouseButton.NoButton,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+    QApplication.sendEvent(view.viewport(), event)
+
+
+def _release(view: ZoomableGraphicsView, pos: QPoint) -> None:
+    event = QMouseEvent(
+        QMouseEvent.Type.MouseButtonRelease,
+        QPointF(pos),
+        QPointF(pos),
+        Qt.MouseButton.LeftButton,
         Qt.MouseButton.NoButton,
         Qt.KeyboardModifier.NoModifier,
     )
@@ -292,3 +318,161 @@ class TestWheelDuringPolygon:
         )
         QApplication.sendEvent(view.viewport(), wheel)
         assert view._zoom_factor == zoom_before
+
+
+# ---------------------------------------------------------------------------
+# Start-point marker: visible affordance + highlight when cursor is in range
+# ---------------------------------------------------------------------------
+
+class TestPolygonStartMarker:
+    def test_no_marker_before_first_click(self, qtbot):
+        view = _make_view(qtbot)
+        view.start_polygon_mode()
+        assert view._polygon_start_marker_item is None
+
+    def test_marker_created_after_first_click(self, qtbot):
+        view = _make_view(qtbot)
+        view.start_polygon_mode()
+        _click(view, QPoint(50, 50))
+        assert view._polygon_start_marker_item is not None
+
+    def test_marker_removed_on_end_polygon_mode(self, qtbot):
+        view = _make_view(qtbot)
+        view.start_polygon_mode()
+        _click(view, QPoint(50, 50))
+        view.end_polygon_mode()
+        assert view._polygon_start_marker_item is None
+
+    def test_marker_position_tracks_first_point_only(self, qtbot):
+        view = _make_view(qtbot)
+        view.start_polygon_mode()
+        _click(view, QPoint(50, 50))
+        pos_after_first = view._polygon_start_marker_item.pos()
+        _click(view, QPoint(150, 50))  # placing a 2nd point must not move the marker
+        pos_after_second = view._polygon_start_marker_item.pos()
+        assert pos_after_first == pos_after_second
+
+    def test_marker_highlights_when_cursor_near_start(self, qtbot):
+        view = _make_view(qtbot)
+        view.start_polygon_mode()
+        _click(view, QPoint(50, 50))
+        _click(view, QPoint(150, 50))
+        _click(view, QPoint(150, 150))
+        far_color = view._polygon_start_marker_item.brush().color()
+        _move(view, QPoint(52, 52))  # hover within the closing tolerance
+        near_color = view._polygon_start_marker_item.brush().color()
+        assert near_color != far_color
+
+    def test_marker_reverts_when_cursor_moves_away_again(self, qtbot):
+        view = _make_view(qtbot)
+        view.start_polygon_mode()
+        _click(view, QPoint(50, 50))
+        _click(view, QPoint(150, 50))
+        _click(view, QPoint(150, 150))
+        far_color = view._polygon_start_marker_item.brush().color()
+        _move(view, QPoint(52, 52))
+        _move(view, QPoint(300, 300))
+        assert view._polygon_start_marker_item.brush().color() == far_color
+
+    def test_marker_not_highlighted_with_fewer_than_3_points(self, qtbot):
+        view = _make_view(qtbot)
+        view.start_polygon_mode()
+        _click(view, QPoint(50, 50))
+        far_color = view._polygon_start_marker_item.brush().color()
+        _move(view, QPoint(52, 52))  # "near" the only point, but too few points to close
+        assert view._polygon_start_marker_item.brush().color() == far_color
+
+
+# ---------------------------------------------------------------------------
+# Continuous "sweep" drawing: click-and-drag adds points along the path
+# ---------------------------------------------------------------------------
+
+class TestPolygonSweep:
+    def test_drag_with_button_held_adds_multiple_points(self, qtbot):
+        view = _make_view(qtbot)
+        view.start_polygon_mode()
+        _click(view, QPoint(10, 10))
+        _drag_move(view, QPoint(30, 10))
+        _drag_move(view, QPoint(60, 10))
+        _drag_move(view, QPoint(90, 10))
+        assert len(view._polygon_points) == 4
+
+    def test_sweep_respects_minimum_step_distance(self, qtbot):
+        view = _make_view(qtbot)
+        view.start_polygon_mode()
+        _click(view, QPoint(10, 10))
+        # Sub-threshold moves (< _polygon_sweep_min_step_px) must not add points.
+        _drag_move(view, QPoint(11, 10))
+        _drag_move(view, QPoint(12, 10))
+        _drag_move(view, QPoint(13, 10))
+        assert len(view._polygon_points) == 1
+
+    def test_move_without_button_held_does_not_add_points(self, qtbot):
+        view = _make_view(qtbot)
+        view.start_polygon_mode()
+        _click(view, QPoint(10, 10))
+        _move(view, QPoint(200, 200))  # hover only, no button held
+        assert len(view._polygon_points) == 1
+
+    def test_release_does_not_close_or_confirm_polygon(self, qtbot):
+        """Sweeping is just an efficient way to place points; closing always
+        requires an explicit click-near-start or Enter, never automatic."""
+        view = _make_view(qtbot)
+        view.start_polygon_mode()
+        confirmed = []
+        view.polygon_confirmed.connect(confirmed.append)
+        _click(view, QPoint(10, 10))
+        _drag_move(view, QPoint(60, 10))
+        _drag_move(view, QPoint(60, 60))
+        _drag_move(view, QPoint(10, 60))
+        _release(view, QPoint(10, 60))
+        assert confirmed == []
+        assert view._polygon_mode is True
+
+    def test_points_after_sweep_can_still_be_closed_by_click(self, qtbot):
+        view = _make_view(qtbot)
+        view.start_polygon_mode()
+        confirmed = []
+        view.polygon_confirmed.connect(confirmed.append)
+        _click(view, QPoint(50, 50))
+        _drag_move(view, QPoint(150, 50))
+        _drag_move(view, QPoint(150, 150))
+        _release(view, QPoint(150, 150))
+        _click(view, QPoint(52, 52))  # back near the very first point
+        assert len(confirmed) == 1
+
+    def test_release_near_start_closes_sweep(self, qtbot):
+        """Regression: sweeping the cursor back to the origin and releasing
+        there must auto-close, the same as a plain click-near-start already
+        does. Previously the sweep itself never checked proximity to the start
+        (it only accumulates points on move), and release did nothing at all,
+        so a sweep that ended near the origin had no way to close."""
+        view = _make_view(qtbot)
+        view.start_polygon_mode()
+        confirmed = []
+        view.polygon_confirmed.connect(confirmed.append)
+        _click(view, QPoint(50, 50))
+        _drag_move(view, QPoint(150, 50))
+        _drag_move(view, QPoint(150, 150))
+        _drag_move(view, QPoint(52, 52))  # sweep back near the start point
+        _release(view, QPoint(52, 52))
+        # The view only notifies via the signal; ending the mode is the
+        # caller's job (window_launcher.py's _on_confirmed calls
+        # end_polygon_mode() when it receives this signal), matching how
+        # crop_confirmed already works for the rectangle-selection mode.
+        assert len(confirmed) == 1
+
+    def test_release_near_start_with_fewer_than_3_points_does_not_close(self, qtbot):
+        view = _make_view(qtbot)
+        view.start_polygon_mode()
+        confirmed = []
+        view.polygon_confirmed.connect(confirmed.append)
+        _click(view, QPoint(50, 50))
+        # 7px: past the 6px sweep-add threshold (so a 2nd point is placed) and
+        # still within the 10px close radius -- but only 2 points total, which
+        # is too few to have a meaningful interior to close.
+        _drag_move(view, QPoint(57, 50))
+        _release(view, QPoint(57, 50))
+        assert len(view._polygon_points) == 2
+        assert confirmed == []
+        assert view._polygon_mode is True

@@ -8,7 +8,8 @@ from __future__ import annotations
 from PySide6.QtCore import Qt, QPointF, QRectF, Signal
 from PySide6.QtGui import QBrush, QColor, QPainterPath, QPen
 from PySide6.QtWidgets import (
-    QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsView,
+    QGraphicsEllipseItem, QGraphicsItem, QGraphicsPathItem, QGraphicsPixmapItem,
+    QGraphicsRectItem, QGraphicsView,
 )
 
 
@@ -58,7 +59,14 @@ class ZoomableGraphicsView(QGraphicsView):
         self._polygon_mode = False
         self._polygon_points: list[QPointF] = []  # scene-coord points placed so far
         self._polygon_path_item: QGraphicsPathItem | None = None
+        self._polygon_start_marker_item: QGraphicsEllipseItem | None = None
         self._polygon_close_radius_px = 10  # view-pixel radius for "click near start to close"
+        self._polygon_sweep_min_step_px = 6  # min view-pixel spacing between sweep-added points
+
+        # Freeform polygon mode needs hover-move events (preview line + start-marker
+        # highlight) even when no button is held between clicks -- Qt widgets don't
+        # deliver those without tracking enabled.
+        self.setMouseTracking(True)
 
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
@@ -164,9 +172,11 @@ class ZoomableGraphicsView(QGraphicsView):
     # ------------------------------------------------------------------
 
     def start_polygon_mode(self) -> None:
-        """Enter freeform polygon-selection mode: click to add points, then
-        click back near the first point (or press Enter with 3+ points placed)
-        to close and confirm. Escape cancels. Disables pan/zoom meanwhile."""
+        """Enter freeform polygon-selection mode: click to add points (or click
+        and drag to sweep a continuous run of points), then close and confirm
+        by clicking near the highlighted start marker, releasing a sweep near
+        it, or pressing Enter with 3+ points placed. Backspace undoes the last
+        point, Escape cancels. Disables pan/zoom meanwhile."""
         if self._polygon_mode:
             return
         self._polygon_mode = True
@@ -185,6 +195,19 @@ class ZoomableGraphicsView(QGraphicsView):
         self._remove_polygon_overlay()
         self.setDragMode(self._pre_crop_drag_mode)
         self.unsetCursor()
+
+    def _is_near_polygon_start(self, scene_point: QPointF) -> bool:
+        """True if *scene_point* is within the closing tolerance of the first
+        placed point, measured in view (screen) pixels so it stays a constant
+        target size regardless of zoom level. Requires 3+ points already placed
+        (a 1- or 2-point "polygon" has no meaningful interior to close)."""
+        if len(self._polygon_points) < 3:
+            return False
+        pos_view = self.mapFromScene(scene_point)
+        first_view = self.mapFromScene(self._polygon_points[0])
+        dx = pos_view.x() - first_view.x()
+        dy = pos_view.y() - first_view.y()
+        return (dx * dx + dy * dy) ** 0.5 <= self._polygon_close_radius_px
 
     def _update_polygon_overlay(self, preview_point: QPointF | None = None) -> None:
         scene = self.scene()
@@ -214,15 +237,39 @@ class ZoomableGraphicsView(QGraphicsView):
             # C++ object was deleted externally (e.g. scene.clear()) — recreate next move
             self._polygon_path_item = None
 
+        # Start-point marker: a small, zoom-constant-size dot anchored on the
+        # first point, so it's always obvious where to click to close the loop.
+        # It highlights (turns green) once the cursor is within closing range.
+        if self._polygon_start_marker_item is None:
+            r = self._polygon_close_radius_px
+            marker = QGraphicsEllipseItem(-r, -r, 2 * r, 2 * r)
+            marker.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations, True)
+            marker.setZValue(11)
+            scene.addItem(marker)
+            self._polygon_start_marker_item = marker
+        try:
+            near_start = preview_point is not None and self._is_near_polygon_start(preview_point)
+            if near_start:
+                self._polygon_start_marker_item.setPen(QPen(QColor(80, 230, 120), 2))
+                self._polygon_start_marker_item.setBrush(QBrush(QColor(80, 230, 120, 160)))
+            else:
+                self._polygon_start_marker_item.setPen(QPen(QColor(255, 210, 60), 2))
+                self._polygon_start_marker_item.setBrush(QBrush(QColor(255, 210, 60, 120)))
+            self._polygon_start_marker_item.setPos(self._polygon_points[0])
+        except RuntimeError:
+            self._polygon_start_marker_item = None
+
     def _remove_polygon_overlay(self) -> None:
-        if self._polygon_path_item is not None:
-            scene = self.scene()
-            if scene is not None:
-                try:
-                    scene.removeItem(self._polygon_path_item)
-                except RuntimeError:
-                    pass
-            self._polygon_path_item = None
+        scene = self.scene()
+        for attr in ("_polygon_path_item", "_polygon_start_marker_item"):
+            item = getattr(self, attr)
+            if item is not None:
+                if scene is not None:
+                    try:
+                        scene.removeItem(item)
+                    except RuntimeError:
+                        pass
+                setattr(self, attr, None)
 
     # ------------------------------------------------------------------
     # Event overrides
@@ -230,16 +277,12 @@ class ZoomableGraphicsView(QGraphicsView):
 
     def mousePressEvent(self, event) -> None:
         if self._polygon_mode and event.button() == Qt.MouseButton.LeftButton:
-            pos_view = event.position().toPoint()
-            if len(self._polygon_points) >= 3:
-                first_view = self.mapFromScene(self._polygon_points[0])
-                dx = pos_view.x() - first_view.x()
-                dy = pos_view.y() - first_view.y()
-                if (dx * dx + dy * dy) ** 0.5 <= self._polygon_close_radius_px:
-                    self.polygon_confirmed.emit(list(self._polygon_points))
-                    event.accept()
-                    return
-            self._polygon_points.append(self.mapToScene(pos_view))
+            scene_pt = self.mapToScene(event.position().toPoint())
+            if self._is_near_polygon_start(scene_pt):
+                self.polygon_confirmed.emit(list(self._polygon_points))
+                event.accept()
+                return
+            self._polygon_points.append(scene_pt)
             self._update_polygon_overlay()
             event.accept()
             return
@@ -254,6 +297,20 @@ class ZoomableGraphicsView(QGraphicsView):
     def mouseMoveEvent(self, event) -> None:
         if self._polygon_mode and self._polygon_points:
             current = self.mapToScene(event.position().toPoint())
+            if event.buttons() & Qt.MouseButton.LeftButton:
+                # Continuous "sweep" drawing: while the button is held, keep
+                # adding points as the cursor moves far enough (in view pixels)
+                # from the last one, so a click-and-drag traces a smooth
+                # freehand outline instead of requiring a separate click per
+                # vertex. Points are only added here, never closed here --
+                # closing on a release near the start point is handled in
+                # mouseReleaseEvent, so releasing elsewhere just pauses the sweep.
+                last_view = self.mapFromScene(self._polygon_points[-1])
+                current_view = self.mapFromScene(current)
+                dx = current_view.x() - last_view.x()
+                dy = current_view.y() - last_view.y()
+                if (dx * dx + dy * dy) ** 0.5 >= self._polygon_sweep_min_step_px:
+                    self._polygon_points.append(current)
             self._update_polygon_overlay(preview_point=current)
             event.accept()
             return
@@ -267,8 +324,21 @@ class ZoomableGraphicsView(QGraphicsView):
 
     def mouseReleaseEvent(self, event) -> None:
         if self._polygon_mode:
-            # Polygon points are placed on press, not release; swallow release
-            # so it doesn't fall through to pan/selection handling.
+            # Points are placed on press/drag, not release. But a sweep's
+            # natural closing gesture *is* a release -- unlike a plain click,
+            # which closes on press if it lands near the start, a sweep never
+            # checks proximity mid-drag (it just keeps adding points), so
+            # releasing back near the start point must also close here or a
+            # sweep could never auto-close at all.
+            if event.button() == Qt.MouseButton.LeftButton:
+                scene_pt = self.mapToScene(event.position().toPoint())
+                if self._is_near_polygon_start(scene_pt):
+                    self.polygon_confirmed.emit(list(self._polygon_points))
+                    event.accept()
+                    return
+            # Otherwise swallow the release so it doesn't fall through to
+            # pan/selection handling; releasing away from the start just
+            # pauses the sweep, it never auto-closes.
             event.accept()
             return
         if self._crop_mode and event.button() == Qt.MouseButton.LeftButton:

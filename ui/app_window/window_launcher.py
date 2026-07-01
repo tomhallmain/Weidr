@@ -549,6 +549,28 @@ class WindowLauncher:
         )
         self._app.notification_ctrl.toast(_("Drag to select box location, Enter to confirm, Escape to cancel"))
 
+    def interactive_background_box(self, event=None) -> None:
+        """Enter interactive background-box mode for the current media (image, GIF,
+        SVG, PDF, or video): paint a random color/pattern fill over everything
+        *outside* a selected rectangle, leaving the selection itself unchanged.
+        Reuses the same rect-selection handlers as :meth:`interactive_crop`."""
+        from image.image_ops import ImageOps
+        from ui.app_window.video_crop_overlay_qt import launch_video_background_box
+
+        ctx = self._setup_rect_selection(self._app.media_path, launch_video_background_box)
+        if ctx is None:
+            return
+        gv, media_frame, source_path, media_type, restore_original = ctx
+        self._run_static_rect_action(
+            gv, media_frame, self._app.media_path, source_path, media_type, restore_original,
+            apply_fn=ImageOps.draw_background_box_at_rect,
+            output_suffix="_bgbox",
+            too_small_msg=_("Selection too small"),
+            success_msg=_("Background box added"),
+            failed_msg=_("Background box draw failed"),
+        )
+        self._app.notification_ctrl.toast(_("Drag to select area to keep, Enter to confirm, Escape to cancel"))
+
     def get_help_and_config(self, event=None) -> None:
         """Open the help and configuration window."""
         try:

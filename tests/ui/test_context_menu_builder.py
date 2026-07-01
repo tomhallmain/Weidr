@@ -73,6 +73,7 @@ _CUT_VIDEO              = _("Cut video at current position…")
 _RUN_PREVALIDATIONS_DIR = _("Run Prevalidations on Directory")
 _INTERACTIVE_CROP       = _("Interactive Crop…")
 _INTERACTIVE_BOX        = _("Interactive Box…")
+_INTERACTIVE_BG_BOX     = _("Interactive Background Box…")
 
 _SET_RELATED  = _("Set Marked File as Related Image of Current")
 
@@ -95,6 +96,7 @@ class TestImageMediaType:
         assert _DIR_SCOPED <= set(actions)
         assert _INTERACTIVE_CROP in actions
         assert _INTERACTIVE_BOX in actions
+        assert _INTERACTIVE_BG_BOX in actions
 
 
 class TestVideoMediaType:
@@ -108,6 +110,7 @@ class TestVideoMediaType:
         assert _DIR_SCOPED <= set(actions)
         assert _INTERACTIVE_CROP in actions
         assert _INTERACTIVE_BOX in actions
+        assert _INTERACTIVE_BG_BOX in actions
 
 
 class TestGifMediaType:
@@ -118,6 +121,7 @@ class TestGifMediaType:
         assert not _VIDEO_ONLY & set(actions)
         assert _INTERACTIVE_CROP in actions
         assert _INTERACTIVE_BOX in actions
+        assert _INTERACTIVE_BG_BOX in actions
 
 
 class TestSvgMediaType:
@@ -128,6 +132,7 @@ class TestSvgMediaType:
         assert not _VIDEO_ONLY & set(actions)
         assert _INTERACTIVE_CROP in actions
         assert _INTERACTIVE_BOX in actions
+        assert _INTERACTIVE_BG_BOX in actions
 
 
 class TestPdfMediaType:
@@ -139,6 +144,7 @@ class TestPdfMediaType:
         assert _DIR_SCOPED <= set(actions)
         assert _INTERACTIVE_CROP in actions
         assert _INTERACTIVE_BOX in actions
+        assert _INTERACTIVE_BG_BOX in actions
 
 
 class TestSetAsRelatedImageMenuItem:

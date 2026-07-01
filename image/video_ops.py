@@ -60,14 +60,32 @@ class VideoOps:
         return Utils.unique_sibling_path(video_path, "_noaudio")
 
     @staticmethod
+    def _reencoded_output_path(video_path: str, suffix: str) -> str:
+        """Collision-safe sibling path for an H.264/AAC re-encoded output.
+
+        Always uses ``.mp4`` regardless of the source container: re-encoded
+        H.264 video / AAC audio streams are not valid in every container (e.g.
+        WebM only allows VP8/VP9/AV1 video and Vorbis/Opus/WebVTT streams), so
+        standardizing on MP4 avoids "Only ... supported for <container>"
+        ffmpeg failures for crop/box/background-box outputs.
+        """
+        mp4_stem = os.path.splitext(video_path)[0] + ".mp4"
+        return Utils.unique_sibling_path(mp4_stem, suffix)
+
+    @staticmethod
     def default_output_path_crop(video_path: str) -> str:
-        """``dir/foo.ext`` → ``dir/foo_crop.ext`` (collision-safe)."""
-        return Utils.unique_sibling_path(video_path, "_crop")
+        """``dir/foo.ext`` → ``dir/foo_crop.mp4`` (collision-safe; always MP4, see :meth:`_reencoded_output_path`)."""
+        return VideoOps._reencoded_output_path(video_path, "_crop")
 
     @staticmethod
     def default_output_path_box(video_path: str) -> str:
-        """``dir/foo.ext`` → ``dir/foo_box.ext`` (collision-safe)."""
-        return Utils.unique_sibling_path(video_path, "_box")
+        """``dir/foo.ext`` → ``dir/foo_box.mp4`` (collision-safe; always MP4, see :meth:`_reencoded_output_path`)."""
+        return VideoOps._reencoded_output_path(video_path, "_box")
+
+    @staticmethod
+    def default_output_path_background_box(video_path: str) -> str:
+        """``dir/foo.ext`` → ``dir/foo_bgbox.mp4`` (collision-safe; always MP4, see :meth:`_reencoded_output_path`)."""
+        return VideoOps._reencoded_output_path(video_path, "_bgbox")
 
     @staticmethod
     def crop_video(
@@ -80,7 +98,8 @@ class VideoOps:
     ) -> str:
         """Write a new sibling file spatially cropped to the rectangle (x, y, w, h).
 
-        Uses FFmpeg's ``crop`` filter with libx264 re-encode.
+        Uses FFmpeg's ``crop`` filter with libx264/AAC re-encode into MP4
+        (see :meth:`_reencoded_output_path` for why the container is fixed).
         Returns the output path on success.
         Raises RuntimeError if ffmpeg is missing, inputs are invalid, or ffmpeg fails.
         """
@@ -105,7 +124,7 @@ class VideoOps:
             "-i", video_path,
             "-vf", f"crop={w}:{h}:{x}:{y}",
             "-c:v", "libx264", "-crf", "18", "-preset", "fast",
-            "-c:a", "copy",
+            "-c:a", "aac",
             out_path,
         ]
         try:
@@ -151,7 +170,8 @@ class VideoOps:
         """Write a new sibling file with a solid random-color box painted over the
         rectangle (x, y, w, h) for the whole duration of the video.
 
-        Uses FFmpeg's ``drawbox`` filter (filled) with libx264 re-encode.
+        Uses FFmpeg's ``drawbox`` filter (filled) with libx264/AAC re-encode into MP4
+        (see :meth:`_reencoded_output_path` for why the container is fixed).
         Returns the output path on success.
         Raises RuntimeError if ffmpeg is missing, inputs are invalid, or ffmpeg fails.
         """
@@ -177,7 +197,7 @@ class VideoOps:
             "-i", video_path,
             "-vf", f"drawbox=x={x}:y={y}:w={w}:h={h}:color={color}:t=fill",
             "-c:v", "libx264", "-crf", "18", "-preset", "fast",
-            "-c:a", "copy",
+            "-c:a", "aac",
             out_path,
         ]
         try:
@@ -204,6 +224,86 @@ class VideoOps:
             raise RuntimeError(f"ffmpeg box draw failed{detail}")
 
         logger.info("Wrote video with box: %s", out_path)
+        return out_path
+
+    @staticmethod
+    def draw_background_box_on_video(
+        video_path: str,
+        x: int,
+        y: int,
+        w: int,
+        h: int,
+        output_path: str | None = None,
+    ) -> str:
+        """Write a new sibling file with a solid random-color fill painted over
+        everything *outside* the rectangle (x, y, w, h) -- the video's "background"
+        -- leaving the rectangle's interior unchanged, for the whole duration of
+        the video.
+
+        Uses four chained FFmpeg ``drawbox`` filters (top/bottom/left/right strips
+        tiling the frame minus the kept rectangle) with libx264/AAC re-encode into
+        MP4 (see :meth:`_reencoded_output_path` for why the container is fixed).
+        Returns the output path on success.
+        Raises RuntimeError if ffmpeg is missing, inputs are invalid, or ffmpeg fails.
+        """
+        if not is_video_file(video_path):
+            raise RuntimeError("Not a video file")
+        if w <= 0 or h <= 0:
+            raise RuntimeError(f"Invalid box dimensions: w={w} h={h}")
+        ffmpeg = VideoOps.find_ffmpeg_executable()
+        if not ffmpeg:
+            raise RuntimeError("ffmpeg not found on PATH")
+
+        out_path = output_path or VideoOps.default_output_path_background_box(video_path)
+        if os.path.exists(out_path):
+            try:
+                os.unlink(out_path)
+            except OSError as e:
+                raise RuntimeError(f"Could not remove existing output file: {e}") from e
+
+        color = VideoOps._random_box_color()
+        # Tile the frame minus the kept (x, y, w, h) rectangle with four strips:
+        # full-width top/bottom bands, plus left/right bands spanning just the
+        # rectangle's row. `iw`/`ih` are FFmpeg's input-width/height expression vars.
+        strips = (
+            f"drawbox=x=0:y=0:w=iw:h={y}:color={color}:t=fill,"
+            f"drawbox=x=0:y={y + h}:w=iw:h=ih-{y + h}:color={color}:t=fill,"
+            f"drawbox=x=0:y={y}:w={x}:h={h}:color={color}:t=fill,"
+            f"drawbox=x={x + w}:y={y}:w=iw-{x + w}:h={h}:color={color}:t=fill"
+        )
+        cmd = [
+            ffmpeg,
+            "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
+            "-i", video_path,
+            "-vf", strips,
+            "-c:v", "libx264", "-crf", "18", "-preset", "fast",
+            "-c:a", "aac",
+            out_path,
+        ]
+        try:
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                stdin=subprocess.DEVNULL,
+                timeout=3600,
+            )
+        except subprocess.TimeoutExpired as e:
+            try:
+                if os.path.isfile(out_path):
+                    os.unlink(out_path)
+            except OSError:
+                pass
+            raise RuntimeError("ffmpeg timed out while drawing background box on video") from e
+        except OSError as e:
+            raise RuntimeError(f"Failed to run ffmpeg: {e}") from e
+
+        if proc.returncode != 0:
+            stderr = (proc.stderr or proc.stdout or "").strip()
+            detail = f": {stderr}" if stderr else ""
+            raise RuntimeError(f"ffmpeg background box draw failed{detail}")
+
+        logger.info("Wrote video with background box: %s", out_path)
         return out_path
 
     @staticmethod

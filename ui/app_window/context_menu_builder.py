@@ -139,6 +139,10 @@ class ContextMenuBuilder:
                 _("Interactive Box…"),
                 lambda: app.window_launcher.interactive_box(),
             )
+            menu.addAction(
+                _("Interactive Background Box…"),
+                lambda: app.window_launcher.interactive_background_box(),
+            )
 
         menu.addSeparator()
 

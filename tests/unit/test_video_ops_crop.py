@@ -41,11 +41,14 @@ class TestDefaultOutputPathCrop:
         out = VideoOps.default_output_path_crop(src)
         assert "_crop" in out
 
-    def test_preserves_extension(self, tmp_path):
-        src = str(tmp_path / "clip.mkv")
+    def test_always_uses_mp4_regardless_of_source_extension(self, tmp_path):
+        # H.264/AAC re-encoded output isn't valid in every source container
+        # (e.g. WebM only allows VP8/VP9/AV1), so the output always standardizes
+        # on MP4 rather than preserving the source extension.
+        src = str(tmp_path / "clip.webm")
         open(src, "w").close()
         out = VideoOps.default_output_path_crop(src)
-        assert out.endswith(".mkv")
+        assert out.endswith(".mp4")
 
     def test_sibling_of_source(self, tmp_path):
         src = str(tmp_path / "clip.mp4")
@@ -126,15 +129,15 @@ class TestCropVideoCommand:
     @patch("image.video_ops.is_video_file", return_value=True)
     @patch("image.video_ops.VideoOps.find_ffmpeg_executable", return_value="/usr/bin/ffmpeg")
     @patch("subprocess.run")
-    def test_copies_audio_stream(self, mock_run, _ffmpeg, _is_video, fake_video, tmp_path):
+    def test_transcodes_audio_to_aac(self, mock_run, _ffmpeg, _is_video, fake_video, tmp_path):
+        # Audio is re-encoded to AAC (not stream-copied): a copied Vorbis/Opus
+        # stream from a source like WebM would be invalid once muxed into MP4.
         mock_run.return_value = _make_proc()
         out = str(tmp_path / "out.mp4")
         VideoOps.crop_video(fake_video, 0, 0, 100, 100, output_path=out)
         cmd = mock_run.call_args[0][0]
-        # -c:a copy must appear together in the command list
-        assert "copy" in cmd
         ca_idx = next(i for i, v in enumerate(cmd) if v == "-c:a")
-        assert cmd[ca_idx + 1] == "copy"
+        assert cmd[ca_idx + 1] == "aac"
 
     @patch("image.video_ops.is_video_file", return_value=True)
     @patch("image.video_ops.VideoOps.find_ffmpeg_executable", return_value="/usr/bin/ffmpeg")

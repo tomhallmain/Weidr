@@ -214,3 +214,17 @@ def launch_video_box(media_frame: MediaFrame, media_path: str, app: AppWindow) -
         success_msg=_("Video box added"),
         toast_msg=_("Drag to select box location, Enter to confirm, Escape to cancel"),
     )
+
+
+def launch_video_background_box(media_frame: MediaFrame, media_path: str, app: AppWindow) -> None:
+    """Pause VLC, compute the video display rect, and open a VideoCropOverlay above it for
+    painting a random color fill over everything outside the selection (the
+    "background"), reusing the same overlay as :func:`launch_video_crop`."""
+    from image.video_ops import VideoOps
+    _launch_video_rect_selector(
+        media_frame, media_path, app,
+        apply_fn=VideoOps.draw_background_box_on_video,
+        no_output_msg=_("Video background box draw produced no output"),
+        success_msg=_("Video background box added"),
+        toast_msg=_("Drag to select area to keep, Enter to confirm, Escape to cancel"),
+    )

@@ -143,6 +143,50 @@ class ImageOps:
             return ""
 
     @staticmethod
+    def draw_background_box_at_rect(image_path: str, left: int, upper: int, right: int, lower: int) -> str:
+        """Paint a random color/pattern fill over everything *outside* the given
+        pixel bounding box (the "background"), leaving the box's interior
+        unchanged, and save as a new sibling file. Does not modify *image_path*.
+
+        Animated GIFs are handled frame-by-frame with original durations preserved.
+        """
+        try:
+            from PIL import ImageSequence
+            from utils.utils import Utils
+            new_path = Utils.unique_sibling_path(image_path, "_bgbox")
+            with Image.open(image_path) as img:
+                n_frames = getattr(img, "n_frames", 1)
+                if n_frames > 1:
+                    loop = img.info.get("loop", 0)
+                    frames, durations = [], []
+                    for frame in ImageSequence.Iterator(img):
+                        frame_rgba = frame.convert("RGBA")
+                        w, h = frame_rgba.size
+                        out = ImageOps.generate_box_fill_image(w, h).convert("RGBA")
+                        out.paste(frame_rgba.crop((left, upper, right, lower)), (left, upper))
+                        frames.append(out)
+                        durations.append(frame.info.get("duration", 100))
+                    frames[0].save(
+                        new_path,
+                        format="GIF",
+                        save_all=True,
+                        append_images=frames[1:],
+                        duration=durations,
+                        loop=loop,
+                        optimize=False,
+                    )
+                else:
+                    src = img.convert("RGB")
+                    w, h = src.size
+                    out = ImageOps.generate_box_fill_image(w, h)
+                    out.paste(src.crop((left, upper, right, lower)), (left, upper))
+                    out.save(new_path)
+            return new_path
+        except Exception as e:
+            logger.error("Error in draw_background_box_at_rect: %s", e)
+            return ""
+
+    @staticmethod
     def rotate_image(image_path, right=False):
         try:
             #loading the image into a numpy array 

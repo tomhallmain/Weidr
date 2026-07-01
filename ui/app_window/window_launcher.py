@@ -486,8 +486,17 @@ class WindowLauncher:
             new_path = apply_fn(source_path, left, upper, right, lower)
 
             if media_type in (MediaType.SVG, MediaType.PDF) and new_path and os.path.exists(new_path):
-                # Output lives next to the temp PNG; move it beside the original file.
-                sibling = Utils.unique_sibling_path(media_path, output_suffix)
+                # SVG/PDF sources are rendered to a raster image for editing (PDF's
+                # rendered page is JPEG, SVG's is PNG -- see pdf_current_page_path /
+                # FrameCache.get_image_path), and apply_fn writes a real image file
+                # in that same format. os.replace() below is a plain rename, not a
+                # re-encode, so the sibling must keep apply_fn's actual output
+                # extension -- not adopt the original .pdf/.svg extension, which
+                # would just mislabel that image as a format it isn't (PDFium then
+                # rejects it with a "Data format error" when trying to open it).
+                image_ext = os.path.splitext(new_path)[1] or ".png"
+                image_stem = os.path.splitext(media_path)[0] + image_ext
+                sibling = Utils.unique_sibling_path(image_stem, output_suffix)
                 try:
                     os.replace(new_path, sibling)
                     new_path = sibling

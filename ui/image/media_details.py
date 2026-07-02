@@ -1416,13 +1416,13 @@ class MediaDetails(SmartWindow):
     ) -> None:
         if master is None or image_path == "":
             raise Exception("No master or image path given")
-        related_image_path, exact_match = (
+        related_image_path, found_on_disk = (
             MediaDetails.get_related_image_path(image_path, node_id)
         )
         if related_image_path is None or related_image_path == "":
             app_actions.toast(_("(No related image found)"))
             return
-        elif not exact_match:
+        elif not found_on_disk:
             app_actions.toast(_(" (Exact Match Not Found)"))
             return
         MediaDetails.open_temp_media_canvas(

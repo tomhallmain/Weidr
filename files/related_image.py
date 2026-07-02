@@ -168,9 +168,9 @@ def get_related_image_path(
     """
     Resolve the related image path for image_path.
 
-    Returns (path, exact_match). exact_match is True only when the file
+    Returns (path, found_on_disk). found_on_disk is True only when the file
     was found on disk. check_extra_directories=None skips the existence
-    check entirely and returns the raw metadata value with exact_match=False.
+    check entirely and returns the raw metadata value with found_on_disk=False.
     """
     related_image_path = image_data_extractor.get_related_image_path(image_path, node_id)
     if related_image_path is None or related_image_path == "":
@@ -203,12 +203,12 @@ def get_related_image_path(
 
 def get_related_image_text(image_path: str, node_id: str = "LoadImage") -> str:
     """Return a display string describing the related image for image_path."""
-    related_image_path, exact_match = get_related_image_path(
+    related_image_path, found_on_disk = get_related_image_path(
         image_path, node_id, check_extra_directories=False
     )
     if related_image_path is not None:
         return (
-            related_image_path if exact_match
+            related_image_path if found_on_disk
             else related_image_path + _(" (Exact Match Not Found)")
         )
     return _("(No related image found)")
@@ -425,20 +425,34 @@ def get_image_edit_redo_params(
 ) -> tuple[str | None, str | None]:
     """Return (related_path, edit_suffix) if image_path can be redone as an image edit.
 
-    Eligible when:
-    - The image has a related image reference in its metadata (path need not exist
-      locally — a sufficiently unique basename is likely the correct source), OR
-      the base stem of the filename matches exactly one file in the same directory
-      whose stem is exactly that base stem (no appended suffix).
+    Eligible when one of, in preference order:
+    - The image has a related image reference in its metadata that resolves to a
+      real file (locally, or via config.directories_to_search_for_related_images).
+    - No metadata reference exists, or it names a path that couldn't be verified to
+      exist anywhere (e.g. the source was since moved/renamed): the base stem of the
+      filename is searched for in the same directory, and used if it matches exactly
+      one file whose stem is exactly that base stem (no appended suffix). This is
+      preferred over an unverified metadata path because it's confirmed to exist.
+    - If that search finds no unique match either, an unverified metadata reference
+      (if any) is used anyway as a last resort — a sufficiently unique basename is
+      likely still the correct source even though we can't confirm it exists right
+      now (see get_related_image_path). Only dropped if there was no metadata
+      reference at all.
     - The image's stem ends with a non-numeric variant suffix (_VARIANT_SUFFIX_RE).
 
     The suffix is the tail of the current stem beyond the related image's stem
     (e.g. source ``img.png``, edit ``img_edit.png`` → suffix ``_edit``).
-    Returns (None, None) when either condition is not met.
+    Returns (None, None) when no candidate source is available, or the suffix
+    condition is not met.
     """
-    related_path, _exact = get_related_image_path(image_path)
+    related_path, found_on_disk = get_related_image_path(image_path)
 
-    if related_path is None:
+    if not found_on_disk:
+        # No metadata reference, or it doesn't resolve to a real file anywhere.
+        # Try a same-directory base-stem search -- it's filesystem-verified, so
+        # prefer it over stale metadata when it uniquely identifies a source.
+        # If it doesn't, related_path is left as-is (None, or the unverified
+        # metadata path as a last resort) rather than being dropped.
         base_stem = extract_filename_base_stem(image_path)
         if base_stem:
             same_dir = os.path.dirname(os.path.abspath(image_path))

@@ -441,3 +441,40 @@ class TestGetImageEditRedoParams:
         with _patch_get_related(None):
             related, suffix = get_image_edit_redo_params(str(edit))
         assert (related, suffix) == (None, None)
+
+    def test_stale_metadata_prefers_verified_same_dir_match(self, tmp_path):
+        """Regression: metadata names a path that doesn't resolve to a real file
+        anywhere (found_on_disk=False) -- e.g. the source was moved by a filtered
+        move. A same-dir file with the exact base stem is filesystem-verified,
+        so it must win over the stale, unverified metadata reference rather
+        than the stale reference being used unconditionally."""
+        source = tmp_path / "CUI_12345.png"
+        edit = tmp_path / "CUI_12345_edit.png"
+        source.write_bytes(b"")
+        edit.write_bytes(b"")
+        stale = "/some/other/place/CUI_12345.png"
+        with patch(
+            "files.related_image.get_related_image_path",
+            return_value=(stale, False),
+        ):
+            related, suffix = get_image_edit_redo_params(str(edit))
+        assert related == str(source)
+        assert suffix == "_edit"
+
+    def test_stale_metadata_used_as_last_resort_when_no_same_dir_match(self, tmp_path):
+        """Regression: when the metadata path can't be verified to exist AND the
+        same-dir search finds no unique match either, the stale metadata
+        reference must still be returned rather than dropped -- a sufficiently
+        unique basename is still likely the correct source (see
+        get_related_image_path's docstring), so this "valid, non-exact" case
+        must not regress to (None, None)."""
+        edit = tmp_path / "CUI_12345_edit.png"
+        edit.write_bytes(b"")
+        stale = "/some/other/place/CUI_12345.png"
+        with patch(
+            "files.related_image.get_related_image_path",
+            return_value=(stale, False),
+        ):
+            related, suffix = get_image_edit_redo_params(str(edit))
+        assert related == stale
+        assert suffix == "_edit"

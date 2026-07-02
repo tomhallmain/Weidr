@@ -58,6 +58,20 @@ def _move(view: ZoomableGraphicsView, pos: QPoint) -> None:
     QApplication.sendEvent(view.viewport(), event)
 
 
+def _hover_move(view: ZoomableGraphicsView, pos: QPoint) -> None:
+    """Mouse move with no button held (a hover, as opposed to _move above
+    which simulates a drag-move with the left button down)."""
+    event = QMouseEvent(
+        QMouseEvent.Type.MouseMove,
+        QPointF(pos),
+        QPointF(pos),
+        Qt.MouseButton.NoButton,
+        Qt.MouseButton.NoButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+    QApplication.sendEvent(view.viewport(), event)
+
+
 def _release(view: ZoomableGraphicsView, pos: QPoint) -> None:
     event = QMouseEvent(
         QMouseEvent.Type.MouseButtonRelease,
@@ -168,6 +182,21 @@ class TestCropRectFromDrag:
         _release(view, QPoint(100, 100))
         assert len(emitted) == 1
         assert isinstance(emitted[0], QRectF)
+
+    def test_rect_unchanged_by_hover_move_after_release(self, qtbot):
+        """Regression: mouse tracking is enabled globally (for polygon-mode's
+        hover preview), so mouseMoveEvent now fires even with no button held.
+        A hover move after the drag's release must not keep resizing the rect
+        from the still-set anchor -- otherwise the selection drifts or
+        collapses before the user gets a chance to press Enter."""
+        view = _make_view(qtbot)
+        view.start_crop_mode()
+        _press(view, QPoint(50, 50))
+        _move(view, QPoint(200, 150))
+        _release(view, QPoint(200, 150))
+        rect_after_release = view.get_crop_rect_scene()
+        _hover_move(view, QPoint(51, 51))  # hover only, no button held
+        assert view.get_crop_rect_scene() == rect_after_release
 
 
 # ---------------------------------------------------------------------------

@@ -315,9 +315,16 @@ class ZoomableGraphicsView(QGraphicsView):
             event.accept()
             return
         if self._crop_mode and self._crop_anchor is not None:
-            current = self.mapToScene(event.position().toPoint())
-            self._crop_rect_scene = QRectF(self._crop_anchor, current).normalized()
-            self._update_crop_overlay()
+            if event.buttons() & Qt.MouseButton.LeftButton:
+                # Only live-resize the rect while the button is actually held.
+                # Mouse tracking is enabled globally (for polygon-mode's hover
+                # preview), so without this check, every hover move after the
+                # drag's release would keep recomputing the rect from the
+                # still-set anchor and the now-idle cursor position, making the
+                # selection drift or collapse before the user can hit Enter.
+                current = self.mapToScene(event.position().toPoint())
+                self._crop_rect_scene = QRectF(self._crop_anchor, current).normalized()
+                self._update_crop_overlay()
             event.accept()
             return
         super().mouseMoveEvent(event)

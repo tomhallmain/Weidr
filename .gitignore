@@ -51,3 +51,6 @@ ehthumbs.db
 .env
 .env.local
 *.log
+
+# Local i18n batch-fix overrides (see scripts/i18n_fixes.example.json)
+scripts/i18n_fixes.json

@@ -127,7 +127,7 @@ class _DirectoryPickerCache:
         home = os.path.expanduser("~")
         if home and os.path.isdir(home):
             normalized_home = os.path.normpath(home)
-            roots.append((normalized_home, _("Home")))
+            roots.append((normalized_home, _("Home folder")))
             seen_roots.add(normalized_home.casefold())
 
         try:
@@ -188,7 +188,7 @@ class _DirectoryPickerCache:
         add_root("/", "/")
         home = os.path.expanduser("~")
         if home and home != "/":
-            add_root(home, _("Home"))
+            add_root(home, _("Home folder"))
 
         # Include mounted volumes from psutil when available.
         try:

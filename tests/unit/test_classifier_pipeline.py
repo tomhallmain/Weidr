@@ -568,12 +568,13 @@ class TestValidation:
         assert any("name" in e.lower() for e in errors)
 
     def test_duplicate_node_names(self):
+        from utils.translations import _
         p = _simple_pipeline(
             _make_node("same", EmbeddingCondition()),
             _make_node("same", EmbeddingCondition()),
         )
         errors = p.validate()
-        assert any("Duplicate" in e for e in errors)
+        assert any(e == _("Duplicate node name: {0}.").format("same") for e in errors)
 
     def test_goto_nonexistent_target(self):
         p = _simple_pipeline(
@@ -584,13 +585,15 @@ class TestValidation:
         assert any("ghost" in e for e in errors)
 
     def test_goto_backward_reference_rejected(self):
+        from utils.translations import _
         p = _simple_pipeline(
             _make_node("n1", EmbeddingCondition()),
             _make_node("n2", EmbeddingCondition(),
                        on_match=NodeOutcome(OutcomeType.GOTO, target_node="n1")),
         )
         errors = p.validate()
-        assert any("cycle" in e.lower() for e in errors)
+        expected = _("Node {0}: GOTO target {1} must be a later node (cycle prevention).").format("n2", "n1")
+        assert any(e == expected for e in errors)
 
     def test_goto_forward_reference_ok(self):
         p = _simple_pipeline(
@@ -601,12 +604,14 @@ class TestValidation:
         assert p.validate() == []
 
     def test_node_result_references_later_node(self):
+        from utils.translations import _
         p = _simple_pipeline(
             _make_node("n1", NodeResultCondition("n2", True)),
             _make_node("n2", EmbeddingCondition()),
         )
         errors = p.validate()
-        assert any("n2" in e and "prior" in e for e in errors)
+        expected = _("Node {0}: NodeResultCondition references {1} which is not a prior node.").format("n1", "n2")
+        assert any(e == expected for e in errors)
 
     def test_node_result_references_nonexistent(self):
         p = _simple_pipeline(
@@ -661,9 +666,10 @@ class TestValidation:
         assert any("min_rank" in e for e in errors)
 
     def test_empty_node_name(self):
+        from utils.translations import _
         p = _simple_pipeline(_make_node("", EmbeddingCondition()))
         errors = p.validate()
-        assert any("empty" in e.lower() for e in errors)
+        assert any(e == _("A node has an empty name.") for e in errors)
 
     def test_related_image_condition_no_edit_suffix_fails(self):
         p = _simple_pipeline(_make_node("n1", RelatedImageCondition(edit_suffix="")))
@@ -839,9 +845,11 @@ class TestValidation:
         assert errors == []
 
     def test_group_no_children_fails(self):
+        from utils.translations import _
         p = _simple_pipeline(_make_node("n1", GroupCondition(operator="OR", nodes=[])))
         errors = p.validate()
-        assert any("no child" in e.lower() for e in errors)
+        expected = _("Node {0}: GroupCondition has no child nodes.").format("n1")
+        assert any(e == expected for e in errors)
 
     def test_group_bad_operator_fails(self):
         child = PipelineNode("c1", FilenameContainsCondition(["x"]))
@@ -850,12 +858,14 @@ class TestValidation:
         assert any("operator" in e.lower() for e in errors)
 
     def test_group_duplicate_child_names_fails(self):
+        from utils.translations import _
         p = _simple_pipeline(_make_node("n1", GroupCondition(operator="OR", nodes=[
             PipelineNode("dup", FilenameContainsCondition(["a"])),
             PipelineNode("dup", FilenameContainsCondition(["b"])),
         ])))
         errors = p.validate()
-        assert any("duplicate" in e.lower() for e in errors)
+        expected = _("Node {0}: GroupCondition duplicate child name {1}.").format("n1", "dup")
+        assert any(e == expected for e in errors)
 
     def test_group_valid_passes(self):
         p = _simple_pipeline(_make_node("n1", GroupCondition(operator="OR", nodes=[
@@ -1077,8 +1087,9 @@ class TestSummaries:
         assert "False" in s
 
     def test_pipeline_node_condition_summary(self):
+        from utils.translations import _
         node = _make_node("n", EmbeddingCondition(["test"]))
-        assert "Embedding" in node.condition_summary()
+        assert node.condition_summary().startswith(_("Embedding"))
 
     def test_condition_display_summaries_dont_crash(self):
         from utils.constants import CompareMediaType
@@ -1201,9 +1212,11 @@ class TestMediaTypeCondition:
         assert "video" in s
 
     def test_validation_rejects_empty_media_types(self):
+        from utils.translations import _
         p = _simple_pipeline(_make_node("n1", MediaTypeCondition([])))
         errors = p.validate()
-        assert any("MediaTypeCondition" in e and "no media_types" in e for e in errors)
+        expected = _("Node {0}: MediaTypeCondition has no media_types.").format("n1")
+        assert any(e == expected for e in errors)
 
     def test_validation_accepts_non_empty(self):
         p = _simple_pipeline(
@@ -1574,9 +1587,11 @@ class TestSeedCategory:
         assert not any("seed_category" in e for e in errors)
 
     def test_validate_errors_when_category_map_empty(self):
+        from utils.translations import _
         p = ClassifierPipeline(name="p", category_map={}, seed_category="Apple")
         errors = p.validate()
-        assert any("seed_category" in e and "empty" in e for e in errors)
+        expected = _("seed_category '{0}' is set but category_map is empty.").format("Apple")
+        assert any(e == expected for e in errors)
 
     def test_validate_errors_when_key_not_in_category_map(self):
         p = ClassifierPipeline(name="p", category_map=self._CAT_MAP, seed_category="Cherry")
@@ -1591,14 +1606,22 @@ class TestSeedCategory:
 
 class TestCategoryMapNumericSuffixValidation:
     def test_numeric_suffix_rejected(self):
+        from utils.translations import _
         p = ClassifierPipeline(name="p", category_map={"Size": "_1280"})
         errors = p.validate()
-        assert any("1280" in e and "numeric" in e for e in errors)
+        expected = _("category_map entry '{0}': suffix '{1}' is purely numeric and cannot be used as a suffix.").format(
+            "Size", "_1280"
+        )
+        assert any(e == expected for e in errors)
 
     def test_numeric_suffix_without_separator_rejected(self):
+        from utils.translations import _
         p = ClassifierPipeline(name="p", category_map={"Index": "001"})
         errors = p.validate()
-        assert any("001" in e and "numeric" in e for e in errors)
+        expected = _("category_map entry '{0}': suffix '{1}' is purely numeric and cannot be used as a suffix.").format(
+            "Index", "001"
+        )
+        assert any(e == expected for e in errors)
 
     def test_alpha_suffix_accepted(self):
         p = ClassifierPipeline(name="p", category_map={"Apple": "_apple"})
@@ -1609,9 +1632,13 @@ class TestCategoryMapNumericSuffixValidation:
         assert p.validate() == []
 
     def test_multiple_entries_one_numeric_reports_that_entry(self):
+        from utils.translations import _
         p = ClassifierPipeline(name="p", category_map={"Apple": "_apple", "Bad": "_999"})
         errors = p.validate()
-        assert any("Bad" in e and "numeric" in e for e in errors)
+        expected = _("category_map entry '{0}': suffix '{1}' is purely numeric and cannot be used as a suffix.").format(
+            "Bad", "_999"
+        )
+        assert any(e == expected for e in errors)
         assert not any("Apple" in e for e in errors)
 
 

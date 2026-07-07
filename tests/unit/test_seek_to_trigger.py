@@ -25,6 +25,7 @@ from ui.compare.seek_to_trigger_tab_qt import (
     SeekToTriggerTab,
 )
 from utils.constants import ClassifierActionType
+from utils.translations import _
 
 
 # ---------------------------------------------------------------------------
@@ -672,28 +673,28 @@ class TestFormatTriggerDetail:
     def test_embedding(self):
         d = TriggerDetail(trigger_type="embedding")
         result = _format_trigger_detail(d)
-        assert "embedding" in result.lower()
+        assert result == _("Trigger: text embedding")
 
     def test_prompt(self):
         d = TriggerDetail(trigger_type="prompt")
         result = _format_trigger_detail(d)
-        assert "prompt" in result.lower()
+        assert result == _("Trigger: prompt match")
 
     def test_prototype(self):
         d = TriggerDetail(trigger_type="prototype")
         result = _format_trigger_detail(d)
-        assert "prototype" in result.lower()
+        assert result == _("Trigger: prototype")
 
     def test_filename(self):
         d = TriggerDetail(trigger_type="filename")
         result = _format_trigger_detail(d)
-        assert "filename" in result.lower()
+        assert result == _("Trigger: filename match")
 
     def test_image_classifier_with_category_and_predictions(self):
         preds = [("portrait", 0.87), ("person", 0.09), ("scene", 0.04)]
         d = TriggerDetail(trigger_type="image_classifier", category="portrait", top_predictions=preds)
         result = _format_trigger_detail(d)
-        assert "image classifier" in result.lower()
+        assert result.startswith(_("Trigger: image classifier"))
         assert "portrait" in result
         assert "87%" in result
 
@@ -707,7 +708,7 @@ class TestFormatTriggerDetail:
     def test_image_classifier_no_category_no_crash(self):
         d = TriggerDetail(trigger_type="image_classifier")
         result = _format_trigger_detail(d)
-        assert "image classifier" in result.lower()
+        assert result == _("Trigger: image classifier")
 
     def test_image_classifier_no_predictions_no_crash(self):
         d = TriggerDetail(trigger_type="image_classifier", category="portrait")
@@ -845,6 +846,7 @@ class TestLastActionPersistence:
         SeekToTriggerTab.run_last_seek_to_trigger(_FakeActions())
 
         assert toasts, "Expected a toast"
-        assert any("Seek to Trigger tab" in t for t in toasts), (
-            f"Expected 'use the Seek to Trigger tab' message, got: {toasts}"
+        expected = _("No previous seek-to-trigger action — use the Seek to Trigger tab first.")
+        assert any(t == expected for t in toasts), (
+            f"Expected {expected!r} message, got: {toasts}"
         )

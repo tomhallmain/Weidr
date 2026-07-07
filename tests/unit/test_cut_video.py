@@ -4,10 +4,12 @@ All subprocess calls are mocked — no real ffmpeg required.
 """
 
 import os
+import re
 import pytest
 from unittest.mock import patch, MagicMock
 
 from image.video_ops import VideoCutSide, VideoOps
+from utils.translations import _
 
 
 # ---------------------------------------------------------------------------
@@ -120,19 +122,19 @@ class TestCutVideoAtMs:
     @patch("image.video_ops.is_video_file", return_value=True)
     @patch("image.video_ops.VideoOps.find_ffmpeg_executable", return_value=None)
     def test_raises_if_no_ffmpeg(self, _ffmpeg, _is_video, fake_video):
-        with pytest.raises(RuntimeError, match="ffmpeg not found"):
+        with pytest.raises(RuntimeError, match=re.escape(_("ffmpeg not found on PATH"))):
             VideoOps.cut_video_at_ms(fake_video, 5000, VideoCutSide.KEEP_BEGINNING, 60000)
 
     @patch("image.video_ops.is_video_file", return_value=True)
     @patch("image.video_ops.VideoOps.find_ffmpeg_executable", return_value="/usr/bin/ffmpeg")
     def test_raises_if_cut_at_zero(self, _ffmpeg, _is_video, fake_video):
-        with pytest.raises(RuntimeError, match="after the start"):
+        with pytest.raises(RuntimeError, match=re.escape(_("Cut position must be after the start of the video"))):
             VideoOps.cut_video_at_ms(fake_video, 0, VideoCutSide.KEEP_BEGINNING, 60000)
 
     @patch("image.video_ops.is_video_file", return_value=True)
     @patch("image.video_ops.VideoOps.find_ffmpeg_executable", return_value="/usr/bin/ffmpeg")
     def test_raises_if_cut_at_or_past_end(self, _ffmpeg, _is_video, fake_video):
-        with pytest.raises(RuntimeError, match="before the end"):
+        with pytest.raises(RuntimeError, match=re.escape(_("Cut position must be before the end of the video"))):
             VideoOps.cut_video_at_ms(fake_video, 60000, VideoCutSide.KEEP_BEGINNING, 60000)
 
     @patch("image.video_ops.is_video_file", return_value=True)

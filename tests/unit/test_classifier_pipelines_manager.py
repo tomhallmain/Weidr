@@ -87,14 +87,16 @@ class TestManagerHelpers:
 
 class TestFlowSummary:
     def test_empty_pipeline_summary(self, isolated_singletons):
+        from utils.translations import _
         p = ClassifierPipeline(name="empty")
-        assert p.flow_summary() == "(empty)"
+        assert p.flow_summary() == _("(empty)")
 
     def test_summary_includes_condition_type(self, isolated_singletons):
+        from utils.translations import _
         p = _make_pipeline("s")
         summary = p.flow_summary()
         # EmbeddingCondition -> "Embedding" in summary
-        assert "Embedding" in summary
+        assert _("Embedding") in summary
 
     def test_summary_is_multiline_for_nodes(self, isolated_singletons):
         p = _make_pipeline("s")

@@ -551,20 +551,23 @@ class TestRunOnProfile:
         assert "Last run on" not in captured[0]
 
     def test_last_run_shown_when_same_profile(self, qtbot, monkeypatch, isolated_singletons):
+        from utils.translations import _
         isolated_singletons.set_meta("pipeline_last_profile:MyPipeline", "TestProfile")
         tab, pipeline, captured = self._setup(qtbot, monkeypatch, isolated_singletons)
         tab._run_on_profile(pipeline)
-        assert "Last run on" in captured[0]
-        assert "TestProfile" in captured[0]
-        assert "switching" not in captured[0]
+        assert _("Last run on: {profile}").format(profile="TestProfile") in captured[0]
+        assert _("Last run on: {profile} (now switching to: {current})").format(
+            profile="TestProfile", current="TestProfile"
+        ) not in captured[0]
 
     def test_last_run_flags_profile_switch(self, qtbot, monkeypatch, isolated_singletons):
+        from utils.translations import _
         isolated_singletons.set_meta("pipeline_last_profile:MyPipeline", "OldProfile")
         tab, pipeline, captured = self._setup(qtbot, monkeypatch, isolated_singletons)
         tab._run_on_profile(pipeline)
-        assert "OldProfile" in captured[0]
-        assert "switching" in captured[0]
-        assert "TestProfile" in captured[0]
+        assert _("Last run on: {profile} (now switching to: {current})").format(
+            profile="OldProfile", current="TestProfile"
+        ) in captured[0]
 
     def test_cancel_does_not_write_last_run_cache(self, qtbot, monkeypatch, isolated_singletons):
         tab, pipeline, captured = self._setup(qtbot, monkeypatch, isolated_singletons)
@@ -709,9 +712,10 @@ class TestSDRunnerPreCheck:
         tab._profile_combo.setCurrentText("GenProfile2")
         tab._run_on_profile(pipeline)
 
+        from utils.translations import _
         assert len(alerts) == 2, "Expected run-confirm + SD-Runner-unavailable alerts"
-        titles = [t for t, _ in alerts]
-        assert any("SD Runner" in t for t in titles)
+        titles = [t for t, _msg in alerts]
+        assert any(t == _("SD Runner Not Available") for t in titles)
 
     def test_unreachable_and_user_cancels_does_not_start_worker(
         self, qtbot, monkeypatch, isolated_singletons

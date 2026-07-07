@@ -154,21 +154,21 @@ class TestMarkedFileMoverProgress:
 
     def test_move_label_mentions_moving(self, qtbot):
         """Progress dialog for a move operation says 'Moving'."""
-        progress, _ = MarkedFileMover.build_marks_progress(None, 200, Utils.move_file)
+        progress, _cb = MarkedFileMover.build_marks_progress(None, 200, Utils.move_file)
         qtbot.addWidget(progress)
-        assert "Moving" in progress.labelText()
+        assert progress.labelText() == _tr("Moving {0} files...").format(200)
 
     def test_copy_label_mentions_copying(self, qtbot):
         """Progress dialog for a copy operation says 'Copying'."""
-        progress, _ = MarkedFileMover.build_marks_progress(None, 200, Utils.copy_file)
+        progress, _cb = MarkedFileMover.build_marks_progress(None, 200, Utils.copy_file)
         qtbot.addWidget(progress)
-        assert "Copying" in progress.labelText()
+        assert progress.labelText() == _tr("Copying {0} files...").format(200)
 
     def test_generic_label_when_move_func_is_none(self, qtbot):
         """Progress dialog with no move_func falls back to 'Processing'."""
-        progress, _ = MarkedFileMover.build_marks_progress(None, 200, None)
+        progress, _cb = MarkedFileMover.build_marks_progress(None, 200, None)
         qtbot.addWidget(progress)
-        assert "Processing" in progress.labelText()
+        assert progress.labelText() == _tr("Processing {0} files...").format(200)
 
     def test_callback_sets_cancelled_flag_when_dialog_wasCanceled(
         self, qtbot, monkeypatch

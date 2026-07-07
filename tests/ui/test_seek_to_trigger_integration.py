@@ -28,6 +28,7 @@ from compare.classifier_actions_manager import ClassifierActionsManager
 from image.frame_cache import FrameCache, MediaStats
 from ui.app_window.media_controls_overlay import SLIDER_MAX
 from utils.constants import ClassifierActionType
+from utils.translations import _
 
 
 # ---------------------------------------------------------------------------
@@ -428,8 +429,8 @@ class TestSeekToTriggerTabEndToEnd:
                     QApplication.processEvents()
 
             detail = tab._detail_lbl.text()
-            assert "image classifier" in detail.lower(), (
-                f"Detail label missing 'image classifier': {detail!r}"
+            assert detail.startswith(_("Trigger: image classifier")), (
+                f"Detail label missing 'image classifier' trigger prefix: {detail!r}"
             )
             assert "portrait" in detail, (
                 f"Detail label missing category 'portrait': {detail!r}"

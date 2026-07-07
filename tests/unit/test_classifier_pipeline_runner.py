@@ -1355,10 +1355,11 @@ class TestPipelineRunReport:
         assert "my profile" in text
         assert "/work" in text
         assert "3" in text
-        assert "Generate" in text
+        assert ClassifierActionType.GENERATE.get_translation() in text
         assert "\n" in text
 
     def test_format_completion_report_includes_message_sections(self):
+        from utils.translations import _
         r = PipelineRunReport()
         r.add("WARNING", "uniqueness", "/dir/stem.png", "Stem not unique")
         r.add(
@@ -1369,13 +1370,14 @@ class TestPipelineRunReport:
         text = r.format_completion_report(
             PipelineRunStats(pipeline_name="p", files_evaluated=1)
         )
-        assert "Warnings" in text
-        assert "Notable" in text
+        assert _("Warnings") in text
+        assert _("Notable events") in text
         assert "uniqueness" in text
         assert "seed_apple.png" in text
         assert "seed_apple2.png" in text
 
     def test_format_completion_report_groups_duplicate_messages(self):
+        from utils.translations import _
         r = PipelineRunReport()
         shared_data = {"matches": ["/dir/stem__cher.png"], "base_stem": "stem"}
         r.add("NOTABLE", "Stem uniqueness check", "/dir/stem__appl.png",
@@ -1389,7 +1391,7 @@ class TestPipelineRunReport:
         assert "stem__banan.png" in text
         assert text.count("3 files share base stem") == 1  # detail appears once
         assert text.count("stem__cher.png") == 1           # match appears once
-        assert "2 files" in text                           # grouped header
+        assert _("  [{0}] — {1} files").format("Stem uniqueness check", 2) in text  # grouped header
 
     def test_format_completion_report_does_not_group_distinct_messages(self):
         r = PipelineRunReport()
@@ -1426,6 +1428,7 @@ class TestPipelineRunReport:
     def test_format_seed_summary_omits_seed_category_skip_note(self):
         """The live per-seed-file summary shouldn't repeat the seed-skip note
         on every seed image — the completion report's count already covers it."""
+        from utils.translations import _
         r = PipelineRunReport()
         snapshot = r.message_count()
         r.add(
@@ -1434,7 +1437,7 @@ class TestPipelineRunReport:
             data={"seed_category_skip": True},
         )
         summary = r.format_seed_summary("/dir/seed.png", None, snapshot)
-        assert summary == "seed.png → (no action)"
+        assert summary == f"seed.png → {_('(no action)')}"
 
     def test_format_completion_report_omits_empty_sections(self):
         r = PipelineRunReport()

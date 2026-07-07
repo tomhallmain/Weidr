@@ -375,11 +375,12 @@ class TestNodeResultPanel:
         assert result.expected_result is False
 
     def test_empty_prior_nodes_shows_placeholder(self, qtbot):
+        from utils.translations import _
         p = _NodeResultPanel()
         qtbot.addWidget(p)
         p.set_prior_nodes([])
         assert p._node_combo.count() == 1
-        assert "no prior" in p._node_combo.itemText(0).lower()
+        assert p._node_combo.itemText(0) == _("(no prior nodes)")
 
     def test_condition_type(self, qtbot):
         p = _NodeResultPanel()
@@ -649,10 +650,11 @@ class TestOutcomeEditorWidget:
         assert w._goto_combo.count() == 3
 
     def test_set_later_nodes_empty_shows_placeholder(self, qtbot):
+        from utils.translations import _
         w = _OutcomeEditorWidget("On match:")
         qtbot.addWidget(w)
         w.set_later_nodes([])
-        assert "no later" in w._goto_combo.itemText(0).lower()
+        assert w._goto_combo.itemText(0) == _("(no later nodes)")
 
     def test_goto_dependent_widget_visible_only_for_goto(self, qtbot):
         w = _OutcomeEditorWidget("On match:")

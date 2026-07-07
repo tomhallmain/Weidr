@@ -91,3 +91,38 @@ class TestFileOpsController:
         win.file_ops_ctrl.copy_media_path(path)
         clipboard_text = QApplication.clipboard().text()
         assert os.path.normcase(clipboard_text) == os.path.normcase(path)
+
+
+class TestFileCheckLargeDirectorySkip:
+    """checking_files=False skips the periodic file check in large directories,
+    unless the new-media slideshow is active — it needs the check to keep
+    watching for newly added files regardless of directory size."""
+
+    def test_skipped_when_checking_files_false_and_slideshow_inactive(
+        self, window_with_dir, monkeypatch
+    ):
+        win, _ = window_with_dir
+        win.set_mode(Mode.BROWSE)
+        win.file_browser.checking_files = False
+        win.slideshow_config.show_new_media = False
+        refreshed = []
+        monkeypatch.setattr(win, "refresh", lambda **kw: refreshed.append(kw))
+
+        win.file_ops_ctrl._on_file_check()
+
+        assert refreshed == []
+
+    def test_not_skipped_when_new_media_slideshow_active(
+        self, window_with_dir, monkeypatch
+    ):
+        win, _ = window_with_dir
+        win.set_mode(Mode.BROWSE)
+        win.file_browser.checking_files = False
+        win.slideshow_config.show_new_media = True
+        refreshed = []
+        monkeypatch.setattr(win, "refresh", lambda **kw: refreshed.append(kw))
+
+        win.file_ops_ctrl._on_file_check()
+
+        assert len(refreshed) == 1
+        assert refreshed[0]["show_new_media"] is True

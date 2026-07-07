@@ -82,14 +82,18 @@ class FileOpsController:
     def _on_file_check(self) -> None:
         """Called on the main thread by QTimer."""
         try:
-            if not self._fb.checking_files:
+            show_new_media = self._app.slideshow_config.show_new_media
+            if not self._fb.checking_files and not show_new_media:
+                # checking_files is False to avoid rechecking large directories, but
+                # the new-media slideshow's whole purpose is watching for new files,
+                # so it overrides that skip.
                 return
             if self._app.mode != Mode.BROWSE:
                 return
             base_dir = self._app.get_base_dir()
             if base_dir and base_dir != "":
                 self._app.refresh(
-                    show_new_media=self._app.slideshow_config.show_new_media,
+                    show_new_media=show_new_media,
                     from_file_check=True,
                 )
         except Exception as e:

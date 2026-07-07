@@ -3,7 +3,7 @@ import os
 
 from PIL import Image
 
-from files.related_image import get_origin_basename
+from files.related_image import extract_filename_base_stem, get_origin_basename
 from image.frame_cache import FrameCache
 from image.image_data_extractor import image_data_extractor
 
@@ -13,6 +13,7 @@ class SortableFile:
         self.basename = os.path.basename(full_file_path)
         self.name_length = len(self.basename)
         self.root, self.extension = os.path.splitext(self.basename)
+        self.suffix = None
         self.related_image_path = None
         self.related_image_path_key = self.full_file_path
         self._image_dimensions = None
@@ -37,6 +38,18 @@ class SortableFile:
         #     pass
 
         return tags
+
+    def set_suffix(self):
+        base_stem = extract_filename_base_stem(self.basename)
+        if base_stem and len(base_stem) < len(self.root):
+            self.suffix = self.root[len(base_stem):]
+        else:
+            self.suffix = ""
+
+    def get_suffix(self):
+        if self.suffix is None:
+            self.set_suffix()
+        return self.suffix
 
     def set_related_image_path(self):
         self.related_image_path = image_data_extractor.get_related_image_path(self.full_file_path)

@@ -325,6 +325,7 @@ def run_pipeline(
                     _("Seed image is assigned to category '{0}'; GENERATE skipped.").format(
                         pipeline.seed_category
                     ),
+                    data={"seed_category_skip": True},
                 )
         else:
             try:

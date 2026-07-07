@@ -52,6 +52,10 @@ class PipelineRunReport:
         self._lock = Lock()
 
     @staticmethod
+    def _is_seed_category_skip(msg: PipelineMessage) -> bool:
+        return isinstance(msg.data, dict) and bool(msg.data.get("seed_category_skip"))
+
+    @staticmethod
     def _severity_heading(severity: str) -> str:
         return {
             "WARNING": _("Warnings"),
@@ -111,6 +115,10 @@ class PipelineRunReport:
         image_name = os.path.basename(image_path)
         with self._lock:
             recent = self._messages[messages_since:]
+        # Seed-category-skip notes fire on every seed image, so surfacing them
+        # here would just repeat the same line once per seed file — the
+        # completion report's total count already covers it.
+        recent = [m for m in recent if not self._is_seed_category_skip(m)]
         if not recent:
             return f"{image_name} → {action_label}"
         lines = [f"{image_name} → {action_label}"]
@@ -206,11 +214,20 @@ class PipelineRunReport:
             key = (msg.node, msg.detail, repr(msg.data))
             groups.setdefault(key, []).append(msg)
         for group in groups.values():
-            if len(group) == 1:
+            if self._is_seed_category_skip(group[0]):
+                lines.extend(self._format_seed_skip_group_lines(group))
+            elif len(group) == 1:
                 lines.extend(self._format_message_lines(group[0]))
             else:
                 lines.extend(self._format_grouped_message_lines(group))
         return lines
+
+    @staticmethod
+    def _format_seed_skip_group_lines(msgs: list[PipelineMessage]) -> list[str]:
+        """One clear line with a total count — the skipped files are exactly
+        the seed images already implied by pipeline.seed_category, so listing
+        each filename would just repeat the seed file list."""
+        return [_("  {0} ({1} file(s))").format(msgs[0].detail, len(msgs))]
 
     @staticmethod
     def _format_grouped_message_lines(msgs: list[PipelineMessage]) -> list[str]:

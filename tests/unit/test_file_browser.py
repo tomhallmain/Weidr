@@ -239,9 +239,22 @@ class TestFileBrowserSort:
         names = [os.path.basename(p) for p in desc]
         assert names == ["zzz.png", "mid.png", "aaa.png"]
 
+    def test_sort_by_suffix_groups_variants_and_orders_by_basename(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(config, "file_types", [".png"])
+        _make_png(str(tmp_path / "image.png"))
+        _make_png(str(tmp_path / "photo_edit.png"))
+        _make_png(str(tmp_path / "image_v2.png"))
+        _make_png(str(tmp_path / "photo_v2.png"))
+
+        fb = FileBrowser(str(tmp_path), recursive=False)
+        fb.set_sort_by(SortBy.SUFFIX)
+        names = [os.path.basename(p) for p in fb.get_files()]
+        # No-suffix group ("") sorts first, then "_edit", then "_v2" group ordered by basename.
+        assert names == ["image.png", "photo_edit.png", "image_v2.png", "photo_v2.png"]
+
 
 class TestFileBrowserSortRelatedImage:
-    """RELATED_IMAGE sort: basename keys and ctime tiebreaker."""
+    """RELATED_IMAGE sort: basename keys and basename tiebreaker."""
 
     @pytest.fixture(autouse=True)
     def _patch_file_types(self, monkeypatch):
@@ -288,41 +301,29 @@ class TestFileBrowserSortRelatedImage:
         assert names[0] == "aaa_other.png"
         assert set(names[1:]) == {"cover.png", "media.png"}
 
-    def test_ctime_tiebreaker_ascending(self, tmp_path, monkeypatch):
+    def test_basename_tiebreaker_ascending(self, tmp_path, monkeypatch):
         cover = tmp_path / "cover.png"
         media = tmp_path / "media.png"
-        # Create media first so it has the earlier ctime on Windows (where os.utime
-        # cannot alter ctime — only the actual creation time matters there).
         _make_png(str(media))
-        time.sleep(0.01)
         _make_png(str(cover))
-        base = time.time() - 1000
-        # Touch in the same order so that on Linux (where os.utime updates ctime)
-        # the relative ordering matches: media ctime < cover ctime.
-        _touch(str(media), base)
-        _touch(str(cover), base + 100)
         self._patch_related(monkeypatch, {str(media): str(cover)})
 
         fb = FileBrowser(str(tmp_path), recursive=False)
         fb.set_sort_by(SortBy.RELATED_IMAGE)
         names = [os.path.basename(p) for p in fb.get_files()]
-        # Both share key "cover.png"; ascending ctime puts media (earlier) first.
-        assert names == ["media.png", "cover.png"]
+        # Both share key "cover.png"; ascending basename puts "cover.png" first.
+        assert names == ["cover.png", "media.png"]
 
-    def test_ctime_tiebreaker_descending(self, tmp_path, monkeypatch):
+    def test_basename_tiebreaker_descending(self, tmp_path, monkeypatch):
         cover = tmp_path / "cover.png"
         media = tmp_path / "media.png"
         _make_png(str(media))
-        time.sleep(0.01)
         _make_png(str(cover))
-        base = time.time() - 1000
-        _touch(str(media), base)
-        _touch(str(cover), base + 100)
         self._patch_related(monkeypatch, {str(media): str(cover)})
 
         fb = FileBrowser(str(tmp_path), recursive=False)
         fb.sort = Sort.DESC
         fb.set_sort_by(SortBy.RELATED_IMAGE)
         names = [os.path.basename(p) for p in fb.get_files()]
-        # Descending: cover (later ctime) sorts first.
-        assert names == ["cover.png", "media.png"]
+        # Descending basename puts "media.png" first.
+        assert names == ["media.png", "cover.png"]

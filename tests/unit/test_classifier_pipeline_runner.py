@@ -1403,6 +1403,39 @@ class TestPipelineRunReport:
         assert "a.png" in text
         assert "b.png" in text
 
+    def test_format_completion_report_collapses_seed_category_skip_to_count(self):
+        """Seed-category GENERATE skips are equivalent to the seed file list —
+        the report should show one clear note with a total count, not every
+        filename."""
+        r = PipelineRunReport()
+        for i in range(3):
+            r.add(
+                "INFO", "gen_apple", f"/dir/seed{i}.png",
+                "Seed image is assigned to category 'Apple'; GENERATE skipped.",
+                data={"seed_category_skip": True},
+            )
+        text = r.format_completion_report(
+            PipelineRunStats(pipeline_name="p", files_evaluated=3)
+        )
+        assert "3 file(s)" in text
+        assert text.count("Seed image is assigned to category 'Apple'; GENERATE skipped.") == 1
+        assert "seed0.png" not in text
+        assert "seed1.png" not in text
+        assert "seed2.png" not in text
+
+    def test_format_seed_summary_omits_seed_category_skip_note(self):
+        """The live per-seed-file summary shouldn't repeat the seed-skip note
+        on every seed image — the completion report's count already covers it."""
+        r = PipelineRunReport()
+        snapshot = r.message_count()
+        r.add(
+            "INFO", "gen_apple", "/dir/seed.png",
+            "Seed image is assigned to category 'Apple'; GENERATE skipped.",
+            data={"seed_category_skip": True},
+        )
+        summary = r.format_seed_summary("/dir/seed.png", None, snapshot)
+        assert summary == "seed.png → (no action)"
+
     def test_format_completion_report_omits_empty_sections(self):
         r = PipelineRunReport()
         text = r.format_completion_report(
@@ -2512,6 +2545,9 @@ class TestSeedCategoryGuard:
                  if m.severity == "INFO" and m.node == "gen_apple"]
         assert infos, "Expected an INFO message for the guarded node"
         assert "Apple" in infos[0].detail
+        # Tagged so the report can collapse repeats to a single count line
+        # instead of listing every seed filename.
+        assert infos[0].data == {"seed_category_skip": True}
 
     def test_guard_fires_for_execute_and_continue_outcome(self):
         """Guard also applies when on_match is EXECUTE_AND_CONTINUE."""

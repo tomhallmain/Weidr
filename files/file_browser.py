@@ -371,6 +371,8 @@ class FileBrowser:
             return self._find_closest_by_related_image(search_text, sorted_files, files)
         elif closest_sort_by == SortBy.RANDOMIZE:
             return self._find_closest_by_random(search_text, sorted_files, files)
+        elif closest_sort_by == SortBy.SUFFIX:
+            return self._find_closest_by_suffix(search_text, sorted_files, files)
         else:
             # Unknown sort type, return first file
             return self._handle_find_closest_failure_message(sorted_files, files, "unknown sort type", f"sort type {closest_sort_by}")
@@ -514,6 +516,23 @@ class FileBrowser:
         
         # Fallback: return first file
         return self._handle_find_closest_failure_message("type", "no match")
+
+    def _find_closest_by_suffix(self, search_text: str, sorted_files: List[SortableFile], original_files: List[str]) -> Optional[str]:
+        """Find closest file by filename suffix (the variant marker after the base stem)."""
+        search_sortable = SortableFile(search_text)
+        search_suffix = search_sortable.get_suffix().lower()
+
+        # Try to find files with matching suffix
+        for sortable_file in sorted_files:
+            if sortable_file.get_suffix().lower() == search_suffix:
+                closest_file = sortable_file.full_file_path
+                self.file_cursor = original_files.index(closest_file)
+                if config.debug:
+                    logger.debug(f"Closest file by suffix: position {self.file_cursor}")
+                return closest_file
+
+        # Fallback: return first file
+        return self._handle_find_closest_failure_message("suffix", "no match")
 
     def _find_closest_by_name_length(self, search_text: str, sorted_files: List[SortableFile], original_files: List[str]) -> Optional[str]:
         """Find closest file by name length."""
@@ -855,7 +874,12 @@ class FileBrowser:
                 sortable_files.sort(key=lambda sf: sf.get_image_width(), reverse=reverse)
             elif self.sort_by == SortBy.RELATED_IMAGE:
                 basename_lookup = {sf.basename: sf for sf in sortable_files}
-                sortable_files.sort(key=lambda sf: (sf.get_origin_image_or_self(basename_lookup), sf.ctime), reverse=reverse)
+                sortable_files.sort(key=lambda sf: (sf.get_origin_image_or_self(basename_lookup), sf.basename.lower()), reverse=reverse)
+            elif self.sort_by == SortBy.SUFFIX:
+                # Sort by full path first, then by basename, then by suffix
+                sortable_files.sort(key=lambda sf: sf.full_file_path.lower(), reverse=reverse)
+                sortable_files.sort(key=lambda sf: sf.basename.lower(), reverse=reverse)
+                sortable_files.sort(key=lambda sf: sf.get_suffix().lower(), reverse=reverse)
 
         # Return either SortableFile objects or filepaths
         if return_sortable_files:

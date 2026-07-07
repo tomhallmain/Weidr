@@ -165,6 +165,7 @@ class SortBy(Enum):
     IMAGE_PIXELS = _("Image Pixels")
     IMAGE_HEIGHT = _("Image Height")
     IMAGE_WIDTH = _("Image Width")
+    SUFFIX = _("Suffix")
 
     def get_text(self):
         if self == SortBy.NAME:
@@ -191,6 +192,8 @@ class SortBy(Enum):
             return _("Image Height")
         elif self == SortBy.IMAGE_WIDTH:
             return _("Image Width")
+        elif self == SortBy.SUFFIX:
+            return _("Suffix")
         raise Exception("Unhandled Sort By text: " + str(self))
 
     def __str__(self):

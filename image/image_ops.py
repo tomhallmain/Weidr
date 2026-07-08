@@ -3,6 +3,7 @@ import random
 import sys
 import time
 import math
+from typing import Optional
 
 import cv2
 import numpy as np
@@ -103,16 +104,24 @@ class ImageOps:
         return PIL.Image.new("RGB", (width, height), ImageOps.get_random_color())
 
     @staticmethod
-    def draw_box_at_rect(image_path: str, left: int, upper: int, right: int, lower: int) -> str:
+    def draw_box_at_rect(image_path: str, left: int, upper: int, right: int, lower: int,
+                          fill_image: Optional[Image.Image] = None, output_path: Optional[str] = None) -> str:
         """Paint a random color/pattern box over the given pixel bounding box and save
         as a new sibling file. Does not modify *image_path*.
 
         Animated GIFs are handled frame-by-frame with original durations preserved.
+
+        *fill_image*, when given, is reused as-is for every frame instead of
+        generating a fresh random fill (this also fixes the previous per-frame
+        random-fill inconsistency for animated GIFs when the caller wants one
+        stable fill). *output_path*, when given, is written to directly instead
+        of a new sibling file -- lets a caller render a preview without
+        committing a result.
         """
         try:
             from PIL import ImageSequence
             from utils.utils import Utils
-            new_path = Utils.unique_sibling_path(image_path, "_box")
+            new_path = output_path if output_path else Utils.unique_sibling_path(image_path, "_box")
             width, height = right - left, lower - upper
             with Image.open(image_path) as img:
                 n_frames = getattr(img, "n_frames", 1)
@@ -121,7 +130,8 @@ class ImageOps:
                     frames, durations = [], []
                     for frame in ImageSequence.Iterator(img):
                         frame_rgba = frame.convert("RGBA")
-                        frame_rgba.paste(ImageOps.generate_box_fill_image(width, height), (left, upper))
+                        frame_fill = fill_image if fill_image is not None else ImageOps.generate_box_fill_image(width, height)
+                        frame_rgba.paste(frame_fill, (left, upper))
                         frames.append(frame_rgba)
                         durations.append(frame.info.get("duration", 100))
                     frames[0].save(
@@ -135,7 +145,7 @@ class ImageOps:
                     )
                 else:
                     out = img.convert("RGB")
-                    out.paste(ImageOps.generate_box_fill_image(width, height), (left, upper))
+                    out.paste(fill_image if fill_image is not None else ImageOps.generate_box_fill_image(width, height), (left, upper))
                     out.save(new_path)
             return new_path
         except Exception as e:
@@ -143,17 +153,23 @@ class ImageOps:
             return ""
 
     @staticmethod
-    def draw_background_box_at_rect(image_path: str, left: int, upper: int, right: int, lower: int) -> str:
+    def draw_background_box_at_rect(image_path: str, left: int, upper: int, right: int, lower: int,
+                                     fill_image: Optional[Image.Image] = None, output_path: Optional[str] = None) -> str:
         """Paint a random color/pattern fill over everything *outside* the given
         pixel bounding box (the "background"), leaving the box's interior
         unchanged, and save as a new sibling file. Does not modify *image_path*.
 
         Animated GIFs are handled frame-by-frame with original durations preserved.
+
+        *fill_image*, when given, is reused as-is for every frame instead of
+        generating a fresh random fill. *output_path*, when given, is written to
+        directly instead of a new sibling file -- lets a caller render a preview
+        without committing a result.
         """
         try:
             from PIL import ImageSequence
             from utils.utils import Utils
-            new_path = Utils.unique_sibling_path(image_path, "_bgbox")
+            new_path = output_path if output_path else Utils.unique_sibling_path(image_path, "_bgbox")
             with Image.open(image_path) as img:
                 n_frames = getattr(img, "n_frames", 1)
                 if n_frames > 1:
@@ -162,7 +178,8 @@ class ImageOps:
                     for frame in ImageSequence.Iterator(img):
                         frame_rgba = frame.convert("RGBA")
                         w, h = frame_rgba.size
-                        out = ImageOps.generate_box_fill_image(w, h).convert("RGBA")
+                        frame_fill = fill_image if fill_image is not None else ImageOps.generate_box_fill_image(w, h)
+                        out = frame_fill.convert("RGBA")
                         out.paste(frame_rgba.crop((left, upper, right, lower)), (left, upper))
                         frames.append(out)
                         durations.append(frame.info.get("duration", 100))
@@ -178,7 +195,10 @@ class ImageOps:
                 else:
                     src = img.convert("RGB")
                     w, h = src.size
-                    out = ImageOps.generate_box_fill_image(w, h)
+                    # .copy() -- out is pasted into below, and fill_image may be a
+                    # caller-owned object (e.g. reused for a later "accept" call
+                    # after this renders a preview); never mutate the caller's copy.
+                    out = (fill_image if fill_image is not None else ImageOps.generate_box_fill_image(w, h)).copy()
                     out.paste(src.crop((left, upper, right, lower)), (left, upper))
                     out.save(new_path)
             return new_path
@@ -250,17 +270,23 @@ class ImageOps:
             return ""
 
     @staticmethod
-    def draw_box_at_polygon(image_path: str, points) -> str:
+    def draw_box_at_polygon(image_path: str, points,
+                             fill_image: Optional[Image.Image] = None, output_path: Optional[str] = None) -> str:
         """Paint a random color/pattern fill inside the given polygon (a list of
         (x, y) pixel coordinates) and save as a new sibling file. Does not
         modify *image_path*. The freeform counterpart to :meth:`draw_box_at_rect`.
 
         Animated GIFs are handled frame-by-frame with original durations preserved.
+
+        *fill_image*, when given, is reused as-is for every frame instead of
+        generating a fresh random fill. *output_path*, when given, is written to
+        directly instead of a new sibling file -- lets a caller render a preview
+        without committing a result.
         """
         try:
             from PIL import ImageSequence
             from utils.utils import Utils
-            new_path = Utils.unique_sibling_path(image_path, "_box")
+            new_path = output_path if output_path else Utils.unique_sibling_path(image_path, "_box")
             with Image.open(image_path) as img:
                 n_frames = getattr(img, "n_frames", 1)
                 if n_frames > 1:
@@ -269,7 +295,8 @@ class ImageOps:
                     for frame in ImageSequence.Iterator(img):
                         frame_rgba = frame.convert("RGBA")
                         mask = ImageOps._polygon_mask(frame_rgba.size, points)
-                        fill = ImageOps.generate_box_fill_image(*frame_rgba.size).convert("RGBA")
+                        frame_fill = fill_image if fill_image is not None else ImageOps.generate_box_fill_image(*frame_rgba.size)
+                        fill = frame_fill.convert("RGBA")
                         frames.append(Image.composite(fill, frame_rgba, mask))
                         durations.append(frame.info.get("duration", 100))
                     frames[0].save(
@@ -284,7 +311,7 @@ class ImageOps:
                 else:
                     src = img.convert("RGB")
                     mask = ImageOps._polygon_mask(src.size, points)
-                    fill = ImageOps.generate_box_fill_image(*src.size)
+                    fill = fill_image if fill_image is not None else ImageOps.generate_box_fill_image(*src.size)
                     Image.composite(fill, src, mask).save(new_path)
             return new_path
         except Exception as e:
@@ -292,7 +319,8 @@ class ImageOps:
             return ""
 
     @staticmethod
-    def draw_background_box_at_polygon(image_path: str, points) -> str:
+    def draw_background_box_at_polygon(image_path: str, points,
+                                        fill_image: Optional[Image.Image] = None, output_path: Optional[str] = None) -> str:
         """Paint a random color/pattern fill everywhere *outside* the given
         polygon (a list of (x, y) pixel coordinates) -- the "background" --
         leaving the polygon's interior unchanged, and save as a new sibling
@@ -300,11 +328,16 @@ class ImageOps:
         :meth:`draw_background_box_at_rect`.
 
         Animated GIFs are handled frame-by-frame with original durations preserved.
+
+        *fill_image*, when given, is reused as-is for every frame instead of
+        generating a fresh random fill. *output_path*, when given, is written to
+        directly instead of a new sibling file -- lets a caller render a preview
+        without committing a result.
         """
         try:
             from PIL import ImageSequence
             from utils.utils import Utils
-            new_path = Utils.unique_sibling_path(image_path, "_bgbox")
+            new_path = output_path if output_path else Utils.unique_sibling_path(image_path, "_bgbox")
             with Image.open(image_path) as img:
                 n_frames = getattr(img, "n_frames", 1)
                 if n_frames > 1:
@@ -314,7 +347,8 @@ class ImageOps:
                         frame_rgba = frame.convert("RGBA")
                         mask = ImageOps._polygon_mask(frame_rgba.size, points)
                         inverted_mask = mask.point(lambda p: 255 - p)
-                        fill = ImageOps.generate_box_fill_image(*frame_rgba.size).convert("RGBA")
+                        frame_fill = fill_image if fill_image is not None else ImageOps.generate_box_fill_image(*frame_rgba.size)
+                        fill = frame_fill.convert("RGBA")
                         frames.append(Image.composite(fill, frame_rgba, inverted_mask))
                         durations.append(frame.info.get("duration", 100))
                     frames[0].save(
@@ -330,7 +364,7 @@ class ImageOps:
                     src = img.convert("RGB")
                     mask = ImageOps._polygon_mask(src.size, points)
                     inverted_mask = mask.point(lambda p: 255 - p)
-                    fill = ImageOps.generate_box_fill_image(*src.size)
+                    fill = fill_image if fill_image is not None else ImageOps.generate_box_fill_image(*src.size)
                     Image.composite(fill, src, inverted_mask).save(new_path)
             return new_path
         except Exception as e:

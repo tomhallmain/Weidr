@@ -470,6 +470,50 @@ class WindowLauncher:
         else:
             self._app.notification_ctrl.toast(failed_msg)
 
+    def _preview_and_confirm_fill(
+        self,
+        source_path: str,
+        fill_size: tuple,
+        render_fn,
+    ) -> Optional[Any]:
+        """Generate a candidate random fill, render a preview of the composited
+        result to a temp file and show it, and let the user reroll (regenerate
+        the fill and refresh the preview) or accept/cancel before the caller
+        commits a real save.
+
+        *fill_size* is the (width, height) to generate the candidate fill at.
+        *render_fn* receives (fill_image, output_path) and should write the
+        composited preview to *output_path* (typically a closure over apply_fn
+        and the already-computed selection geometry).
+
+        Returns the accepted fill image, or None if the user cancelled.
+        """
+        import tempfile
+        from image.image_ops import ImageOps
+        from lib.fill_preview_dialog_qt import show_fill_preview_dialog
+
+        ext = os.path.splitext(source_path)[1] or ".png"
+        preview_path = os.path.join(tempfile.gettempdir(), "weidr_fill_preview" + ext)
+
+        fill_holder = [ImageOps.generate_box_fill_image(*fill_size)]
+
+        def _render():
+            render_fn(fill_holder[0], preview_path)
+
+        def _reroll():
+            fill_holder[0] = ImageOps.generate_box_fill_image(*fill_size)
+            _render()
+
+        _render()
+        try:
+            accepted = show_fill_preview_dialog(self._app, preview_path, _reroll)
+        finally:
+            try:
+                os.remove(preview_path)
+            except OSError:
+                pass
+        return fill_holder[0] if accepted else None
+
     def _run_static_rect_action(
         self,
         gv,
@@ -484,11 +528,20 @@ class WindowLauncher:
         too_small_msg: str,
         success_msg: str,
         failed_msg: str,
+        preview_fill: bool = False,
+        fill_covers_full_image: bool = False,
     ) -> None:
         """Wire crop_confirmed/crop_cancelled for one rectangle-selection action
         (crop / box / background box) on static media. *apply_fn* receives
         (source_path, left, upper, right, lower) and returns the new file path
         (or "" on failure).
+
+        When *preview_fill* is True (box / background box only -- crop has no
+        fill), *apply_fn* is also called with ``fill_image=``/``output_path=``
+        kwargs so a candidate fill can be previewed and rerolled before the
+        real save; *fill_covers_full_image* selects whether the previewed fill
+        is sized to the selection rect (box) or the whole image (background
+        box, which paints everywhere outside the rect).
         """
         def _disconnect_signals():
             for sig, slot in ((gv.crop_confirmed, _on_confirmed), (gv.crop_cancelled, _on_cancelled)):
@@ -523,7 +576,21 @@ class WindowLauncher:
                 restore_original()
                 return
 
-            new_path = apply_fn(source_path, left, upper, right, lower)
+            if preview_fill:
+                fill_size = (img_w, img_h) if fill_covers_full_image else (right - left, lower - upper)
+                fill_image = self._preview_and_confirm_fill(
+                    source_path,
+                    fill_size,
+                    lambda fill, out_path: apply_fn(
+                        source_path, left, upper, right, lower, fill_image=fill, output_path=out_path
+                    ),
+                )
+                if fill_image is None:
+                    restore_original()
+                    return
+                new_path = apply_fn(source_path, left, upper, right, lower, fill_image=fill_image)
+            else:
+                new_path = apply_fn(source_path, left, upper, right, lower)
             self._finish_static_edit(new_path, media_path, media_type, output_suffix, success_msg, failed_msg)
 
         gv.crop_confirmed.connect(_on_confirmed)
@@ -544,11 +611,19 @@ class WindowLauncher:
         too_small_msg: str,
         success_msg: str,
         failed_msg: str,
+        preview_fill: bool = False,
     ) -> None:
         """Wire polygon_confirmed/crop_cancelled for one freeform-selection action
         (box / background box) on static media. *apply_fn* receives
         (source_path, points) where points is a list of (x, y) pixel-space
         coordinates, and returns the new file path (or "" on failure).
+
+        When *preview_fill* is True (box / background box only -- crop has no
+        fill), *apply_fn* is also called with ``fill_image=``/``output_path=``
+        kwargs so a candidate fill can be previewed and rerolled before the
+        real save. Unlike the rect case, the fill always covers the whole
+        image here -- both freeform box and background-box composite via a
+        full-image mask (see draw_box_at_polygon / draw_background_box_at_polygon).
         """
         def _disconnect_signals():
             for sig, slot in ((gv.polygon_confirmed, _on_confirmed), (gv.crop_cancelled, _on_cancelled)):
@@ -586,7 +661,20 @@ class WindowLauncher:
                 restore_original()
                 return
 
-            new_path = apply_fn(source_path, points)
+            if preview_fill:
+                fill_image = self._preview_and_confirm_fill(
+                    source_path,
+                    (img_w, img_h),
+                    lambda fill, out_path: apply_fn(
+                        source_path, points, fill_image=fill, output_path=out_path
+                    ),
+                )
+                if fill_image is None:
+                    restore_original()
+                    return
+                new_path = apply_fn(source_path, points, fill_image=fill_image)
+            else:
+                new_path = apply_fn(source_path, points)
             self._finish_static_edit(new_path, media_path, media_type, output_suffix, success_msg, failed_msg)
 
         gv.polygon_confirmed.connect(_on_confirmed)
@@ -630,6 +718,7 @@ class WindowLauncher:
             too_small_msg=_("Box selection too small"),
             success_msg=_("Box added"),
             failed_msg=_("Box draw failed"),
+            preview_fill=True,
         )
         self._app.notification_ctrl.toast(_("Drag to select box location, Enter to confirm, Escape to cancel"))
 
@@ -652,6 +741,8 @@ class WindowLauncher:
             too_small_msg=_("Selection too small"),
             success_msg=_("Background box added"),
             failed_msg=_("Background box draw failed"),
+            preview_fill=True,
+            fill_covers_full_image=True,
         )
         self._app.notification_ctrl.toast(_("Drag to select area to keep, Enter to confirm, Escape to cancel"))
 
@@ -707,6 +798,7 @@ class WindowLauncher:
             too_small_msg=_("Need at least 3 points"),
             success_msg=_("Box added"),
             failed_msg=_("Box draw failed"),
+            preview_fill=True,
         )
         self._app.notification_ctrl.toast(
             _("Click or click-drag to add points, click near the start to close, Enter to confirm, Escape to cancel")
@@ -732,6 +824,7 @@ class WindowLauncher:
             too_small_msg=_("Need at least 3 points"),
             success_msg=_("Background box added"),
             failed_msg=_("Background box draw failed"),
+            preview_fill=True,
         )
         self._app.notification_ctrl.toast(
             _("Click or click-drag to add points, click near the start to close, Enter to confirm, Escape to cancel")

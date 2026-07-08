@@ -73,6 +73,11 @@ except ImportError:
 # never explicitly released; they leak until process exit, which is intentional.
 _vlc_instances_pending_cleanup: list = []
 
+# Decode workers whose QThread would not exit before their MediaFrame closed.
+# Kept alive for the process lifetime — deleting a running QThread aborts the
+# process (same pattern as _vlc_instances_pending_cleanup above).
+_orphaned_decode_workers: list = []
+
 try:
     import shiboken6
     _SHIBOKEN_AVAILABLE = True
@@ -238,6 +243,7 @@ class MediaFrame(QFrame):
         self._vlc_disposed = False
         self._image_request_id = 0
         self._decode_worker = None
+        self._retired_decode_workers: list[_ImageDecodeWorker] = []
         self._empty_directory_message = _(
             "No displayable files found in this directory for the current settings."
         )
@@ -278,9 +284,46 @@ class MediaFrame(QFrame):
         try:
             if worker.isRunning():
                 worker.requestInterruption()
-                worker.wait(10)
         except Exception:
             pass
+        self._release_decode_worker(worker)
+
+    def _release_decode_worker(self, worker) -> None:
+        """Dispose of a decode worker without deleting a running QThread.
+
+        Dropping the last Python reference to a QThread deletes the C++ object;
+        doing so while the thread is still inside run() aborts the process
+        (access violation on Windows). Park still-running workers in a retired
+        list until their finished signal fires.
+        """
+        if worker is None:
+            return
+        try:
+            if worker.isRunning() and not worker.wait(50):
+                self._retired_decode_workers.append(worker)
+                worker.finished.connect(self._reap_retired_decode_workers)
+                if not worker.isRunning():
+                    # Finished between wait() and connect(); reap immediately
+                    # since the signal will never fire for this worker.
+                    self._reap_retired_decode_workers()
+        except Exception:
+            pass
+
+    def _reap_retired_decode_workers(self) -> None:
+        self._retired_decode_workers = [
+            w for w in self._retired_decode_workers if w.isRunning()
+        ]
+
+    def _drain_decode_workers(self) -> None:
+        """Wait out retired decode workers at teardown; park stragglers in
+        _orphaned_decode_workers so a running QThread is never deleted."""
+        for worker in self._retired_decode_workers:
+            try:
+                if worker.isRunning() and not worker.wait(2000):
+                    _orphaned_decode_workers.append(worker)
+            except Exception:
+                pass
+        self._retired_decode_workers = []
 
     def _invalidate_pending_image_promotion(self) -> None:
         self._next_request_id()
@@ -310,8 +353,13 @@ class MediaFrame(QFrame):
         view_h = max(1, viewport_size.height())
         overscan = large_preview_overscan()
         max_dim = large_preview_max_dim()
-        target_w = min(int(view_w * overscan), max_dim, src_w)
-        target_h = min(int(view_h * overscan), max_dim, src_h)
+        # Fit the source into the preview box with scale_dims so the decode
+        # target keeps the source aspect ratio — QImageReader.setScaledSize()
+        # scales to exactly the given size and would otherwise stretch the
+        # image to the viewport's shape.
+        box_w = max(1, min(int(view_w * overscan), max_dim))
+        box_h = max(1, min(int(view_h * overscan), max_dim))
+        target_w, target_h = scale_dims((src_w, src_h), (box_w, box_h))
         return QSize(max(1, target_w), max(1, target_h))
 
     def _should_use_hq_downscale(self, source_dims: tuple[int, int], target_size: QSize | None) -> bool:
@@ -471,13 +519,17 @@ class MediaFrame(QFrame):
         if not isinstance(image_obj, QImage) or image_obj.isNull():
             return
         self._display_qimage(image_obj, (image_obj.width(), image_obj.height()), preserve_view=True)
+        worker = self._decode_worker
         self._decode_worker = None
+        self._release_decode_worker(worker)
 
     @Slot(int, str, str)
     def _on_promotion_failed(self, request_id: int, path: str, _message: str) -> None:
         if request_id == self._image_request_id and path == self.path:
             logger.warning("Large-image promotion decode failed: path=%s request_id=%s message=%s", path, request_id, _message)
+            worker = self._decode_worker
             self._decode_worker = None
+            self._release_decode_worker(worker)
 
     def _has_active_overlay_media(self):
         return isinstance(self._video_ui, VideoUI) or (self._gif_movie is not None and self._gif_is_animated)
@@ -870,6 +922,8 @@ class MediaFrame(QFrame):
         self._playback_timer.start()
 
     def closeEvent(self, event):
+        self._invalidate_pending_image_promotion()
+        self._drain_decode_workers()
         self.dispose_vlc()
         super().closeEvent(event)
 

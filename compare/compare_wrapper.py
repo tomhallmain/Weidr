@@ -33,6 +33,44 @@ from utils.utils import Utils
 logger = get_logger("compare_wrapper")
 
 
+class RemovalUndoSnapshot:
+    """Deep copy of compare group state taken before a move-out removal mutates it.
+
+    Files moved out of the compare base directory are removed from the group
+    state and the stored checkpoint, but the move can be undone (Ctrl+Z or the
+    file actions window). This snapshot lets the compare-result change be
+    undone along with the move. Only one version is kept — each new move-out
+    replaces it — and delete flows never create one (deletes are not undoable
+    from within the app).
+    """
+
+    def __init__(self, removed_files, app_mode, wrapper: 'CompareWrapper',
+                 compare_result, checkpoint_existed: bool):
+        self.removed_files = list(removed_files)
+        self.base_dir = wrapper._compare.base_dir
+        self.app_mode = app_mode
+        self.files_grouped = deepcopy(wrapper.files_grouped)
+        self.file_groups = deepcopy(wrapper.file_groups)
+        self.files_matched = list(wrapper.files_matched)
+        self.group_indexes = list(wrapper.group_indexes)
+        self.current_group_index = wrapper.current_group_index
+        self.current_supergroup_index = wrapper.current_supergroup_index
+        self.match_index = wrapper.match_index
+        self.max_group_index = wrapper.max_group_index
+        self.has_media_matches = wrapper.has_media_matches
+        self.checkpoint_existed = checkpoint_existed
+        if compare_result is not None:
+            self.result_files_grouped = deepcopy(compare_result.files_grouped)
+            self.result_file_groups = deepcopy(compare_result.file_groups)
+            self.result_supergroups = deepcopy(getattr(compare_result, "supergroups", []))
+            self.result_dir_files_hash = list(getattr(compare_result, "_dir_files_hash", []) or [])
+        else:
+            self.result_files_grouped = None
+            self.result_file_groups = None
+            self.result_supergroups = None
+            self.result_dir_files_hash = None
+
+
 class CompareWrapper:
     def __init__(self, master, compare_mode, app_actions):
         self._master = master
@@ -55,9 +93,11 @@ class CompareWrapper:
         self.max_group_index = 0
         self.hidden_media = []
         self.label_suffix = ""  # appended to every group label (e.g. " (composite)")
+        self._removal_undo_snapshot: Optional[RemovalUndoSnapshot] = None
 
     def clear_compare(self):
         self._compare = None
+        self._invalidate_removal_undo_snapshot()
 
     def share_data_from(self, other: 'CompareWrapper') -> None:
         """Reuse the already-loaded compare instance from a same-mode wrapper.
@@ -439,6 +479,7 @@ class CompareWrapper:
             compare_result.clear_supergroups()
 
         self._remove_stored_result()
+        self._invalidate_removal_undo_snapshot()
         self._app_actions.set_mode(Mode.BROWSE)
         self._app_actions._set_label_state(_("Set a directory to run comparison."))
         self._app_actions.refresh()
@@ -543,6 +584,7 @@ class CompareWrapper:
 
     def run(self, args=CompareArgs()):
         get_new_data = True
+        self._invalidate_removal_undo_snapshot()
         self.current_group_index = 0
         self.current_group = None
         self.max_group_index = 0
@@ -812,6 +854,91 @@ class CompareWrapper:
 
     def update_compare_for_readded_file(self, readded_file):
         self._compare.readd_files([readded_file])
+
+    def _file_in_group_state(self, filepath: str) -> bool:
+        if filepath in self.files_matched:
+            return True
+        return any(filepath in group for group in self.file_groups.values())
+
+    def capture_removal_undo_snapshot(self, removed_files, app_mode) -> None:
+        """Snapshot group state before a move-out removal is applied.
+
+        Called only for move-based removals (never deletes), before
+        _update_groups_for_removed_file / _sync_result_after_deletion /
+        remove_from_groups mutate anything. If the move is later undone,
+        maybe_restore_removal_undo_snapshot() reverses the result change.
+
+        Removals that don't touch any file in the current group state are
+        ignored so they can't clobber a still-restorable snapshot (e.g. the
+        refresh triggered by the file actions window undoing a move whose
+        files live outside this compare's base directory).
+        """
+        if self._compare is None or not removed_files:
+            return
+        relevant_files = [f for f in removed_files if self._file_in_group_state(f)]
+        if not relevant_files:
+            return
+        compare_result = getattr(self._compare, "compare_result", None)
+        checkpoint_existed = os.path.exists(CompareResult.cache_path(
+            self._compare.base_dir, getattr(self._compare, "COMPARE_MODE", None)))
+        self._removal_undo_snapshot = RemovalUndoSnapshot(
+            relevant_files, app_mode, self, compare_result, checkpoint_existed)
+        logger.info("Captured compare state snapshot before removal of %s file(s)",
+                    len(relevant_files))
+
+    def maybe_restore_removal_undo_snapshot(self) -> Optional[RemovalUndoSnapshot]:
+        """Restore pre-removal group state once every snapshot file exists again.
+
+        A move-out that was undone (Ctrl+Z, file actions window, or even a
+        manual move back in the OS file manager) puts the files back in the
+        base directory; when all of them are present again, the wrapper state,
+        CompareResult, and on-disk checkpoint are restored to their pre-move
+        values and the files are re-added to the compare data. Returns the
+        consumed snapshot when a restore happened, else None.
+        """
+        snap = self._removal_undo_snapshot
+        if snap is None or self._compare is None:
+            return None
+        if self._compare.base_dir != snap.base_dir:
+            self._removal_undo_snapshot = None
+            return None
+        if not all(os.path.exists(f) for f in snap.removed_files):
+            return None
+        self._removal_undo_snapshot = None
+        try:
+            self._compare.readd_files(list(snap.removed_files))
+        except Exception as exc:
+            logger.error("Failed to re-add returned files to compare data: %s", exc)
+        self.files_grouped = snap.files_grouped
+        self.file_groups = snap.file_groups
+        self.files_matched = snap.files_matched
+        self.group_indexes = snap.group_indexes
+        self.current_group_index = snap.current_group_index
+        self.current_supergroup_index = snap.current_supergroup_index
+        self.match_index = snap.match_index
+        self.max_group_index = snap.max_group_index
+        self.has_media_matches = snap.has_media_matches
+        try:
+            self.current_group = self.file_groups[self.group_indexes[self.current_group_index]]
+        except (IndexError, KeyError):
+            self.current_group = None
+        compare_result = getattr(self._compare, "compare_result", None)
+        if compare_result is not None and snap.result_file_groups is not None:
+            compare_result.files_grouped = snap.result_files_grouped
+            compare_result.file_groups = snap.result_file_groups
+            compare_result.supergroups = snap.result_supergroups
+            compare_result._dir_files_hash = snap.result_dir_files_hash
+            if snap.checkpoint_existed:
+                try:
+                    compare_result.store()
+                except Exception as exc:
+                    logger.error("Failed to store restored compare result: %s", exc)
+        logger.info("Restored compare state for %s file(s) moved back to %s",
+                    len(snap.removed_files), snap.base_dir)
+        return snap
+
+    def _invalidate_removal_undo_snapshot(self) -> None:
+        self._removal_undo_snapshot = None
 
     def _sync_result_after_deletion(self, filepath: str) -> None:
         """Update the on-disk CompareResult checkpoint to reflect a deleted file.

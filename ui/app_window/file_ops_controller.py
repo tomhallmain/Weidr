@@ -178,6 +178,9 @@ class FileOpsController:
         from files.marked_files import MarkedFiles
 
         MarkedFiles.set_delete_lock()  # Undo deleting action is not supported
+        # A delete can't be undone either, so a pending removal-undo snapshot
+        # could restore group entries for a file that no longer exists — drop it.
+        self._cm.invalidate_removal_undo_snapshot()
 
         if toast and manual_delete:
             item_name = os.path.basename(filepath)
@@ -806,6 +809,11 @@ class FileOpsController:
 
     def handle_remove_files_from_groups(self, files: list[str]) -> None:
         """Remove the given files from compare groups."""
+        # Only move flows reach this method (deletes update groups directly in
+        # delete_media), and moves can be undone — snapshot the group state
+        # first so the compare-result change can be undone along with the move
+        # (see AppWindow.restore_compare_state_for_undone_move).
+        self._cm.capture_removal_undo_snapshot(files, self._app.mode)
         current_media = self._cm.current_match()
         for filepath in files:
             if filepath == self._cm.search_media_path:

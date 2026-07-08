@@ -20,6 +20,7 @@ class AppActions:
         "start_progress_bar", "stop_progress_bar",
         "refresh_masonry",
         "is_compare_running",
+        "restore_compare_state_for_undone_move",
     }
     
     def __init__(self, actions: Dict[str, Callable[..., Any]], master: Optional[object] = None):

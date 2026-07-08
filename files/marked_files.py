@@ -596,6 +596,11 @@ class MarkedFiles():
             MarkedFiles.last_set_target_dir = target_dir
             if is_moving:
                 app_actions.refresh(removed_files=list(MarkedFiles.previous_marks))
+                # This move may itself be the undo of an earlier move-out (e.g.
+                # the file actions window's Undo moves files back to their
+                # original directory); restore compare state if it returned the
+                # files of a pending removal-undo snapshot.
+                app_actions.restore_compare_state_for_undone_move()
             else:
                 app_actions.refresh()
             if not exceptions_present:
@@ -685,6 +690,10 @@ class MarkedFiles():
             action_part3 = "move" if is_moving_back else "copy"
             raise Exception(f"Failed to {action_part3} some files: {exceptions}")
         app_actions.refresh()
+        if is_moving_back:
+            # Files are back in their original directory; if they were part of
+            # an active compare result, restore its pre-move state as well.
+            app_actions.restore_compare_state_for_undone_move()
 
     @staticmethod
     def test_in_directory_static(app_actions, target_dir=None, single_image=False) -> bool:

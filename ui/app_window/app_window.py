@@ -473,6 +473,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             "copy_media_path": ts(self.file_ops_ctrl.copy_media_path),
             "release_media_canvas": ts(self.release_media_canvas),
             "is_compare_running": self.is_compare_running,
+            "restore_compare_state_for_undone_move": ts(self.restore_compare_state_for_undone_move),
             # Persistence
             "store_info_cache": self.cache_ctrl.store_info_cache,
             # Masonry grid
@@ -927,6 +928,31 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             self.sidebar_panel.remove_search_mode_buttons()
         if mode not in (Mode.GROUP, Mode.DUPLICATES):
             self.sidebar_panel.remove_group_mode_buttons()
+
+    def restore_compare_state_for_undone_move(self) -> None:
+        """Reverse the compare-result change of a move-out whose move was undone.
+
+        Called after move endpoints in MarkedFiles (Ctrl+Z undo_move_marks, and
+        moves that may return files, e.g. the file actions window's undo). When
+        every file of the pending removal-undo snapshot exists again, the
+        compare manager restores group state and checkpoint; this then returns
+        the UI to the compare view that was active before the move-out.
+        """
+        snapshot = self.compare_manager.maybe_restore_removal_undo_snapshot()
+        if snapshot is None:
+            return
+        self.notification_ctrl.toast(
+            _("Restored compare result state for {0} file(s) moved back").format(
+                len(snapshot.removed_files)
+            )
+        )
+        if snapshot.app_mode == Mode.BROWSE:
+            return
+        if self.mode == Mode.BROWSE:
+            # The removal had emptied the last group and dropped the app back
+            # to browse mode; return to the compare view the user was in.
+            self.set_mode(snapshot.app_mode)
+        self.compare_manager.set_current_group(start_match_index=snapshot.match_index)
 
     def _sync_media_empty_directory_message(self) -> None:
         """

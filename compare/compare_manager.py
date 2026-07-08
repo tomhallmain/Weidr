@@ -745,6 +745,24 @@ class CompareManager:
         """Update stored compare result after a file deletion (delegated to primary wrapper)."""
         if self._primary_wrapper() is not None:
             self._primary_wrapper()._sync_result_after_deletion(filepath)
+
+    def capture_removal_undo_snapshot(self, removed_files, app_mode) -> None:
+        """Snapshot group state before a move-out removal (delegated to primary wrapper)."""
+        if self._primary_wrapper() is not None:
+            self._primary_wrapper().capture_removal_undo_snapshot(removed_files, app_mode)
+
+    def maybe_restore_removal_undo_snapshot(self):
+        """Restore pre-removal group state after an undone move (delegated to primary wrapper).
+
+        Returns the consumed RemovalUndoSnapshot when a restore happened, else None."""
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().maybe_restore_removal_undo_snapshot()
+        return None
+
+    def invalidate_removal_undo_snapshot(self) -> None:
+        """Drop any pending removal-undo snapshot (all wrappers) — e.g. after a delete."""
+        for wrapper in self._wrappers.values():
+            wrapper._invalidate_removal_undo_snapshot()
     
     def _get_file_group_map(self, app_mode):
         """Get file group map (delegated to primary wrapper)."""

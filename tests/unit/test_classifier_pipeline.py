@@ -1604,6 +1604,66 @@ class TestSeedCategory:
         assert p.validate() == []
 
 
+class TestRunSortBy:
+    """Tests for the run_sort_by pipeline-level field (batch-run file order)."""
+
+    def test_defaults_to_none(self):
+        p = ClassifierPipeline(name="p")
+        assert p.run_sort_by is None
+
+    def test_roundtrip_with_value(self):
+        from utils.constants import SortBy
+        p = ClassifierPipeline(name="p", run_sort_by=SortBy.NAME)
+        p2 = ClassifierPipeline.from_dict(p.to_dict())
+        assert p2.run_sort_by == SortBy.NAME
+
+    def test_omitted_from_dict_when_unset(self):
+        p = ClassifierPipeline(name="p")
+        assert "run_sort_by" not in p.to_dict()
+
+    def test_present_in_dict_when_set_as_get_text_string(self):
+        from utils.constants import SortBy
+        p = ClassifierPipeline(name="p", run_sort_by=SortBy.NAME)
+        assert p.to_dict()["run_sort_by"] == SortBy.NAME.get_text()
+
+    def test_missing_key_in_dict_defaults_to_none(self):
+        d = {"name": "p", "nodes": []}
+        p = ClassifierPipeline.from_dict(d)
+        assert p.run_sort_by is None
+
+    def test_validate_passes_when_unset(self):
+        p = ClassifierPipeline(name="p")
+        assert p.validate() == []
+
+    def test_validate_passes_for_valid_sort(self):
+        from utils.constants import SortBy
+        p = ClassifierPipeline(name="p", run_sort_by=SortBy.NAME)
+        assert p.validate() == []
+
+
+class TestSortFilesForRun:
+    """Tests for ClassifierPipeline.sort_files_for_run."""
+
+    def test_no_sort_returns_files_unchanged(self):
+        p = ClassifierPipeline(name="p")
+        files = ["/tmp/b.png", "/tmp/a.png"]
+        result = p.sort_files_for_run(files)
+        assert result is files  # unset run_sort_by -> identity, no wrapping/sorting at all
+
+    def test_empty_files_list_returns_empty(self):
+        from utils.constants import SortBy
+        p = ClassifierPipeline(name="p", run_sort_by=SortBy.NAME)
+        assert p.sort_files_for_run([]) == []
+
+    def test_name_sort_orders_alphabetically(self):
+        import os
+        from utils.constants import SortBy
+        p = ClassifierPipeline(name="p", run_sort_by=SortBy.NAME)
+        files = ["/tmp/b.png", "/tmp/a.png", "/tmp/c.png"]
+        result = p.sort_files_for_run(files)
+        assert [os.path.basename(f) for f in result] == ["a.png", "b.png", "c.png"]
+
+
 class TestCategoryMapNumericSuffixValidation:
     def test_numeric_suffix_rejected(self):
         from utils.translations import _

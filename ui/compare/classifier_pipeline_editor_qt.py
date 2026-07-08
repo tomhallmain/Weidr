@@ -53,7 +53,7 @@ from files.directory_profile import DirectoryProfile
 from lib.multi_display_qt import SmartDialog
 from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle
-from utils.constants import ClassifierActionType, ImageGenerationType
+from utils.constants import ClassifierActionType, ImageGenerationType, SortBy
 from utils.logging_setup import get_logger
 from utils.translations import _
 
@@ -1771,6 +1771,22 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         form.addRow(_("Seed category:"), self._seed_category_combo)
         self._refresh_seed_category_combo(p.seed_category)
 
+        self._run_sort_by_combo = QComboBox()
+        self._run_sort_by_combo.setToolTip(
+            _("File order for a batch run. No sort is fastest for a large "
+              "directory since it skips wrapping/sorting entirely and uses "
+              "the raw scan order as-is.")
+        )
+        self._run_sort_by_combo.addItem(_("No sort (fastest)"), None)
+        for sb in SortBy:
+            self._run_sort_by_combo.addItem(sb.get_text(), sb)
+        if p.run_sort_by is not None:
+            idx = self._run_sort_by_combo.findData(p.run_sort_by)
+            if idx >= 0:
+                self._run_sort_by_combo.setCurrentIndex(idx)
+        self._run_sort_by_combo.currentTextChanged.connect(self._on_field_changed)
+        form.addRow(_("Run sort order:"), self._run_sort_by_combo)
+
         self._on_type_changed()
         return box
 
@@ -2514,6 +2530,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         final.generation_type = self._gen_type_combo.currentData()
         final.category_map = self._category_map_editor.get_items()
         final.seed_category = self._seed_category_combo.currentData() or ""
+        final.run_sort_by = self._run_sort_by_combo.currentData()
 
         errors = final.validate()
         if errors:

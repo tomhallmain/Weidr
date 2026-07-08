@@ -29,15 +29,17 @@ def show_fill_preview_dialog(
     master: Optional[QWidget],
     preview_path: str,
     on_reroll: Callable[[], None],
+    on_solid: Callable[[tuple], None],
 ) -> bool:
     """
     Show a preview of the fill about to be painted into an image, with the
-    option to reroll (regenerate the fill and refresh the preview) before
-    accepting or cancelling.
+    option to reroll (regenerate the fill and refresh the preview), switch to
+    a plain black or white fill, or accept/cancel.
 
     *preview_path* must already exist and contain the candidate result.
     *on_reroll* regenerates the fill and rewrites *preview_path* in place;
-    this function reloads it afterward.
+    *on_solid* does the same but with a plain ``(r, g, b)`` color instead of a
+    fresh random fill. This function reloads *preview_path* after either.
 
     Returns True if the user accepted, False if they cancelled.
     """
@@ -84,6 +86,14 @@ def show_fill_preview_dialog(
         on_reroll()
         _load_preview()
 
+    def _handle_black() -> None:
+        on_solid((0, 0, 0))
+        _load_preview()
+
+    def _handle_white() -> None:
+        on_solid((255, 255, 255))
+        _load_preview()
+
     def _handle_accept() -> None:
         _accepted[0] = True
         dialog.accept()
@@ -98,6 +108,14 @@ def show_fill_preview_dialog(
     reroll_btn = QPushButton(_("Reroll"))
     reroll_btn.clicked.connect(_handle_reroll)
     btn_layout.addWidget(reroll_btn)
+
+    black_btn = QPushButton(_("Black"))
+    black_btn.clicked.connect(_handle_black)
+    btn_layout.addWidget(black_btn)
+
+    white_btn = QPushButton(_("White"))
+    white_btn.clicked.connect(_handle_white)
+    btn_layout.addWidget(white_btn)
 
     cancel_btn = QPushButton(_("Cancel"))
     cancel_btn.clicked.connect(_handle_cancel)

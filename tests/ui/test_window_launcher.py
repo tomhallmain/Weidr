@@ -166,7 +166,7 @@ class TestPreviewAndConfirmFill:
         )
         monkeypatch.setattr(
             "lib.fill_preview_dialog_qt.show_fill_preview_dialog",
-            lambda master, preview_path, on_reroll: True,
+            lambda master, preview_path, on_reroll, on_solid: True,
         )
         rendered = []
         result = launcher._preview_and_confirm_fill(
@@ -186,7 +186,7 @@ class TestPreviewAndConfirmFill:
         )
         monkeypatch.setattr(
             "lib.fill_preview_dialog_qt.show_fill_preview_dialog",
-            lambda master, preview_path, on_reroll: False,
+            lambda master, preview_path, on_reroll, on_solid: False,
         )
         result = launcher._preview_and_confirm_fill(
             str(tmp_path / "source.png"), (10, 10), lambda fill, out_path: None,
@@ -201,7 +201,7 @@ class TestPreviewAndConfirmFill:
             MagicMock(side_effect=fills),
         )
 
-        def fake_dialog(master, preview_path, on_reroll):
+        def fake_dialog(master, preview_path, on_reroll, on_solid):
             on_reroll()  # simulate one reroll click before accepting
             return True
 
@@ -217,6 +217,32 @@ class TestPreviewAndConfirmFill:
         assert rendered == [fills[0], fills[1]]
         assert result is fills[1]
 
+    def test_solid_color_button_switches_to_plain_fill(self, tmp_path, monkeypatch):
+        launcher = WindowLauncher(MagicMock())
+        monkeypatch.setattr(
+            "image.image_ops.ImageOps.generate_box_fill_image",
+            MagicMock(return_value=object()),  # the initial random fill; not asserted on here
+        )
+
+        def fake_dialog(master, preview_path, on_reroll, on_solid):
+            on_solid((0, 0, 0))  # simulate clicking "Black"
+            return True
+
+        monkeypatch.setattr(
+            "lib.fill_preview_dialog_qt.show_fill_preview_dialog", fake_dialog,
+        )
+        rendered = []
+        result = launcher._preview_and_confirm_fill(
+            str(tmp_path / "source.png"), (10, 6),
+            lambda fill, out_path: rendered.append(fill),
+        )
+        assert result.size == (10, 6)
+        assert result.mode == "RGB"
+        assert result.getpixel((0, 0)) == (0, 0, 0)
+        # Initial random render, then the solid-black render.
+        assert len(rendered) == 2
+        assert rendered[-1] is result
+
     def test_preview_file_is_cleaned_up(self, tmp_path, monkeypatch):
         launcher = WindowLauncher(MagicMock())
         monkeypatch.setattr(
@@ -225,7 +251,7 @@ class TestPreviewAndConfirmFill:
         )
         captured_path = []
 
-        def fake_dialog(master, preview_path, on_reroll):
+        def fake_dialog(master, preview_path, on_reroll, on_solid):
             captured_path.append(preview_path)
             with open(preview_path, "wb") as f:
                 f.write(b"x")
@@ -260,7 +286,7 @@ class TestRunStaticRectActionPreviewFill:
         )
         monkeypatch.setattr(
             "lib.fill_preview_dialog_qt.show_fill_preview_dialog",
-            lambda master, preview_path, on_reroll: True,
+            lambda master, preview_path, on_reroll, on_solid: True,
         )
         media_path = str(tmp_path / "photo.png")
         open(media_path, "w").close()
@@ -300,7 +326,7 @@ class TestRunStaticRectActionPreviewFill:
     def test_cancel_does_not_save(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
             "lib.fill_preview_dialog_qt.show_fill_preview_dialog",
-            lambda master, preview_path, on_reroll: False,
+            lambda master, preview_path, on_reroll, on_solid: False,
         )
         media_path = str(tmp_path / "photo.png")
         open(media_path, "w").close()
@@ -336,7 +362,7 @@ class TestRunStaticRectActionPreviewFill:
     def test_fill_covers_full_image_uses_full_image_size_for_background_box(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
             "lib.fill_preview_dialog_qt.show_fill_preview_dialog",
-            lambda master, preview_path, on_reroll: True,
+            lambda master, preview_path, on_reroll, on_solid: True,
         )
         gen_calls = []
         monkeypatch.setattr(
@@ -381,7 +407,7 @@ class TestRunStaticPolygonActionPreviewFill:
         )
         monkeypatch.setattr(
             "lib.fill_preview_dialog_qt.show_fill_preview_dialog",
-            lambda master, preview_path, on_reroll: True,
+            lambda master, preview_path, on_reroll, on_solid: True,
         )
         media_path = str(tmp_path / "photo.png")
         open(media_path, "w").close()

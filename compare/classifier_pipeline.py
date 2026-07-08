@@ -22,7 +22,7 @@ from typing import ClassVar, Optional
 
 from files.related_image import suffix_is_numeric
 from utils.app_info_cache import app_info_cache
-from utils.constants import ClassifierActionType, CompareMediaType, ImageGenerationType
+from utils.constants import ClassifierActionType, CompareMediaType, ImageGenerationType, SortBy
 from utils.logging_setup import get_logger
 from utils.translations import _
 
@@ -859,6 +859,11 @@ class ClassifierPipeline:
     # a ClassifierRankCondition seed guard in the node.  Must be a key present in
     # category_map (validated by validate()).  Empty string = feature disabled.
     seed_category: str = ""
+    # File order for batch runs (see utils.constants.SortBy).  None = no sort --
+    # gather_files' raw, unordered glob result is used as-is, which is the
+    # fastest option for a large directory since it skips wrapping/sorting
+    # entirely.
+    run_sort_by: Optional[SortBy] = None
 
     def __post_init__(self):
         if self.nodes is None:
@@ -892,6 +897,24 @@ class ClassifierPipeline:
                 if outcome is not None and outcome.action_type == ClassifierActionType.GENERATE:
                     return True
         return False
+
+    def sort_files_for_run(self, files: list) -> list:
+        """
+        Order *files* (already gathered, e.g. by compare.base_compare.gather_files)
+        per run_sort_by before a batch run.
+
+        Returns *files* unchanged when run_sort_by is unset (the default) --
+        the fastest option for a large directory, since it skips wrapping
+        every path in a SortableFile and sorting entirely, keeping
+        gather_files' raw, unordered glob result as-is.
+        """
+        if self.run_sort_by is None or not files:
+            return files
+        from files.file_browser import FileBrowser
+        from files.sortable_file import SortableFile
+        file_browser = FileBrowser(directory="", recursive=False, sort_by=self.run_sort_by)
+        sortable_files = [SortableFile(f) for f in files]
+        return file_browser.get_sorted_files(sortable_files)
 
     # ------------------------------------------------------------------
     # Validation
@@ -1282,6 +1305,8 @@ class ClassifierPipeline:
             d["category_map"] = dict(self.category_map)
         if self.seed_category:
             d["seed_category"] = self.seed_category
+        if self.run_sort_by:
+            d["run_sort_by"] = self.run_sort_by.get_text()
         return d
 
     @staticmethod
@@ -1290,6 +1315,11 @@ class ClassifierPipeline:
             if not val:
                 return None
             return ClassifierActionType[val] if isinstance(val, str) else val
+
+        def _opt_sort_by(val):
+            if not val:
+                return None
+            return SortBy.get(val) if isinstance(val, str) else val
 
         raw_map = d.get("category_map")
         if raw_map is None:
@@ -1310,6 +1340,7 @@ class ClassifierPipeline:
             ),
             category_map=raw_map,
             seed_category=d.get("seed_category", ""),
+            run_sort_by=_opt_sort_by(d.get("run_sort_by")),
             move_to_working_dir=d.get("move_to_working_dir", True),
         )
 

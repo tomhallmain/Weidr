@@ -382,7 +382,8 @@ class ClassifierActionsTab(QWidget):
             from files.related_image import clear_base_stem_dir_cache
             clear_base_stem_dir_cache()
             for directory in directories:
-                for image_path in gather_files(directory):
+                files = pipeline.sort_files_for_run(list(gather_files(directory)))
+                for image_path in files:
                     try:
                         run_pipeline(pipeline, image_path, callbacks, base_directory=directory)
                     except Exception:

@@ -478,8 +478,8 @@ class WindowLauncher:
     ) -> Optional[Any]:
         """Generate a candidate random fill, render a preview of the composited
         result to a temp file and show it, and let the user reroll (regenerate
-        the fill and refresh the preview) or accept/cancel before the caller
-        commits a real save.
+        the fill and refresh the preview), switch to a plain black/white fill,
+        or accept/cancel before the caller commits a real save.
 
         *fill_size* is the (width, height) to generate the candidate fill at.
         *render_fn* receives (fill_image, output_path) and should write the
@@ -489,6 +489,7 @@ class WindowLauncher:
         Returns the accepted fill image, or None if the user cancelled.
         """
         import tempfile
+        from PIL import Image
         from image.image_ops import ImageOps
         from lib.fill_preview_dialog_qt import show_fill_preview_dialog
 
@@ -504,9 +505,13 @@ class WindowLauncher:
             fill_holder[0] = ImageOps.generate_box_fill_image(*fill_size)
             _render()
 
+        def _set_solid(color: tuple):
+            fill_holder[0] = Image.new("RGB", fill_size, color)
+            _render()
+
         _render()
         try:
-            accepted = show_fill_preview_dialog(self._app, preview_path, _reroll)
+            accepted = show_fill_preview_dialog(self._app, preview_path, _reroll, _set_solid)
         finally:
             try:
                 os.remove(preview_path)

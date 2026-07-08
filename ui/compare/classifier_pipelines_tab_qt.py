@@ -432,7 +432,7 @@ class ClassifierPipelinesTab(QWidget):
             files_by_directory: dict[str, int] = {}
 
             for directory in directories:
-                files = list(gather_files(directory))
+                files = pipeline.sort_files_for_run(list(gather_files(directory)))
                 files_by_directory[directory] = len(files)
                 logger.info(
                     "Pipeline %r: scanning %s — %d file(s)", pipeline.name, directory, len(files)

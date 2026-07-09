@@ -27,6 +27,7 @@ class WindowManager:
     _windows: list[AppWindow] = []
     _secondary_toplevels: dict[int, object] = {}  # window_id -> SmartWindow (keep reference to avoid gc)
     _primary: Optional[AppWindow] = None
+    _last_active: Optional[AppWindow] = None
     _cycle_index: int = 0
 
     # ------------------------------------------------------------------
@@ -54,9 +55,29 @@ class WindowManager:
             cls._windows.remove(window)
         if cls._primary is window:
             cls._primary = None
+        if cls._last_active is window:
+            cls._last_active = None
         cls._secondary_toplevels.pop(window.window_id, None)
         from utils.notification_manager import notification_manager
         notification_manager.unregister_window(window.window_id)
+
+    @classmethod
+    def notify_window_activated(cls, window: AppWindow) -> None:
+        """Record *window* as the AppWindow the user last worked in.
+
+        Called from AppWindow on activation only — secondary tool windows
+        (file actions, go-to-file, temp canvas) never update this, so it
+        keeps pointing at the AppWindow whose context their requests should
+        run in.
+        """
+        cls._last_active = window
+
+    @classmethod
+    def get_active_window(cls) -> Optional[AppWindow]:
+        """The AppWindow the user last worked in, falling back to primary."""
+        if cls._last_active is not None and cls._last_active in cls._windows:
+            return cls._last_active
+        return cls._primary
 
     # ------------------------------------------------------------------
     # Queries

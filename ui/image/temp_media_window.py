@@ -63,6 +63,17 @@ class TempMediaWindow(SmartWindow):
 
         self._bind_shortcuts()
 
+    def set_context(self, app_actions) -> None:
+        """Rebind this reused singleton to the requesting window's context.
+
+        The canvas outlives the window that first created it; every
+        open_temp_media_canvas() call must re-point app_actions at the
+        originating window so in-canvas actions (refocus, details, marks, …)
+        run in the right context.
+        """
+        if app_actions is not None:
+            self._app_actions = app_actions
+
     # -- shortcuts -------------------------------------------------
     def _bind_shortcuts(self) -> None:
         def sc(key: str, fn) -> None:

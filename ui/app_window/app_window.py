@@ -1460,6 +1460,15 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
 
             WindowManager.unregister(self)
 
+    def changeEvent(self, event):
+        """Track this window as last-active so requests from long-lived
+        secondary windows (file actions, go-to-file, temp canvas) can resolve
+        the AppWindow context the user is actually working in."""
+        from PySide6.QtCore import QEvent
+        if event.type() == QEvent.Type.ActivationChange and self.isActiveWindow():
+            WindowManager.notify_window_activated(self)
+        super().changeEvent(event)
+
     def closeEvent(self, event):
         """Qt close event handler."""
         if self._closing:

@@ -446,6 +446,10 @@ class HelpAndConfig(SmartDialog):
         self._cb_enable_prevalidations = self._add_checkbox_row(
             _("Enable Prevalidations"), config.enable_prevalidations,
         )
+        self._cb_prevalidate_direct_display = self._add_checkbox_row(
+            _("Prevalidate on Direct Media Display (go-to-file, Home/End, related image)"),
+            config.prevalidate_on_direct_media_display,
+        )
         self._le_dyn_min_samples = self._add_entry_row(
             _("Min Sample Count"), str(config.dynamic_media_min_sample_count),
         )
@@ -546,6 +550,7 @@ class HelpAndConfig(SmartDialog):
             ("_cb_overwrite_on_move",          "move_marks_overwrite_existing_file"),
             ("_cb_save_screenshot_same_dir",   "save_screenshot_to_same_dir"),
             ("_cb_enable_prevalidations",      "enable_prevalidations"),
+            ("_cb_prevalidate_direct_display", "prevalidate_on_direct_media_display"),
             ("_cb_large_hq_downscale",         "large_image_enable_hq_idle_downscale"),
             ("_cb_large_full_promotion",       "large_image_enable_full_res_promotion"),
         ]

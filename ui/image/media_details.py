@@ -1432,6 +1432,58 @@ class MediaDetails(SmartWindow):
         )
 
     @staticmethod
+    def _confirm_advisory_prevalidation(media_path: str, app_actions) -> bool:
+        """Advisory prevalidation gate for external-context display (dry run).
+
+        Files shown in the temp canvas usually live outside the invoking
+        window's base directory, so the normal base-dir-gated prevalidation
+        (with actions and caching) does not apply. Instead run
+        ClassifierActionsManager.advise_media — no gating, no actions, no
+        caching — and ask the user to confirm before the file is shown.
+        Returns True when the file may be displayed.
+        """
+        from compare.classifier_actions_manager import ClassifierActionsManager
+        from utils.constants import ClassifierActionType
+
+        if not config.prevalidate_on_direct_media_display:
+            return True
+        # Respect the invoking window's Shift+L prevalidation toggle.
+        if not app_actions.get_master().compare_manager.prevalidations_running:
+            return True
+        if ClassifierActionsManager.is_dynamic_prevalidation_media(media_path):
+            # Phase 1: dynamic-media advisory needs frame sampling (slow on the
+            # UI thread); deferred — see docs/skip-handling-direct-media-display.md.
+            logger.info("Advisory prevalidation skipped for dynamic media: %s", media_path)
+            return True
+        # Recent-file-action exemption — checked only after every other gate:
+        # a recently moved/copied file was either displayable in its original
+        # context (manual) or already skipped once (auto).
+        if ClassifierActionsManager.is_exempt_from_direct_display_check(media_path):
+            logger.info("Advisory prevalidation exempt (recent file action or "
+                        "known move target): %s", media_path)
+            return True
+        # The originating window's base_dir gates the advisory the same way it
+        # gates normal prevalidation (excluded dirs, profiles, move targets);
+        # only the file's own external directory stays ungated.
+        action, prevalidation_name = ClassifierActionsManager.advise_media(
+            media_path, base_dir=app_actions.get_base_dir()
+        )
+        if action is None or action == ClassifierActionType.GENERATE:
+            return True
+        if action == ClassifierActionType.NOTIFY:
+            app_actions.toast(prevalidation_name + _(" detected"))
+            return True
+        # BLUR included: the temp canvas has no blur overlay wiring, so warn.
+        return bool(app_actions.alert(
+            _("Prevalidation Warning"),
+            _(
+                "Prevalidation \"{0}\" would normally apply action \"{1}\" to this file.\n\n"
+                "Show it anyway?"
+            ).format(prevalidation_name, action.get_translation()),
+            kind="askyesno",
+        ))
+
+    @staticmethod
     def open_temp_media_canvas(
         master=None,
         media_path=None,
@@ -1453,11 +1505,18 @@ class MediaDetails(SmartWindow):
                 is not None
             ):
                 return
+        if not MediaDetails._confirm_advisory_prevalidation(media_path, app_actions):
+            return
         was_open = MediaDetails.temp_media_canvas is not None
         if MediaDetails.temp_media_canvas is None:
             MediaDetails.set_temp_media_canvas(
                 master, media_path, app_actions
             )
+        else:
+            # The canvas is a reused singleton; rebind it to the requesting
+            # window's context so in-canvas actions don't run in the context
+            # of whichever window first created it.
+            MediaDetails.temp_media_canvas.set_context(app_actions)
         try:
             MediaDetails.temp_media_canvas.create_media(media_path)
         except Exception:

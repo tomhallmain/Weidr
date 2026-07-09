@@ -685,7 +685,12 @@ class ClassifierAction:
         media_path,
         callbacks: ActionCallbacks,
         base_directory: Optional[str] = None,
+        dry_run: bool = False,
     ) -> Optional[ClassifierActionType]:
+        """Evaluate this action against *media_path* and (unless *dry_run*)
+        execute it. With dry_run=True, matching returns the would-be action
+        type without invoking run_action — no file I/O, callbacks, or
+        FileAction history."""
         if not self.can_run:
             return None
         if not self.media_type_allowed(media_path):
@@ -769,6 +774,8 @@ class ClassifierAction:
                     and FrameCache.is_pseudostatic_dynamic_media(media_path)
                 )
                 if threshold_met or pseudostatic_match:
+                    if dry_run:
+                        return self.action
                     return self.run_action(
                         media_path,
                         callbacks,
@@ -782,6 +789,7 @@ class ClassifierAction:
                 media_path,
                 callbacks,
                 base_directory=base_directory or os.path.dirname(media_path),
+                dry_run=dry_run,
             )
         except Exception as e:
             # For non-image media, fall back to first extracted frame.
@@ -794,6 +802,7 @@ class ClassifierAction:
                 actual_image_path,
                 callbacks,
                 base_directory=base_directory or os.path.dirname(media_path),
+                dry_run=dry_run,
             )
 
     def run_on_image_path(
@@ -801,11 +810,14 @@ class ClassifierAction:
         image_path,
         callbacks: ActionCallbacks,
         base_directory: Optional[str] = None,
+        dry_run: bool = False,
     ) -> Optional[ClassifierActionType]:
         if not self.can_run:
             return None
         is_match, matched_category = self._evaluate_image_path_match(image_path)
         if is_match:
+            if dry_run:
+                return self.action
             return self.run_action(
                 image_path,
                 callbacks,
@@ -1368,20 +1380,26 @@ class Prevalidation(ClassifierAction):
         image_path,
         callbacks: ActionCallbacks,
         base_directory: Optional[str] = None,
+        dry_run: bool = False,
     ) -> Optional[ClassifierActionType]:
         # Lazy load the image classifier if needed
         super().ensure_image_classifier_loaded(callbacks.notify_callback)
-        return super().run_on_image_path(image_path, callbacks, base_directory=base_directory)
+        return super().run_on_image_path(
+            image_path, callbacks, base_directory=base_directory, dry_run=dry_run
+        )
 
     def run_on_media_path(
         self,
         media_path,
         callbacks: ActionCallbacks,
         base_directory: Optional[str] = None,
+        dry_run: bool = False,
     ) -> Optional[ClassifierActionType]:
         # Keep lazy image-classifier loading behavior for sampled media paths too.
         super().ensure_image_classifier_loaded(callbacks.notify_callback)
-        return super().run_on_media_path(media_path, callbacks, base_directory=base_directory)
+        return super().run_on_media_path(
+            media_path, callbacks, base_directory=base_directory, dry_run=dry_run
+        )
 
     def validate_dirs(self):
         super().validate_dirs()

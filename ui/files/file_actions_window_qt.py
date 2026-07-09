@@ -453,24 +453,40 @@ class FileActionsWindow(SmartWindow):
     # ==================================================================
     # Actions
     # ==================================================================
+    def _active_context(self) -> tuple:
+        """Resolve (master, app_actions) of the AppWindow the user last worked in.
+
+        This window stays open while the user switches between app windows, so
+        the construction-time context can go stale — skippability and move/undo
+        targets are relative to the window the request comes from, not the one
+        that opened this dialog. The stored context is only a fallback.
+        """
+        from ui.app_window.window_manager import WindowManager
+        win = WindowManager.get_active_window()
+        if win is not None:
+            return win, win.app_actions
+        return self._app_master, self._app_actions
+
     def _view(self, media_path: str) -> None:
+        app_master, app_actions = self._active_context()
         if not os.path.isfile(media_path):
-            self._app_actions.warn(
+            app_actions.warn(
                 _("File not found: ") + os.path.basename(media_path)
             )
             return
         try:
             self._view_image_callback(
-                master=self._app_master,
+                master=app_master,
                 media_path=media_path,
-                app_actions=self._app_actions,
+                app_actions=app_actions,
             )
         except Exception as e:
-            self._app_actions.toast(
+            app_actions.toast(
                 _("Error opening media: ") + str(e)
             )
 
     def _undo(self, action: FileAction, specific_image: str | None = None) -> None:
+        _, app_actions = self._active_context()
         # If this was an automated prevalidation action, confirm that the user
         # wants to create an override so it won't fire on these files again.
         override_paths: list[str] = []
@@ -484,7 +500,7 @@ class FileActionsWindow(SmartWindow):
             else:
                 override_paths = list(action.original_marks)
 
-            confirmed = self._app_actions.alert(
+            confirmed = app_actions.alert(
                 _("Override Prevalidation?"),
                 _(
                     "This action was performed automatically by a prevalidation. "
@@ -501,14 +517,14 @@ class FileActionsWindow(SmartWindow):
         if specific_image is not None:
             if not os.path.isfile(specific_image):
                 error_text = _("Image does not exist: ") + specific_image
-                self._app_actions.alert(
+                app_actions.alert(
                     _("File Action Error"), error_text, master=self
                 )
                 raise Exception(error_text)
             if action.is_move_action():
                 original_directory = action.get_original_directory()
                 self._move_marks_callback(
-                    self._app_actions,
+                    app_actions,
                     target_dir=original_directory,
                     move_func=Utils.move_file,
                     files=[specific_image],
@@ -520,14 +536,14 @@ class FileActionsWindow(SmartWindow):
         else:
             if not action.any_new_files_exist():
                 error_text = _("Images not found")
-                self._app_actions.alert(
+                app_actions.alert(
                     _("File Action Error"), error_text, master=self
                 )
                 raise Exception(error_text)
             if action.is_move_action():
                 original_directory = action.get_original_directory()
                 self._move_marks_callback(
-                    self._app_actions,
+                    app_actions,
                     target_dir=original_directory,
                     move_func=Utils.move_file,
                     files=action.new_files,
@@ -694,7 +710,8 @@ class FileActionsWindow(SmartWindow):
         if media_path is not None and not isinstance(media_path, str):
             media_path = None
         if media_path is None:
-            media_path = self._app_actions.get_active_media_filepath()
+            _, app_actions = self._active_context()
+            media_path = app_actions.get_active_media_filepath()
             if media_path is None:
                 raise Exception("No active media")
 

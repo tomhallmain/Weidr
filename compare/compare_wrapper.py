@@ -498,9 +498,19 @@ class CompareWrapper:
         '''
         While in group mode, navigate between the groups.
         '''
+        if not self._load_current_group(start_match_index=start_match_index):
+            return
+        self._display_current_match()
+
+    def _load_current_group(self, start_match_index=0) -> bool:
+        '''
+        Set current_group / match_index / files_matched for the group at
+        current_group_index without displaying anything. Returns False (with a
+        toast) when there are no groups.
+        '''
         if self.file_groups is None or len(self.file_groups) == 0:
             self._app_actions.toast(_("No Groups Found"))
-            return
+            return False
 
         actual_group_index = self.actual_group_index()
         self.current_group = self.file_groups[actual_group_index]
@@ -509,11 +519,35 @@ class CompareWrapper:
 
         for f in sorted(self.current_group, key=lambda f: self.current_group[f]):
             self.files_matched.append(f)
+        return True
 
+    def _display_current_match(self) -> None:
+        actual_group_index = self.actual_group_index()
         self._app_actions._set_label_state(group_number=self.current_group_index, size=len(self.files_matched),
                                             suffix=self.label_suffix + self._supergroup_label_suffix(actual_group_index))
         self._master.update()
         self._app_actions.create_media(self.current_match())
+
+    def show_boundary_match(self, last_file=False) -> None:
+        '''
+        Home/End within compare results: show the first (or last) match of the
+        first (or last) group, honoring skips before anything is displayed
+        (config prevalidate_on_direct_media_display).
+        '''
+        if len(self.group_indexes) > 0:
+            self.current_group_index = len(self.group_indexes) - 1 if last_file else 0
+        if not self._load_current_group():
+            return
+        self.match_index = len(self.files_matched) - 1 if last_file else 0
+        if config.prevalidate_on_direct_media_display:
+            start_media = self.current_match()
+            media = start_media
+            while self.skip_media(media):
+                media = self._get_prev_media() if last_file else self._get_next_media()
+                if media == start_media:
+                    self._app_actions.toast(_("All media in the group are skipped"))
+                    break
+        self._display_current_match()
 
     def _supergroup_label_suffix(self, actual_group_index: int) -> str:
         '''

@@ -93,6 +93,7 @@ def ui_app_window_test_hygiene(monkeypatch):
     def _reset_window_manager() -> None:
         WindowManager._windows.clear()
         WindowManager._primary = None
+        WindowManager._last_active = None
         WindowManager._secondary_toplevels.clear()
         WindowManager._cycle_index = 0
 

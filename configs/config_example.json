@@ -152,6 +152,7 @@
   ],
   "text_embedding_search_presets_exclusive": false,
   "enable_prevalidations": true,
+  "prevalidate_on_direct_media_display": true,
   "dynamic_media_min_sample_count": 4,
   "dynamic_media_max_sample_frames": 20,
   "dynamic_media_max_sample_pages": 40,

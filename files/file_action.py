@@ -99,6 +99,35 @@ class FileAction():
         action = FileAction.get_history_action(auto=True)
         return action.new_files[0] if action and action.new_files else None
 
+    @staticmethod
+    def was_recently_actioned(path: str, auto: Optional[bool] = None, max_actions: int = 100) -> bool:
+        """True when *path*'s filename matches the FIRST new file of a recent
+        move/copy action.
+
+        Used to exempt directly-requested media from advisory prevalidation:
+        a file that was recently moved or copied out of a context was
+        displayable there (manual moves) or already skipped once (auto moves).
+
+        - Delete actions are not under consideration.
+        - Multi-file actions only check their first file (bounds the scan to
+          one comparison per action regardless of transfer size).
+        - Only the filename is compared, not the full path.
+        - *auto*: None matches any initiator; True/False filters by initiator.
+        """
+        filename = os.path.normcase(os.path.basename(path))
+        if not filename:
+            return False
+        for action in FileAction.action_history[:max_actions]:
+            if auto is not None and bool(action.auto) != auto:
+                continue
+            if action.is_delete_action():
+                continue
+            if not action.new_files:
+                continue
+            if os.path.normcase(os.path.basename(action.new_files[0])) == filename:
+                return True
+        return False
+
 
     @staticmethod
     def set_permanent_action(target_dir, move_func, toast_callback):

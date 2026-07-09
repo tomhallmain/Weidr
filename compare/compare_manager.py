@@ -676,6 +676,11 @@ class CompareManager:
         if self._primary_wrapper() is not None:
             return self._primary_wrapper().set_current_group(start_match_index)
 
+    def show_boundary_match(self, last_file=False):
+        """Home/End within compare results (delegated to primary wrapper)."""
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().show_boundary_match(last_file=last_file)
+
     def get_grouped_filepaths(self, app_mode) -> list:
         """Return all comparison files ordered group-by-group for masonry display."""
         if self._primary_wrapper() is not None:

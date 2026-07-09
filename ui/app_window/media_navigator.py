@@ -139,6 +139,11 @@ class MediaNavigator:
             if current_media is None:
                 if self._fb.has_files():
                     if self._fb.is_incremental_loading:
+                        # NOTE: no skip/prevalidation check here — during
+                        # incremental load the file list and cursor are still
+                        # in flux, so direct-display prevalidation
+                        # (prevalidate_on_direct_media_display) is not applied
+                        # to this bootstrap display yet.
                         self.create_media(self._fb.get_files()[0])
                         current_media = self.get_active_media_filepath()
                         if current_media is None:
@@ -182,10 +187,8 @@ class MediaNavigator:
                 raise
 
         elif self._cm.has_compare():
-            self._app.direction = Direction.FORWARD
-            self._cm.current_group_index = 0
-            self._cm.match_index = 0
-            self._cm.set_current_group()
+            self._app.direction = Direction.BACKWARD if last_file else Direction.FORWARD
+            self._cm.show_boundary_match(last_file=last_file)
 
     def page_up(self, event=None) -> None:
         """Jump backward by a page of files.
@@ -240,6 +243,27 @@ class MediaNavigator:
     # ==================================================================
     # Go-to-file
     # ==================================================================
+    def _suppress_direct_display(self, media_path, compare_manager=None) -> bool:
+        """Run prevalidations for a directly-requested file (config-gated).
+
+        Returns True when the file must not be displayed. A matched
+        prevalidation notifies through its own normal callbacks (the real
+        skip_media pipeline runs, side effects included); the generic toast
+        here only covers suppressions that emit nothing of their own (e.g.
+        hidden files).
+        """
+        if not config.prevalidate_on_direct_media_display:
+            return False
+        cm = compare_manager if compare_manager is not None else self._cm
+        if not cm.skip_media(media_path):
+            return False
+        self._app.notification_ctrl.toast(
+            _("Not shown (prevalidation or hidden): {0}").format(
+                os.path.basename(media_path)
+            )
+        )
+        return True
+
     def go_to_file(
         self,
         event=None,
@@ -278,6 +302,8 @@ class MediaNavigator:
                 closest_sort_by=closest_sort_by,
             )
             if media_path:
+                if self._suppress_direct_display(media_path):
+                    return True
                 self.create_media(media_path)
                 return True
         else:
@@ -285,6 +311,8 @@ class MediaNavigator:
                 search_text, exact_match=exact_match
             )
             if group_indexes:
+                if self._suppress_direct_display(media_path):
+                    return True
                 self._cm.current_group_index = group_indexes[0]
                 self._cm.set_current_group(start_match_index=group_indexes[1])
                 return True
@@ -304,6 +332,10 @@ class MediaNavigator:
                     closest_sort_by=closest_sort_by,
                 )
                 if found_path:
+                    if self._suppress_direct_display(
+                        found_path, compare_manager=window.compare_manager
+                    ):
+                        return True
                     window.raise_()
                     window.activateWindow()
                     window.media_navigator.create_media(found_path)
@@ -313,6 +345,10 @@ class MediaNavigator:
                     search_text, exact_match=exact_match
                 )
                 if found_path and group_indexes:
+                    if self._suppress_direct_display(
+                        found_path, compare_manager=window.compare_manager
+                    ):
+                        return True
                     window.compare_manager.current_group_index = group_indexes[0]
                     window.compare_manager.set_current_group(start_match_index=group_indexes[1])
                     window.raise_()
@@ -363,6 +399,8 @@ class MediaNavigator:
                 self._fb.refresh()
             file_path = self._fb.go_to_index(index)
             if file_path:
+                if self._suppress_direct_display(file_path):
+                    return True
                 self.create_media(file_path)
                 return True
         except ValueError as e:

@@ -65,6 +65,7 @@ class Config:
         "save_screenshot_to_same_dir":         bool,
         # Prevalidation (dynamic media)
         "enable_prevalidations":               bool,
+        "prevalidate_on_direct_media_display": bool,
         "dynamic_media_min_sample_count":      int,
         "dynamic_media_max_sample_frames":     int,
         "dynamic_media_max_sample_pages":      int,
@@ -207,6 +208,9 @@ class Config:
         self.text_embedding_search_preset_index = -1
         self.text_embedding_search_presets_exclusive = False
         self.enable_prevalidations = True
+        # Run prevalidations on direct-display paths too (go-to-file, Home/End
+        # in compare modes, related image / temp media canvas advisory check).
+        self.prevalidate_on_direct_media_display = True
         # Dynamic media prevalidation sampling bounds.
         self.dynamic_media_min_sample_count = 4
         self.dynamic_media_max_sample_frames = 20
@@ -319,6 +323,7 @@ class Config:
                             "sidebar_visible",
                             "always_open_new_windows",
                             "enable_prevalidations",
+                            "prevalidate_on_direct_media_display",
                             "show_negative_prompt",
                             "large_image_enable_hq_idle_downscale",
                             "large_image_enable_full_res_promotion",

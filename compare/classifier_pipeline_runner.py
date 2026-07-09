@@ -190,6 +190,7 @@ def run_pipeline(
     report: Optional[PipelineRunReport] = None,
     generate_queue: Optional[DebouncedGenerateQueue] = None,
     processed_stems: Optional[set] = None,
+    dry_run: bool = False,
 ) -> Optional[ClassifierActionType]:
     """
     Walk the pipeline nodes and return the ClassifierActionType to fire, or
@@ -366,6 +367,7 @@ def run_pipeline(
                 base_directory,
                 generate_queue=generate_queue,
                 move_to_working_dir=pipeline.move_to_working_dir,
+                dry_run=dry_run,
             )
             if should_mark_done and base_stem:
                 processed_stems.add(base_stem)
@@ -381,6 +383,7 @@ def run_pipeline(
                 base_directory,
                 generate_queue=generate_queue,
                 move_to_working_dir=pipeline.move_to_working_dir,
+                dry_run=dry_run,
             )
             last_etc_action = outcome.action_type
             # Fall through to CONTINUE — advance to the next node.
@@ -403,6 +406,7 @@ def run_pipeline(
                 base_directory,
                 generate_queue=generate_queue,
                 move_to_working_dir=pipeline.move_to_working_dir,
+                dry_run=dry_run,
             )
             if should_mark_done and base_stem:
                 processed_stems.add(base_stem)
@@ -429,6 +433,7 @@ def run_pipeline(
         base_directory,
         generate_queue=generate_queue,
         move_to_working_dir=pipeline.move_to_working_dir,
+        dry_run=dry_run,
     )
     if should_mark_done and base_stem:
         processed_stems.add(base_stem)
@@ -998,8 +1003,11 @@ def _dispatch_action(
     *,
     generate_queue: Optional[DebouncedGenerateQueue] = None,
     move_to_working_dir: bool = True,
+    dry_run: bool = False,
 ) -> None:
-    if action_type is None:
+    # dry_run: the caller only wants the would-be action type (advisory
+    # prevalidation for external-context display); execute nothing.
+    if action_type is None or dry_run:
         return
 
     hide_callback = callbacks.hide_callback

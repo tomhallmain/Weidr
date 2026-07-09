@@ -137,7 +137,7 @@ class GoToFile(SmartDialog):
             geometry=self.get_geometry(),
         )
         GoToFile._instance = self
-        self._app_actions = app_actions
+        self._fallback_app_actions = app_actions
         self._loading_bar: Optional[QProgressBar] = None
 
         root = QVBoxLayout(self)
@@ -343,6 +343,20 @@ class GoToFile(SmartDialog):
 
         # Focus the search entry
         QTimer.singleShot(1, self._search_entry.setFocus)
+
+    @property
+    def _app_actions(self) -> AppActions:
+        """Context of the AppWindow the user last worked in.
+
+        This dialog can stay open while the user switches app windows, so the
+        construction-time app_actions can go stale; resolve at request time
+        and keep the stored value only as a fallback.
+        """
+        from ui.app_window.window_manager import WindowManager
+        win = WindowManager.get_active_window()
+        if win is not None:
+            return win.app_actions
+        return self._fallback_app_actions
 
     # ==================================================================
     # Go To File actions

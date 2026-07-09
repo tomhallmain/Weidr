@@ -439,6 +439,123 @@ class ClassifierActionsManager:
         return prevalidation_action
 
     @staticmethod
+    def advise_media(media_path: str, base_dir: Optional[str] = None) -> tuple[Optional[ClassifierActionType], Optional[str]]:
+        """Dry-run prevalidations for a file shown outside the current browsing
+        context (related image / temp media canvas).
+
+        *base_dir* is the base directory of the **originating window** (where
+        the request came from), not the file's parent directory.
+
+        Unlike prevalidate_media:
+
+        - **The file's own directory is never gated** — it is unrelated to any
+          window's base_dir.
+        - **Originating-context gating is respected** — when browsing the
+          requesting window would run no prevalidations, the advisory doesn't
+          either: a *base_dir* in ``directories_to_exclude`` returns no
+          advisory, and per-prevalidation profile directories and the
+          MOVE-target == base_dir exclusion apply exactly as in
+          prevalidate_media. With no *base_dir* available, all prevalidations
+          are considered.
+        - **No execution** — matches are evaluated with ``dry_run=True``; no
+          file I/O, callbacks, FileAction history, or marks.
+        - **No caching** — neither ``prevalidated_cache`` nor the file buckets
+          are read or written; a cached result would imply the action was
+          handled when nothing ran.
+        - **User overrides are respected** — an overridden file returns no
+          advisory.
+
+        Returns ``(would_be_action, prevalidation_or_pipeline_name)``, or
+        ``(None, None)`` when nothing matches. The caller decides how to warn
+        the user before displaying the file.
+        """
+        if not ClassifierActionsManager._prevalidations_initialized:
+            ClassifierActionsManager._prevalidations_post_init()
+
+        for lookahead in Lookahead.lookaheads:
+            lookahead.run_result = None
+
+        if media_path in ClassifierActionsManager.user_prevalidation_overrides:
+            return None, None
+
+        if base_dir and base_dir in ClassifierActionsManager.directories_to_exclude:
+            return None, None
+
+        no_op_callbacks = ActionCallbacks()
+        for prevalidation in ClassifierActionsManager.prevalidations:
+            if prevalidation.is_active and prevalidation.can_run:
+                if base_dir:
+                    if prevalidation.is_move_action() and prevalidation.action_modifier == base_dir:
+                        continue
+                    if prevalidation.profile is not None and base_dir not in prevalidation.profile.directories:
+                        continue
+                if not prevalidation.media_type_allowed(media_path):
+                    continue
+                try:
+                    action = prevalidation.run_on_media_path(
+                        media_path,
+                        no_op_callbacks,
+                        base_directory=None,
+                        dry_run=True,
+                    )
+                except Exception:
+                    logger.exception("Error dry-running prevalidation %s for %s",
+                                     prevalidation.name, media_path)
+                    continue
+                if action is not None:
+                    return action, prevalidation.name
+
+        try:
+            from compare.classifier_pipeline import ClassifierPipelines
+            from compare.classifier_pipeline_runner import run_pipeline
+            for pipeline in ClassifierPipelines.get_prevalidation_pipelines():
+                if not pipeline.is_active:
+                    continue
+                if base_dir and pipeline.profile is not None and base_dir not in pipeline.profile.directories:
+                    continue
+                if not pipeline.media_type_allowed(media_path):
+                    continue
+                action = run_pipeline(
+                    pipeline,
+                    media_path,
+                    no_op_callbacks,
+                    base_directory=None,
+                    dry_run=True,
+                )
+                if action is not None:
+                    return action, pipeline.name
+        except Exception:
+            logger.exception("Error dry-running classifier pipelines for %s", media_path)
+
+        return None, None
+
+    @staticmethod
+    def is_exempt_from_direct_display_check(media_path: str) -> bool:
+        """True when advisory prevalidation should be skipped for *media_path*.
+
+        Exemptions (see docs/skip-handling-direct-media-display.md, Appendix A):
+
+        - the file's name matches the first file of any of the last 100
+          move/copy actions — the same test for both initiators, for different
+          reasons: a manual move implies the file was displayable in its
+          original context (movable means it was not skippable), and an auto
+          move means it was already skipped once (warning again would force a
+          double skip);
+        - the file sits in a known prevalidation MOVE/COPY target directory
+          (parity with the normal flow, which never prevalidates inside
+          ``directories_to_exclude``).
+        """
+        from files.file_action import FileAction
+
+        if FileAction.was_recently_actioned(media_path):
+            return True
+        media_dir = os.path.normcase(os.path.normpath(os.path.dirname(media_path)))
+        return any(
+            os.path.normcase(os.path.normpath(d)) == media_dir
+            for d in ClassifierActionsManager.directories_to_exclude
+        )
+
+    @staticmethod
     def _should_persist_prevalidation_cache(
         action: Optional[ClassifierActionType],
         matched_prevalidation: Optional[Prevalidation],

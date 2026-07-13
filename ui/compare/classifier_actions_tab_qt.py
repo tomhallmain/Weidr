@@ -57,11 +57,19 @@ class ClassifierActionsTab(QWidget):
         profile_name_or_path: Optional[str] = None,
     ) -> None:
         """Run a classifier action across *directory_paths*."""
+        media_paths = None
+        prototype_only = classifier_action.use_prototype and not classifier_action.has_non_prototype_validation()
+        if not prototype_only:
+            # ClassifierAction does no directory walking itself — only this layer
+            # knows each directory's cached sort preference (app_info_cache), so
+            # gathering happens here before handing the resolved list down.
+            media_paths = ClassifierActionsManager.gather_sorted_media_paths(directory_paths)
         classifier_action.run(
             directory_paths,
             callbacks,
             profile_name_or_path,
             ClassifierActionsTab.BATCH_VALIDATION_MAX_IMAGES,
+            media_paths=media_paths,
         )
 
     @staticmethod

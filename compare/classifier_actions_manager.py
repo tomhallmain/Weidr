@@ -37,6 +37,7 @@ from utils.media_utils import is_video_path_by_extension
 from utils.constants import ClassifierActionType
 from utils.logging_setup import get_logger
 from utils.translations import _
+from utils.utils import Utils
 
 
 
@@ -314,6 +315,45 @@ class ClassifierActionsManager:
             or (config.enable_gifs and path_lower.endswith(".gif"))
             or (config.enable_pdfs and path_lower.endswith(".pdf"))
         )
+
+    @staticmethod
+    def gather_sorted_media_paths(directory_paths: List[str]) -> List[str]:
+        """Resolve directory_paths into a list of media file paths for a bulk
+        classifier action run, using each directory's cached sort preference
+        (app_info_cache, the same source app_window.py reads when navigating)
+        rather than the global config.sort_by default — only the cache knows
+        what a given directory's sort was last set to by the user. Falls back
+        to config.sort_by when a directory has no cached preference.
+
+        This is the "gathering" step callers must run before invoking
+        ClassifierAction.run(media_paths=...) for any non-prototype-only
+        validation; ClassifierAction itself has no directory-walking logic.
+        """
+        from files.file_browser import FileBrowser
+        from utils.constants import SortBy
+
+        all_paths: List[str] = []
+        for directory in directory_paths:
+            if not Utils.isdir_with_retry(directory):
+                logger.warning(f"Directory does not exist: {directory}")
+                continue
+            sort_by = config.sort_by
+            cached_sort_by = app_info_cache.get(directory, "sort_by", default_val=None)
+            if cached_sort_by:
+                try:
+                    sort_by = (
+                        SortBy.get(cached_sort_by)
+                        if isinstance(cached_sort_by, str)
+                        else cached_sort_by
+                    )
+                except Exception:
+                    logger.warning(f"Invalid cached sort_by {cached_sort_by!r} for {directory}, using default")
+            fb = FileBrowser(directory, recursive=True, sort_by=sort_by)
+            fb.set_directory(directory)
+            while fb.is_incremental_loading:
+                time.sleep(0.05)
+            all_paths.extend(fb.get_files())
+        return all_paths
 
     @staticmethod
     def prevalidate_media(

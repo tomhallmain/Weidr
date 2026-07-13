@@ -454,16 +454,30 @@ class ClassifierAction:
         # Start batch validation and action execution in a separate thread
         start_thread(batch_validation_worker, use_asyncio=False)
 
-    def run(self, directory_paths: list[str], callbacks: ActionCallbacks, profile_name_or_path: Optional[str] = None, max_images_per_batch: Optional[int] = None):
+    def run(
+        self,
+        directory_paths: list[str],
+        callbacks: ActionCallbacks,
+        profile_name_or_path: Optional[str] = None,
+        max_images_per_batch: Optional[int] = None,
+        media_paths: Optional[list[str]] = None,
+    ):
         """Run the classifier action on the given directory paths.
-        
+
         Args:
-            directory_paths: List of directory paths to process
+            directory_paths: List of directory paths to process (used for the
+                vectorized prototype-only fast path, and to record the last-used
+                profile/directory)
             hide_callback: Callback for hiding images
             notify_callback: Callback for notifications
             add_mark_callback: Optional callback for marking images
             profile_name_or_path: Optional profile name or directory path to store as last used
             max_images_per_batch: Optional maximum number of images to process per batch
+            media_paths: Pre-gathered, pre-sorted media file paths, required for any
+                validation type other than prototype-only matching. This class does
+                no directory walking itself — callers must resolve directory_paths
+                via ClassifierActionsManager.gather_sorted_media_paths() first, since
+                only that layer knows a directory's cached sort preference.
         """
         if not self.is_active:
             logger.info(f"Classifier action {self.name} is disabled, skipping")
@@ -486,14 +500,57 @@ class ClassifierAction:
             self._last_used_profile = directory_paths[0]
 
         logger.info(f"Running classifier action {self.name} on {len(directory_paths)} directories")
-        
+
         # Pre-load image classifier and prototype before processing images
         self.ensure_image_classifier_loaded(callbacks.notify_callback)
         self.ensure_prototype_loaded(callbacks.notify_callback)
 
-        # Use batch prototype validation when prototype validation is enabled
-        if self.use_prototype:
+        # The vectorized batch path only checks prototype similarity, bypassing
+        # _evaluate_image_path_match entirely — correct only when prototype is
+        # the sole enabled validation type. Any other enabled type (image
+        # classifier, embedding, prompts, filename-contains, base-stem) needs
+        # per-file OR-combined evaluation via the media_paths sweep below.
+        if self.use_prototype and not self.has_non_prototype_validation():
             self._run_with_batch_prototype_validation(directory_paths, callbacks, max_images_per_batch)
+        elif media_paths is not None:
+            self._run_media_paths_sweep(media_paths, callbacks)
+        else:
+            logger.error(
+                "Classifier action %r needs media_paths for its enabled validation "
+                "type(s); caller must resolve directory_paths via "
+                "ClassifierActionsManager.gather_sorted_media_paths() before calling run().",
+                self.name,
+            )
+
+    def has_non_prototype_validation(self) -> bool:
+        return bool(
+            self.use_embedding
+            or self.use_image_classifier
+            or self.use_prompts
+            or self.use_filename_contains
+            or self.use_base_stem_match
+        )
+
+    def _run_media_paths_sweep(self, media_paths: list[str], callbacks: ActionCallbacks):
+        """Evaluate/act on each of media_paths via the full OR-combined validation
+        logic in run_on_media_path. Runs in a background thread, matching
+        _run_with_batch_prototype_validation's behavior."""
+        def sweep_worker():
+            try:
+                total = len(media_paths)
+                if callbacks.notify_callback:
+                    callbacks.notify_callback(_("Evaluating {0} files...").format(total))
+                for media_path in media_paths:
+                    try:
+                        self.run_on_media_path(
+                            media_path, callbacks, base_directory=os.path.dirname(media_path)
+                        )
+                    except Exception as e:
+                        logger.error(f"Error running action on {media_path}: {e}")
+            except Exception as e:
+                logger.error(f"Error in classifier action media sweep: {e}")
+
+        start_thread(sweep_worker, use_asyncio=False)
 
     def _evaluate_image_path_match(
         self, image_path: str, lookahead_eval_cache=None, _detail_out: Optional[list] = None

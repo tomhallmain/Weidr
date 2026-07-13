@@ -19,6 +19,7 @@ build/
 # -----------------------------------------------------------------------------
 configs/*
 !configs/config_example.json
+!configs/suggested_classifier_models.json
 models/*
 simple_image_compare_*
 weidr_*

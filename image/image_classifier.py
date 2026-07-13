@@ -107,21 +107,29 @@ class BaseImageClassifier(ABC):
         Returns:
             The model class
         """
+        import hashlib
         import importlib.util
         import sys
-        
+
         # Get the directory and module name
         module_dir = os.path.dirname(py_file_path)
-        module_name = os.path.splitext(os.path.basename(py_file_path))[0]
-        
+        base_name = os.path.splitext(os.path.basename(py_file_path))[0]
+        # Third-party architecture files commonly reuse generic filenames (e.g.
+        # multiple HF repos each shipping their own "model_architecture.py").
+        # Suffix with a hash of the absolute path so two distinct files never
+        # share a module identity, regardless of load order.
+        path_hash = hashlib.sha1(os.path.abspath(py_file_path).encode("utf-8")).hexdigest()[:12]
+        module_name = f"{base_name}_{path_hash}"
+
         # Add the directory to sys.path if not already there
         if module_dir not in sys.path:
             sys.path.insert(0, module_dir)
-        
+
         try:
             # Import the module
             spec = importlib.util.spec_from_file_location(module_name, py_file_path)
             module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
             spec.loader.exec_module(module)
             if class_name:
                 return getattr(module, class_name)
@@ -178,6 +186,8 @@ class BaseImageClassifier(ABC):
 
     def _get_model_base(self):
         """Get an instance of the base model architecture class"""
+        import inspect
+
         if self.model_architecture is None:
             raise ValueError("Model architecture not set")
         if isinstance(self.model_architecture, type):
@@ -185,6 +195,11 @@ class BaseImageClassifier(ABC):
         elif isinstance(self.model_architecture, str):
             # Shouldn't happen, it should already be imported by this point, but just in case...
             model_base = import_model_architecture(self.model_architecture)
+        elif inspect.isfunction(self.model_architecture) or inspect.ismethod(self.model_architecture):
+            # A zero-arg factory function (e.g. a third-party `get_model()`-style
+            # helper shipped as-is, rather than an nn.Module subclass) — call it
+            # to build the model.
+            model_base = self.model_architecture()
         else:
             print(f"Assuming runnable base model architecture type: {type(self.model_architecture)}")
             model_base = self.model_architecture

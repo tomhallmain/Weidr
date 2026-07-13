@@ -145,6 +145,11 @@ class ImageClassifierManager:
     def get_model_names(self) -> List[str]:
         return list(self.classifier_metadata.keys())
 
+    def is_loaded(self, model_name: Optional[str]) -> bool:
+        """Whether the classifier is already instantiated and cached (vs. just registered metadata)."""
+        key = self.resolve_registered_model_name(model_name)
+        return key is not None and key in self.classifiers
+
     def add_classifier_metadata(self, model_details: Dict[str, Any]) -> None:
         model_config = ImageClassifierModelConfig.from_dict(model_details, logger=logger)
         self.classifier_metadata[model_config.model_name] = model_config

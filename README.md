@@ -121,11 +121,10 @@ Prevalidation rules and classifier actions can be configured with:
 
 Prevalidations automatically run on media as you browse, while classifier actions can be executed manually on selected media directories when needed. These features are particularly useful for maintaining clean media collections and automating local content filtering. Prevalidations can be toggled on or off per directory/window via the context menu or the dedicated keybind — the setting is remembered per directory and defaults to the global `enable_prevalidations` config value for directories opened for the first time. The classifier action management window allows copying between types of classifier action to reduce the burden of action configuration.
 
-Classifier models can be added manually or discovered through the in-app model manager, which supports searching Hugging Face repositories, viewing model cards, and installing selected model files.
-
-You can find example classifier models that are known to work here:
+Classifier models can be added manually or discovered through the in-app model manager, which supports searching Hugging Face repositories, viewing model cards, and installing selected model files. The **Suggested Models** tab offers curated, one-click installs for models known to work well with this app:
 - [Coherence Detection](https://huggingface.co/reddesert/coherence_detection) - A PyTorch ResNet-34 model for classifying AI-generated images into coherent, incoherent, or semi-incoherent categories
-- [NSFW Model](https://github.com/FurkanGozukara/nsfw_model) - An H5 classifier model for filtering out some types of NSFW content
+- [NSFW Detection](https://huggingface.co/reddesert/nsfw_detection) - A PyTorch ResNet-34 safetensors classifier model for filtering out some types of NSFW content
+- [Deep Image Orientation Detection](https://huggingface.co/DuarteBarbosa/deep-image-orientation-detection) - A PyTorch EfficientNetV2 model (4-way: 0°/90°/180°/270°) for detecting images that are sideways or upside-down, e.g. from a camera/scanner defaulting to one orientation
 
 ---
 

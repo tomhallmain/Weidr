@@ -26,6 +26,7 @@ from compare.classifier_actions_manager import ClassifierActionsManager
 from extensions.hf_hub_api import HfHubApiBackend
 from image.image_classifier_manager import image_classifier_manager
 from image.image_classifier_model_config import ImageClassifierModelConfig
+from image.suggested_classifier_models import SUGGESTED_CLASSIFIER_MODELS, SuggestedClassifierModel
 from lib.multi_display_qt import SmartDialog
 from utils.config import config
 from utils.constants import HfHubSortDirection, HfHubSortOption, HfHubVisualMediaTask
@@ -396,6 +397,66 @@ class _ClassifierTestWorker(QThread):
             self.failed.emit(self._model_name, self._image_path, str(exc))
 
 
+class _ClassifierPreloadWorker(QThread):
+    """Instantiate (load into memory) a single classifier in a background thread."""
+
+    finished = Signal(str, bool)  # model_name, can_run
+    failed = Signal(str, str)     # model_name, error_message
+
+    def __init__(self, model_name: str):
+        super().__init__()
+        self._model_name = model_name
+
+    def run(self):
+        try:
+            classifier = image_classifier_manager.get_classifier(self._model_name)
+            can_run = bool(classifier is not None and classifier.can_run)
+            self.finished.emit(self._model_name, can_run)
+        except Exception as exc:
+            self.failed.emit(self._model_name, str(exc))
+
+
+class _SuggestedModelInstallWorker(QThread):
+    """Download a curated suggested model's file from HF Hub in a background thread."""
+
+    finished = Signal(str, str)  # model_name, downloaded_path
+    failed = Signal(str, str)    # model_name, error_message
+
+    def __init__(self, suggestion: SuggestedClassifierModel):
+        super().__init__()
+        self._suggestion = suggestion
+
+    def run(self):
+        try:
+            api = HfHubApiBackend()
+            snapshot_dir = api.download_snapshot(self._suggestion.hf_repo_id)
+            downloaded_path = HfModelManagerWindow._resolve_downloaded_file_path(
+                snapshot_dir, self._suggestion.hf_selected_filename
+            )
+            if downloaded_path is None:
+                raise RuntimeError(
+                    f"Unable to locate {self._suggestion.hf_selected_filename} in downloaded snapshot"
+                )
+            for url, filename in self._suggestion.extra_source_files:
+                self._download_extra_source_file(url, os.path.join(snapshot_dir, filename))
+            self.finished.emit(self._suggestion.model_name, downloaded_path)
+        except Exception as exc:
+            self.failed.emit(self._suggestion.model_name, str(exc))
+
+    @staticmethod
+    def _download_extra_source_file(url: str, destination_path: str) -> None:
+        """Fetch a plain-URL companion source file (e.g. architecture code not
+        published in the HF repo itself) into the downloaded snapshot directory."""
+        import urllib.request
+
+        if os.path.isfile(destination_path):
+            return
+        with urllib.request.urlopen(url, timeout=30) as response:
+            data = response.read()
+        with open(destination_path, "wb") as f:
+            f.write(data)
+
+
 class HfModelManagerWindow(SmartDialog):
     """Manage image classifier models from HF Hub and local config."""
 
@@ -423,6 +484,8 @@ class HfModelManagerWindow(SmartDialog):
         self._hf_api: Optional[HfHubApiBackend] = None
         self._repo_files_cache: dict[str, list[str]] = {}
         self._test_worker: Optional[_ClassifierTestWorker] = None
+        self._preload_worker: Optional[_ClassifierPreloadWorker] = None
+        self._suggested_install_worker: Optional[_SuggestedModelInstallWorker] = None
 
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 8)
@@ -431,12 +494,16 @@ class HfModelManagerWindow(SmartDialog):
 
         search_page = QWidget()
         installed_page = QWidget()
+        suggested_page = QWidget()
         self._tabs.addTab(search_page, _("HF Hub Search"))
         self._tabs.addTab(installed_page, _("Installed Models"))
+        self._tabs.addTab(suggested_page, _("Suggested Models"))
 
         self._build_search_tab(search_page)
         self._build_installed_tab(installed_page)
+        self._build_suggested_tab(suggested_page)
         self._refresh_installed_models()
+        self._refresh_suggested_models()
         self._tabs.setCurrentIndex(1)
 
         QShortcut(QKeySequence(Qt.Key_Escape), self).activated.connect(self.close)
@@ -593,6 +660,7 @@ class HfModelManagerWindow(SmartDialog):
                 _("Backend"),
                 _("Categories"),
                 _("Model Location"),
+                _("Loaded"),
                 _("Config"),
             ]
         )
@@ -619,6 +687,10 @@ class HfModelManagerWindow(SmartDialog):
         self._test_btn.clicked.connect(self._test_selected_model_on_current_image)
         btn_row.addWidget(self._test_btn)
 
+        self._preload_btn = QPushButton(_("Preload Selected"))
+        self._preload_btn.clicked.connect(self._preload_selected_model)
+        btn_row.addWidget(self._preload_btn)
+
         load_files_btn = QPushButton(_("Load Repo Files"))
         load_files_btn.clicked.connect(self._load_repo_files_for_installed_selection)
         btn_row.addWidget(load_files_btn)
@@ -636,6 +708,142 @@ class HfModelManagerWindow(SmartDialog):
         btn_row.addWidget(remove_btn)
         btn_row.addStretch()
         layout.addLayout(btn_row)
+
+    def _build_suggested_tab(self, page: QWidget) -> None:
+        layout = QVBoxLayout(page)
+
+        notice = QLabel(
+            _("Curated models known to work well with this app. Installing downloads the "
+              "file from Hugging Face and adds it to your classifier config automatically — "
+              "no manual JSON editing needed.")
+        )
+        notice.setWordWrap(True)
+        layout.addWidget(notice)
+
+        self._suggested_tree = QTreeWidget()
+        self._suggested_tree.setHeaderLabels([_("Model"), _("Backend"), _("Status")])
+        self._suggested_tree.setRootIsDecorated(False)
+        self._suggested_tree.setAlternatingRowColors(True)
+        self._suggested_tree.itemSelectionChanged.connect(self._on_suggested_selection_changed)
+        hdr = self._suggested_tree.header()
+        hdr.setStretchLastSection(True)
+        layout.addWidget(self._suggested_tree)
+
+        self._suggested_description_label = QLabel("")
+        self._suggested_description_label.setWordWrap(True)
+        layout.addWidget(self._suggested_description_label)
+
+        btn_row = QHBoxLayout()
+        self._suggested_install_btn = QPushButton(_("Install Selected"))
+        self._suggested_install_btn.clicked.connect(self._install_selected_suggested_model)
+        btn_row.addWidget(self._suggested_install_btn)
+
+        view_card_btn = QPushButton(_("View Model Card"))
+        view_card_btn.clicked.connect(self._view_model_card_for_suggested_selection)
+        btn_row.addWidget(view_card_btn)
+        btn_row.addStretch()
+        layout.addLayout(btn_row)
+
+    def _refresh_suggested_models(self) -> None:
+        self._suggested_tree.clear()
+        installed_names = {m.get("model_name") for m in config.image_classifier_models}
+        for suggestion in SUGGESTED_CLASSIFIER_MODELS:
+            status = _("Installed") if suggestion.model_name in installed_names else _("Not installed")
+            item = QTreeWidgetItem(
+                self._suggested_tree,
+                [suggestion.display_name, suggestion.backend, status],
+            )
+            item.setData(0, Qt.ItemDataRole.UserRole, suggestion.model_name)
+        if self._suggested_tree.topLevelItemCount() > 0 and not self._suggested_tree.selectedItems():
+            self._suggested_tree.setCurrentItem(self._suggested_tree.topLevelItem(0))
+
+    def _selected_suggestion(self) -> Optional[SuggestedClassifierModel]:
+        selected = self._suggested_tree.selectedItems()
+        if not selected:
+            return None
+        model_name = selected[0].data(0, Qt.ItemDataRole.UserRole)
+        for suggestion in SUGGESTED_CLASSIFIER_MODELS:
+            if suggestion.model_name == model_name:
+                return suggestion
+        return None
+
+    def _on_suggested_selection_changed(self) -> None:
+        suggestion = self._selected_suggestion()
+        self._suggested_description_label.setText(suggestion.description if suggestion else "")
+
+    def _install_selected_suggested_model(self) -> None:
+        suggestion = self._selected_suggestion()
+        if suggestion is None:
+            self._app_actions.warn(_("Please select a suggested model first."))
+            return
+        installed_names = {m.get("model_name") for m in config.image_classifier_models}
+        if suggestion.model_name in installed_names:
+            self._app_actions.toast(_("'{0}' is already installed.").format(suggestion.display_name))
+            return
+        self._suggested_install_btn.setEnabled(False)
+        self._suggested_install_btn.setText(_("Installing…"))
+        worker = _SuggestedModelInstallWorker(suggestion)
+        worker.finished.connect(self._on_suggested_install_finished)
+        worker.failed.connect(self._on_suggested_install_failed)
+        self._suggested_install_worker = worker
+        worker.start()
+
+    @Slot(str, str)
+    def _on_suggested_install_finished(self, model_name: str, downloaded_path: str) -> None:
+        self._suggested_install_btn.setEnabled(True)
+        self._suggested_install_btn.setText(_("Install Selected"))
+        worker = self._suggested_install_worker
+        self._suggested_install_worker = None
+        if worker is not None:
+            worker.deleteLater()
+
+        suggestion = next((s for s in SUGGESTED_CLASSIFIER_MODELS if s.model_name == model_name), None)
+        if suggestion is None:
+            return
+        model_details = suggestion.to_model_details(downloaded_path)
+        try:
+            model_details = ImageClassifierModelConfig.from_dict(model_details, logger=logger).to_dict()
+        except Exception as e:
+            self._app_actions.alert(_("Invalid Model Configuration"), str(e), kind="error", master=self)
+            return
+        if self._persist_model_details(
+            model_details,
+            success_message=_("Installed suggested model '{0}'. Preload it from the Installed "
+                               "Models tab to warm it into memory now.").format(suggestion.display_name),
+        ):
+            self._refresh_suggested_models()
+
+    @Slot(str, str)
+    def _on_suggested_install_failed(self, model_name: str, error: str) -> None:
+        self._suggested_install_btn.setEnabled(True)
+        self._suggested_install_btn.setText(_("Install Selected"))
+        worker = self._suggested_install_worker
+        self._suggested_install_worker = None
+        if worker is not None:
+            worker.deleteLater()
+        logger.error("Suggested model install failed for %r: %s", model_name, error)
+        self._app_actions.alert(
+            _("Install Failed"),
+            f"{model_name}\n\n{error}",
+            kind="error",
+            master=self,
+        )
+
+    def _view_model_card_for_suggested_selection(self) -> None:
+        suggestion = self._selected_suggestion()
+        if suggestion is None:
+            self._app_actions.warn(_("Please select a suggested model first."))
+            return
+        try:
+            card_text = self._api().get_model_card_text(suggestion.hf_repo_id)
+            _TextPreviewDialog(
+                parent=self,
+                title=_("Model Card - {0}").format(suggestion.hf_repo_id),
+                text=card_text,
+            ).show()
+        except Exception as e:
+            logger.error(f"Failed to fetch model card for {suggestion.hf_repo_id}: {e}")
+            self._app_actions.alert(_("Model Card Error"), str(e), kind="error", master=self)
 
     def _api(self) -> HfHubApiBackend:
         if self._hf_api is None:
@@ -850,6 +1058,17 @@ class HfModelManagerWindow(SmartDialog):
             self._app_actions.alert(_("Invalid Model Configuration"), str(e), kind="error", master=self)
             return
 
+        if not self._persist_model_details(
+            model_details,
+            success_message=_("Downloaded and installed model '{0}'.").format(model_name),
+        ):
+            return
+        self._tabs.setCurrentIndex(1)
+        self._model_name_edit.setText(model_name)
+
+    def _persist_model_details(self, model_details: dict[str, Any], *, success_message: str) -> bool:
+        """Add or replace a classifier config entry, prompting before overwriting. Returns True on success."""
+        model_name = str(model_details.get("model_name", "")).strip()
         existing_names = {m.get("model_name") for m in config.image_classifier_models}
         if model_name in existing_names:
             should_replace = self._app_actions.alert(
@@ -859,7 +1078,7 @@ class HfModelManagerWindow(SmartDialog):
                 master=self,
             )
             if not should_replace:
-                return
+                return False
 
         updated_models = []
         replaced = False
@@ -879,14 +1098,11 @@ class HfModelManagerWindow(SmartDialog):
         except Exception as e:
             logger.error(f"Failed to persist model details: {e}")
             self._app_actions.alert(_("Config Update Error"), str(e), kind="error", master=self)
-            return
+            return False
 
         self._refresh_installed_models()
-        self._tabs.setCurrentIndex(1)
-        self._model_name_edit.setText(model_name)
-        self._app_actions.success(
-            _("Downloaded and installed model '{0}'.").format(model_name)
-        )
+        self._app_actions.success(success_message)
+        return True
 
     @staticmethod
     def _default_model_name(repo_id: str) -> str:
@@ -926,19 +1142,22 @@ class HfModelManagerWindow(SmartDialog):
                 config_col = parse_err if len(parse_err) <= 120 else parse_err[:117] + "…"
             else:
                 config_col = _("OK")
+            model_name = str(display_model.get("model_name", ""))
+            loaded_col = _("yes") if image_classifier_manager.is_loaded(model_name) else _("no")
             item = QTreeWidgetItem(
                 self._installed_tree,
                 [
-                    str(display_model.get("model_name", "")),
+                    model_name,
                     backend,
                     categories_text,
                     str(display_model.get("model_location", "")),
+                    loaded_col,
                     config_col,
                 ],
             )
             item.setData(0, Qt.ItemDataRole.UserRole, dict(display_model))
             item.setToolTip(
-                4,
+                5,
                 parse_err if parse_err else _("Configuration is valid."),
             )
         if valid_count == 0:
@@ -1094,6 +1313,61 @@ class HfModelManagerWindow(SmartDialog):
         self._app_actions.alert(
             _("Classifier Test Failed"),
             f"{model_name}\n{image_path}\n\n{error}",
+            kind="error",
+            master=self,
+        )
+
+    def _preload_selected_model(self) -> None:
+        model = self._selected_installed_model_details()
+        if model is None:
+            self._app_actions.warn(_("Please select an installed model first."))
+            return
+        model_name = str(model.get("model_name", "")).strip()
+        if not model_name:
+            self._app_actions.warn(_("Selected model has no name."))
+            return
+        if image_classifier_manager.is_loaded(model_name):
+            self._app_actions.toast(_("'{0}' is already loaded.").format(model_name))
+            return
+        self._preload_btn.setEnabled(False)
+        self._preload_btn.setText(_("Loading…"))
+        worker = _ClassifierPreloadWorker(model_name)
+        worker.finished.connect(self._on_classifier_preload_finished)
+        worker.failed.connect(self._on_classifier_preload_failed)
+        self._preload_worker = worker
+        worker.start()
+
+    @Slot(str, bool)
+    def _on_classifier_preload_finished(self, model_name: str, can_run: bool) -> None:
+        self._preload_btn.setEnabled(True)
+        self._preload_btn.setText(_("Preload Selected"))
+        worker = self._preload_worker
+        self._preload_worker = None
+        if worker is not None:
+            worker.deleteLater()
+        self._refresh_installed_models()
+        if can_run:
+            self._app_actions.success(_("Preloaded '{0}'.").format(model_name))
+        else:
+            self._app_actions.alert(
+                _("Preload Failed"),
+                _("'{0}' failed to initialize (can_run=False). Check the log for details.").format(model_name),
+                kind="error",
+                master=self,
+            )
+
+    @Slot(str, str)
+    def _on_classifier_preload_failed(self, model_name: str, error: str) -> None:
+        self._preload_btn.setEnabled(True)
+        self._preload_btn.setText(_("Preload Selected"))
+        worker = self._preload_worker
+        self._preload_worker = None
+        if worker is not None:
+            worker.deleteLater()
+        logger.error("Classifier preload failed for %r: %s", model_name, error)
+        self._app_actions.alert(
+            _("Preload Failed"),
+            f"{model_name}\n\n{error}",
             kind="error",
             master=self,
         )

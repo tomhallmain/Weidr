@@ -1,0 +1,67 @@
+[
+  {
+    "display_name": "Image Orientation Detection (0/90/180/270°)",
+    "model_name": "image_orientation_detection",
+    "description": "Detects images that are sideways or upside-down, e.g. from a camera/scanner defaulting to one orientation. EfficientNetV2-S fine-tuned for 4-way rotation classification (98.82% validation accuracy). PyTorch, MIT license.\nhttps://huggingface.co/DuarteBarbosa/deep-image-orientation-detection",
+    "hf_repo_id": "DuarteBarbosa/deep-image-orientation-detection",
+    "hf_selected_filename": "orientation_model_v2_0.9882.pth",
+    "model_categories": ["0", "90_cw", "180", "270_cw"],
+    "backend": "pytorch",
+    "input_shape": [384, 384],
+    "extra_source_files": [
+      {
+        "url": "https://raw.githubusercontent.com/duartebarbosadev/deep-image-orientation-detection/main/config.py",
+        "filename": "config.py"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/duartebarbosadev/deep-image-orientation-detection/main/src/model.py",
+        "filename": "model.py"
+      }
+    ],
+    "model_kwargs": {
+      "architecture_module_name": "model",
+      "architecture_class_path": "get_orientation_model"
+    }
+  },
+  {
+    "display_name": "NSFW Detection",
+    "model_name": "nsfw_detection",
+    "description": "ResNet-34 safetensors classifier for filtering out some types of NSFW content, trained on 11 fine-grained categories. PyTorch, openmdw-1.0 license.\nhttps://huggingface.co/reddesert/nsfw_detection",
+    "hf_repo_id": "reddesert/nsfw_detection",
+    "hf_selected_filename": "nsfw_model.safetensors",
+    "model_categories": [
+      "bdsm", "disgusting", "drawings", "gore", "hentai", "unnamed_a",
+      "neutral", "q", "sexy", "unnamed_b", "x"
+    ],
+    "backend": "pytorch",
+    "input_shape": [320, 320],
+    "positive_groups": [
+      ["gore", "disgusting", "bdsm", "q", "hentai", "x", "sexy", "unnamed_a", "unnamed_b"]
+    ],
+    "neutral_categories": ["drawings", "neutral"],
+    "severity_order": ["gore", "disgusting", "bdsm", "q", "hentai", "x", "sexy", "unnamed_a", "unnamed_b"],
+    "model_kwargs": {
+      "architecture_module_name": "model_architecture",
+      "architecture_class_path": "NSFW_Classifier_Model"
+    }
+  },
+  {
+    "display_name": "Coherence Detection (AI-Generated Image Artifacts)",
+    "model_name": "coherence_detection",
+    "description": "ResNet-34 safetensors classifier for classifying AI-generated images into coherent, incoherent, or semi-incoherent categories. PyTorch, openmdw-1.0 license.\nhttps://huggingface.co/reddesert/coherence_detection",
+    "hf_repo_id": "reddesert/coherence_detection",
+    "hf_selected_filename": "coherence_model.safetensors",
+    "model_categories": ["coherent", "incoherent", "semi-incoherent"],
+    "backend": "pytorch",
+    "input_shape": [224, 224],
+    "positive_groups": [
+      ["incoherent", "semi-incoherent"]
+    ],
+    "neutral_categories": ["coherent"],
+    "severity_order": ["incoherent", "semi-incoherent"],
+    "model_kwargs": {
+      "architecture_module_name": "model_architecture",
+      "architecture_class_path": "CoherenceDetectionModel"
+    }
+  }
+]

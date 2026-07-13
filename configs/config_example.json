@@ -133,17 +133,30 @@
       }
     },
     {
+      "model_name": "image orientation detection (recommended: install via the 'Suggested Models' tab in the in-app HF model manager instead of copying this by hand)",
+      "model_location": "path/to/downloaded/orientation_model_v2_0.9882.pth (be sure to change this)",
+      "model_categories": ["0", "90_cw", "180", "270_cw"],
+      "backend": "pytorch",
+      "input_shape": [384, 384],
+      "hf_repo_id": "DuarteBarbosa/deep-image-orientation-detection",
+      "hf_selected_filename": "orientation_model_v2_0.9882.pth",
+      "model_kwargs": {
+        "architecture_module_name": "model",
+        "architecture_class_path": "get_orientation_model"
+      }
+    },
+    {
       "model_name": "nsfw split-group example (be sure to change this)",
       "model_location": "path/to/my/nsfw/model.safetensors",
-      "model_categories": ["nsfw_cat_1", "nsfw_cat_2", "nsfw_cat_3", "nsfw_cat_4", "nsfw_cat_5"],
+      "model_categories": ["sfw_cat_1", "sfw_cat_2", "nsfw_cat_1", "nsfw_cat_2", "nsfw_cat_3"],
       "backend": "pytorch",
       "positive_groups": [
-        ["nsfw_cat_3", "nsfw_cat_4", "nsfw_cat_5"],
-        ["nsfw_cat_3", "nsfw_cat_4"],
-        ["nsfw_cat_3", "nsfw_cat_5"]
+        ["nsfw_cat_1", "nsfw_cat_2", "nsfw_cat_3"],
+        ["nsfw_cat_1", "nsfw_cat_2"],
+        ["nsfw_cat_1", "nsfw_cat_3"]
       ],
-      "neutral_categories": ["nsfw_cat_1", "nsfw_cat_2"],
-      "severity_order": ["nsfw_cat_5", "nsfw_cat_4", "nsfw_cat_3", "nsfw_cat_2", "nsfw_cat_1"],
+      "neutral_categories": ["sfw_cat_1", "sfw_cat_2"],
+      "severity_order": ["nsfw_cat_3", "nsfw_cat_2", "nsfw_cat_1"],
       "model_kwargs": {
         "architecture_module_name": "my_model_architecture_module",
         "architecture_location": "path/to/my/model_architecture.py (optional)"

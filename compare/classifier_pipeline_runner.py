@@ -1132,3 +1132,16 @@ def _dispatch_action(
         )
         if scramble_callback:
             scramble_callback(image_path, action_modifier or None)
+
+    else:
+        # TODO: ROTATE is implemented for ClassifierAction/Prevalidation
+        # (compare/classifier_action.py) only. It's still selectable here
+        # because _fill_action_combo() lists the full ClassifierActionType
+        # enum, but this pipeline/node-graph engine discards the matched
+        # node's category/score before dispatch, so there's no classifier
+        # label to derive a rotation angle from -- needs that plumbing added
+        # before ROTATE (or any future action type) can work here too.
+        logger.warning(
+            "Pipeline %r: action type %s is not implemented in the pipeline engine, skipping",
+            pipeline_name, action_type,
+        )

@@ -83,6 +83,85 @@ class VideoOps:
         return VideoOps._reencoded_output_path(video_path, "_box")
 
     @staticmethod
+    def default_output_path_rotate(video_path: str) -> str:
+        """``dir/foo.ext`` → ``dir/foo_rot.mp4`` (collision-safe; always MP4, see :meth:`_reencoded_output_path`)."""
+        return VideoOps._reencoded_output_path(video_path, "_rot")
+
+    @staticmethod
+    def rotate_video(video_path: str, degrees: int, output_path: str | None = None) -> str:
+        """Write a new sibling file with the video rotated clockwise by *degrees*
+        (must be a multiple of 90: 0, 90, 180, or 270).
+
+        Uses FFmpeg's ``transpose`` filter with libx264/AAC re-encode into MP4
+        (see :meth:`_reencoded_output_path` for why the container is fixed).
+        Never overwrites *video_path* -- re-encoding is lossy, so (like
+        :meth:`crop_video` and every other VideoOps mutation) this always
+        produces a new file. Returns the output path on success.
+
+        Raises RuntimeError if ffmpeg is missing, inputs are invalid, or ffmpeg fails.
+        """
+        if not is_video_file(video_path):
+            raise RuntimeError("Not a video file")
+        normalized_degrees = degrees % 360
+        if normalized_degrees % 90 != 0:
+            raise RuntimeError(f"Invalid rotation angle: {degrees}, must be a multiple of 90")
+        ffmpeg = VideoOps.find_ffmpeg_executable()
+        if not ffmpeg:
+            raise RuntimeError("ffmpeg not found on PATH")
+
+        out_path = output_path or VideoOps.default_output_path_rotate(video_path)
+        if os.path.exists(out_path):
+            try:
+                os.unlink(out_path)
+            except OSError as e:
+                raise RuntimeError(f"Could not remove existing output file: {e}") from e
+
+        if normalized_degrees == 0:
+            shutil.copyfile(video_path, out_path)
+            return out_path
+
+        transpose_filter = {
+            90: "transpose=1",
+            180: "transpose=1,transpose=1",
+            270: "transpose=2",
+        }[normalized_degrees]
+
+        cmd = [
+            ffmpeg,
+            "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
+            "-i", video_path,
+            "-vf", transpose_filter,
+            "-c:v", "libx264", "-crf", "18", "-preset", "fast",
+            "-c:a", "aac",
+            out_path,
+        ]
+        try:
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                stdin=subprocess.DEVNULL,
+                timeout=3600,
+            )
+        except subprocess.TimeoutExpired as e:
+            try:
+                if os.path.isfile(out_path):
+                    os.unlink(out_path)
+            except OSError:
+                pass
+            raise RuntimeError("ffmpeg timed out while rotating video") from e
+        except OSError as e:
+            raise RuntimeError(f"Failed to run ffmpeg: {e}") from e
+
+        if proc.returncode != 0:
+            stderr = (proc.stderr or proc.stdout or "").strip()
+            detail = f": {stderr}" if stderr else ""
+            raise RuntimeError(f"ffmpeg rotate failed{detail}")
+
+        logger.info("Wrote rotated video: %s", out_path)
+        return out_path
+
+    @staticmethod
     def default_output_path_background_box(video_path: str) -> str:
         """``dir/foo.ext`` → ``dir/foo_bgbox.mp4`` (collision-safe; always MP4, see :meth:`_reencoded_output_path`)."""
         return VideoOps._reencoded_output_path(video_path, "_bgbox")

@@ -227,6 +227,9 @@ class CompareWrapper:
                     ClassifierActionType.NOTIFY,
                     ClassifierActionType.BLUR,
                     ClassifierActionType.GENERATE,
+                    # ROTATE corrects media_path in place -- the file at this same
+                    # path should still be shown (now right-side-up), not skipped.
+                    ClassifierActionType.ROTATE,
                 )
         return False
 

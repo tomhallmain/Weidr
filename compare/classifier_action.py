@@ -21,9 +21,16 @@ from image.image_classifier_manager import image_classifier_manager
 from image.image_data_extractor import image_data_extractor
 from image.frame_cache import FrameCache
 from image.image_ops import ImageOps
+from image.video_ops import VideoOps
 from files.related_image import extract_filename_base_stem, find_files_by_base_stem
 from utils.config import config
-from utils.media_utils import get_media_type_for_path, is_classifier_dynamic_media_path
+from utils.media_utils import (
+    get_media_type_for_path,
+    is_classifier_dynamic_media_path,
+    parse_rotation_label,
+    resolve_rendered_frame_source,
+    rotated_sibling_output_path,
+)
 from utils.constants import ActionType, ClassifierActionType, CompareMediaType
 from utils.logging_setup import get_logger
 from utils.running_tasks_registry import start_thread
@@ -1007,6 +1014,27 @@ class ClassifierAction:
             return None
         return os.path.join(resolved_base_dir, category)
 
+    def _resolve_rotation_degrees(
+        self,
+        image_path: str,
+        resolved_category: Optional[str] = None,
+    ) -> Optional[int]:
+        """Resolve how many degrees clockwise to rotate for a ROTATE action.
+
+        A static ``action_modifier`` (e.g. "90") wins if set, the same way a
+        static action_modifier overrides the classifier-derived MOVE target
+        directory in :meth:`_resolve_action_target_directory`. Otherwise the
+        degrees are parsed straight from the classifier's own predicted
+        category label -- the orientation-detection model's categories already
+        *are* the rotation amount needed to correct the image.
+        """
+        if self.action_modifier:
+            return parse_rotation_label(self.action_modifier)
+        category = resolved_category or self._resolve_classifier_target_category(image_path)
+        if not category:
+            return None
+        return parse_rotation_label(category)
+
     def run_action(
         self,
         image_path,
@@ -1030,6 +1058,53 @@ class ClassifierAction:
         elif self.action == ClassifierActionType.ADD_MARK:
             add_mark_callback(image_path)
             notify_callback("\n" + base_message + _(" - marked"), base_message=base_message, action_type=ActionType.SYSTEM, is_manual=False)
+        elif self.action == ClassifierActionType.ROTATE:
+            degrees = self._resolve_rotation_degrees(image_path, resolved_category=resolved_category)
+            if degrees is None:
+                notify_callback("\n" + base_message + _(" - could not determine rotation angle, skipped"),
+                                base_message=base_message, action_type=ActionType.SYSTEM, is_manual=False)
+            elif degrees == 0:
+                notify_callback("\n" + base_message + _(" - already correctly oriented"),
+                                base_message=base_message, action_type=ActionType.SYSTEM, is_manual=False)
+            else:
+                media_type = get_media_type_for_path(image_path)
+                result = None
+                if media_type == CompareMediaType.IMAGE:
+                    notify_callback("\n" + base_message + _(" - rotating {0} degrees").format(degrees),
+                                    base_message=base_message, action_type=ActionType.SYSTEM, is_manual=False)
+                    result = ImageOps.rotate_image_to_degrees(image_path, degrees)
+                elif media_type == CompareMediaType.GIF:
+                    notify_callback("\n" + base_message + _(" - rotating {0} degrees (new file)").format(degrees),
+                                    base_message=base_message, action_type=ActionType.SYSTEM, is_manual=False)
+                    result = ImageOps.rotate_gif_to_degrees(image_path, degrees)
+                elif media_type == CompareMediaType.VIDEO:
+                    notify_callback("\n" + base_message + _(" - rotating {0} degrees (new file)").format(degrees),
+                                    base_message=base_message, action_type=ActionType.SYSTEM, is_manual=False)
+                    try:
+                        result = VideoOps.rotate_video(image_path, degrees)
+                    except Exception as e:
+                        logger.error(f"Error rotating video at {image_path} for classifier action {self.name}: {e}")
+                else:
+                    # SVG/HTML/PDF can't be rotated in their own format -- render a
+                    # raster stand-in (reusing the existing FrameCache extraction
+                    # used for classification) and write the rotated result as a
+                    # new sibling file next to the real source. Never touches the
+                    # source file or overwrites the FrameCache temp render itself.
+                    true_source_path, frame_path = resolve_rendered_frame_source(image_path)
+                    if true_source_path is None:
+                        notify_callback("\n" + base_message + _(" - rotation not supported for this file type, skipped"),
+                                        base_message=base_message, action_type=ActionType.SYSTEM, is_manual=False)
+                    else:
+                        out_path = rotated_sibling_output_path(true_source_path, frame_path)
+                        notify_callback(
+                            "\n" + base_message + _(" - rotating {0} degrees, saving rendered preview: {1}").format(
+                                degrees, os.path.basename(out_path)
+                            ),
+                            base_message=base_message, action_type=ActionType.SYSTEM, is_manual=False,
+                        )
+                        result = ImageOps.rotate_image_to_degrees(frame_path, degrees, output_path=out_path)
+                if result is None:
+                    logger.error(f"Error rotating file at {image_path} for classifier action {self.name}")
         elif self.action.requires_target_directory():
             target_directory = self._resolve_action_target_directory(
                 image_path,

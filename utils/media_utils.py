@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import functools
 import os
+import re
 
 from utils.audio_media import (
     has_real_video_stream,
@@ -17,6 +18,9 @@ from utils.audio_media import (
 )
 from utils.config import config
 from utils.constants import MediaType
+from utils.logging_setup import get_logger
+
+logger = get_logger("media_utils")
 
 # Used when ``config.video_types`` is missing or empty (matches media_frame fallback).
 DEFAULT_VIDEO_EXTENSIONS = (
@@ -315,3 +319,122 @@ def is_classifier_dynamic_media_path(path: str) -> bool:
     if config.enable_pdfs and lower.endswith(".pdf"):
         return True
     return False
+
+
+# ---------------------------------------------------------------------------
+# ClassifierActionType.ROTATE resolution
+#
+# ClassifierAction.run_action dispatches ROTATE differently depending on the
+# media type of the path it receives, since only a static raster image can be
+# corrected losslessly and in place.
+#
+# Static images are overwritten in place using OpenCV/NumPy rot90 in
+# image_ops.py. The file itself is fixed, which is the point of the action.
+#
+# GIFs and videos both reach run_action with their real source path, since
+# GIF and video both count as dynamic media for classifier sampling. Neither
+# is overwritten. GIFs are rotated frame by frame with PIL, preserving
+# duration and loop, and videos are rotated with ffmpeg's transpose filter
+# and re-encoded to H.264. Both write a new sibling file, since neither
+# transformation is guaranteed to reproduce the source exactly.
+#
+# PDF, SVG, and HTML cannot be rotated in their own format, so ROTATE instead
+# rotates a rendered raster stand-in and saves it as a new file next to the
+# real source. The source document is never modified. PDF also counts as
+# dynamic media, so it reaches run_action with its real path, and its first
+# page is rendered on demand. SVG and HTML are not dynamic media. By the time
+# a match reaches run_action, the path has already been substituted with a
+# FrameCache temp render by an unrelated classification fallback, and
+# resolve_rendered_frame_source below reverses that lookup to recover the
+# true source. That same substitution affects other actions such as MOVE and
+# DELETE for these two types. That is a known, separate issue this does not
+# fix.
+#
+# Audio and any other unmatched type has no renderable frame and no format
+# to rotate, so the action is skipped with a notification.
+#
+# Two checks run before any of this, for every type alike. A resolved angle
+# of 0 degrees is a no-op notify. A rotation angle that cannot be parsed from
+# the classifier label or a manual action_modifier is skipped.
+# ---------------------------------------------------------------------------
+
+
+def is_frame_cache_path(image_path: str) -> bool:
+    """True when *image_path* lives inside FrameCache's temp directory -- i.e. it's
+    a rendered raster stand-in for an SVG/HTML source (see
+    :func:`resolve_rendered_frame_source`), not a genuine standalone file.
+
+    Lazily imports FrameCache (image/frame_cache.py imports from this module at
+    top level, so the reverse import has to happen inside the function)."""
+    from image.frame_cache import FrameCache
+    try:
+        cache_dir = os.path.realpath(FrameCache.temporary_directory.name)
+        target = os.path.realpath(image_path)
+    except Exception:
+        return False
+    return target == cache_dir or target.startswith(cache_dir + os.sep)
+
+
+def resolve_rendered_frame_source(image_path: str) -> tuple[str | None, str | None]:
+    """For SVG/HTML/PDF -- which can't be rotated (or otherwise raster-edited) in
+    their own format -- resolve ``(true_source_path, rendered_frame_path)``.
+
+    PDF reaches classifier action dispatch with its own real path (PDF is
+    "dynamic" media, see :func:`is_classifier_dynamic_media_path`), so the frame
+    is fetched on demand via FrameCache. SVG/HTML are not "dynamic": by the time
+    a match reaches action dispatch, the path has already been substituted with
+    a FrameCache-extracted temp render (see ClassifierAction.run_on_media_path's
+    exception fallback), so true_source_path has to be recovered by reverse
+    lookup in FrameCache.cache.
+
+    Returns ``(None, None)`` if the source can't be determined.
+    """
+    from image.frame_cache import FrameCache
+
+    lower = image_path.lower()
+    if lower.endswith((".pdf", ".svg", ".html", ".htm")):
+        try:
+            frame_path = FrameCache.get_image_path(image_path)
+        except Exception as e:
+            logger.error(f"Error rendering frame for {image_path}: {e}")
+            return None, None
+        if frame_path == image_path:
+            return None, None
+        return image_path, frame_path
+    if is_frame_cache_path(image_path):
+        true_source_path = next(
+            (src for src, frame in FrameCache.cache.items() if frame == image_path),
+            None,
+        )
+        if true_source_path is None:
+            return None, None
+        return true_source_path, image_path
+    return None, None
+
+
+def parse_rotation_label(label: str) -> int | None:
+    """Parse a leading integer out of a rotation label (e.g. "90_cw", "180") into degrees.
+
+    Assumes clockwise rotation, matching the orientation-detection suggested
+    model's category naming ("0"/"90_cw"/"180"/"270_cw"). Returns None if the
+    label doesn't start with a multiple of 90.
+    """
+    match = re.match(r"^(\d+)", label.strip())
+    if not match:
+        return None
+    degrees = int(match.group(1))
+    if degrees % 90 != 0:
+        return None
+    return degrees % 360
+
+
+def rotated_sibling_output_path(true_source_path: str, frame_path: str) -> str:
+    """Collision-safe output path for a rotated SVG/HTML/PDF render: same
+    directory and stem as the real source, but the rendered frame's own raster
+    extension (e.g. .png for SVG, .jpg for PDF/HTML), with a "_rot" suffix --
+    never the source's own (non-raster) extension."""
+    from utils.utils import Utils
+
+    raster_ext = os.path.splitext(frame_path)[1]
+    raster_target = os.path.splitext(true_source_path)[0] + raster_ext
+    return Utils.unique_sibling_path(raster_target, "_rot")

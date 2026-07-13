@@ -391,6 +391,93 @@ class ImageOps:
             return None
 
     @staticmethod
+    def rotate_image_to_degrees(image_path, degrees, output_path=None):
+        """
+        Losslessly rotate a static raster image clockwise by ``degrees`` (must
+        be a multiple of 90: 0, 90, 180, or 270).
+
+        Overwrites ``image_path`` in place when ``output_path`` is not given.
+        Unlike :meth:`rotate_image`, which always writes a new sibling file for
+        a single manual 90-degree turn, in-place is the default here because
+        this is meant for automated orientation correction (e.g. driven by a
+        ClassifierAction ROTATE result) where the source file itself is simply
+        wrong and should be fixed, not duplicated. Callers rotating a rendered
+        stand-in (e.g. a PDF/SVG page raster, which can't itself be rotated)
+        should pass an explicit ``output_path`` instead.
+        """
+        try:
+            normalized_degrees = degrees % 360
+            if normalized_degrees % 90 != 0:
+                logger.error(f"rotate_image_to_degrees: unsupported angle {degrees}, must be a multiple of 90")
+                return None
+            target_path = output_path or image_path
+            if normalized_degrees == 0:
+                if output_path and output_path != image_path:
+                    import shutil as _shutil
+                    _shutil.copyfile(image_path, output_path)
+                return target_path
+            img = cv2.imread(image_path)
+            if img is None:
+                logger.error(f"rotate_image_to_degrees: could not read {image_path}")
+                return None
+            rotated = np.rot90(img, k=-(normalized_degrees // 90))
+
+            from utils.utils import Utils
+            with Utils.file_operation_lock:
+                cv2.imwrite(target_path, rotated)
+            return target_path
+        except Exception as e:
+            logger.error(f'Error in rotate_image_to_degrees: {e}')
+            return None
+
+    @staticmethod
+    def rotate_gif_to_degrees(image_path, degrees, output_path=None):
+        """
+        Losslessly rotate an animated GIF clockwise by ``degrees`` (must be a
+        multiple of 90: 0, 90, 180, or 270), frame-by-frame, preserving each
+        frame's duration and the loop count -- same approach already used by
+        :meth:`crop_image_to_rect`/:meth:`draw_box_at_rect` for animated GIFs.
+
+        Always writes a new sibling file (or ``output_path`` if given); GIF
+        re-encoding through PIL is not guaranteed byte-identical, so this never
+        overwrites the source in place.
+        """
+        try:
+            normalized_degrees = degrees % 360
+            if normalized_degrees % 90 != 0:
+                logger.error(f"rotate_gif_to_degrees: unsupported angle {degrees}, must be a multiple of 90")
+                return None
+
+            from utils.utils import Utils
+            new_path = output_path or Utils.unique_sibling_path(image_path, "_rot")
+            if normalized_degrees == 0:
+                import shutil as _shutil
+                _shutil.copyfile(image_path, new_path)
+                return new_path
+
+            # PIL rotate() is counter-clockwise; negate for a clockwise turn.
+            from PIL import ImageSequence
+            with Image.open(image_path) as img:
+                loop = img.info.get("loop", 0)
+                frames, durations = [], []
+                for frame in ImageSequence.Iterator(img):
+                    frames.append(frame.convert("RGBA").rotate(-normalized_degrees, expand=True))
+                    durations.append(frame.info.get("duration", 100))
+                frames[0].save(
+                    new_path,
+                    format="GIF",
+                    save_all=True,
+                    append_images=frames[1:],
+                    duration=durations,
+                    loop=loop,
+                    optimize=False,
+                )
+            return new_path
+        except Exception as e:
+            logger.error(f'Error in rotate_gif_to_degrees: {e}')
+            return None
+
+    @staticmethod
     def rotate_image_partial(image_path, angle=90, center=None, scale=1.0, texture_probability=0.75):
         """
         Rotate image with random texture or solid color background.

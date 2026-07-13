@@ -3,8 +3,12 @@ Unit tests for ClassifierActionsManager.gather_sorted_media_paths.
 
 Covers: per-directory sort_by resolution from app_info_cache (falling back to
 config.sort_by when nothing is cached), skipping missing directories via
-Utils.isdir_with_retry (not a bare os.path.isdir), and that the resulting
-file list actually reflects what's on disk for real directories.
+Utils.isdir_with_retry (not a bare os.path.isdir), that the resulting
+(media_path, base_directory) pairs actually reflect what's on disk for real
+directories, and that base_directory is the top-level directory a file was
+gathered under (not its own immediate parent) even for files found recursively
+in a subdirectory — see test_classifier_action_run_media_paths.py for why that
+distinction matters (MOVE actions re-nesting already-categorized files).
 """
 from compare.classifier_actions_manager import ClassifierActionsManager
 from utils.app_info_cache import app_info_cache
@@ -147,13 +151,16 @@ class TestMissingDirectorySkipped:
 # ---------------------------------------------------------------------------
 
 class TestRealFileGathering:
-    def test_returns_files_in_directory(self, tmp_path):
+    def test_returns_media_path_base_directory_pairs(self, tmp_path):
         (tmp_path / "b.jpg").write_bytes(b"1")
         (tmp_path / "a.jpg").write_bytes(b"2")
 
         result = ClassifierActionsManager.gather_sorted_media_paths([str(tmp_path)])
 
-        assert set(result) == {str(tmp_path / "a.jpg"), str(tmp_path / "b.jpg")}
+        assert set(result) == {
+            (str(tmp_path / "a.jpg"), str(tmp_path)),
+            (str(tmp_path / "b.jpg"), str(tmp_path)),
+        }
 
     def test_empty_directory_returns_empty_list(self, tmp_path):
         result = ClassifierActionsManager.gather_sorted_media_paths([str(tmp_path)])
@@ -169,4 +176,20 @@ class TestRealFileGathering:
 
         result = ClassifierActionsManager.gather_sorted_media_paths([str(dir1), str(dir2)])
 
-        assert set(result) == {str(dir1 / "x.jpg"), str(dir2 / "y.jpg")}
+        assert set(result) == {
+            (str(dir1 / "x.jpg"), str(dir1)),
+            (str(dir2 / "y.jpg"), str(dir2)),
+        }
+
+    def test_recursively_found_file_paired_with_top_level_directory(self, tmp_path):
+        """A file discovered in a subdirectory must be paired with the
+        top-level directory passed in, not its own immediate parent — this is
+        what lets ClassifierAction.run_action recognize a file already sitting
+        in its category subdirectory as already-at-target instead of re-nesting it."""
+        subdir = tmp_path / "270_cw"
+        subdir.mkdir()
+        (subdir / "already_categorized.jpg").write_bytes(b"1")
+
+        result = ClassifierActionsManager.gather_sorted_media_paths([str(tmp_path)])
+
+        assert result == [(str(subdir / "already_categorized.jpg"), str(tmp_path))]

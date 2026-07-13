@@ -317,13 +317,22 @@ class ClassifierActionsManager:
         )
 
     @staticmethod
-    def gather_sorted_media_paths(directory_paths: List[str]) -> List[str]:
-        """Resolve directory_paths into a list of media file paths for a bulk
-        classifier action run, using each directory's cached sort preference
+    def gather_sorted_media_paths(directory_paths: List[str]) -> List[tuple]:
+        """Resolve directory_paths into (media_path, base_directory) pairs for a
+        bulk classifier action run, using each directory's cached sort preference
         (app_info_cache, the same source app_window.py reads when navigating)
         rather than the global config.sort_by default — only the cache knows
         what a given directory's sort was last set to by the user. Falls back
         to config.sort_by when a directory has no cached preference.
+
+        base_directory is the top-level directory_paths entry a file was found
+        under, NOT the file's own immediate parent (os.path.dirname) — matching
+        prevalidate_media's documented behavior. Recursive listing means an
+        already-categorized file from a prior run can be found deep under a
+        MOVE target subdirectory; using its own dirname as base_directory would
+        make run_action's "already at target" check
+        (dirname(media_path) == target) never match, causing it to re-nest into
+        target/category/category instead of recognizing it's already in place.
 
         This is the "gathering" step callers must run before invoking
         ClassifierAction.run(media_paths=...) for any non-prototype-only
@@ -332,7 +341,7 @@ class ClassifierActionsManager:
         from files.file_browser import FileBrowser
         from utils.constants import SortBy
 
-        all_paths: List[str] = []
+        all_paths: List[tuple] = []
         for directory in directory_paths:
             if not Utils.isdir_with_retry(directory):
                 logger.warning(f"Directory does not exist: {directory}")
@@ -352,7 +361,8 @@ class ClassifierActionsManager:
             fb.set_directory(directory)
             while fb.is_incremental_loading:
                 time.sleep(0.05)
-            all_paths.extend(fb.get_files())
+            for media_path in fb.get_files():
+                all_paths.append((media_path, directory))
         return all_paths
 
     @staticmethod

@@ -48,7 +48,7 @@ class TestRunClassifierActionGathering:
         gather_calls = []
         monkeypatch.setattr(
             "ui.compare.classifier_actions_tab_qt.ClassifierActionsManager.gather_sorted_media_paths",
-            lambda dirs: gather_calls.append(dirs) or ["/some/dir/a.jpg"],
+            lambda dirs: gather_calls.append(dirs) or [("/some/dir/a.jpg", "/some/dir")],
         )
         run_calls = []
         ca = _action(use_image_classifier=True)
@@ -59,7 +59,7 @@ class TestRunClassifierActionGathering:
         )
 
         assert gather_calls == [["/some/dir"]]
-        assert run_calls[0]["media_paths"] == ["/some/dir/a.jpg"]
+        assert run_calls[0]["media_paths"] == [("/some/dir/a.jpg", "/some/dir")]
 
     def test_prototype_plus_classifier_gathers_too(self, monkeypatch):
         """Prototype enabled alongside another type is not prototype-only,

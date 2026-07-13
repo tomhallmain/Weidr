@@ -460,7 +460,7 @@ class ClassifierAction:
         callbacks: ActionCallbacks,
         profile_name_or_path: Optional[str] = None,
         max_images_per_batch: Optional[int] = None,
-        media_paths: Optional[list[str]] = None,
+        media_paths: Optional[list[tuple[str, str]]] = None,
     ):
         """Run the classifier action on the given directory paths.
 
@@ -473,10 +473,16 @@ class ClassifierAction:
             add_mark_callback: Optional callback for marking images
             profile_name_or_path: Optional profile name or directory path to store as last used
             max_images_per_batch: Optional maximum number of images to process per batch
-            media_paths: Pre-gathered, pre-sorted media file paths, required for any
-                validation type other than prototype-only matching. This class does
-                no directory walking itself — callers must resolve directory_paths
-                via ClassifierActionsManager.gather_sorted_media_paths() first, since
+            media_paths: Pre-gathered, pre-sorted (media_path, base_directory) pairs,
+                required for any validation type other than prototype-only matching.
+                base_directory must be the top-level directory the file was
+                discovered under (not os.path.dirname(media_path)) — otherwise a
+                MOVE/COPY action re-evaluating a file already sitting in its
+                category subdirectory from a prior run will nest it again
+                (target/category/category) instead of recognizing it's already in
+                place. This class does no directory walking itself — callers must
+                resolve directory_paths via
+                ClassifierActionsManager.gather_sorted_media_paths() first, since
                 only that layer knows a directory's cached sort preference.
         """
         if not self.is_active:
@@ -531,19 +537,22 @@ class ClassifierAction:
             or self.use_base_stem_match
         )
 
-    def _run_media_paths_sweep(self, media_paths: list[str], callbacks: ActionCallbacks):
-        """Evaluate/act on each of media_paths via the full OR-combined validation
-        logic in run_on_media_path. Runs in a background thread, matching
-        _run_with_batch_prototype_validation's behavior."""
+    def _run_media_paths_sweep(self, media_paths: list[tuple[str, str]], callbacks: ActionCallbacks):
+        """Evaluate/act on each (media_path, base_directory) pair via the full
+        OR-combined validation logic in run_on_media_path. Runs in a background
+        thread, matching _run_with_batch_prototype_validation's behavior.
+
+        base_directory must be the top-level directory the file was gathered
+        under, not its own immediate parent — see run()'s docstring."""
         def sweep_worker():
             try:
                 total = len(media_paths)
                 if callbacks.notify_callback:
                     callbacks.notify_callback(_("Evaluating {0} files...").format(total))
-                for media_path in media_paths:
+                for media_path, base_directory in media_paths:
                     try:
                         self.run_on_media_path(
-                            media_path, callbacks, base_directory=os.path.dirname(media_path)
+                            media_path, callbacks, base_directory=base_directory
                         )
                     except Exception as e:
                         logger.error(f"Error running action on {media_path}: {e}")

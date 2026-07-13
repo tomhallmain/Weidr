@@ -5,8 +5,15 @@ Regression coverage: run() previously only did anything when use_prototype
 was the (implicit) validation type — any other enabled validation type
 (image classifier, embedding, prompts, filename-contains, base-stem) caused
 run() to load the classifier, log a line, and silently do nothing else. Now
-run() requires pre-gathered media_paths for that case and sweeps them via
-run_on_media_path in a background thread, patched here to run inline.
+run() requires pre-gathered (media_path, base_directory) pairs for that case
+and sweeps them via run_on_media_path in a background thread, patched here
+to run inline.
+
+Also covers a second regression found during manual testing of the first fix:
+base_directory must be the top-level directory a file was gathered under, not
+os.path.dirname(media_path) — otherwise a MOVE action re-evaluating a file
+already sitting in its category subdirectory from a prior run nests it again
+(target/category/category) instead of recognizing it's already in place.
 """
 from unittest.mock import MagicMock
 
@@ -97,7 +104,7 @@ class TestRunImageClassifierSweep:
         ca = _action(use_image_classifier=True, image_classifier_selected_categories=["positive"])
         ca.image_classifier = fake_classifier  # bypass real model loading
 
-        marked = _run_sync(monkeypatch, ca, [str(tmp_path)], media_paths=[str(img)])
+        marked = _run_sync(monkeypatch, ca, [str(tmp_path)], media_paths=[(str(img), str(tmp_path))])
         assert marked == [str(img)]
 
     def test_non_matching_media_path_takes_no_action(self, monkeypatch, tmp_path):
@@ -110,7 +117,7 @@ class TestRunImageClassifierSweep:
         ca = _action(use_image_classifier=True, image_classifier_selected_categories=["positive"])
         ca.image_classifier = fake_classifier
 
-        marked = _run_sync(monkeypatch, ca, [str(tmp_path)], media_paths=[str(img)])
+        marked = _run_sync(monkeypatch, ca, [str(tmp_path)], media_paths=[(str(img), str(tmp_path))])
         assert marked == []
 
     def test_only_matching_paths_act_among_several(self, monkeypatch, tmp_path):
@@ -128,7 +135,10 @@ class TestRunImageClassifierSweep:
         ca = _action(use_image_classifier=True, image_classifier_selected_categories=["positive"])
         ca.image_classifier = fake_classifier
 
-        marked = _run_sync(monkeypatch, ca, [str(tmp_path)], media_paths=[str(img1), str(img2)])
+        marked = _run_sync(
+            monkeypatch, ca, [str(tmp_path)],
+            media_paths=[(str(img1), str(tmp_path)), (str(img2), str(tmp_path))],
+        )
         assert marked == [str(img2)]
 
     def test_missing_media_paths_does_nothing_rather_than_silently_no_op_wrong(self, monkeypatch, tmp_path):
@@ -158,7 +168,7 @@ class TestRunImageClassifierSweep:
         )
         ca.image_classifier = fake_classifier
 
-        marked = _run_sync(monkeypatch, ca, [str(tmp_path)], media_paths=[str(img)])
+        marked = _run_sync(monkeypatch, ca, [str(tmp_path)], media_paths=[(str(img), str(tmp_path))])
         assert marked == []
 
 
@@ -177,7 +187,7 @@ class TestRunEmbeddingSweep:
         )
 
         ca = _action(use_embedding=True, positives=["cat"])
-        marked = _run_sync(monkeypatch, ca, [str(tmp_path)], media_paths=[str(img)])
+        marked = _run_sync(monkeypatch, ca, [str(tmp_path)], media_paths=[(str(img), str(tmp_path))])
         assert marked == [str(img)]
 
     def test_non_matching_media_path_takes_no_action(self, monkeypatch, tmp_path):
@@ -190,7 +200,7 @@ class TestRunEmbeddingSweep:
         )
 
         ca = _action(use_embedding=True, positives=["cat"])
-        marked = _run_sync(monkeypatch, ca, [str(tmp_path)], media_paths=[str(img)])
+        marked = _run_sync(monkeypatch, ca, [str(tmp_path)], media_paths=[(str(img), str(tmp_path))])
         assert marked == []
 
 
@@ -233,6 +243,81 @@ class TestRunPrototypeOnlyUnaffected:
             image_classifier_selected_categories=["positive"],
         )
         ca.image_classifier = fake_classifier
-        marked = _run_sync(monkeypatch, ca, [str(tmp_path)], media_paths=[str(img)])
+        marked = _run_sync(monkeypatch, ca, [str(tmp_path)], media_paths=[(str(img), str(tmp_path))])
         assert batch_calls == []
         assert marked == [str(img)]
+
+
+# ---------------------------------------------------------------------------
+# MOVE action target-directory resolution — the double-nesting regression
+# ---------------------------------------------------------------------------
+
+class TestMoveActionBaseDirectory:
+    def _move_action(self):
+        return _action(
+            action=ClassifierActionType.MOVE,
+            use_image_classifier=True,
+            image_classifier_selected_categories=["270_cw"],
+        )
+
+    def _classified_as(self, category):
+        clf = MagicMock()
+        clf.test_image_for_categories.return_value = True
+        clf.classify_image.return_value = category
+        return clf
+
+    def test_already_categorized_file_is_not_re_nested(self, monkeypatch, tmp_path):
+        """A file already sitting in its category subdirectory (recursively
+        re-discovered on a later run) must be recognized as already-at-target
+        and left alone, given the correct top-level base_directory."""
+        category_dir = tmp_path / "270_cw"
+        category_dir.mkdir()
+        img = category_dir / "IMG_0846.MOV"
+        img.write_bytes(b"fake")
+
+        ca = self._move_action()
+        ca.image_classifier = self._classified_as("270_cw")
+        monkeypatch.setattr("compare.classifier_action.start_thread", lambda fn, *a, **kw: fn())
+
+        callbacks = ActionCallbacks(notify_callback=_NOOP)
+        # base_directory is the TOP-LEVEL directory (tmp_path) — what
+        # gather_sorted_media_paths now returns, not category_dir.
+        ca.run([str(tmp_path)], callbacks, media_paths=[(str(img), str(tmp_path))])
+
+        assert img.exists()
+        assert not (category_dir / "270_cw").exists()
+
+    def test_wrong_base_directory_reproduces_the_bug(self, monkeypatch, tmp_path):
+        """Documents the root cause: passing the file's own immediate parent as
+        base_directory (the pre-fix behavior) does incorrectly re-nest it."""
+        category_dir = tmp_path / "270_cw"
+        category_dir.mkdir()
+        img = category_dir / "IMG_0846.MOV"
+        img.write_bytes(b"fake")
+
+        ca = self._move_action()
+        ca.image_classifier = self._classified_as("270_cw")
+        monkeypatch.setattr("compare.classifier_action.start_thread", lambda fn, *a, **kw: fn())
+
+        callbacks = ActionCallbacks(notify_callback=_NOOP)
+        # Deliberately wrong: base_directory = file's own parent directory.
+        ca.run([str(tmp_path)], callbacks, media_paths=[(str(img), str(category_dir))])
+
+        nested = category_dir / "270_cw" / "IMG_0846.MOV"
+        assert nested.exists()
+        assert not img.exists()
+
+    def test_new_file_moves_into_category_dir_under_top_level(self, monkeypatch, tmp_path):
+        img = tmp_path / "IMG_1328.jpeg"
+        img.write_bytes(b"fake")
+
+        ca = self._move_action()
+        ca.image_classifier = self._classified_as("270_cw")
+        monkeypatch.setattr("compare.classifier_action.start_thread", lambda fn, *a, **kw: fn())
+
+        callbacks = ActionCallbacks(notify_callback=_NOOP)
+        ca.run([str(tmp_path)], callbacks, media_paths=[(str(img), str(tmp_path))])
+
+        moved = tmp_path / "270_cw" / "IMG_1328.jpeg"
+        assert moved.exists()
+        assert not img.exists()

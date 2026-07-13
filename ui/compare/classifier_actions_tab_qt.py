@@ -355,7 +355,7 @@ class ClassifierActionsTab(QWidget):
         )
         full = f"{msg}\n\n{self._format_directory_message(profile.directories)}"
 
-        if not qt_alert(_("Run Classifier Action"), full, kind="askokcancel", master=self):
+        if not qt_alert(self, _("Run Classifier Action"), full, kind="askokcancel"):
             return
 
         ClassifierActionsTab.run_classifier_action(
@@ -412,7 +412,7 @@ class ClassifierActionsTab(QWidget):
             f"\n\n{_('Directories:')}\n{dir_list}"
         )
 
-        if not qt_alert(_("Run All Classifier Actions"), full, kind="askokcancel", master=self):
+        if not qt_alert(self, _("Run All Classifier Actions"), full, kind="askokcancel"):
             return
 
         callbacks = self._app_actions.prevalidation_callbacks_with_mark

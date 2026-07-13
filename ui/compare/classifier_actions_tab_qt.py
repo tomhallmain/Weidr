@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 from collections import defaultdict
-from typing import Optional
+from typing import Callable, Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -55,6 +55,7 @@ class ClassifierActionsTab(QWidget):
         directory_paths: list[str],
         callbacks: ActionCallbacks,
         profile_name_or_path: Optional[str] = None,
+        on_complete: Optional[Callable[[dict], None]] = None,
     ) -> None:
         """Run a classifier action across *directory_paths*."""
         media_paths = None
@@ -70,6 +71,7 @@ class ClassifierActionsTab(QWidget):
             profile_name_or_path,
             ClassifierActionsTab.BATCH_VALIDATION_MAX_IMAGES,
             media_paths=media_paths,
+            on_complete=on_complete,
         )
 
     @staticmethod
@@ -371,6 +373,26 @@ class ClassifierActionsTab(QWidget):
             profile.directories,
             self._app_actions.prevalidation_callbacks_with_mark,
             profile.name,
+            on_complete=self._notify_classifier_action_complete,
+        )
+
+    def _notify_classifier_action_complete(self, stats: dict) -> None:
+        """Show a success toast summarizing a finished classifier action run,
+        mirroring the summary shown when running all prevalidations."""
+        self._app_actions.success(
+            _(
+                "Classifier action '{0}' finished.\n"
+                "Files checked: {1} — outcomes: {2} — moves: {3} — copies: {4} — deletes: {5} — errors: {6}"
+            ).format(
+                stats.get("action_name", ""),
+                stats.get("files_checked", 0),
+                stats.get("outcomes", 0),
+                stats.get("moves", 0),
+                stats.get("copies", 0),
+                stats.get("deletes", 0),
+                stats.get("errors", 0),
+            ),
+            time_in_seconds=10,
         )
 
     def _run_single_pipeline(self, pipeline) -> None:
@@ -427,6 +449,7 @@ class ClassifierActionsTab(QWidget):
         for ca in active:
             ClassifierActionsTab.run_classifier_action(
                 ca, profile.directories, callbacks, profile.name,
+                on_complete=self._notify_classifier_action_complete,
             )
 
 

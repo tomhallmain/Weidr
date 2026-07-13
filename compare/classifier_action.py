@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 import math
 import os
-from typing import ClassVar, Optional
+from typing import Callable, ClassVar, Optional
 
 from compare.action_callbacks import ActionCallbacks
 from compare.compare_embeddings_clip import CompareEmbeddingClip
@@ -411,25 +411,36 @@ class ClassifierAction:
             logger.error(f"Error checking prototype validation for {image_path}: {e}")
             return False
     
-    def _run_with_batch_prototype_validation(self, directory_paths: list[str], callbacks: ActionCallbacks, max_images_per_batch: Optional[int] = None):
+    def _run_with_batch_prototype_validation(
+        self,
+        directory_paths: list[str],
+        callbacks: ActionCallbacks,
+        max_images_per_batch: Optional[int] = None,
+        on_complete: Optional[Callable[[dict], None]] = None,
+    ):
         """
         Run classifier action with batch prototype validation for efficiency.
-        
+
         Delegates batch processing to EmbeddingPrototype, then runs actions on matching images.
         Runs the entire process (batch validation + action execution) in a separate thread.
-        
+
         Args:
             directory_paths: List of directory paths to process
             hide_callback: Callback for hiding images
             notify_callback: Callback for notifications
             add_mark_callback: Optional callback for marking images
             max_images_per_batch: Optional maximum number of images to process per batch
+            on_complete: Optional callback invoked once with a summary dict when the
+                job finishes (or fails outright), e.g. to show a completion toast.
         """
         if not self.use_prototype or self._cached_prototype is None:
             return
-        
+
         def batch_validation_worker():
             """Worker function to run batch validation and actions in a separate thread."""
+            outcomes = 0
+            errors = 0
+            matching_paths = []
             try:
                 # Use EmbeddingPrototype to batch validate images from directories
                 matching_paths = EmbeddingPrototype.batch_validate_with_prototypes(
@@ -446,13 +457,52 @@ class ClassifierAction:
                 for image_path in matching_paths:
                     try:
                         self.run_action(image_path, callbacks)
+                        outcomes += 1
                     except Exception as e:
+                        errors += 1
                         logger.error(f"Error running action on {image_path}: {e}")
             except Exception as e:
                 logger.error(f"Error in batch prototype validation: {e}")
-        
+            finally:
+                self._invoke_on_complete(
+                    on_complete,
+                    files_checked=len(matching_paths),
+                    outcomes=outcomes,
+                    errors=errors,
+                )
+
         # Start batch validation and action execution in a separate thread
         start_thread(batch_validation_worker, use_asyncio=False)
+
+    def _invoke_on_complete(
+        self,
+        on_complete,
+        *,
+        files_checked: int,
+        outcomes: int,
+        errors: int,
+    ) -> None:
+        """Build and dispatch the job-summary dict every run path finishes with.
+        moves/copies/deletes are derived from self.action, since a single
+        ClassifierAction always executes the same action type for every match —
+        only the target category subdirectory varies per file."""
+        if on_complete is None:
+            return
+        moves = outcomes if self.action == ClassifierActionType.MOVE else 0
+        copies = outcomes if self.action == ClassifierActionType.COPY else 0
+        deletes = outcomes if self.action == ClassifierActionType.DELETE else 0
+        try:
+            on_complete({
+                "action_name": self.name,
+                "files_checked": files_checked,
+                "outcomes": outcomes,
+                "moves": moves,
+                "copies": copies,
+                "deletes": deletes,
+                "errors": errors,
+            })
+        except Exception:
+            logger.exception("Error in classifier action completion callback for %r", self.name)
 
     def run(
         self,
@@ -461,6 +511,7 @@ class ClassifierAction:
         profile_name_or_path: Optional[str] = None,
         max_images_per_batch: Optional[int] = None,
         media_paths: Optional[list[tuple[str, str]]] = None,
+        on_complete: Optional[Callable[[dict], None]] = None,
     ):
         """Run the classifier action on the given directory paths.
 
@@ -484,6 +535,10 @@ class ClassifierAction:
                 resolve directory_paths via
                 ClassifierActionsManager.gather_sorted_media_paths() first, since
                 only that layer knows a directory's cached sort preference.
+            on_complete: Optional callback invoked once from the background thread
+                when the job finishes, with a summary dict (action_name,
+                files_checked, outcomes, moves, copies, deletes, errors) — e.g. to
+                show a completion toast.
         """
         if not self.is_active:
             logger.info(f"Classifier action {self.name} is disabled, skipping")
@@ -517,9 +572,11 @@ class ClassifierAction:
         # classifier, embedding, prompts, filename-contains, base-stem) needs
         # per-file OR-combined evaluation via the media_paths sweep below.
         if self.use_prototype and not self.has_non_prototype_validation():
-            self._run_with_batch_prototype_validation(directory_paths, callbacks, max_images_per_batch)
+            self._run_with_batch_prototype_validation(
+                directory_paths, callbacks, max_images_per_batch, on_complete=on_complete
+            )
         elif media_paths is not None:
-            self._run_media_paths_sweep(media_paths, callbacks)
+            self._run_media_paths_sweep(media_paths, callbacks, on_complete=on_complete)
         else:
             logger.error(
                 "Classifier action %r needs media_paths for its enabled validation "
@@ -537,7 +594,12 @@ class ClassifierAction:
             or self.use_base_stem_match
         )
 
-    def _run_media_paths_sweep(self, media_paths: list[tuple[str, str]], callbacks: ActionCallbacks):
+    def _run_media_paths_sweep(
+        self,
+        media_paths: list[tuple[str, str]],
+        callbacks: ActionCallbacks,
+        on_complete: Optional[Callable[[dict], None]] = None,
+    ):
         """Evaluate/act on each (media_path, base_directory) pair via the full
         OR-combined validation logic in run_on_media_path. Runs in a background
         thread, matching _run_with_batch_prototype_validation's behavior.
@@ -545,19 +607,33 @@ class ClassifierAction:
         base_directory must be the top-level directory the file was gathered
         under, not its own immediate parent — see run()'s docstring."""
         def sweep_worker():
+            outcomes = 0
+            errors = 0
+            files_checked = 0
             try:
                 total = len(media_paths)
                 if callbacks.notify_callback:
                     callbacks.notify_callback(_("Evaluating {0} files...").format(total))
                 for media_path, base_directory in media_paths:
+                    files_checked += 1
                     try:
-                        self.run_on_media_path(
+                        result = self.run_on_media_path(
                             media_path, callbacks, base_directory=base_directory
                         )
+                        if result is not None:
+                            outcomes += 1
                     except Exception as e:
+                        errors += 1
                         logger.error(f"Error running action on {media_path}: {e}")
             except Exception as e:
                 logger.error(f"Error in classifier action media sweep: {e}")
+            finally:
+                self._invoke_on_complete(
+                    on_complete,
+                    files_checked=files_checked,
+                    outcomes=outcomes,
+                    errors=errors,
+                )
 
         start_thread(sweep_worker, use_asyncio=False)
 

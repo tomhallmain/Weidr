@@ -214,7 +214,7 @@ class TestRunPrototypeOnlyUnaffected:
         monkeypatch.setattr(
             ClassifierAction,
             "_run_with_batch_prototype_validation",
-            lambda self, directory_paths, callbacks, max_images_per_batch: calls.append(directory_paths),
+            lambda self, directory_paths, callbacks, max_images_per_batch, on_complete=None: calls.append(directory_paths),
         )
         ca = _action(use_prototype=True, prototype_directory=str(tmp_path))
         callbacks = ActionCallbacks(notify_callback=_NOOP)
@@ -228,7 +228,7 @@ class TestRunPrototypeOnlyUnaffected:
         monkeypatch.setattr(
             ClassifierAction,
             "_run_with_batch_prototype_validation",
-            lambda self, directory_paths, callbacks, max_images_per_batch: batch_calls.append(True),
+            lambda self, directory_paths, callbacks, max_images_per_batch, on_complete=None: batch_calls.append(True),
         )
         img = tmp_path / "photo.jpg"
         img.write_bytes(b"fake")
@@ -321,3 +321,132 @@ class TestMoveActionBaseDirectory:
         moved = tmp_path / "270_cw" / "IMG_1328.jpeg"
         assert moved.exists()
         assert not img.exists()
+
+
+# ---------------------------------------------------------------------------
+# on_complete callback — job-finished summary
+# ---------------------------------------------------------------------------
+
+class TestOnCompleteCallback:
+    def test_called_with_summary_after_media_paths_sweep(self, monkeypatch, tmp_path):
+        img1 = tmp_path / "a.jpg"
+        img2 = tmp_path / "b.jpg"
+        img1.write_bytes(b"1")
+        img2.write_bytes(b"2")
+
+        fake_classifier = MagicMock()
+        fake_classifier.test_image_for_categories.side_effect = (
+            lambda path, categories: path == str(img2)
+        )
+        fake_classifier.classify_image.return_value = "positive"
+
+        ca = _action(
+            name="My Action",
+            use_image_classifier=True,
+            image_classifier_selected_categories=["positive"],
+        )
+        ca.image_classifier = fake_classifier
+        monkeypatch.setattr("compare.classifier_action.start_thread", lambda fn, *a, **kw: fn())
+
+        summaries = []
+        callbacks = ActionCallbacks(notify_callback=_NOOP, add_mark_callback=lambda p: None)
+        ca.run(
+            [str(tmp_path)],
+            callbacks,
+            media_paths=[(str(img1), str(tmp_path)), (str(img2), str(tmp_path))],
+            on_complete=summaries.append,
+        )
+
+        assert len(summaries) == 1
+        stats = summaries[0]
+        assert stats["action_name"] == "My Action"
+        assert stats["files_checked"] == 2
+        assert stats["outcomes"] == 1
+        assert stats["errors"] == 0
+
+    def test_move_action_reports_moves_count(self, monkeypatch, tmp_path):
+        img = tmp_path / "IMG_1328.jpeg"
+        img.write_bytes(b"fake")
+
+        fake_classifier = MagicMock()
+        fake_classifier.test_image_for_categories.return_value = True
+        fake_classifier.classify_image.return_value = "270_cw"
+
+        ca = _action(
+            action=ClassifierActionType.MOVE,
+            use_image_classifier=True,
+            image_classifier_selected_categories=["270_cw"],
+        )
+        ca.image_classifier = fake_classifier
+        monkeypatch.setattr("compare.classifier_action.start_thread", lambda fn, *a, **kw: fn())
+
+        summaries = []
+        callbacks = ActionCallbacks(notify_callback=_NOOP)
+        ca.run(
+            [str(tmp_path)],
+            callbacks,
+            media_paths=[(str(img), str(tmp_path))],
+            on_complete=summaries.append,
+        )
+
+        assert summaries[0]["moves"] == 1
+        assert summaries[0]["copies"] == 0
+        assert summaries[0]["deletes"] == 0
+
+    def test_no_on_complete_does_not_raise(self, monkeypatch, tmp_path):
+        img = tmp_path / "photo.jpg"
+        img.write_bytes(b"fake")
+        fake_classifier = MagicMock()
+        fake_classifier.test_image_for_categories.return_value = True
+        fake_classifier.classify_image.return_value = "positive"
+
+        ca = _action(use_image_classifier=True, image_classifier_selected_categories=["positive"])
+        ca.image_classifier = fake_classifier
+        monkeypatch.setattr("compare.classifier_action.start_thread", lambda fn, *a, **kw: fn())
+
+        callbacks = ActionCallbacks(notify_callback=_NOOP)
+        # Should not raise despite on_complete being unset (default None).
+        ca.run([str(tmp_path)], callbacks, media_paths=[(str(img), str(tmp_path))])
+
+    def test_on_complete_exception_is_swallowed(self, monkeypatch, tmp_path):
+        img = tmp_path / "photo.jpg"
+        img.write_bytes(b"fake")
+        fake_classifier = MagicMock()
+        fake_classifier.test_image_for_categories.return_value = True
+        fake_classifier.classify_image.return_value = "positive"
+
+        ca = _action(use_image_classifier=True, image_classifier_selected_categories=["positive"])
+        ca.image_classifier = fake_classifier
+        monkeypatch.setattr("compare.classifier_action.start_thread", lambda fn, *a, **kw: fn())
+
+        def _broken_callback(stats):
+            raise RuntimeError("boom")
+
+        callbacks = ActionCallbacks(notify_callback=_NOOP)
+        # A misbehaving on_complete must not propagate out of the sweep.
+        ca.run(
+            [str(tmp_path)], callbacks,
+            media_paths=[(str(img), str(tmp_path))],
+            on_complete=_broken_callback,
+        )
+
+    def test_prototype_only_path_invokes_on_complete(self, monkeypatch, tmp_path):
+        """The batch-prototype fast path must also report completion, not just
+        the general media_paths sweep."""
+        monkeypatch.setattr(
+            "compare.classifier_action.EmbeddingPrototype.batch_validate_with_prototypes",
+            lambda **kw: ["/dir/a.jpg", "/dir/b.jpg"],
+        )
+        monkeypatch.setattr("compare.classifier_action.start_thread", lambda fn, *a, **kw: fn())
+
+        ca = _action(name="Proto Action", use_prototype=True, prototype_directory=str(tmp_path))
+        ca._cached_prototype = object()  # bypass real embedding computation
+
+        summaries = []
+        callbacks = ActionCallbacks(notify_callback=_NOOP, add_mark_callback=lambda p: None)
+        ca.run([str(tmp_path)], callbacks, on_complete=summaries.append)
+
+        assert len(summaries) == 1
+        assert summaries[0]["action_name"] == "Proto Action"
+        assert summaries[0]["files_checked"] == 2
+        assert summaries[0]["outcomes"] == 2

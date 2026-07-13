@@ -77,3 +77,57 @@ class TestRunClassifierActionGathering:
         )
 
         assert gather_calls == [["/some/dir"]]
+
+    def test_on_complete_is_forwarded_to_run(self, monkeypatch):
+        monkeypatch.setattr(
+            "ui.compare.classifier_actions_tab_qt.ClassifierActionsManager.gather_sorted_media_paths",
+            lambda dirs: [],
+        )
+        run_calls = []
+        ca = _action(use_image_classifier=True)
+        monkeypatch.setattr(ca, "run", lambda *a, **kw: run_calls.append(kw))
+        sentinel = lambda stats: None
+
+        ClassifierActionsTab.run_classifier_action(
+            ca, ["/some/dir"], ActionCallbacks(notify_callback=_NOOP), on_complete=sentinel
+        )
+
+        assert run_calls[0]["on_complete"] is sentinel
+
+
+class TestNotifyClassifierActionComplete:
+    """_notify_classifier_action_complete only touches self._app_actions, so it
+    can be tested on a bare instance without constructing the full Qt widget."""
+
+    def _tab_with_fake_app_actions(self):
+        tab = ClassifierActionsTab.__new__(ClassifierActionsTab)
+        calls = []
+        tab._app_actions = type(
+            "FakeAppActions", (), {"success": lambda self, msg, time_in_seconds=None: calls.append((msg, time_in_seconds))}
+        )()
+        return tab, calls
+
+    def test_formats_summary_message(self):
+        tab, calls = self._tab_with_fake_app_actions()
+        tab._notify_classifier_action_complete({
+            "action_name": "Rotate",
+            "files_checked": 10,
+            "outcomes": 3,
+            "moves": 3,
+            "copies": 0,
+            "deletes": 0,
+            "errors": 1,
+        })
+
+        assert len(calls) == 1
+        message, time_in_seconds = calls[0]
+        assert "Rotate" in message
+        assert "10" in message
+        assert "3" in message
+        assert "1" in message
+        assert time_in_seconds == 10
+
+    def test_missing_keys_default_to_zero(self):
+        tab, calls = self._tab_with_fake_app_actions()
+        tab._notify_classifier_action_complete({})
+        assert len(calls) == 1

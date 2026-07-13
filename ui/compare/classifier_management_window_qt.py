@@ -576,7 +576,11 @@ class ClassifierActionModifyWindow(SmartDialog):
         ca.is_active = self._is_active_cb.isChecked()
 
         self._finalize_specific()
-        ca.validate()
+        try:
+            ca.validate()
+        except Exception as e:
+            self._app_actions.alert(_("Invalid Configuration"), str(e), kind="error", master=self)
+            return
         ca.mark_runtime_valid()
         self.close()
         self._refresh_callback(ca)

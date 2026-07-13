@@ -216,7 +216,7 @@ class ClassifierActionCopyWindow(SmartDialog):
     def _copy_item(self) -> None:
         new_name = self._name_edit.text().strip()
         if not new_name:
-            qt_alert(_("Error"), _("Name cannot be empty"), kind="warning", master=self)
+            qt_alert(self, _("Error"), _("Name cannot be empty"), kind="warning")
             return
 
         target_class = self._get_target_class()
@@ -224,12 +224,12 @@ class ClassifierActionCopyWindow(SmartDialog):
 
         if new_name in existing:
             qt_alert(
+                self,
                 _("Error"),
                 _("A {0} with this name already exists").format(
                     target_class.get_display_value().lower()
                 ),
                 kind="warning",
-                master=self,
             )
             return
 
@@ -255,10 +255,10 @@ class ClassifierActionCopyWindow(SmartDialog):
             new_item.validate()
         except Exception as e:
             qt_alert(
+                self,
                 _("Invalid Copy Target"),
                 str(e),
                 kind="warning",
-                master=self,
             )
             return
 

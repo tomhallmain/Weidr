@@ -1,9 +1,9 @@
+import logging
 import os
 
 from PIL import Image
 import torch
 import clip
-from transformers import AutoModel, AutoProcessor, FlavaProcessor, FlavaModel, AlignProcessor, AlignModel
 
 from image.frame_cache import FrameCache
 from utils.config import config
@@ -13,6 +13,33 @@ from utils.pillow_plugins import ensure_pillow_plugins_registered
 ensure_pillow_plugins_registered()
 
 logger = get_logger("model")
+
+# transformers logs its own (more alarmist-sounding) warning at import time
+# below when torch is older than it recommends, e.g. "PyTorch was not found.
+# Models won't be available..." even though torch IS installed and many
+# non-transformers-backed model paths in this app work fine regardless.
+# Emit our own accurately-hedged warning first and quiet the raw one.
+_MIN_TRANSFORMERS_TORCH_VERSION = (2, 4)
+
+
+def _torch_version_tuple() -> tuple:
+    try:
+        parts = torch.__version__.split("+")[0].split(".")
+        return tuple(int(p) for p in parts[:2])
+    except Exception:
+        return (0, 0)
+
+
+if _torch_version_tuple() < _MIN_TRANSFORMERS_TORCH_VERSION:
+    logger.warning(
+        "Detected PyTorch %s (transformers recommends >= %s). Some transformers-based "
+        "embedding modes may not be available; this does not necessarily affect other "
+        "model backends, and compatibility here is not guaranteed either way.",
+        torch.__version__, ".".join(map(str, _MIN_TRANSFORMERS_TORCH_VERSION)),
+    )
+    logging.getLogger("transformers").setLevel(logging.ERROR)
+
+from transformers import AutoModel, AutoProcessor, FlavaProcessor, FlavaModel, AlignProcessor, AlignModel
 
 # XVLM may not be loaded if the config.json file is not updated
 # or if the model files are not downloaded

@@ -2,7 +2,7 @@
   {
     "display_name": "Image Orientation Detection (0/90/180/270°)",
     "model_name": "image_orientation_detection",
-    "description": "Detects images that are sideways or upside-down, e.g. from a camera/scanner defaulting to one orientation. EfficientNetV2-S fine-tuned for 4-way rotation classification (98.82% validation accuracy). PyTorch, MIT license.\nhttps://huggingface.co/DuarteBarbosa/deep-image-orientation-detection",
+    "description": "Detects images that are sideways or upside-down, e.g. from a camera/scanner defaulting to one orientation. EfficientNetV2-S fine-tuned for 4-way rotation classification. PyTorch, MIT license. Third-party model — intended behavior is not guaranteed to work well on your image set; actual accuracy may vary.\nhttps://huggingface.co/DuarteBarbosa/deep-image-orientation-detection",
     "hf_repo_id": "DuarteBarbosa/deep-image-orientation-detection",
     "hf_selected_filename": "orientation_model_v2_0.9882.pth",
     "model_categories": ["0", "90_cw", "180", "270_cw"],

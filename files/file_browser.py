@@ -118,12 +118,22 @@ class FileBrowser:
             self._get_sortable_files()
         files = self.get_files()
         self.checking_files = len(files) > 0 and len(files) < config.file_check_skip_if_n_files_over # Avoid rechecking in directories with many files
-        if file_check and current_file and os.path.isfile(current_file):
+        if file_check and current_file and os.path.isfile(current_file) and current_file in files:
             with self.cursor_lock:
                 self.file_cursor = files.index(current_file)
                 if len(removed_files) > 0:
                     if self.file_cursor > -1:
                         self.file_cursor += direction.get_correction()
+            self._new_files = list(set(files) - set(last_files))
+        elif file_check and current_file and os.path.isfile(current_file):
+            # current_file still exists on disk but was filtered out (e.g. its
+            # media type was just disabled in configuration) -- fall back to a
+            # bounds-safe cursor instead of crashing on files.index().
+            with self.cursor_lock:
+                if len(files) - 1 < self.file_cursor:
+                    self.file_cursor = direction.get_correction()
+                else:
+                    self.file_cursor += direction.get_correction()
             self._new_files = list(set(files) - set(last_files))
         elif not refresh_cursor:
             with self.cursor_lock:

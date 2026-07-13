@@ -228,10 +228,14 @@ class TestTypeConfigurationWindowUI:
     def test_apply_changes_refreshes_compares(self, window_with_dir, qtbot, monkeypatch):
         config.enable_audio = True
         refreshed: list[bool] = []
+        browse_refreshed: list[bool] = []
 
         class _RecordingActions:
             def refresh_all_compares(self):
                 refreshed.append(True)
+
+            def refresh(self):
+                browse_refreshed.append(True)
 
             def toast(self, *_args, **_kwargs):
                 pass
@@ -256,5 +260,44 @@ class TestTypeConfigurationWindowUI:
         TypeConfigurationWindow.apply_changes(_RecordingActions())
 
         assert refreshed == [True]
+        assert browse_refreshed == [True]
         assert config.enable_audio is False
         assert TypeConfigurationWindow._instance is None
+
+    def test_apply_changes_skips_browse_refresh_when_no_changes(
+        self, window_with_dir, qtbot, monkeypatch
+    ):
+        config.enable_audio = True
+        browse_refreshed: list[bool] = []
+
+        class _RecordingActions:
+            def refresh_all_compares(self):
+                pass
+
+            def refresh(self):
+                browse_refreshed.append(True)
+
+            def toast(self, *_args, **_kwargs):
+                pass
+
+        win, _ = window_with_dir
+        win.window_launcher.open_type_configuration_window()
+        qtbot.waitUntil(
+            lambda: TypeConfigurationWindow._instance is not None,
+            timeout=5000,
+        )
+        dlg = TypeConfigurationWindow._instance
+        TypeConfigurationWindow._original_config = dict(
+            TypeConfigurationWindow._original_config
+        )
+        # Pending change matches the original config -- _has_changes() is False.
+        TypeConfigurationWindow._pending_changes[CompareMediaType.AUDIO] = True
+
+        monkeypatch.setattr(
+            dlg._app_actions,
+            "find_window_with_compare",
+            lambda: None,
+        )
+        TypeConfigurationWindow.apply_changes(_RecordingActions())
+
+        assert browse_refreshed == []

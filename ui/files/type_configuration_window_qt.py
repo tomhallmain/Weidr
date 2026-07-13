@@ -288,7 +288,8 @@ class TypeConfigurationWindow(SmartDialog):
     # ------------------------------------------------------------------
     @classmethod
     def apply_changes(cls, app_actions=None) -> None:  # noqa: C901
-        if cls._has_changes():
+        has_changes = cls._has_changes()
+        if has_changes:
             cls.save_pending_changes()
         elif app_actions is None:
             return
@@ -349,6 +350,12 @@ class TypeConfigurationWindow(SmartDialog):
 
         if app_actions is not None:
             app_actions.refresh_all_compares()
+            if has_changes:
+                # Browse-mode windows aren't covered by refresh_all_compares (that
+                # only touches windows with an active compare) -- refresh the file
+                # list here so a disabled/enabled type's files update immediately
+                # instead of waiting on the next periodic file-check tick.
+                app_actions.refresh()
             app_actions.toast(_("Media type configuration updated"), time_in_seconds=5)
             cls.on_closing()
         else:

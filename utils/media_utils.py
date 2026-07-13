@@ -158,6 +158,11 @@ def get_media_type_for_path(path: str) -> MediaType:
             return MediaType.HTML
         return MediaType.UNCONFIGURED
 
+    # TODO: unlike every branch above, this fallback never checks
+    # config.enable_images, so raster images still resolve to MediaType.IMAGE
+    # (instead of UNCONFIGURED) even after Image is disabled in the type
+    # configuration window. Affects classifier pipeline/action gating,
+    # context menu building, and media details for the IMAGE type.
     return MediaType.IMAGE
 
 

@@ -325,11 +325,14 @@ def is_classifier_dynamic_media_path(path: str) -> bool:
 # ClassifierActionType.ROTATE resolution
 #
 # ClassifierAction.run_action dispatches ROTATE differently depending on the
-# media type of the path it receives, since only a static raster image can be
-# corrected losslessly and in place.
+# media type of the path it receives, since the transformation itself differs
+# per format -- but none of them overwrite the original file. Every branch
+# writes a new "_rot"-suffixed sibling file, so the suffix always gives an
+# accurate audit trail of what's been done to the source, and behavior is
+# consistent across media types.
 #
-# Static images are overwritten in place using OpenCV/NumPy rot90 in
-# image_ops.py. The file itself is fixed, which is the point of the action.
+# Static images are rotated losslessly using OpenCV/NumPy rot90 in
+# image_ops.py and saved as a new sibling file.
 #
 # GIFs and videos both reach run_action with their real source path, since
 # GIF and video both count as dynamic media for classifier sampling. Neither

@@ -396,33 +396,34 @@ class ImageOps:
         Losslessly rotate a static raster image clockwise by ``degrees`` (must
         be a multiple of 90: 0, 90, 180, or 270).
 
-        Overwrites ``image_path`` in place when ``output_path`` is not given.
-        Unlike :meth:`rotate_image`, which always writes a new sibling file for
-        a single manual 90-degree turn, in-place is the default here because
-        this is meant for automated orientation correction (e.g. driven by a
-        ClassifierAction ROTATE result) where the source file itself is simply
-        wrong and should be fixed, not duplicated. Callers rotating a rendered
-        stand-in (e.g. a PDF/SVG page raster, which can't itself be rotated)
-        should pass an explicit ``output_path`` instead.
+        Always writes a new sibling file (or ``output_path`` if given), never
+        overwriting ``image_path`` in place -- consistent with
+        :meth:`rotate_gif_to_degrees` and :meth:`rotate_video`, and so the
+        "_rot" suffix always reflects an accurate audit trail of what's been
+        done to the original file, for every media type ROTATE supports.
         """
         try:
             normalized_degrees = degrees % 360
             if normalized_degrees % 90 != 0:
                 logger.error(f"rotate_image_to_degrees: unsupported angle {degrees}, must be a multiple of 90")
                 return None
-            target_path = output_path or image_path
             if normalized_degrees == 0:
+                # Nothing to rotate, so nothing to audit-trail -- don't spawn a
+                # "_rot" duplicate of an unchanged image. Only copy if the
+                # caller explicitly asked for a specific output_path.
                 if output_path and output_path != image_path:
                     import shutil as _shutil
                     _shutil.copyfile(image_path, output_path)
-                return target_path
+                    return output_path
+                return image_path
+            from utils.utils import Utils
+            target_path = output_path or Utils.unique_sibling_path(image_path, "_rot")
             img = cv2.imread(image_path)
             if img is None:
                 logger.error(f"rotate_image_to_degrees: could not read {image_path}")
                 return None
             rotated = np.rot90(img, k=-(normalized_degrees // 90))
 
-            from utils.utils import Utils
             with Utils.file_operation_lock:
                 cv2.imwrite(target_path, rotated)
             return target_path

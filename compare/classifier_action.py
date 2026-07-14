@@ -1070,7 +1070,7 @@ class ClassifierAction:
                 media_type = get_media_type_for_path(image_path)
                 result = None
                 if media_type == CompareMediaType.IMAGE:
-                    notify_callback("\n" + base_message + _(" - rotating {0} degrees").format(degrees),
+                    notify_callback("\n" + base_message + _(" - rotating {0} degrees (new file)").format(degrees),
                                     base_message=base_message, action_type=ActionType.SYSTEM, is_manual=False)
                     result = ImageOps.rotate_image_to_degrees(image_path, degrees)
                 elif media_type == CompareMediaType.GIF:

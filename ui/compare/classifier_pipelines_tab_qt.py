@@ -47,6 +47,11 @@ class ClassifierPipelinesTab(QWidget):
 
     _editor_window = None  # ClassifierPipelineEditorDialog or None
 
+    # Session-scoped record of confirmed "Run Current" prompts: pipeline name →
+    # disabled-node signature at confirmation time. While the signature is
+    # unchanged, repeat current-media runs skip the confirmation dialog.
+    _current_media_confirmed: dict = {}
+
     # ------------------------------------------------------------------
     # Construction
     # ------------------------------------------------------------------
@@ -130,11 +135,12 @@ class ClassifierPipelinesTab(QWidget):
     _COL_PROFILE = 4
     _COL_FLOW    = 5
     _COL_RUN     = 6
-    _COL_RERUN   = 7
-    _COL_EDIT    = 8
-    _COL_DUP     = 9
-    _COL_DEL     = 10
-    _COL_DOWN    = 11
+    _COL_RUN_CUR = 7
+    _COL_RERUN   = 8
+    _COL_EDIT    = 9
+    _COL_DUP     = 10
+    _COL_DEL     = 11
+    _COL_DOWN    = 12
 
     def _rebuild_rows(self) -> None:
         _clear_layout(self._scroll_layout)
@@ -201,6 +207,13 @@ class ClassifierPipelinesTab(QWidget):
             run_btn.setToolTip(_("Run on all files in the selected profile's directories"))
             run_btn.clicked.connect(lambda _=False, p=pipeline: self._run_on_profile(p))
             grid.addWidget(run_btn, r, self._COL_RUN)
+
+            run_cur_btn = QPushButton(_("Run Current"))
+            run_cur_btn.setToolTip(_("Run on the currently displayed media item only"))
+            run_cur_btn.clicked.connect(
+                lambda _=False, p=pipeline: self._run_on_current_media(p)
+            )
+            grid.addWidget(run_cur_btn, r, self._COL_RUN_CUR)
 
             has_dump = ClassifierPipelinesTab._find_latest_dump(pipeline) is not None
             rerun_btn = QPushButton(_("Rerun Last"))
@@ -345,6 +358,10 @@ class ClassifierPipelinesTab(QWidget):
             suffix_note = f" ({seed_suffix})" if seed_suffix else ""
             details.append(_("Seed category: {cat}{suffix}").format(
                 cat=pipeline.seed_category, suffix=suffix_note))
+
+        disabled_note = ClassifierPipelinesTab._disabled_nodes_note(pipeline)
+        if disabled_note:
+            details.append(disabled_note)
 
         _last_profile_key = f"pipeline_last_profile:{pipeline.name}"
         last_profile = app_info_cache.get_meta(_last_profile_key, "")
@@ -492,6 +509,80 @@ class ClassifierPipelinesTab(QWidget):
         start_thread(_worker, use_asyncio=False)
 
     # ------------------------------------------------------------------
+    # Run on current media
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _disabled_nodes_note(pipeline: ClassifierPipeline) -> str:
+        """One-line disabled-node listing for run confirmations, or "" if none."""
+        disabled = [n.name for n in pipeline.nodes if not n.enabled]
+        if not disabled:
+            return ""
+        return _("Disabled nodes (will be skipped): {nodes}").format(
+            nodes=", ".join(disabled)
+        )
+
+    @staticmethod
+    def _disabled_nodes_signature(pipeline: ClassifierPipeline) -> tuple:
+        return (
+            pipeline.name,
+            tuple(sorted(n.name for n in pipeline.nodes if not n.enabled)),
+        )
+
+    def _run_on_current_media(self, pipeline: ClassifierPipeline) -> None:
+        media_path = None
+        try:
+            media_path = self._app_actions.get_active_media_filepath()
+        except Exception:
+            logger.exception("Failed to resolve active media filepath")
+        if not media_path:
+            qt_alert(self, _("Run Pipeline"), _("No active media to run on."))
+            return
+
+        signature = ClassifierPipelinesTab._disabled_nodes_signature(pipeline)
+        if ClassifierPipelinesTab._current_media_confirmed.get(pipeline.name) != signature:
+            note = ClassifierPipelinesTab._disabled_nodes_note(pipeline)
+            details_block = ("\n" + note + "\n") if note else ""
+            msg = _("Run pipeline '{name}' on the current media?{details}\n\nMedia:\n  {path}").format(
+                name=pipeline.name, details=details_block, path=media_path,
+            )
+            if not qt_alert(self, _("Run Pipeline on Current Media"), msg, kind="askokcancel"):
+                return
+            ClassifierPipelinesTab._current_media_confirmed[pipeline.name] = signature
+
+        # Non-batched bundle: generates dispatch one-shot and scrambles run
+        # synchronously, so nothing is left queued behind a directory-loop flush.
+        callbacks = self._app_actions.pipeline_run_callbacks
+        base_directory = os.path.dirname(media_path)
+
+        def _worker():
+            from compare.classifier_pipeline_runner import run_pipeline
+            from files.related_image import clear_base_stem_dir_cache, clear_generate_gate_cache
+            from utils.constants import ClassifierActionType
+
+            clear_base_stem_dir_cache()
+            clear_generate_gate_cache()
+            try:
+                result = run_pipeline(
+                    pipeline, media_path, callbacks, base_directory=base_directory
+                )
+                summary = _("Pipeline '{name}' on {file}: {action}").format(
+                    name=pipeline.name,
+                    file=os.path.basename(media_path),
+                    action=result.value if isinstance(result, ClassifierActionType) else _("(no action)"),
+                )
+                logger.info(summary)
+                try:
+                    self._app_actions.title_notify(summary)
+                except Exception:
+                    pass
+            except Exception:
+                logger.exception("Pipeline run error on %s", media_path)
+
+        from utils.running_tasks_registry import start_thread
+        start_thread(_worker, use_asyncio=False)
+
+    # ------------------------------------------------------------------
     # Scramble helpers
     # ------------------------------------------------------------------
 
@@ -500,13 +591,7 @@ class ClassifierPipelinesTab(QWidget):
         path: str, modifier: str | None, skip_existing: bool = False
     ) -> None:
         from image.image_ops import ImageOps
-        out = ImageOps.new_filepath(path, append_part=modifier) if modifier else None
-        if skip_existing and out and os.path.exists(out):
-            return
-        if modifier and "semi" in modifier:
-            ImageOps.semi_scramble_image(path, output_path=out)
-        else:
-            ImageOps.scramble_image(path, output_path=out)
+        ImageOps.scramble_by_modifier(path, modifier, skip_existing=skip_existing)
 
     @staticmethod
     def _make_scramble_batch_state(

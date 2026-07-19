@@ -1,9 +1,11 @@
 """
 Execution engine for ClassifierPipeline (Phase 2).
 
-run_pipeline() is the sole public entry point.  All imports of heavy
-dependencies (CLIP, classifiers, prototype embeddings) are deferred to the
-point of use so the module can be imported without loading ML models.
+run_pipeline() is the public entry point for full pipeline execution;
+run_single_node() executes one node in isolation for on-demand GUI runs.
+All imports of heavy dependencies (CLIP, classifiers, prototype embeddings)
+are deferred to the point of use so the module can be imported without
+loading ML models.
 
 No existing modules are modified.
 """
@@ -440,6 +442,77 @@ def run_pipeline(
     # If no explicit default action was set but EXECUTE_AND_CONTINUE actions fired,
     # return the last such action so callers can account for the work done.
     return pipeline.default_action if pipeline.default_action is not None else last_etc_action
+
+
+def run_single_node(
+    pipeline: ClassifierPipeline,
+    node,
+    image_path: str,
+    callbacks: ActionCallbacks,
+    *,
+    base_directory: Optional[str] = None,
+) -> tuple[bool, Optional[ClassifierActionType]]:
+    """
+    Evaluate one node's condition against a single image and fire the resulting
+    outcome's action, without walking the rest of the pipeline.
+
+    Backs the editor's "Run Node on Current Media" context-menu action.
+    Deliberate differences from run_pipeline():
+      - runs even if node.enabled is False or the pipeline is inactive —
+        the user explicitly picked this node;
+      - the seed-category GENERATE guard and stem-group logic are skipped;
+      - GOTO / CONTINUE / ACCEPT outcomes are no-ops (there is no traversal);
+      - REJECT fires pipeline.default_reject_action, as in the main loop;
+      - prior-node conditions (node_result etc.) see no prior results and
+        evaluate as no-match.
+
+    Returns (matched, fired_action_type_or_None).
+    """
+    node_results: dict[str, bool] = {}
+    node_scores: dict[str, object] = {}
+    try:
+        matched, score = _evaluate_condition(
+            node.condition, image_path, node_results, node_scores, base_directory,
+            node_name=node.name,
+            pipeline_categories=list(pipeline.category_map.values()),
+        )
+    except Exception:
+        logger.exception(
+            "Pipeline %r: error in node %r on %s — treating as no-match",
+            pipeline.name, node.name, image_path,
+        )
+        matched, score = False, None
+    logger.info(
+        "Pipeline %r: single-node run %r on %s → %s (score=%s)",
+        pipeline.name, node.name, image_path,
+        "MATCH" if matched else "NO-MATCH", score,
+    )
+
+    outcome: NodeOutcome = node.on_match if matched else node.on_no_match
+    action: Optional[ClassifierActionType] = None
+    if outcome.outcome_type in (OutcomeType.EXECUTE, OutcomeType.EXECUTE_AND_CONTINUE):
+        action = outcome.action_type
+        _dispatch_action(
+            outcome.action_type,
+            outcome.action_modifier or None,
+            pipeline.name,
+            image_path,
+            callbacks,
+            base_directory,
+            move_to_working_dir=pipeline.move_to_working_dir,
+        )
+    elif outcome.outcome_type == OutcomeType.REJECT:
+        action = pipeline.default_reject_action
+        _dispatch_action(
+            pipeline.default_reject_action,
+            None,
+            pipeline.name,
+            image_path,
+            callbacks,
+            base_directory,
+            move_to_working_dir=pipeline.move_to_working_dir,
+        )
+    return matched, action
 
 
 # ---------------------------------------------------------------------------

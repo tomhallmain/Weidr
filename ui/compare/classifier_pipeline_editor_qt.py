@@ -24,8 +24,8 @@ from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog, QFormLayout,
     QGraphicsScene, QGraphicsView,
     QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
-    QPlainTextEdit, QPushButton, QScrollArea, QSizePolicy, QSpinBox, QSplitter,
-    QStackedWidget, QVBoxLayout, QWidget,
+    QMenu, QPlainTextEdit, QPushButton, QScrollArea, QSizePolicy, QSpinBox,
+    QSplitter, QStackedWidget, QVBoxLayout, QWidget,
 )
 
 from compare.classifier_pipeline import (
@@ -1805,6 +1805,8 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         )
         self._node_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self._node_list.itemSelectionChanged.connect(self._on_selection_changed)
+        self._node_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._node_list.customContextMenuRequested.connect(self._show_node_context_menu)
         lay.addWidget(self._node_list, 1)
 
         btn_row = QHBoxLayout()
@@ -2016,6 +2018,97 @@ class ClassifierPipelineEditorDialog(SmartDialog):
             self._flush_node_to_model()
             self._current_node_idx = None
             self._node_editor_widget.setEnabled(False)
+
+    # ------------------------------------------------------------------
+    # Node list context menu
+    # ------------------------------------------------------------------
+
+    def _show_node_context_menu(self, pos) -> None:
+        item = self._node_list.itemAt(pos)
+        if item is None:
+            return
+        row = self._node_list.row(item)
+        node = self._pipeline.nodes[row]
+        # Toggle acts on the whole selection when the clicked row is part of a
+        # multi-selection; otherwise just on the clicked row.
+        selected = sorted(idx.row() for idx in self._node_list.selectedIndexes())
+        toggle_rows = selected if (row in selected and len(selected) > 1) else [row]
+
+        menu = QMenu(self)
+        if len(toggle_rows) > 1:
+            toggle_label = _("Toggle Enabled ({0} nodes)").format(len(toggle_rows))
+        else:
+            toggle_label = _("Disable Node") if node.enabled else _("Enable Node")
+        menu.addAction(toggle_label, lambda: self._toggle_nodes_enabled(toggle_rows))
+        menu.addSeparator()
+        menu.addAction(
+            _("Run Node on Current Media"),
+            lambda: self._run_node_on_current_media(row),
+        )
+        menu.exec(self._node_list.mapToGlobal(pos))
+
+    def _toggle_nodes_enabled(self, rows: list) -> None:
+        for row in rows:
+            if not (0 <= row < len(self._pipeline.nodes)):
+                continue
+            node = self._pipeline.nodes[row]
+            if row == self._current_node_idx:
+                # Route through the checkbox: its handler updates the model and
+                # list item, and keeps _flush_node_to_model from writing the
+                # stale checkbox state back over this toggle.
+                self._node_enabled_cb.setChecked(not node.enabled)
+            else:
+                node.enabled = not node.enabled
+                self._update_node_list_item(row)
+        self._refresh_flow_preview()
+
+    def _run_node_on_current_media(self, row: int) -> None:
+        self._flush_node_to_model()
+        if not (0 <= row < len(self._pipeline.nodes)):
+            return
+        node = self._pipeline.nodes[row]
+        media_path = None
+        try:
+            media_path = self._app_actions.get_active_media_filepath()
+        except Exception:
+            logger.exception("Failed to resolve active media filepath")
+        if not media_path:
+            qt_alert(self, _("Run Node"), _("No active media to run on."))
+            return
+
+        # Runs the node as currently edited (self._pipeline is the working
+        # copy), so unsaved changes are included — useful for testing a node
+        # before saving. Non-batched callbacks: see pipeline_run_callbacks.
+        pipeline = self._pipeline
+        callbacks = self._app_actions.pipeline_run_callbacks
+
+        def _worker():
+            from compare.classifier_pipeline_runner import run_single_node
+            from files.related_image import clear_base_stem_dir_cache, clear_generate_gate_cache
+
+            clear_base_stem_dir_cache()
+            clear_generate_gate_cache()
+            try:
+                matched, action = run_single_node(
+                    pipeline, node, media_path, callbacks,
+                    base_directory=os.path.dirname(media_path),
+                )
+                summary = _("Node '{node}' on {file}: {result}{action}").format(
+                    node=node.name,
+                    file=os.path.basename(media_path),
+                    result=_("match") if matched else _("no match"),
+                    action=(" → " + action.value) if action is not None else "",
+                )
+                logger.info(summary)
+                try:
+                    self._app_actions.title_notify(summary)
+                except Exception:
+                    pass
+            except Exception:
+                logger.exception("Single-node run error on %s", media_path)
+
+        from utils.running_tasks_registry import start_thread
+        start_thread(_worker, use_asyncio=False)
 
     def _group_selected_nodes(self) -> None:
         """Convert the currently selected nodes into children of a new GroupCondition node."""

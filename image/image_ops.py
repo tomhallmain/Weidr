@@ -1288,6 +1288,25 @@ class ImageOps:
         return result
 
     @staticmethod
+    def scramble_by_modifier(
+        image_path: str, modifier: str | None = None, skip_existing: bool = False
+    ) -> None:
+        """Scramble one image synchronously, dispatching on the action modifier.
+
+        The modifier doubles as the output filename suffix; a modifier
+        containing "semi" selects semi_scramble_image(), anything else selects
+        scramble_image(). With skip_existing, an already-present output file
+        suppresses the scramble.
+        """
+        out = ImageOps.new_filepath(image_path, append_part=modifier) if modifier else None
+        if skip_existing and out and os.path.exists(out):
+            return
+        if modifier and "semi" in modifier:
+            ImageOps.semi_scramble_image(image_path, output_path=out)
+        else:
+            ImageOps.scramble_image(image_path, output_path=out)
+
+    @staticmethod
     def scramble_image(image_path: str, output_path: str | None = None) -> str:
         """Apply heavy random distortion to produce a visually incoherent image.
 

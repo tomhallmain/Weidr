@@ -600,8 +600,12 @@ class ClassifierPipelinesTab(QWidget):
             clear_base_stem_dir_cache()
             clear_generate_gate_cache()
             try:
+                # assume_seed: the user picked this image, so it is the seed of
+                # its stem group by definition — keeps the seed_category guard
+                # effective even when the filename doesn't look like a seed.
                 result = run_pipeline(
-                    pipeline, media_path, callbacks, base_directory=base_directory
+                    pipeline, media_path, callbacks,
+                    base_directory=base_directory, assume_seed=True,
                 )
                 _dispatch_generate_batch()   # flush generate remainder
                 summary = _("Pipeline '{name}' on {file}: {action}").format(

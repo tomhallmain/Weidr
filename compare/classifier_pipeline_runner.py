@@ -194,6 +194,7 @@ def run_pipeline(
     generate_queue: Optional[DebouncedGenerateQueue] = None,
     processed_stems: Optional[set] = None,
     dry_run: bool = False,
+    assume_seed: bool = False,
 ) -> Optional[ClassifierActionType]:
     """
     Walk the pipeline nodes and return the ClassifierActionType to fire, or
@@ -244,6 +245,13 @@ def run_pipeline(
         omit it. RELATED_IMAGE ascending sort is strongly recommended when
         passing processed_stems; it ensures seeds are evaluated before their
         derivatives for maximum skip efficiency.
+
+    assume_seed
+        Treat *image_path* as the seed of its stem group regardless of whether
+        its file stem matches the extracted base stem. Used by on-demand
+        single-media runs ("Run Current"), where the user's chosen image is
+        the seed by definition — this keeps the seed_category guard effective
+        for filenames that don't look like seeds (e.g. suffixed derivatives).
     """
     if not pipeline.is_active or not pipeline.nodes:
         if config.debug:
@@ -256,7 +264,9 @@ def run_pipeline(
 
     base_stem: Optional[str] = extract_filename_base_stem(image_path)
     image_file_stem = os.path.splitext(os.path.basename(image_path))[0]
-    is_seed = base_stem is not None and image_file_stem.lower() == base_stem.lower()
+    is_seed = assume_seed or (
+        base_stem is not None and image_file_stem.lower() == base_stem.lower()
+    )
     if config.debug:
         logger.debug("Pipeline %r: evaluating %s (base_stem=%r, is_seed=%s)", pipeline.name, image_path, base_stem, is_seed)
 

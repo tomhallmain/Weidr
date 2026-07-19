@@ -2505,6 +2505,29 @@ class TestSeedCategoryGuard:
             run_pipeline(p, non_seed, ActionCallbacks())
         assert ClassifierActionType.GENERATE in dispatched
 
+    def test_assume_seed_fires_guard_for_non_seed_filename(self):
+        """assume_seed=True: the guard applies even when the filename doesn't
+        look like a seed — used by single-media "Run Current", where the user's
+        chosen image is the seed by definition."""
+        p = self._pipeline_with_seed_category(self._gen_apple_node())
+        dispatched = []
+        non_seed = "/fake/image_17820172251234_apple.jpg"
+        with patch("compare.classifier_pipeline_runner._dispatch_action",
+                   side_effect=lambda *a, **kw: dispatched.append(a[0])):
+            result = run_pipeline(p, non_seed, ActionCallbacks(), assume_seed=True)
+        assert result is None          # on_no_match = accept
+        assert not dispatched
+
+    def test_assume_seed_false_by_default_keeps_existing_behavior(self):
+        """Without assume_seed, the same non-seed path still generates (guard off)."""
+        p = self._pipeline_with_seed_category(self._gen_apple_node())
+        dispatched = []
+        non_seed = "/fake/image_17820172251234_apple.jpg"
+        with patch("compare.classifier_pipeline_runner._dispatch_action",
+                   side_effect=lambda *a, **kw: dispatched.append(a[0])):
+            run_pipeline(p, non_seed, ActionCallbacks())
+        assert ClassifierActionType.GENERATE in dispatched
+
     def test_guard_does_not_fire_for_different_category_node(self):
         """Seed image but the node generates Banana, not Apple: condition evaluated."""
         gen_banana = PipelineNode(

@@ -548,6 +548,38 @@ class TestBaseStemMatchPanel:
 
 
 # ---------------------------------------------------------------------------
+# _AlwaysPanel
+# ---------------------------------------------------------------------------
+
+class TestAlwaysPanel:
+    def test_get_condition(self, qtbot):
+        from compare.classifier_pipeline import AlwaysCondition
+        from ui.compare.classifier_pipeline_editor_qt import _AlwaysPanel
+        p = _AlwaysPanel()
+        qtbot.addWidget(p)
+        p.load(None)
+        c = p.get_condition()
+        assert isinstance(c, AlwaysCondition)
+        assert c.condition_type == "always"
+
+    def test_condition_type_attribute(self):
+        from ui.compare.classifier_pipeline_editor_qt import _AlwaysPanel
+        assert _AlwaysPanel.condition_type == "always"
+
+    def test_editor_loads_always_condition_node(self, qtbot, isolated_singletons):
+        from compare.classifier_pipeline import AlwaysCondition
+        pipeline = _make_pipeline()
+        pipeline.nodes[0].condition = AlwaysCondition()
+        dlg = _open_dialog(qtbot, pipeline)
+        dlg._node_list.setCurrentRow(0)
+        idx = dlg._condition_type_combo.currentIndex()
+        assert dlg._cond_panels[idx] is dlg._always_panel
+        # Flush must round-trip the condition unchanged
+        dlg._flush_node_to_model()
+        assert isinstance(dlg._pipeline.nodes[0].condition, AlwaysCondition)
+
+
+# ---------------------------------------------------------------------------
 # _OutcomeEditorWidget
 # ---------------------------------------------------------------------------
 

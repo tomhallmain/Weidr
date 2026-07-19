@@ -20,6 +20,7 @@ from compare.action_callbacks import ActionCallbacks
 from compare.debounced_generate_queue import DebouncedGenerateQueue
 from compare.pipeline_run_report import PipelineRunReport
 from compare.classifier_pipeline import (
+    AlwaysCondition,
     ClassifierPipeline,
     CompositeCondition,
     ClassifierRankCondition,
@@ -531,6 +532,9 @@ def _evaluate_condition(
     pipeline_categories: list = [],
 ) -> tuple[bool, object]:
     """Return (matched, score). Score is a raw float where available, else None."""
+
+    if isinstance(condition, AlwaysCondition):
+        return True, None
 
     if isinstance(condition, EmbeddingCondition):
         from compare.compare_embeddings_clip import CompareEmbeddingClip

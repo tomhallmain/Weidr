@@ -109,6 +109,13 @@ class TestConditionSerialization:
         assert isinstance(c2, LookaheadCondition)
         assert c2.lookahead_name == "my_lookahead"
 
+    def test_always_roundtrip(self):
+        from compare.classifier_pipeline import AlwaysCondition
+        c = AlwaysCondition()
+        c2 = _condition_from_dict(c.to_dict())
+        assert isinstance(c2, AlwaysCondition)
+        assert c2.condition_type == "always"
+
     def test_node_result_roundtrip(self):
         c = NodeResultCondition(node_name="clip_check", expected_result=False)
         c2 = _condition_from_dict(c.to_dict())

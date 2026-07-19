@@ -2595,3 +2595,77 @@ class TestSeedCategoryGuard:
                    side_effect=lambda *a, **kw: dispatched.append(a[0])):
             run_pipeline(p, IMAGE, ActionCallbacks(), processed_stems=None)
         assert not dispatched
+
+
+# ---------------------------------------------------------------------------
+# AlwaysCondition (no check — just execute)
+# ---------------------------------------------------------------------------
+
+class TestAlwaysCondition:
+    def test_evaluate_always_matches(self):
+        from compare.classifier_pipeline import AlwaysCondition
+        assert _evaluate_condition(AlwaysCondition(), IMAGE, {}, {}) == (True, None)
+
+    def test_run_pipeline_executes_action_unconditionally(self):
+        from compare.classifier_pipeline import AlwaysCondition
+        notifications = []
+        node = _node(
+            "always_notify",
+            AlwaysCondition(),
+            on_match=_execute(ClassifierActionType.NOTIFY),
+        )
+        result = run_pipeline(
+            _pipeline(node),
+            IMAGE,
+            ActionCallbacks(notify_callback=lambda *a, **kw: notifications.append(a)),
+        )
+        assert result == ClassifierActionType.NOTIFY
+        assert len(notifications) == 1
+
+
+# ---------------------------------------------------------------------------
+# run_single_node
+# ---------------------------------------------------------------------------
+
+class TestRunSingleNode:
+    def test_always_node_executes_action(self):
+        from compare.classifier_pipeline import AlwaysCondition
+        from compare.classifier_pipeline_runner import run_single_node
+        notifications = []
+        node = _node(
+            "always_notify",
+            AlwaysCondition(),
+            on_match=_execute(ClassifierActionType.NOTIFY),
+        )
+        matched, action = run_single_node(
+            _pipeline(node), node, IMAGE,
+            ActionCallbacks(notify_callback=lambda *a, **kw: notifications.append(a)),
+        )
+        assert matched is True
+        assert action == ClassifierActionType.NOTIFY
+        assert len(notifications) == 1
+
+    def test_runs_even_when_node_disabled(self):
+        from compare.classifier_pipeline import AlwaysCondition
+        from compare.classifier_pipeline_runner import run_single_node
+        node = _node(
+            "disabled_node",
+            AlwaysCondition(),
+            on_match=_execute(ClassifierActionType.NOTIFY),
+        )
+        node.enabled = False
+        matched, action = run_single_node(_pipeline(node), node, IMAGE, ActionCallbacks())
+        assert matched is True
+        assert action == ClassifierActionType.NOTIFY
+
+    def test_no_match_without_action_returns_none(self):
+        node = _node(
+            "fname_check",
+            FilenameContainsCondition(["does_not_appear"]),
+            on_match=_execute(ClassifierActionType.NOTIFY),
+            on_no_match=NodeOutcome.continue_(),
+        )
+        from compare.classifier_pipeline_runner import run_single_node
+        matched, action = run_single_node(_pipeline(node), node, IMAGE, ActionCallbacks())
+        assert matched is False
+        assert action is None

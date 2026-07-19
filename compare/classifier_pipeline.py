@@ -202,6 +202,22 @@ class FilenameContainsCondition:
 
 
 @dataclass
+class AlwaysCondition:
+    """No check required — always matches, so the node's on_match outcome
+    simply executes. Useful for unconditional action nodes."""
+    condition_type: ClassVar[str] = "always"
+
+    def to_dict(self) -> dict:
+        return {"condition_type": self.condition_type}
+
+    def summary(self) -> str:
+        return "Always()"
+
+    def display_summary(self) -> str:
+        return _("Always (no check)")
+
+
+@dataclass
 class MediaTypeCondition:
     """Tests whether the file's resolved media type is one of the listed types."""
     condition_type: ClassVar[str] = "media_type"
@@ -553,6 +569,7 @@ NodeCondition = (
     | PrototypeCondition
     | PromptCondition
     | FilenameContainsCondition
+    | AlwaysCondition
     | MediaTypeCondition
     | LookaheadCondition
     | NodeResultCondition
@@ -600,6 +617,8 @@ def _condition_from_dict(d: dict):
             patterns=d.get("patterns", []),
             case_sensitive=d.get("case_sensitive", False),
         )
+    if ct == "always":
+        return AlwaysCondition()
     if ct == "media_type":
         return MediaTypeCondition(media_types=d.get("media_types", []))
     if ct == "lookahead":
@@ -1239,6 +1258,7 @@ class ClassifierPipeline:
             "classifier_rank": _("ClsRank"),
             "prototype": _("Prototype"),
             "prompt": _("Prompt"),
+            "always": _("Always"),
             "lookahead": _("Lookahead"),
             "node_result": _("NodeResult"),
             "composite": _("Composite"),

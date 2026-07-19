@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
 )
 
 from compare.classifier_pipeline import (
+    AlwaysCondition,
     ClassifierPipeline,
     ClassifierPipelines,
     ClassifierRankCondition,
@@ -78,6 +79,7 @@ _CONDITION_ENTRIES = [
     ("group_child_result",  _("Group Child Result")),
     ("composite",           _("Composite")),
     ("group",               _("Group")),
+    ("always",              _("No Check (Always)")),
 ]
 _CONDITION_TYPES   = [k for k, _ in _CONDITION_ENTRIES]
 _CONDITION_LABELS  = [v for _, v in _CONDITION_ENTRIES]
@@ -1027,6 +1029,25 @@ class _GroupChildResultPanel(QWidget):
 # Composite panel (Phase 4c) — inline list of sub-conditions
 # ---------------------------------------------------------------------------
 
+class _AlwaysPanel(QWidget):
+    condition_type = "always"
+
+    def __init__(self, on_changed: Callable = None, parent=None):
+        super().__init__(parent)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 4, 0, 4)
+        lay.addWidget(_label(
+            _("No check — this node always matches, so its on-match outcome "
+              "simply executes.")
+        ))
+
+    def load(self, condition) -> None:
+        pass
+
+    def get_condition(self) -> AlwaysCondition:
+        return AlwaysCondition()
+
+
 class _SubCondRow(QWidget):
     """A single sub-condition row inside the composite panel."""
 
@@ -1063,6 +1084,7 @@ class _SubCondRow(QWidget):
             _UnknownSuffixPanel(on_changed=self._on_changed),
             _LookaheadPanel(on_changed=self._on_changed),
             _NodeResultPanel(on_changed=self._on_changed),
+            _AlwaysPanel(on_changed=self._on_changed),
         ]
         for p in self._panels:
             self._stack.addWidget(p)
@@ -1295,6 +1317,7 @@ class _GroupPanel(QWidget):
             _UnknownSuffixPanel(on_changed=changed_cb),
             _LookaheadPanel(on_changed=changed_cb),
             _NodeResultPanel(on_changed=changed_cb),
+            _AlwaysPanel(on_changed=changed_cb),
         ]
         self._child_stack = QStackedWidget()
         for p in self._child_panels:
@@ -1899,6 +1922,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._group_child_result_panel  = _GroupChildResultPanel(on_changed=changed_cb)
         self._composite_panel           = _CompositePanel(on_changed=changed_cb)
         self._group_panel               = _GroupPanel(on_changed=changed_cb)
+        self._always_panel              = _AlwaysPanel(on_changed=changed_cb)
 
         self._cond_panels = [
             self._embedding_panel, self._classifier_rank_panel,
@@ -1910,6 +1934,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
             self._group_child_result_panel,
             self._composite_panel,
             self._group_panel,
+            self._always_panel,
         ]
 
         self._condition_stack = _AdaptiveStack()

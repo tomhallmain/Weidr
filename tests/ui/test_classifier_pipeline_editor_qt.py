@@ -1014,3 +1014,45 @@ class TestEditorFlowPreview:
         dlg = _open_dialog(qtbot)
         # Empty pipeline shows a placeholder text item in the scene
         assert len(dlg._flow_scene.items()) > 0
+
+    def test_flow_preview_renders_all_nodes_when_one_disabled(self, qtbot, isolated_singletons):
+        """Regression: a disabled node used to blank the whole flow preview.
+
+        _render_flow_graph's GOTO branch unpacked a tuple into "_", which made
+        "_" function-local and shadowed the module-level translation function,
+        so the _("disabled") calls in the disabled-node render path raised
+        UnboundLocalError — swallowed by _refresh_flow_preview, which replaced
+        the scene with "(preview unavailable)". All nodes must render, with
+        the disabled one labeled, not vanish.
+        """
+        from utils.translations import _
+        pipeline = _make_pipeline()
+        pipeline.nodes[0].enabled = False
+        dlg = _open_dialog(qtbot, pipeline)
+        text = _scene_text(dlg)
+        assert _("(preview unavailable)") not in text
+        assert "n1" in text
+        assert "n2" in text
+        assert _("disabled") in text
+
+    def test_render_flow_graph_disabled_node_with_goto_does_not_raise(self, qtbot, isolated_singletons):
+        """Direct render call (no exception swallow), combining the two paths
+        involved in the regression: a disabled node (evaluates _("disabled"))
+        and a GOTO outcome (the branch whose unpack shadowed "_")."""
+        pipeline = _make_pipeline()
+        pipeline.nodes[0].enabled = False
+        pipeline.nodes[0].on_match = NodeOutcome(OutcomeType.GOTO, target_node="n2")
+        dlg = _open_dialog(qtbot, pipeline)
+        dlg._render_flow_graph()  # must not raise
+        text = _scene_text(dlg)
+        assert "n1" in text
+        assert "n2" in text
+
+    def test_flow_preview_recovers_when_node_reenabled(self, qtbot, isolated_singletons):
+        from utils.translations import _
+        pipeline = _make_pipeline()
+        pipeline.nodes[0].enabled = False
+        dlg = _open_dialog(qtbot, pipeline)
+        dlg._node_list.setCurrentRow(0)
+        dlg._node_enabled_cb.setChecked(True)
+        assert _("disabled") not in _scene_text(dlg)

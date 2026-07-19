@@ -550,9 +550,46 @@ class ClassifierPipelinesTab(QWidget):
                 return
             ClassifierPipelinesTab._current_media_confirmed[pipeline.name] = signature
 
-        # Non-batched bundle: generates dispatch one-shot and scrambles run
-        # synchronously, so nothing is left queued behind a directory-loop flush.
-        callbacks = self._app_actions.pipeline_run_callbacks
+        if pipeline.has_generate_action():
+            from extensions.sd_runner_client import SDRunnerClient
+            if not SDRunnerClient.is_reachable():
+                if not qt_alert(
+                    self,
+                    _("SD Runner Not Available"),
+                    _(
+                        "This pipeline has GENERATE actions but the SD Runner is not "
+                        "reachable.\n\nGenerated images will not be produced unless SD "
+                        "Runner is started before the run completes.\n\nContinue anyway?"
+                    ),
+                    kind="askokcancel",
+                ):
+                    return
+
+        # Capture the generation type on the main thread before the worker starts.
+        # Pipeline-level setting takes priority; fall back to the application's global mode.
+        if pipeline.generation_type is not None:
+            generation_type = pipeline.generation_type
+        else:
+            from ui.image.media_details import MediaDetails
+            generation_type = MediaDetails.get_image_specific_generation_mode()
+
+        # batch_size=None: no intermediate flush, so the single-file run sends the
+        # generation server exactly one run_batch call after the pipeline completes.
+        all_generates, _on_generate, _dispatch_generate_batch = (
+            ClassifierPipelinesTab._make_generate_batch_state(generation_type, None)
+        )
+
+        from compare.action_callbacks import ActionCallbacks
+        from files.marked_files import MarkedFiles
+
+        callbacks = ActionCallbacks(
+            hide_callback=self._app_actions.hide_current_media,
+            notify_callback=self._app_actions.title_notify,
+            add_mark_callback=MarkedFiles.add_mark_if_not_present,
+            blur_callback=self._app_actions.request_media_blur,
+            generate_callback=_on_generate,
+            scramble_callback=ClassifierPipelinesTab._run_one_scramble,
+        )
         base_directory = os.path.dirname(media_path)
 
         def _worker():
@@ -566,11 +603,16 @@ class ClassifierPipelinesTab(QWidget):
                 result = run_pipeline(
                     pipeline, media_path, callbacks, base_directory=base_directory
                 )
+                _dispatch_generate_batch()   # flush generate remainder
                 summary = _("Pipeline '{name}' on {file}: {action}").format(
                     name=pipeline.name,
                     file=os.path.basename(media_path),
                     action=result.value if isinstance(result, ClassifierActionType) else _("(no action)"),
                 )
+                if all_generates:
+                    summary += "\n" + _("{n} generation request(s) queued").format(
+                        n=len(all_generates)
+                    )
                 logger.info(summary)
                 try:
                     self._app_actions.title_notify(summary)

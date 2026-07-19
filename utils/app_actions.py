@@ -92,24 +92,11 @@ class AppActions:
         from files.marked_files import MarkedFiles
         return self._build_callbacks(add_mark_callback=MarkedFiles.add_mark_if_not_present)
 
-    @cached_property
-    def pipeline_run_callbacks(self):
-        """Callbacks for user-triggered pipeline or single-node runs against one
-        media item: prevalidation_callbacks_with_mark plus a synchronous
-        single-file scramble. Directory batch runs keep their own pooled/batched
-        generate and scramble state in ClassifierPipelinesTab instead."""
-        from files.marked_files import MarkedFiles
-        from image.image_ops import ImageOps
-        return self._build_callbacks(
-            add_mark_callback=MarkedFiles.add_mark_if_not_present,
-            scramble_callback=ImageOps.scramble_by_modifier,
-        )
-
     def make_prevalidation_callbacks(self, add_mark_callback):
         """Build an ActionCallbacks bundle with a custom add_mark_callback."""
         return self._build_callbacks(add_mark_callback=add_mark_callback)
 
-    def _build_callbacks(self, add_mark_callback=None, scramble_callback=None):
+    def _build_callbacks(self, add_mark_callback=None):
         from compare.action_callbacks import ActionCallbacks
         return ActionCallbacks(
             hide_callback=self.hide_current_media,
@@ -119,5 +106,4 @@ class AppActions:
             generate_callback=lambda path, edit_suffix=None, target_dir=None: self.run_image_generation(
                 media_path=path, edit_suffix=edit_suffix, suppress_toast=True, target_dir=target_dir
             ),
-            scramble_callback=scramble_callback,
         )

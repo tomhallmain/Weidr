@@ -1628,6 +1628,8 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._current_node_idx: Optional[int] = None
         self._suppress_refresh = False
         self._node_editor_widget: Optional[QWidget] = None
+        # Scene rect per node (node order), for flow-graph context-menu hit tests.
+        self._flow_node_rects: list[QRectF] = []
 
         super().__init__(
             parent=parent,
@@ -1937,6 +1939,8 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._flow_view.setMinimumHeight(160)
         self._flow_view.setMaximumHeight(220)
         self._flow_view.setRenderHint(QPainter.Antialiasing)
+        self._flow_view.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._flow_view.customContextMenuRequested.connect(self._show_flow_context_menu)
         self._flow_view.setStyleSheet(
             f"QGraphicsView {{ background: #1e1e1e; border: 1px solid {_FG}; }}"
         )
@@ -2028,12 +2032,28 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         if item is None:
             return
         row = self._node_list.row(item)
-        node = self._pipeline.nodes[row]
         # Toggle acts on the whole selection when the clicked row is part of a
         # multi-selection; otherwise just on the clicked row.
         selected = sorted(idx.row() for idx in self._node_list.selectedIndexes())
         toggle_rows = selected if (row in selected and len(selected) > 1) else [row]
+        self._popup_node_menu(row, toggle_rows, self._node_list.mapToGlobal(pos))
 
+    def _show_flow_context_menu(self, pos) -> None:
+        scene_pos = self._flow_view.mapToScene(pos)
+        row = next(
+            (i for i, rect in enumerate(self._flow_node_rects)
+             if rect.contains(scene_pos)),
+            None,
+        )
+        if row is None or row >= len(self._pipeline.nodes):
+            return
+        # Sync the node list/editor pane to the clicked node so the menu acts
+        # on what the editor now shows.
+        self._node_list.setCurrentRow(row)
+        self._popup_node_menu(row, [row], self._flow_view.mapToGlobal(pos))
+
+    def _popup_node_menu(self, row: int, toggle_rows: list, global_pos) -> None:
+        node = self._pipeline.nodes[row]
         menu = QMenu(self)
         if len(toggle_rows) > 1:
             toggle_label = _("Toggle Enabled ({0} nodes)").format(len(toggle_rows))
@@ -2045,7 +2065,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
             _("Run Node on Current Media"),
             lambda: self._run_node_on_current_media(row),
         )
-        menu.exec(self._node_list.mapToGlobal(pos))
+        menu.exec(global_pos)
 
     def _toggle_nodes_enabled(self, rows: list) -> None:
         for row in rows:
@@ -2061,6 +2081,37 @@ class ClassifierPipelineEditorDialog(SmartDialog):
                 node.enabled = not node.enabled
                 self._update_node_list_item(row)
         self._refresh_flow_preview()
+
+    def _make_single_node_callbacks(self):
+        """ActionCallbacks for a one-off single-node run.
+
+        GENERATE goes to the server as a batch of one via run_batch — the
+        server queues batches on its side, so even a single request should
+        use the batch path — forced to IMAGE_EDIT for now, since single-node
+        runs have no batch-run context to derive a generation type from.
+        SCRAMBLE runs synchronously.
+        """
+        from compare.action_callbacks import ActionCallbacks
+        from files.marked_files import MarkedFiles
+        from image.image_ops import ImageOps
+
+        def _generate(path, edit_suffix=None, target_dir=None):
+            from extensions.sd_runner_client import SDRunnerClient
+            args = {"image": path, "append": False}
+            if edit_suffix:
+                args["edit_suffix"] = edit_suffix
+            if target_dir:
+                args["target_dir"] = target_dir
+            SDRunnerClient().run_batch(ImageGenerationType.IMAGE_EDIT, [args])
+
+        return ActionCallbacks(
+            hide_callback=self._app_actions.hide_current_media,
+            notify_callback=self._app_actions.title_notify,
+            add_mark_callback=MarkedFiles.add_mark_if_not_present,
+            blur_callback=self._app_actions.request_media_blur,
+            generate_callback=_generate,
+            scramble_callback=ImageOps.scramble_by_modifier,
+        )
 
     def _run_node_on_current_media(self, row: int) -> None:
         self._flush_node_to_model()
@@ -2078,9 +2129,9 @@ class ClassifierPipelineEditorDialog(SmartDialog):
 
         # Runs the node as currently edited (self._pipeline is the working
         # copy), so unsaved changes are included — useful for testing a node
-        # before saving. Non-batched callbacks: see pipeline_run_callbacks.
+        # before saving.
         pipeline = self._pipeline
-        callbacks = self._app_actions.pipeline_run_callbacks
+        callbacks = self._make_single_node_callbacks()
 
         def _worker():
             from compare.classifier_pipeline_runner import run_single_node
@@ -2394,6 +2445,8 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         try:
             self._render_flow_graph()
         except Exception:
+            logger.exception("Flow preview render failed")
+            self._flow_node_rects = []
             self._flow_scene.clear()
             item = self._flow_scene.addText(_("(preview unavailable)"))
             item.setDefaultTextColor(QColor(_FG))
@@ -2402,6 +2455,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         """Rebuild the QGraphicsScene with a node-graph view of the pipeline."""
         scene = self._flow_scene
         scene.clear()
+        self._flow_node_rects = []
 
         nodes = self._pipeline.nodes
         if not nodes:
@@ -2454,6 +2508,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         for node in nodes:
             nx, ny = pos[node.name]
             nh = heights[node.name]
+            self._flow_node_rects.append(QRectF(nx, ny, NW, nh))
             ctype = getattr(node.condition, "condition_type", "?")
             disabled   = not node.enabled
             node_brush = QBrush(dim_bg)   if disabled else box_brush
@@ -2541,7 +2596,10 @@ class ClassifierPipelineEditorDialog(SmartDialog):
                 elif outcome.outcome_type == OutcomeType.GOTO:
                     tgt = outcome.target_node
                     if tgt in pos:
-                        _, ty  = pos[tgt]
+                        # Don't unpack into "_": that would shadow the module-level
+                        # translation function for the whole function scope and break
+                        # the _("disabled") calls above with an UnboundLocalError.
+                        ty     = pos[tgt][1]
                         t_nh   = heights[tgt]
                         t_band = t_nh * 0.35 if is_match else t_nh * 0.65
                         pen    = QPen(col, 1.5)

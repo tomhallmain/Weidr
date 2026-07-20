@@ -83,6 +83,27 @@ class AppActions:
     def set_media_details_window(self, media_details_window):
         self._actions["_media_details_window"] = media_details_window
 
+    def related_images_signals(self):
+        """Lazily-created Qt bridge for related-image result reporting.
+
+        The related images window connects to `.result`; Qt handles both the
+        thread bridge (queued main-thread delivery for reports emitted from
+        worker threads) and connection lifetime (auto-disconnect when the
+        receiving window is destroyed) — no manual registration bookkeeping.
+        """
+        sigs = self._actions.get("_related_images_signals")
+        if sigs is None:
+            from ui.app_window.related_images_events import RelatedImagesResultSignals
+            sigs = RelatedImagesResultSignals()
+            self._actions["_related_images_signals"] = sigs
+        return sigs
+
+    def notify_related_images_result(self, message, action_label=None, data=None) -> None:
+        """Report a related-image action outcome, in addition to the
+        transient toasts the actions already emit. Emitting with no receivers
+        connected is a cheap no-op."""
+        self.related_images_signals().result.emit(message, action_label, data)
+
     @cached_property
     def prevalidation_callbacks(self):
         return self._build_callbacks()

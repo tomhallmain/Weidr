@@ -42,7 +42,7 @@ Keybinding map  (■ = bound  · = free | cols: Shift | Ctrl | Ctrl+Shift)
              Home/End/PgUp/PgDown ■ (bare), Backspace ■ (Shift),
              Delete ■ (Shift + Ctrl+Shift), Escape ■ (bare + Shift),
              Return ■ (Ctrl + Ctrl+Shift + Ctrl+Alt),
-             Tab ■ (Ctrl + Ctrl+Shift), F1/F11 ■
+             Tab ■ (Ctrl + Ctrl+Shift), F1/F11 ■, Y ■ (Alt)
 """
 
 from __future__ import annotations
@@ -173,7 +173,10 @@ class KeyBindingManager:
         )
         self._bind("Shift+Y", app.file_marks_ctrl.set_marks_from_downstream_related_images)
         self._bind("Ctrl+Y", app.file_marks_ctrl.mark_sources_with_downstream_in_dir, guarded=False)
-        self._bind("Ctrl+Shift+Y", app.file_marks_ctrl.mark_downstream_files_in_dir, guarded=False)
+        # Ctrl+Shift+Y previously ran mark_downstream_files_in_dir directly;
+        # that action is now a button inside the related images window.
+        self._bind("Ctrl+Shift+Y", app.window_launcher.open_related_images_window, guarded=False)
+        self._bind("Alt+Y", app.file_marks_ctrl.set_marks_from_downstream_related_images_all_windows)
         self._bind("Shift+H", app.window_launcher.get_help_and_config)
         self._bind("Shift+E", app.window_launcher.copy_prompt)
         self._bind(

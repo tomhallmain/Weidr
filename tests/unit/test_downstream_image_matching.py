@@ -353,3 +353,50 @@ class TestGetDownstreamFilesForSources:
 
         result = get_downstream_files_for_sources([source], str(dir_y))
         assert result == []
+
+
+# ---------------------------------------------------------------------------
+# get_downstream_related_images — quiet flag
+# ---------------------------------------------------------------------------
+
+class TestGetDownstreamRelatedImagesQuiet:
+    """quiet=True suppresses the per-directory result toasts so multi-directory
+    callers (all-open-windows search) can emit one aggregate summary."""
+
+    def _app_actions(self, toasts):
+        from types import SimpleNamespace
+        return SimpleNamespace(toast=lambda msg, **kw: toasts.append(msg))
+
+    def test_quiet_suppresses_no_result_toast(self, tmp_path):
+        from files.related_image import get_downstream_related_images
+        toasts = []
+        result = get_downstream_related_images(
+            str(tmp_path / "absent_source.png"), str(tmp_path),
+            self._app_actions(toasts), force_refresh=True, quiet=True,
+        )
+        assert result is None
+        assert toasts == []
+
+    def test_default_still_toasts(self, tmp_path):
+        from files.related_image import get_downstream_related_images
+        toasts = []
+        result = get_downstream_related_images(
+            str(tmp_path / "absent_source.png"), str(tmp_path),
+            self._app_actions(toasts), force_refresh=True,
+        )
+        assert result is None
+        assert len(toasts) == 1
+
+    def test_quiet_suppresses_found_toast(self, tmp_path):
+        from files.related_image import get_downstream_related_images
+        source = str(tmp_path / "src.png")
+        derived = str(tmp_path / "derived.png")
+        _make_png(source)
+        _make_png(derived, related_image=source)
+        toasts = []
+        result = get_downstream_related_images(
+            source, str(tmp_path),
+            self._app_actions(toasts), force_refresh=True, quiet=True,
+        )
+        assert result == [derived]
+        assert toasts == []

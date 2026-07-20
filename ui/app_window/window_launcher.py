@@ -111,6 +111,15 @@ class WindowLauncher:
         except Exception as e:
             self._handle_error(e, "Favorites Window Error")
 
+    def open_related_images_window(self, event=None) -> None:
+        """Open the related images actions window."""
+        try:
+            from ui.files.related_images_window_qt import RelatedImagesWindow
+            window = RelatedImagesWindow(self._app)
+            window.show()
+        except Exception as e:
+            self._handle_error(e, "Related Images Window Error")
+
     def open_directory_notes_window(self, event=None) -> None:
         """Open the directory notes window for the current base directory."""
         try:

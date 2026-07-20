@@ -360,6 +360,13 @@ class FileMarksController:
     # ==================================================================
     # Related media / downstream marks
     # ==================================================================
+    def _notify_related_result(self, message: str, action_label: str, **data) -> None:
+        """Surface a related-image action outcome to the related images
+        window's result area (no-op when it isn't open)."""
+        self._app.app_actions.notify_related_images_result(
+            message, action_label=action_label, data=data or None
+        )
+
     @require_password(ProtectedActions.VIEW_MEDIA_DETAILS)
     def set_marks_from_downstream_related_images(
         self,
@@ -403,11 +410,105 @@ class FileMarksController:
             ):
                 return
             MarkedFiles.file_marks = downstream_related_images
-            self._app.notification_ctrl.toast(
-                _("{0} file marks set").format(len(downstream_related_images))
+            message = _("{0} file marks set").format(len(downstream_related_images))
+            self._app.notification_ctrl.toast(message)
+            self._notify_related_result(
+                message, _("Set marks from downstream images"),
+                found=len(downstream_related_images), base_dir=base_dir,
             )
             window.file_marks_ctrl.go_to_mark()
             window.media_frame.setFocus()
+        else:
+            self._notify_related_result(
+                _("No downstream related images found in") + f"\n{base_dir}",
+                _("Set marks from downstream images"),
+                found=0, base_dir=base_dir,
+            )
+
+    @require_password(ProtectedActions.VIEW_MEDIA_DETAILS)
+    def set_marks_from_downstream_related_images_all_windows(self, event=None) -> None:
+        """Set marks from downstream related images across all open windows.
+
+        Multi-target generalization of set_marks_from_downstream_related_images:
+        every open window's base directory (current window included,
+        de-duplicated) is searched and the results are unioned. Oversized
+        unconfirmed directories are skipped with a note in the summary rather
+        than aborting the whole search.
+        """
+        from ui.app_window.window_manager import WindowManager
+
+        media_to_use = (
+            self._app.media_path
+            if len(MarkedFiles.file_marks) != 1
+            else MarkedFiles.file_marks[0]
+        )
+        if not media_to_use:
+            self._app.notification_ctrl.toast(_("No active media to search from."))
+            return
+
+        searched_dirs: list[str] = []
+        skipped_dirs: list[str] = []
+        seen_dirs: set = set()
+        found: list[str] = []
+        seen_files: set = set()
+        first_owner_window = None
+        for window in WindowManager.get_open_windows():
+            base_dir = getattr(window, "base_dir", None)
+            if not base_dir or not os.path.isdir(base_dir):
+                continue
+            norm_dir = os.path.normpath(os.path.abspath(base_dir))
+            if norm_dir in seen_dirs:
+                continue
+            seen_dirs.add(norm_dir)
+            # Same size condition as check_many_files, but non-interactive:
+            # skip-with-note instead of prompting/aborting per window.
+            if (not window.file_browser.has_confirmed_dir()
+                    and window.file_browser.is_slow_total_files(threshold=2000)):
+                skipped_dirs.append(base_dir)
+                continue
+            downstream = get_downstream_related_images(
+                media_to_use, base_dir, self._app.app_actions,
+                force_refresh=True, quiet=True,
+            )
+            searched_dirs.append(base_dir)
+            for f in downstream or []:
+                if f not in seen_files:
+                    seen_files.add(f)
+                    found.append(f)
+            if downstream and first_owner_window is None:
+                first_owner_window = window
+
+        if not found:
+            message = _("No downstream related images found across {0} open window(s).").format(
+                len(searched_dirs))
+            if skipped_dirs:
+                message += "\n" + _("Skipped {0} large unconfirmed director(ies).").format(
+                    len(skipped_dirs))
+            self._app.notification_ctrl.toast(message)
+            self._notify_related_result(
+                message, _("Search all open windows"),
+                found=0, searched_dirs=searched_dirs, skipped_dirs=skipped_dirs,
+            )
+            return
+
+        if not MarkedFiles.guard_mark_mutation(
+            self._app.app_actions, _("Set marks from related media (all windows)")
+        ):
+            return
+        MarkedFiles.file_marks = found
+        summary = _("{0} file marks set from {1} window(s)").format(
+            len(found), len(searched_dirs))
+        if skipped_dirs:
+            summary += "\n" + _("Skipped {0} large unconfirmed director(ies).").format(
+                len(skipped_dirs))
+        self._app.notification_ctrl.toast(summary)
+        self._notify_related_result(
+            summary, _("Search all open windows"),
+            found=len(found), searched_dirs=searched_dirs, skipped_dirs=skipped_dirs,
+        )
+        if first_owner_window is not None:
+            first_owner_window.file_marks_ctrl.go_to_mark()
+            first_owner_window.media_frame.setFocus()
 
     @require_password(ProtectedActions.VIEW_MEDIA_DETAILS)
     def mark_sources_with_downstream_in_dir(
@@ -432,9 +533,10 @@ class FileMarksController:
         sources = get_sources_with_downstream_in_dir(source_paths, base_dir)
 
         if not sources:
-            self._app.notification_ctrl.toast(
-                _("No source files with downstream images found in\n{0}").format(base_dir)
-            )
+            message = _("No source files with downstream images found in\n{0}").format(base_dir)
+            self._app.notification_ctrl.toast(message)
+            self._notify_related_result(
+                message, _("Mark sources with downstream"), found=0, base_dir=base_dir)
             return
 
         if not MarkedFiles.guard_mark_mutation(
@@ -443,9 +545,11 @@ class FileMarksController:
             return
 
         MarkedFiles.file_marks = sources
-        self._app.notification_ctrl.toast(
-            _("{0} source file(s) marked").format(len(sources))
-        )
+        message = _("{0} source file(s) marked").format(len(sources))
+        self._app.notification_ctrl.toast(message)
+        self._notify_related_result(
+            message, _("Mark sources with downstream"),
+            found=len(sources), base_dir=base_dir)
         self.go_to_mark()
         self._app.media_frame.setFocus()
 
@@ -473,9 +577,10 @@ class FileMarksController:
         downstream = get_downstream_files_for_sources(source_paths, base_dir)
 
         if not downstream:
-            self._app.notification_ctrl.toast(
-                _("No downstream files found in\n{0}").format(base_dir)
-            )
+            message = _("No downstream files found in\n{0}").format(base_dir)
+            self._app.notification_ctrl.toast(message)
+            self._notify_related_result(
+                message, _("Mark downstream files"), found=0, base_dir=base_dir)
             return
 
         if not MarkedFiles.guard_mark_mutation(
@@ -484,9 +589,11 @@ class FileMarksController:
             return
 
         MarkedFiles.file_marks = downstream
-        self._app.notification_ctrl.toast(
-            _("{0} downstream file(s) marked").format(len(downstream))
-        )
+        message = _("{0} downstream file(s) marked").format(len(downstream))
+        self._app.notification_ctrl.toast(message)
+        self._notify_related_result(
+            message, _("Mark downstream files"),
+            found=len(downstream), base_dir=base_dir)
         window = WindowManager.get_window(base_dir=base_dir)
         if window is not None:
             window.file_marks_ctrl.go_to_mark()

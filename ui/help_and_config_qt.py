@@ -165,7 +165,8 @@ class HelpAndConfig(SmartDialog):
             "Ctrl+D": _("Set current marks from previous marks list"),
             "Shift+Y": _("Set marks from downstream related images"),
             "Ctrl+Y": _("Mark sources with downstream files in current directory"),
-            "Ctrl+Shift+Y": _("Mark all downstream files in current directory"),
+            "Ctrl+Shift+Y": _("Open related images window (includes mark-all-downstream action)"),
+            "Alt+Y": _("Set marks from downstream related images in all open windows"),
             "0-9": _("Run hotkey marks action"),
             "Shift+0-9": _("Run hotkey marks action (shift variant)"),
         }, col_0_width)

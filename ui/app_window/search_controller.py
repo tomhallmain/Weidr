@@ -637,9 +637,17 @@ class SearchController:
         if next_related_image is not None:
             window.media_navigator.go_to_file(search_text=next_related_image)
             window.media_frame.setFocus()
+            self._app.app_actions.notify_related_images_result(
+                _("Navigated to {0}").format(os.path.basename(next_related_image)),
+                action_label=_("Next downstream image"),
+                data={"path": next_related_image, "base_dir": base_dir},
+            )
         else:
-            self._app.notification_ctrl.toast(
-                _("No downstream related image(s) found in {0}").format(base_dir)
+            message = _("No downstream related image(s) found in {0}").format(base_dir)
+            self._app.notification_ctrl.toast(message)
+            self._app.app_actions.notify_related_images_result(
+                message, action_label=_("Next downstream image"),
+                data={"base_dir": base_dir},
             )
 
     # ==================================================================

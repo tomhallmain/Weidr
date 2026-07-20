@@ -244,7 +244,11 @@ def get_downstream_related_images(
     other_base_dir: str,
     app_actions,
     force_refresh: bool = False,
+    quiet: bool = False,
 ):
+    # quiet: suppress the per-directory result toasts — used by callers that
+    # search several directories in one pass and emit a single aggregate
+    # summary themselves (e.g. the all-open-windows marks search).
     global _downstream_index, _downstream_cache
     key = image_path + "/" + other_base_dir
     if force_refresh or key not in _downstream_cache:
@@ -259,9 +263,11 @@ def get_downstream_related_images(
             downstream = _downstream_cache[key]
             toast_text = _("{0} downstream image(s) found.").format(len(downstream))
     if len(downstream) == 0:
-        app_actions.toast(_("No downstream related images found in") + f"\n{other_base_dir}")
+        if not quiet:
+            app_actions.toast(_("No downstream related images found in") + f"\n{other_base_dir}")
         return None
-    app_actions.toast(toast_text)
+    if not quiet:
+        app_actions.toast(toast_text)
     return downstream
 
 

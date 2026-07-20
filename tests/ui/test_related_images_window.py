@@ -71,6 +71,15 @@ class TestRelatedImagesWindow:
         assert len(texts) == 6
         assert any("all open windows" in t.lower() for t in texts)
 
+    def test_shows_source_window_directory(self, window_with_dir, qtbot):
+        """The opener's directory is displayed — that window's current media
+        is what every action sources from."""
+        win, media_dir = window_with_dir
+        rw = _open_window(win, qtbot)
+        text = rw._source_label.text()
+        rw.close()
+        assert media_dir in text
+
     def test_result_area_shows_reported_results(self, window_with_dir, qtbot):
         win, _ = window_with_dir
         rw = _open_window(win, qtbot)
@@ -172,6 +181,13 @@ class TestAllWindowsDownstreamSearch:
         assert "2 window(s)" in message
         assert data["found"] == 3
         assert data["skipped_dirs"] == []
+        # Per-directory breakdown: post-dedup contributions sum to the total
+        # ("/x/b.png" counts for the first directory that yielded it).
+        assert data["found_by_dir"] == {media_dir: 2, other_dir: 1}
+        assert ": 2" in message and ": 1" in message
+        # The source image that started the search is reported.
+        assert data["source"] == win.media_path
+        assert os.path.basename(win.media_path) in message
 
     def test_oversized_window_skipped_not_fatal(
         self, window_with_dir, qtbot, tmp_path
@@ -182,10 +198,14 @@ class TestAllWindowsDownstreamSearch:
         fake2 = self._fake_secondary_window(other_dir, slow=True)
         toasts: list = []
         queried: list = []
+        reports: list = []
 
         def _fake_get(media, base_dir, aa, force_refresh=False, quiet=False):
             queried.append(base_dir)
             return {media_dir: ["/x/a.png"]}.get(base_dir)
+
+        def _capture(message, action_label, data):
+            reports.append(data)
 
         with pytest.MonkeyPatch.context() as mp:
             self._prepare(
@@ -196,14 +216,23 @@ class TestAllWindowsDownstreamSearch:
                 _fake_get,
             )
             mp.setattr(win.file_marks_ctrl, "go_to_mark", lambda: None)
-
-            win.file_marks_ctrl.set_marks_from_downstream_related_images_all_windows()
+            win.app_actions.related_images_signals().result.connect(_capture)
+            try:
+                win.file_marks_ctrl.set_marks_from_downstream_related_images_all_windows()
+            finally:
+                win.app_actions.related_images_signals().result.disconnect(_capture)
 
         marks = MarkedFiles.file_marks[:]
         MarkedFiles.file_marks = []  # don't leak fake paths into teardown
         assert other_dir not in queried
         assert marks == ["/x/a.png"]
         assert any("Skipped" in t for t in toasts)
+        # Breakdown: a skipped directory is absent from found_by_dir entirely
+        # (0 would mean "searched, nothing found"), and appears in skipped_dirs.
+        assert len(reports) == 1
+        assert reports[0]["found_by_dir"] == {media_dir: 1}
+        assert reports[0]["skipped_dirs"] == [other_dir]
+        assert reports[0]["source"] == win.media_path
 
     def test_no_results_leaves_marks_unchanged(self, window_with_dir, qtbot):
         win, media_dir = window_with_dir

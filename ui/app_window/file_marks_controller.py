@@ -450,6 +450,9 @@ class FileMarksController:
         skipped_dirs: list[str] = []
         seen_dirs: set = set()
         found: list[str] = []
+        # Post-dedup contribution per directory, so per-dir counts sum to
+        # len(found) even when the same file is reachable from two windows.
+        found_by_dir: dict[str, int] = {}
         seen_files: set = set()
         first_owner_window = None
         for window in WindowManager.get_open_windows():
@@ -471,23 +474,28 @@ class FileMarksController:
                 force_refresh=True, quiet=True,
             )
             searched_dirs.append(base_dir)
+            new_in_dir = 0
             for f in downstream or []:
                 if f not in seen_files:
                     seen_files.add(f)
                     found.append(f)
+                    new_in_dir += 1
+            found_by_dir[base_dir] = new_in_dir
             if downstream and first_owner_window is None:
                 first_owner_window = window
 
         if not found:
             message = _("No downstream related images found across {0} open window(s).").format(
                 len(searched_dirs))
+            message += "\n" + _("Source: {0}").format(os.path.basename(media_to_use))
             if skipped_dirs:
                 message += "\n" + _("Skipped {0} large unconfirmed director(ies).").format(
                     len(skipped_dirs))
             self._app.notification_ctrl.toast(message)
             self._notify_related_result(
                 message, _("Search all open windows"),
-                found=0, searched_dirs=searched_dirs, skipped_dirs=skipped_dirs,
+                found=0, source=media_to_use,
+                searched_dirs=searched_dirs, skipped_dirs=skipped_dirs,
             )
             return
 
@@ -498,13 +506,19 @@ class FileMarksController:
         MarkedFiles.file_marks = found
         summary = _("{0} file marks set from {1} window(s)").format(
             len(found), len(searched_dirs))
+        summary += "\n" + _("Source: {0}").format(os.path.basename(media_to_use))
+        for directory, count in found_by_dir.items():
+            summary += "\n  {0}: {1}".format(
+                Utils.get_relative_dirpath(directory, levels=2), count)
         if skipped_dirs:
             summary += "\n" + _("Skipped {0} large unconfirmed director(ies).").format(
                 len(skipped_dirs))
         self._app.notification_ctrl.toast(summary)
         self._notify_related_result(
             summary, _("Search all open windows"),
-            found=len(found), searched_dirs=searched_dirs, skipped_dirs=skipped_dirs,
+            found=len(found), source=media_to_use,
+            searched_dirs=searched_dirs, skipped_dirs=skipped_dirs,
+            found_by_dir=found_by_dir,
         )
         if first_owner_window is not None:
             first_owner_window.file_marks_ctrl.go_to_mark()

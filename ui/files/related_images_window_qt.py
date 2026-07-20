@@ -64,6 +64,20 @@ class RelatedImagesWindow(SmartDialog):
         )
         outer.addWidget(header)
 
+        # The window that opened this dialog is where "current media" comes
+        # from for every action below — name its directory so that's never
+        # ambiguous when several windows are open. get_base_dir is a required
+        # AppActions action, so this is the stable API for it.
+        source_dir = app_window.app_actions.get_base_dir() or _("(no directory)")
+        self._source_label = QLabel(_("Current media source: {0}").format(source_dir))
+        self._source_label.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
+        self._source_label.setWordWrap(True)
+        self._source_label.setToolTip(
+            _("Actions in this window use the current media of the window "
+              "that opened it.")
+        )
+        outer.addWidget(self._source_label)
+
         app = self._app
         actions = [
             (_("View related image"), "Shift+R",

@@ -42,3 +42,17 @@ class HangingVlcPlayer:
 
     def __getattr__(self, name):
         return getattr(self._real, name)
+
+
+def isolated_app_info_cache():
+    """Return the per-test isolated app_info_cache instance.
+
+    The autouse isolated_singletons fixture (tests/conftest.py) installs a
+    fresh AppInfoCache as utils.app_info_cache.app_info_cache for each test.
+    Looking the attribute up at call time yields that isolated instance — the
+    same one production code reaches via deferred imports. A module-level
+    `from utils.app_info_cache import app_info_cache` in a test file would
+    instead bind the pre-isolation original and read stale state.
+    """
+    import utils.app_info_cache as aic
+    return aic.app_info_cache

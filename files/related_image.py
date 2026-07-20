@@ -160,6 +160,42 @@ def get_origin_basename(entry, basename_lookup: dict, visited: set = None) -> st
     return entry.basename
 
 
+def _find_same_directory_related_alias(image_path: str, related_image_path: str) -> str | None:
+    """Rescue a stale related-image pointer whose path prefix moved.
+
+    When an external drive's letter changes (D:\\ -> F:\\) or an ancestor
+    directory is renamed/moved, the stored pointer no longer exists on disk —
+    but the source image often sits right next to the image that references
+    it. If the trailing directory components of the pointer's directory and
+    of image_path's own directory agree (up to two levels, drive/root
+    excluded, case-insensitive), look for the pointer's basename beside
+    image_path and treat a hit as a valid match. The tail-agreement guard
+    keeps a coincidental same-named neighbor from being claimed when the
+    pointer clearly referenced an unrelated location.
+    """
+    image_dir = os.path.dirname(os.path.abspath(image_path))
+    pointer_dir = os.path.dirname(related_image_path)
+    if not pointer_dir:
+        return None
+
+    def _tail_parts(directory: str) -> list[str]:
+        tail = os.path.splitdrive(os.path.normpath(directory))[1]
+        return [p.lower() for p in tail.replace("\\", "/").split("/") if p]
+
+    image_parts = _tail_parts(image_dir)
+    pointer_parts = _tail_parts(pointer_dir)
+    n = min(2, len(image_parts), len(pointer_parts))
+    if n == 0 or image_parts[-n:] != pointer_parts[-n:]:
+        return None
+    candidate = os.path.join(image_dir, os.path.basename(related_image_path))
+    if os.path.normcase(os.path.normpath(candidate)) == os.path.normcase(
+            os.path.normpath(os.path.abspath(image_path))):
+        return None  # an image is not its own related image
+    if not os.path.isfile(candidate):
+        return None
+    return candidate
+
+
 def get_related_image_path(
     image_path: str,
     node_id: str = "LoadImage",
@@ -178,6 +214,17 @@ def get_related_image_path(
     elif check_extra_directories is None:
         return related_image_path, False
     elif not os.path.isfile(related_image_path):
+        # Cheap rescue first, and before the check_extra_directories=False
+        # early-out so the media details display benefits too: a pointer left
+        # stale by a drive-letter change or directory move often refers to a
+        # file sitting right beside the image.
+        same_dir_alias = _find_same_directory_related_alias(image_path, related_image_path)
+        if same_dir_alias is not None:
+            logger.info(
+                f"{image_path} - Stale related image pointer {related_image_path} "
+                f"resolved beside the image as {same_dir_alias}"
+            )
+            return same_dir_alias, True
         if not check_extra_directories:
             return related_image_path, False
         logger.info(f"{image_path} - Related image {related_image_path} not found")

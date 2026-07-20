@@ -126,6 +126,11 @@ class RelatedImagesWindow(SmartDialog):
     # ------------------------------------------------------------------
     # Result reporting
     # ------------------------------------------------------------------
+    # TODO: only the all-windows search currently reports rich payload data
+    # (found_by_dir, source, skipped_dirs); the other related-image actions
+    # report message text with minimal data. Add richer report data from
+    # those methods and render the involved payloads here (e.g. expandable
+    # per-directory rows) instead of message text only.
 
     def _on_result(self, message: str, action_label=None, data=None) -> None:
         """Append an action outcome to the rolling result area.

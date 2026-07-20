@@ -356,6 +356,82 @@ class TestGetDownstreamFilesForSources:
 
 
 # ---------------------------------------------------------------------------
+# Same-directory rescue of stale related-image pointers
+# ---------------------------------------------------------------------------
+
+class TestSameDirectoryPointerRescue:
+    """A pointer left stale by a drive-letter change (D:\\ -> F:\\) or a
+    directory move must resolve to the same-named file sitting beside the
+    image that references it — when the trailing directory components of
+    both locations agree — instead of reporting no exact match."""
+
+    def _make_pair(self, tmp_path, pointer):
+        sub = tmp_path / "media" / "pics"
+        sub.mkdir(parents=True, exist_ok=True)
+        source = str(sub / "source_image.png")
+        derived = str(sub / "derived.png")
+        _make_png(source)
+        _make_png(derived, related_image=pointer)
+        return source, derived
+
+    def test_stale_pointer_with_matching_tail_resolves_beside_image(self, tmp_path):
+        # Same trailing components (media/pics), nonexistent prefix — the
+        # drive-migration / moved-ancestor shape.
+        stale = str(tmp_path / "GONE_DRIVE" / "media" / "pics" / "source_image.png")
+        source, derived = self._make_pair(tmp_path, stale)
+        related, found = get_related_image_path(derived, check_extra_directories=False)
+        assert found is True
+        assert os.path.normpath(related) == os.path.normpath(source)
+
+    def test_media_details_text_reports_rescued_match(self, tmp_path):
+        from files.related_image import get_related_image_text
+        from utils.translations import _
+        stale = str(tmp_path / "GONE_DRIVE" / "media" / "pics" / "source_image.png")
+        source, derived = self._make_pair(tmp_path, stale)
+        text = get_related_image_text(derived)
+        assert _(" (Exact Match Not Found)") not in text
+        assert os.path.normpath(text) == os.path.normpath(source)
+
+    def test_tail_mismatch_is_not_rescued(self, tmp_path):
+        # Same basename exists beside the image, but the pointer referenced
+        # clearly different parent directories — must not be claimed.
+        stale = str(tmp_path / "GONE_DRIVE" / "other" / "place" / "source_image.png")
+        _source, derived = self._make_pair(tmp_path, stale)
+        related, found = get_related_image_path(derived, check_extra_directories=False)
+        assert found is False
+        assert related == stale
+
+    def test_missing_neighbor_is_not_rescued(self, tmp_path):
+        # Tail matches but no same-named file exists beside the image.
+        stale = str(tmp_path / "GONE_DRIVE" / "media" / "pics" / "never_existed.png")
+        _source, derived = self._make_pair(tmp_path, stale)
+        related, found = get_related_image_path(derived, check_extra_directories=False)
+        assert found is False
+        assert related == stale
+
+    def test_pointer_to_own_basename_is_not_rescued(self, tmp_path):
+        # A file must not be claimed as its own related image.
+        stale = str(tmp_path / "GONE_DRIVE" / "media" / "pics" / "derived.png")
+        _source, derived = self._make_pair(tmp_path, stale)
+        related, found = get_related_image_path(derived, check_extra_directories=False)
+        assert found is False
+        assert related == stale
+
+    def test_valid_pointer_unaffected(self, tmp_path):
+        # Existing behavior pinned: a pointer that exists on disk resolves
+        # directly, no rescue involved.
+        sub = tmp_path / "media" / "pics"
+        sub.mkdir(parents=True, exist_ok=True)
+        source = str(sub / "source_image.png")
+        derived = str(sub / "derived.png")
+        _make_png(source)
+        _make_png(derived, related_image=source)
+        related, found = get_related_image_path(derived, check_extra_directories=False)
+        assert found is True
+        assert related == source
+
+
+# ---------------------------------------------------------------------------
 # get_downstream_related_images — quiet flag
 # ---------------------------------------------------------------------------
 

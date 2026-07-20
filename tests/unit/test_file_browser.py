@@ -327,3 +327,53 @@ class TestFileBrowserSortRelatedImage:
         names = [os.path.basename(p) for p in fb.get_files()]
         # Descending basename puts "media.png" first.
         assert names == ["media.png", "cover.png"]
+
+
+class TestIncrementalSeedAlias:
+    """find() must resolve the incremental-load seed path after a full refresh
+    replaced its verbatim string form with scandir's entry.path form.
+
+    Regression: Backspace right after an incremental load opened the previous
+    media in a temp canvas because find(prev_media_path, exact_match=True)
+    string-missed the same file (seed form was e.g. base_dir + "/" + basename
+    while the regathered list holds scandir-form paths).
+    """
+
+    def _browser_with_alias_seed(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(config, "file_types", [".png"])
+        _make_png(tmp_path / "aaa.png")
+        _make_png(tmp_path / "bbb.png")
+        _make_png(tmp_path / "ccc.png")
+        fb = FileBrowser(str(tmp_path), recursive=False)
+        fb.set_directory(str(tmp_path))
+        # Seed form differs from the canonical list entries (doubled
+        # separator, as produced by naive base_dir + "/" + basename joins).
+        alias = str(tmp_path) + os.sep + os.sep + "bbb.png"
+        fb._incremental_seed_path = alias
+        return fb, alias
+
+    def test_seed_alias_resolves_to_canonical_path(self, tmp_path, monkeypatch):
+        fb, alias = self._browser_with_alias_seed(tmp_path, monkeypatch)
+        files = fb.get_files()
+        assert alias not in files  # exact string match would miss
+        found = fb.find(search_text=alias, exact_match=True)
+        assert found is not None
+        assert found in files
+        assert os.path.basename(found) == "bbb.png"
+        assert fb.file_cursor == files.index(found)
+
+    def test_non_seed_full_path_miss_still_returns_none(self, tmp_path, monkeypatch):
+        """Scoping: an arbitrary not-found path must not trigger the scan."""
+        fb, _alias = self._browser_with_alias_seed(tmp_path, monkeypatch)
+        missing = str(tmp_path) + os.sep + os.sep + "aaa.png"  # aliased, but not the seed
+        assert fb.find(search_text=missing, exact_match=True) is None
+
+    def test_no_seed_recorded_returns_none(self, tmp_path, monkeypatch):
+        fb, alias = self._browser_with_alias_seed(tmp_path, monkeypatch)
+        fb._incremental_seed_path = None
+        assert fb.find(search_text=alias, exact_match=True) is None
+
+    def test_exact_form_match_still_works_without_scan(self, tmp_path, monkeypatch):
+        fb, _alias = self._browser_with_alias_seed(tmp_path, monkeypatch)
+        files = fb.get_files()
+        assert fb.find(search_text=files[0], exact_match=True) == files[0]

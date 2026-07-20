@@ -46,6 +46,11 @@ class FileBrowser:
         # One-shot arming: incremental loading should run after explicit
         # directory/recurse changes, not on every later refresh.
         self._incremental_refresh_armed = False
+        # The preferred-file path seeded verbatim into the last incremental
+        # load, if any. Its string form may differ from the scandir-produced
+        # entries (see _find_incremental_seed_alias); remembered so find()
+        # can resolve it after a full refresh replaces it.
+        self._incremental_seed_path: Optional[str] = None
         self._is_external_drive_directory = Utils.is_external_drive(self.directory)
 
     def has_files(self) -> bool:
@@ -323,7 +328,7 @@ class FileBrowser:
                 logger.debug(f"Index of {search_text}: {self.file_cursor}")
             return files[self.file_cursor]
         if exact_match and closest_sort_by is None:
-            return None
+            return self._find_incremental_seed_alias(search_text, files)
         search_text = search_text.lower()
         # If that fails, match string to the start of file name
         for i in range(len(filenames)):
@@ -346,6 +351,33 @@ class FileBrowser:
         if closest_sort_by is not None and len(files) > 0:
             return self._find_closest_file_by_position(search_text, files, closest_sort_by)
         
+        return None
+
+    def _find_incremental_seed_alias(self, search_text: str, files: List[str]) -> Optional[str]:
+        """Resolve a full-path search that misses only because of a string-form
+        mismatch with the last incremental-load seed.
+
+        The preferred-file seed is inserted into the file list verbatim (e.g.
+        ``base_dir + "/" + basename`` from Utils.get_valid_file) and gets
+        displayed, so media/prev-media paths can hold that form; a later full
+        refresh rebuilds the list purely from scandir's entry.path form, and
+        exact string matching then fails for the same file (Backspace after an
+        incremental load opening a temp canvas instead of navigating).
+
+        Deliberately scoped for large directories: unless *search_text* is
+        that one seed path (a single normpath comparison), this does nothing —
+        genuine not-found lookups don't pay an O(n) normalized scan.
+        """
+        seed = self._incremental_seed_path
+        if not seed:
+            return None
+        target = os.path.normcase(os.path.normpath(search_text))
+        if target != os.path.normcase(os.path.normpath(seed)):
+            return None
+        for i, f in enumerate(files):
+            if os.path.normcase(os.path.normpath(f)) == target:
+                self.file_cursor = i
+                return f
         return None
 
     def _find_closest_file_by_position(self, search_text: str, files: List[str], closest_sort_by: SortBy) -> Optional[str]:
@@ -736,6 +768,7 @@ class FileBrowser:
 
         seed = self._preferred_initial_file
         self._preferred_initial_file = None
+        self._incremental_seed_path = None
         if seed and os.path.isfile(seed):
             ext = os.path.splitext(seed)[1].lower()
             if ext in set(config.file_types):
@@ -743,6 +776,7 @@ class FileBrowser:
                 self._files_cache[seed] = sf
                 self._files = [sf]
                 self.filepaths = self.get_sorted_files(list(self._files))
+                self._incremental_seed_path = seed
 
         thread = threading.Thread(
             target=self._incremental_load_worker,
@@ -765,6 +799,13 @@ class FileBrowser:
         batch: List[str] = []
         to_scan = [self.directory]
         seen_paths = set(self.filepaths)
+        # The seed path was inserted verbatim and may differ in string form
+        # from scandir's entry.path for the same file; compare normalized so
+        # the seed file isn't added a second time. Basename pre-check keeps
+        # the normpath cost off the common per-file path.
+        seed = self._incremental_seed_path
+        seed_basename = os.path.basename(seed) if seed else None
+        norm_seed = os.path.normcase(os.path.normpath(seed)) if seed else None
         stop_event = self._incremental_stop_event
         while to_scan and not stop_event.is_set():
             current_dir = to_scan.pop()
@@ -779,6 +820,10 @@ class FileBrowser:
                         elif entry.is_file(follow_symlinks=False):
                             ext = os.path.splitext(entry.name)[1].lower()
                             if ext in allowed_extensions and entry.path not in seen_paths:
+                                if (seed_basename is not None
+                                        and entry.name == seed_basename
+                                        and os.path.normcase(os.path.normpath(entry.path)) == norm_seed):
+                                    continue
                                 batch.append(entry.path)
                                 seen_paths.add(entry.path)
                                 self._incremental_files_discovered += 1

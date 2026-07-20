@@ -755,13 +755,13 @@ class TestLastActionPersistence:
 
     def test_restore_finds_classifier_action_by_name(self):
         """Persisted name resolves to the matching ClassifierAction object."""
-        from utils.app_info_cache import app_info_cache
+        from tests.helpers import isolated_app_info_cache
 
         ca = _action(name="my_seek_action")
         old = ClassifierActionsManager.classifier_actions[:]
         ClassifierActionsManager.classifier_actions = [ca]
         try:
-            app_info_cache.set_meta(_LAST_ACTION_CACHE_KEY, "my_seek_action")
+            isolated_app_info_cache().set_meta(_LAST_ACTION_CACHE_KEY, "my_seek_action")
             result = SeekToTriggerTab._restore_last_action_from_cache()
             assert result is ca
         finally:
@@ -769,14 +769,14 @@ class TestLastActionPersistence:
 
     def test_restore_finds_prevalidation_by_name(self):
         """Persisted name also searches prevalidations, not just classifier actions."""
-        from utils.app_info_cache import app_info_cache
+        from tests.helpers import isolated_app_info_cache
         from compare.classifier_action import Prevalidation
 
         pv = Prevalidation(name="my_preval", action=ClassifierActionType.HIDE, use_embedding=False)
         old_pv = ClassifierActionsManager.prevalidations[:]
         ClassifierActionsManager.prevalidations = [pv]
         try:
-            app_info_cache.set_meta(_LAST_ACTION_CACHE_KEY, "my_preval")
+            isolated_app_info_cache().set_meta(_LAST_ACTION_CACHE_KEY, "my_preval")
             result = SeekToTriggerTab._restore_last_action_from_cache()
             assert result is pv
         finally:
@@ -784,12 +784,12 @@ class TestLastActionPersistence:
 
     def test_restore_returns_none_when_name_absent_from_managers(self):
         """Returns None gracefully when the cached name no longer matches any action."""
-        from utils.app_info_cache import app_info_cache
+        from tests.helpers import isolated_app_info_cache
 
         old = ClassifierActionsManager.classifier_actions[:]
         ClassifierActionsManager.classifier_actions = []
         try:
-            app_info_cache.set_meta(_LAST_ACTION_CACHE_KEY, "deleted_action")
+            isolated_app_info_cache().set_meta(_LAST_ACTION_CACHE_KEY, "deleted_action")
             result = SeekToTriggerTab._restore_last_action_from_cache()
             assert result is None
         finally:
@@ -805,13 +805,13 @@ class TestLastActionPersistence:
     def test_headless_run_restores_action_from_cache_on_fresh_session(self):
         """With _last_action=None, run_last_seek_to_trigger restores from cache
         and warms _last_action for subsequent in-session calls."""
-        from utils.app_info_cache import app_info_cache
+        from tests.helpers import isolated_app_info_cache
 
         ca = _action(name="cached_action")
         old = ClassifierActionsManager.classifier_actions[:]
         ClassifierActionsManager.classifier_actions = [ca]
         try:
-            app_info_cache.set_meta(_LAST_ACTION_CACHE_KEY, "cached_action")
+            isolated_app_info_cache().set_meta(_LAST_ACTION_CACHE_KEY, "cached_action")
 
             toasts = []
 

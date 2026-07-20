@@ -6,7 +6,7 @@ import pytest
 from PySide6.QtWidgets import QApplication, QLabel
 
 from ui.files.type_configuration_window_qt import TypeConfigurationWindow
-from utils.app_info_cache import app_info_cache
+from tests.helpers import isolated_app_info_cache
 from utils.config import config
 from utils.constants import CompareMediaType
 from utils.translations import _
@@ -40,7 +40,7 @@ def _type_configuration_cleanup():
 
 class TestTypeConfigurationPersistence:
     def test_load_pending_changes_reads_cache(self):
-        app_info_cache.set_meta(
+        isolated_app_info_cache().set_meta(
             "file_type_configuration",
             {"AUDIO": False, "VIDEO": True},
         )
@@ -57,7 +57,7 @@ class TestTypeConfigurationPersistence:
             CompareMediaType.AUDIO: False,
         }
         TypeConfigurationWindow.save_pending_changes()
-        stored = app_info_cache.get_meta("file_type_configuration", default_val={})
+        stored = isolated_app_info_cache().get_meta("file_type_configuration", default_val={})
         assert stored["AUDIO"] is False
         assert stored["VIDEO"] is True
 

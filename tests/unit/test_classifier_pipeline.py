@@ -530,7 +530,7 @@ class TestClassifierPipelinesStorage:
 
     def test_corrupt_entry_skipped(self, monkeypatch):
         """A bad cache entry should be skipped, not crash the load."""
-        from utils import app_info_cache as aic
+        from tests.helpers import isolated_app_info_cache
         # A node with an unknown condition_type causes _condition_from_dict to raise
         # ValueError, which load() catches and skips.
         bad_node = {
@@ -544,7 +544,7 @@ class TestClassifierPipelinesStorage:
             {"name": "bad", "nodes": [bad_node], "is_active": True},
         ]
         monkeypatch.setattr(
-            aic.app_info_cache, "get_meta",
+            isolated_app_info_cache(), "get_meta",
             lambda key, default_val=None: raw if key == "classifier_pipelines" else default_val,
         )
         ClassifierPipelines.load()

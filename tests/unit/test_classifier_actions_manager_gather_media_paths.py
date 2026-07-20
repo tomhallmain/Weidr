@@ -11,7 +11,7 @@ in a subdirectory — see test_classifier_action_run_media_paths.py for why that
 distinction matters (MOVE actions re-nesting already-categorized files).
 """
 from compare.classifier_actions_manager import ClassifierActionsManager
-from utils.app_info_cache import app_info_cache
+from tests.helpers import isolated_app_info_cache
 from utils.config import config
 from utils.constants import SortBy
 from utils.utils import Utils
@@ -49,7 +49,7 @@ class TestSortByResolution:
     def test_uses_cached_sort_by_when_present(self, tmp_path, monkeypatch):
         directory = str(tmp_path)
         _patch_file_browser(monkeypatch)
-        app_info_cache.set(directory, "sort_by", SortBy.CREATION_TIME)
+        isolated_app_info_cache().set(directory, "sort_by", SortBy.CREATION_TIME)
 
         ClassifierActionsManager.gather_sorted_media_paths([directory])
 
@@ -68,7 +68,7 @@ class TestSortByResolution:
         directory = str(tmp_path)
         _patch_file_browser(monkeypatch)
         monkeypatch.setattr(config, "sort_by", SortBy.NAME)
-        app_info_cache.set(directory, "sort_by", "not a real sort")
+        isolated_app_info_cache().set(directory, "sort_by", "not a real sort")
 
         ClassifierActionsManager.gather_sorted_media_paths([directory])
 
@@ -77,7 +77,7 @@ class TestSortByResolution:
     def test_string_cached_sort_by_is_resolved_via_sortby_get(self, tmp_path, monkeypatch):
         directory = str(tmp_path)
         _patch_file_browser(monkeypatch)
-        app_info_cache.set(directory, "sort_by", SortBy.CREATION_TIME.value)
+        isolated_app_info_cache().set(directory, "sort_by", SortBy.CREATION_TIME.value)
 
         ClassifierActionsManager.gather_sorted_media_paths([directory])
 
@@ -89,8 +89,8 @@ class TestSortByResolution:
         dir1.mkdir()
         dir2.mkdir()
         _patch_file_browser(monkeypatch)
-        app_info_cache.set(str(dir1), "sort_by", SortBy.CREATION_TIME)
-        app_info_cache.set(str(dir2), "sort_by", SortBy.NAME_LENGTH)
+        isolated_app_info_cache().set(str(dir1), "sort_by", SortBy.CREATION_TIME)
+        isolated_app_info_cache().set(str(dir2), "sort_by", SortBy.NAME_LENGTH)
 
         ClassifierActionsManager.gather_sorted_media_paths([str(dir1), str(dir2)])
 

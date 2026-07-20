@@ -50,6 +50,27 @@ atexit.register(shutil.rmtree, _bootstrap_tmp, True)
 import pytest
 
 
+def repoint_singleton_bindings(monkeypatch, attr_name, old_obj, new_obj):
+    """Repoint every imported module's module-level binding of *old_obj* to
+    *new_obj* (undone automatically by monkeypatch at test teardown).
+
+    Modules that do e.g. `from utils.app_info_cache import app_info_cache` at
+    module level hold their own reference to the singleton, so patching only
+    the source module leaves those bindings stale — historically handled by a
+    per-module patch list that had to be extended every time a new module
+    adopted the import style. Sweeping sys.modules retires that whack-a-mole:
+    the identity comparison guarantees only bindings to the exact old object
+    are touched, and modules imported later get the new object naturally via
+    the patched source module.
+    """
+    for module in list(sys.modules.values()):
+        try:
+            if getattr(module, attr_name, None) is old_obj:
+                monkeypatch.setattr(module, attr_name, new_obj)
+        except Exception:
+            continue
+
+
 @pytest.fixture(autouse=True)
 def isolated_singletons(tmp_path, monkeypatch):
     """Re-initialise the app_info_cache and config singletons for each test,
@@ -73,57 +94,20 @@ def isolated_singletons(tmp_path, monkeypatch):
     import utils.app_info_cache as aic
     import utils.config as cfg
 
+    old_cache = aic.app_info_cache
     new_cache = aic.AppInfoCache()
-    monkeypatch.setattr(aic, "app_info_cache", new_cache)
-
-    # cache_controller.py holds a module-level `from utils.app_info_cache import
-    # app_info_cache` that bypasses the monkeypatch above.  Patch it directly so
-    # AppWindow.__init__ reads from the fresh per-test cache, not a stale one.
-    try:
-        import ui.app_window.cache_controller as _cc
-        monkeypatch.setattr(_cc, "app_info_cache", new_cache)
-    except Exception:
-        pass
-
-    try:
-        import files.file_action as _fa
-        monkeypatch.setattr(_fa, "app_info_cache", new_cache)
-    except Exception:
-        pass
-
-    try:
-        import compare.classifier_pipeline as _cp
-        monkeypatch.setattr(_cp, "app_info_cache", new_cache)
-    except Exception:
-        pass
-
-    try:
-        import ui.compare.seek_to_trigger_tab_qt as _stt
-        monkeypatch.setattr(_stt, "app_info_cache", new_cache)
-    except Exception:
-        pass
-
-    try:
-        import ui.compare.classifier_management_window_qt as _cmw
-        monkeypatch.setattr(_cmw, "app_info_cache", new_cache)
-    except Exception:
-        pass
-
-    try:
-        import ui.compare.classifier_actions_tab_qt as _cat
-        monkeypatch.setattr(_cat, "app_info_cache", new_cache)
-    except Exception:
-        pass
-
-    try:
-        import ui.compare.classifier_pipelines_tab_qt as _cpt
-        monkeypatch.setattr(_cpt, "app_info_cache", new_cache)
-    except Exception:
-        pass
+    # Repoints utils.app_info_cache itself plus every imported module holding
+    # a module-level `from utils.app_info_cache import app_info_cache` binding.
+    repoint_singleton_bindings(monkeypatch, "app_info_cache", old_cache, new_cache)
 
     # Silence startup log spam; patch before instantiation so __init__ skips the print.
     monkeypatch.setattr(cfg.Config, "print_config_settings", lambda self: None)
-    monkeypatch.setattr(cfg, "config", cfg.Config())
+    # Same sweep as the cache: repoints utils.config itself plus every module
+    # (test modules included — they hold module-level `from utils.config
+    # import config` bindings too) so tests and production agree on the fresh
+    # per-test Config instance.
+    old_config = cfg.config
+    repoint_singleton_bindings(monkeypatch, "config", old_config, cfg.Config())
 
     yield new_cache
 

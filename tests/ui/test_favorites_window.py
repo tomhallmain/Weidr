@@ -6,7 +6,7 @@ import pytest
 from PySide6.QtWidgets import QApplication, QLabel
 
 from ui.files.favorites_window_qt import FavoritesWindow
-from utils.app_info_cache import app_info_cache
+from tests.helpers import isolated_app_info_cache
 from utils.translations import _
 
 
@@ -68,7 +68,7 @@ class TestFavoritesWindow:
         win, media_dir = window_with_dir
         norm_dir = os.path.normpath(os.path.abspath(media_dir))
         media_path = os.path.normpath(win.file_browser.get_files()[0])
-        app_info_cache.set(norm_dir, "favorites", [media_path])
+        isolated_app_info_cache().set(norm_dir, "favorites", [media_path])
 
         win.window_launcher.open_favorites_window()
         qtbot.waitUntil(lambda: _find_favorites_window() is not None, timeout=5000)

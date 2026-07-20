@@ -82,9 +82,9 @@ class TestFileActionSerialization:
 
     def test_store_and_load_actions_via_app_info_cache(self):
         import files.file_action as fa_module
-        from utils import app_info_cache as aic_mod
+        from tests.helpers import isolated_app_info_cache
 
-        cache = aic_mod.app_info_cache
+        cache = isolated_app_info_cache()
         fa_module.app_info_cache = cache
 
         FileAction.action_history.clear()

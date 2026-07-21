@@ -193,6 +193,7 @@ class TestClassifierRankPanel:
         assert c.min_rank == 1
         assert c.max_rank == 1
         assert c.min_confidence == 0.0
+        assert c.negate is False
 
     def test_round_trip(self, qtbot):
         p = _ClassifierRankPanel()
@@ -229,6 +230,38 @@ class TestClassifierRankPanel:
         assert c.min_rank == 1
         assert c.max_rank == 2
         assert abs(c.min_confidence - 0.5) < 1e-6
+
+    def test_negate_checkbox_round_trip(self, qtbot):
+        p = _ClassifierRankPanel()
+        qtbot.addWidget(p)
+        p._categories.set_items(["cherry"])
+        p._negate.setChecked(True)
+        c = p.get_condition()
+        assert c.negate is True
+
+        p._negate.setChecked(False)
+        c = p.get_condition()
+        assert c.negate is False
+
+    def test_load_condition_sets_negate(self, qtbot):
+        p = _ClassifierRankPanel()
+        qtbot.addWidget(p)
+        cond = ClassifierRankCondition(
+            classifier_name="my_model",
+            categories=["cherry"],
+            negate=True,
+        )
+        p.load(cond)
+        assert p._negate.isChecked() is True
+        c = p.get_condition()
+        assert c.negate is True
+
+    def test_load_none_resets_negate_to_false(self, qtbot):
+        p = _ClassifierRankPanel()
+        qtbot.addWidget(p)
+        p._negate.setChecked(True)
+        p.load(None)
+        assert p._negate.isChecked() is False
 
 
 # ---------------------------------------------------------------------------

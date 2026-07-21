@@ -200,6 +200,48 @@ class TestClassifierRankCondition:
         )
         assert result is False
 
+    def test_negate_flips_a_match_to_no_match(self, monkeypatch):
+        # Top-ranked category IS "explicit" -- would match without negate.
+        self._mock_classifier(monkeypatch, {"safe": 0.1, "explicit": 0.9})
+        result, score = _eval_classifier_rank(
+            ClassifierRankCondition("m", ["explicit"], min_rank=1, max_rank=1, negate=True),
+            IMAGE,
+        )
+        assert result is False
+        assert score == pytest.approx(0.9)
+
+    def test_negate_flips_a_no_match_to_match(self, monkeypatch):
+        # Top-ranked category is NOT "explicit" -- would fail to match without negate.
+        self._mock_classifier(monkeypatch, {"safe": 0.9, "explicit": 0.1})
+        result, score = _eval_classifier_rank(
+            ClassifierRankCondition("m", ["explicit"], min_rank=1, max_rank=1, negate=True),
+            IMAGE,
+        )
+        assert result is True
+        assert score is None
+
+    def test_negate_does_not_rescue_missing_classifier(self, monkeypatch):
+        import image.image_classifier_manager as mgr_mod
+
+        class FakeManager:
+            def get_classifier(self, name):
+                return None
+
+        monkeypatch.setattr(mgr_mod, "image_classifier_manager", FakeManager())
+        result, _ = _eval_classifier_rank(
+            ClassifierRankCondition("missing_model", ["x"], 1, 1, negate=True),
+            IMAGE,
+        )
+        assert result is False
+
+    def test_negate_does_not_rescue_empty_categories(self, monkeypatch):
+        self._mock_classifier(monkeypatch, {"safe": 0.9, "explicit": 0.1})
+        result, _ = _eval_classifier_rank(
+            ClassifierRankCondition("m", [], min_rank=1, max_rank=1, negate=True),
+            IMAGE,
+        )
+        assert result is False
+
 
 # ---------------------------------------------------------------------------
 # PrototypeCondition

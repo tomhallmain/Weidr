@@ -1553,6 +1553,39 @@ class TestClassifierRankInheritCategories:
         assert not any("inherit" in e for e in errors)
 
 
+class TestClassifierRankNegate:
+    """ClassifierRankCondition.negate serialization and summary behavior."""
+
+    def test_default_is_false(self):
+        c = ClassifierRankCondition(classifier_name="m")
+        assert c.negate is False
+
+    def test_roundtrip_true(self):
+        c = ClassifierRankCondition(classifier_name="m", categories=["_a"], negate=True)
+        c2 = _condition_from_dict(c.to_dict())
+        assert isinstance(c2, ClassifierRankCondition)
+        assert c2.negate is True
+
+    def test_roundtrip_false(self):
+        c = ClassifierRankCondition(classifier_name="m", categories=["_a"], negate=False)
+        c2 = _condition_from_dict(c.to_dict())
+        assert c2.negate is False
+
+    def test_backward_compat_missing_key_defaults_false(self):
+        d = {"condition_type": "classifier_rank", "classifier_name": "m",
+             "categories": ["_a"], "min_rank": 1, "max_rank": 1, "min_confidence": 0.0}
+        c = _condition_from_dict(d)
+        assert c.negate is False
+
+    def test_summary_shows_not_prefix_when_negated(self):
+        c = ClassifierRankCondition(classifier_name="m", categories=["_a"], negate=True)
+        assert c.summary().startswith("NOT ")
+
+    def test_summary_has_no_not_prefix_when_not_negated(self):
+        c = ClassifierRankCondition(classifier_name="m", categories=["_a"], negate=False)
+        assert not c.summary().startswith("NOT ")
+
+
 # ---------------------------------------------------------------------------
 # TestSeedCategory
 # ---------------------------------------------------------------------------

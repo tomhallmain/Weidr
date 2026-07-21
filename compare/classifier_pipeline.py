@@ -79,6 +79,17 @@ class ClassifierRankCondition:
     # category explicitly when the condition should always match the pipeline's
     # own category set.
     inherit_categories: bool = False
+    # When True, flips the rank/category/confidence result. Lets this condition
+    # express "none of these categories rank highly" directly -- e.g. as a third
+    # AND sub-condition on a category-fill generate node, alongside conditions
+    # like RelatedImageCondition/BaseStemMatchCondition where True already means
+    # "clear to generate" -- without wrapping it in a CompositeCondition(NOT, ...)
+    # (which the pipeline editor's sub-condition picker doesn't support nesting,
+    # and which would cost a second, separate classifier evaluation; the
+    # classifier call itself is not cached and is not necessarily cheap).
+    # Classifier-not-found and no-categories-configured are error states and are
+    # NOT negated -- they always evaluate to no-match, regardless of this flag.
+    negate: bool = False
 
     def __post_init__(self):
         self.categories = list(self.categories) if self.categories else []
@@ -92,6 +103,7 @@ class ClassifierRankCondition:
             "max_rank": self.max_rank,
             "min_confidence": self.min_confidence,
             "inherit_categories": self.inherit_categories,
+            "negate": self.negate,
         }
 
     def summary(self) -> str:
@@ -100,7 +112,8 @@ class ClassifierRankCondition:
         else:
             cats = ", ".join(self.categories) if self.categories else "(none)"
         rank = f"rank {self.min_rank}" if self.min_rank == self.max_rank else f"rank {self.min_rank}-{self.max_rank}"
-        return f"ClassifierRank({self.classifier_name}, [{cats}], {rank})"
+        prefix = "NOT " if self.negate else ""
+        return f"{prefix}ClassifierRank({self.classifier_name}, [{cats}], {rank})"
 
     def display_summary(self) -> str:
         if self.inherit_categories and not self.categories:
@@ -112,7 +125,8 @@ class ClassifierRankCondition:
             if self.min_rank == self.max_rank
             else _("rank {0}-{1}").format(self.min_rank, self.max_rank)
         )
-        return _("ClsRank") + f"({self.classifier_name}, [{cats}], {rank})"
+        prefix = _("NOT ") if self.negate else ""
+        return prefix + _("ClsRank") + f"({self.classifier_name}, [{cats}], {rank})"
 
 
 @dataclass
@@ -599,6 +613,7 @@ def _condition_from_dict(d: dict):
             max_rank=d.get("max_rank", 1),
             min_confidence=d.get("min_confidence", 0.0),
             inherit_categories=d.get("inherit_categories", False),
+            negate=d.get("negate", False),
         )
     if ct == "prototype":
         return PrototypeCondition(
@@ -1714,10 +1729,16 @@ class ClassifierPipelines:
 
         Seed guard note
         ───────────────────────
-        Each category node could optionally include a CompositeCondition(NOT,
-        ClassifierRankCondition(...)) as a third AND sub-condition to skip
-        generation when the seed image is already classified as that category.
-        This is omitted here pending classifier validation.
+        Each category node could optionally include a ClassifierRankCondition
+        (categories=[the other categories], negate=True) as a third AND
+        sub-condition, to skip generation when the seed image is already
+        classified as one of the other categories. negate=True flips the
+        condition's match so True means "none of the listed categories rank
+        highly" -- matching the True-means-clear-to-generate polarity of the
+        other two sub-conditions -- without wrapping it in a separate NOT
+        composite (unsupported by the editor's sub-condition picker) or paying
+        for a second, separate classifier evaluation. This is omitted here
+        pending classifier validation.
 
         processed_stems note
         ─────────────────────────────

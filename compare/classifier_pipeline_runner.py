@@ -633,19 +633,26 @@ def _eval_classifier_rank(
         else condition.categories
     )
     if not categories:
+        # Misconfiguration -- always no-match, regardless of negate, so a broken
+        # condition can't accidentally flip into "always allow".
         return False, None
 
     ranked = classifier.predict_image_ranked(image_path)
 
+    matched_score = None
     for rank_idx, (category, score) in enumerate(ranked, start=1):
         if rank_idx > condition.max_rank:
             break
         if rank_idx < condition.min_rank:
             continue
         if category in categories and score >= condition.min_confidence:
-            return True, score
+            matched_score = score
+            break
 
-    return False, None
+    matched = matched_score is not None
+    if condition.negate:
+        return (not matched), matched_score
+    return matched, matched_score
 
 
 def _eval_prototype(

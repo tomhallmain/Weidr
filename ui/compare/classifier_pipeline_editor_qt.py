@@ -388,16 +388,33 @@ class _ClassifierRankPanel(QWidget):
 
         self._inherit_categories = QCheckBox(_("Inherit from pipeline category map"))
         self._inherit_categories.setChecked(False)
+        self._inherit_categories.setToolTip(
+            _("When checked, matches against ALL of the pipeline's category_map values "
+              "instead of the list below. Leave unchecked to name only specific categories "
+              "(e.g. just the ones you want to exclude), which is usually what you want when "
+              "this condition is guarding a single category node rather than the whole seed.")
+        )
         self._inherit_categories.stateChanged.connect(self._on_inherit_toggled)
         form.addRow(_("Categories:"), self._inherit_categories)
 
         self._categories = _StringListEditor(_("category name"), on_changed=self._on_changed)
+        self._categories.setToolTip(
+            _("Categories this condition matches against. Matching is OR across this list: "
+              "the condition succeeds if ANY of these categories occupies a qualifying rank "
+              "position (see Rank range) with a high enough score (see Min confidence).")
+        )
         form.addRow("", self._categories)
 
         rank_row = QHBoxLayout()
         self._min_rank = QSpinBox()
         self._min_rank.setRange(1, 20)
         self._min_rank.setValue(1)
+        self._min_rank.setToolTip(
+            _("Position in the classifier's own ranked output to start checking, where rank 1 "
+              "is the single category the classifier considers most likely, rank 2 the next "
+              "most likely, and so on. Min/Max together define an inclusive window of "
+              "positions to inspect -- they are NOT a confidence range.")
+        )
         self._min_rank.valueChanged.connect(self._on_changed)
         rank_row.addWidget(_label(_("Min:")))
         rank_row.addWidget(self._min_rank)
@@ -405,6 +422,12 @@ class _ClassifierRankPanel(QWidget):
         self._max_rank = QSpinBox()
         self._max_rank.setRange(1, 20)
         self._max_rank.setValue(1)
+        self._max_rank.setToolTip(
+            _("End of the rank-position window (inclusive). Min=Max=1 (the default) only "
+              "checks the classifier's single top guess, so a listed category ranked 2nd or "
+              "lower will NOT match even if it's a strong secondary signal. Widen this (e.g. "
+              "1-3) to catch a category anywhere in the top N guesses.")
+        )
         self._max_rank.valueChanged.connect(self._on_changed)
         rank_row.addWidget(_label(_("Max:")))
         rank_row.addWidget(self._max_rank)
@@ -416,8 +439,31 @@ class _ClassifierRankPanel(QWidget):
         self._min_confidence.setSingleStep(0.01)
         self._min_confidence.setDecimals(3)
         self._min_confidence.setValue(0.0)
+        self._min_confidence.setToolTip(
+            _("Minimum score (0-1) a listed category must have at its rank position to count "
+              "as a match. The default of 0.0 is the LEAST strict setting -- it accepts any "
+              "score, so only rank position and category membership decide the match. Raise "
+              "this (e.g. 0.3-0.5) to require the classifier to actually be confident, rather "
+              "than matching on a near-zero score that happened to land in the rank window.")
+        )
         self._min_confidence.valueChanged.connect(self._on_changed)
         form.addRow(_("Min confidence:"), self._min_confidence)
+
+        self._negate = QCheckBox(_("Negate (match when categories are NOT found)"))
+        self._negate.setChecked(False)
+        self._negate.setToolTip(
+            _("Unchecked (default): matches when a listed category IS found in the rank "
+              "window with enough confidence -- a positive detection. Check this to flip "
+              "that, so the condition matches when NONE of the listed categories qualify. "
+              "Useful as a guard sub-condition alongside RelatedImageCondition / "
+              "BaseStemMatchCondition on an AND node, where True already means \"clear to "
+              "generate\" for those -- e.g. 'generate banana only if not already Cherry', "
+              "without needing to wrap this condition in a separate NOT composite (which "
+              "the sub-condition picker here doesn't support nesting anyway, and which "
+              "would otherwise cost a second, separate, non-cached classifier evaluation).")
+        )
+        self._negate.stateChanged.connect(self._on_changed)
+        form.addRow(_("Negate:"), self._negate)
 
     def _on_inherit_toggled(self, state: int) -> None:
         self._categories.setEnabled(not bool(state))
@@ -446,6 +492,7 @@ class _ClassifierRankPanel(QWidget):
             self._min_rank.setValue(condition.min_rank)
             self._max_rank.setValue(condition.max_rank)
             self._min_confidence.setValue(condition.min_confidence)
+            self._negate.setChecked(condition.negate)
         else:
             self._inherit_categories.setChecked(False)
             self._categories.set_items([])
@@ -453,6 +500,7 @@ class _ClassifierRankPanel(QWidget):
             self._min_rank.setValue(1)
             self._max_rank.setValue(1)
             self._min_confidence.setValue(0.0)
+            self._negate.setChecked(False)
 
     def get_condition(self) -> ClassifierRankCondition:
         return ClassifierRankCondition(
@@ -461,6 +509,7 @@ class _ClassifierRankPanel(QWidget):
             categories=self._categories.get_items(),
             min_rank=self._min_rank.value(),
             max_rank=self._max_rank.value(),
+            negate=self._negate.isChecked(),
             min_confidence=self._min_confidence.value(),
         )
 
@@ -647,6 +696,15 @@ class _RelatedImagePanel(QWidget):
         self._count_threshold = QSpinBox()
         self._count_threshold.setRange(1, 999)
         self._count_threshold.setValue(1)
+        self._count_threshold.setToolTip(
+            _("This condition matches (True) when the downstream file count with this "
+              "suffix is BELOW this threshold -- i.e. \"room to generate more\", not "
+              "\"a related file was found\". With the default of 1, that means it matches "
+              "when the count is 0 -- no matching file exists yet. This is the opposite of "
+              "what \"Related Image Exists\" might suggest at a glance: True here means the "
+              "image does NOT exist (yet), which is exactly the polarity generate-node AND "
+              "conditions need (True = clear to generate).")
+        )
         self._count_threshold.valueChanged.connect(self._on_changed)
         form.addRow(_("Count threshold:"), self._count_threshold)
 
@@ -699,6 +757,14 @@ class _BaseStemMatchPanel(QWidget):
 
         self._require_match = QCheckBox(_("Pass when found (uncheck to pass when not found)"))
         self._require_match.setChecked(True)
+        self._require_match.setToolTip(
+            _("Checked (default) is the intuitive reading: True means a file with this base "
+              "stem WAS found. But category-fill style pipelines typically uncheck this, so "
+              "True instead means no file with this base stem exists yet in the target "
+              "directory -- \"this category still needs generating\", not \"a duplicate was "
+              "found\". Match this condition's polarity to whatever the rest of the node's "
+              "AND conditions expect (e.g. True = clear to generate).")
+        )
         self._require_match.stateChanged.connect(self._on_changed)
         form.addRow(_("Match mode:"), self._require_match)
 

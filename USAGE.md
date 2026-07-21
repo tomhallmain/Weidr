@@ -38,6 +38,14 @@ Run from the project root with `pytest` (requires `pytest` and `pytest-qt` from 
 
 ---
 
+## Purging Legacy App-Identifier Credentials
+
+If the app's encryption identifier changes (e.g. after a rename), `app_info_cache.py` transparently falls back to the old identifier to decrypt your existing cache, then re-encrypts it under the new one — but leaves the old identifier's OS keyring credentials in place, since they're the only copy until you've confirmed the migration worked.
+
+Once you're confident the new identifier is working, run `python scripts/purge_legacy_app_identifiers.py` to clean up the old credentials. It's a dry run by default; pass `--execute` (and `--yes` to skip the confirmation prompt) to actually delete. It refuses to run unless the current cache decrypts successfully under the current identifier, and it will never delete the current identifier's own credentials.
+
+---
+
 ## Configuration
 
 <details>

@@ -28,7 +28,6 @@ from PySide6.QtWidgets import (
 
 from files.related_image import extract_filename_base_stem, find_files_by_base_stem
 from ui.files.marked_file_mover_qt import MarkedFiles
-from ui.files.file_actions_window_qt import FileActionsWindow
 from files.file_action import FileAction
 from lib.multi_display_qt import SmartDialog
 from ui.app_style import AppStyle
@@ -438,7 +437,7 @@ class GoToFile(SmartDialog):
         """Set closest search, populate with last moved image, and go."""
         last_moved = MarkedFiles.last_moved_image
         if not last_moved:
-            action = FileActionsWindow.get_history_action(
+            action = FileAction.get_history_action(
                 start_index=0, auto=False
             )
             if (

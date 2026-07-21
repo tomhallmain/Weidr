@@ -194,8 +194,16 @@ def require_password(
                 # If we can't find a master window, proceed without password check
                 return func(self, *args, **kwargs)
             
-            # Get app_actions from the instance
-            app_actions = getattr(self, 'app_actions', None)
+            # Get app_actions from the instance. Dialogs (e.g. PasswordAdminWindow)
+            # set self.app_actions directly; Qt controllers (WindowLauncher,
+            # FileMarksController, FileOpsController, SearchController) only
+            # store the AppWindow as self._app and expose it via self._app.app_actions.
+            if hasattr(self, 'app_actions'):
+                app_actions = self.app_actions
+            elif hasattr(self, '_app'):
+                app_actions = self._app.app_actions
+            else:
+                app_actions = None
             
             def password_callback(result):
                 if result:

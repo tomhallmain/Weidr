@@ -5,7 +5,12 @@ from utils.translations import _
 
 class AppInfo:
     SERVICE_NAME = "MyPersonalApplicationsService"
-    APP_IDENTIFIER = "simple_image_compare"  # TODO update to new name
+    APP_IDENTIFIER = "weidr"
+    # Prior identifiers, kept so existing users' encrypted caches can still be
+    # decrypted and migrated forward. Do not remove entries here just because
+    # they look stale - the credentials under them may still be the only copy
+    # of a user's decryption key.
+    LEGACY_APP_IDENTIFIERS = ["simple_image_compare"]
 
 
 class Mode(Enum):

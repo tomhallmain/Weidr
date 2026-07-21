@@ -278,14 +278,33 @@ class AppInfoCache(InflationMonitor):
             except Exception as e:
                 raise Exception(f"Error storing application cache: {e}")
 
-    def _try_load_cache_from_file(self, path):
+    def _try_load_cache_from_file(self, path, app_identifier=None):
         """Attempt to load and decrypt the cache from the given file path. Raises on failure."""
         encrypted_data = decrypt_data_from_file(
             path,
             AppInfo.SERVICE_NAME,
-            AppInfo.APP_IDENTIFIER
+            app_identifier or AppInfo.APP_IDENTIFIER
         )
         return json.loads(encrypted_data.decode('utf-8'))
+
+    def _load_cache_from_file_with_fallback(self, path):
+        """
+        Attempt to load and decrypt from path using the current app identifier, falling
+        back to legacy identifiers (e.g. after an app rename) if that fails. Returns the
+        legacy identifier that succeeded, or None if the current identifier worked directly.
+        Raises the original exception if no identifier can decrypt the file.
+        """
+        try:
+            self._cache = self._try_load_cache_from_file(path)
+            return None
+        except Exception as current_identifier_error:
+            for legacy_identifier in AppInfo.LEGACY_APP_IDENTIFIERS:
+                try:
+                    self._cache = self._try_load_cache_from_file(path, legacy_identifier)
+                    return legacy_identifier
+                except Exception:
+                    continue
+            raise current_identifier_error
 
     def load(self):
         with self._lock:
@@ -311,7 +330,15 @@ class AppInfoCache(InflationMonitor):
                 for path in cache_paths:
                     if os.path.exists(path):
                         try:
-                            self._cache = self._try_load_cache_from_file(path)
+                            migrated_from = self._load_cache_from_file_with_fallback(path)
+                            if migrated_from:
+                                logger.warning(
+                                    f"Decrypted {path} using legacy app identifier "
+                                    f"'{migrated_from}' instead of '{AppInfo.APP_IDENTIFIER}'. "
+                                    f"Credentials for '{migrated_from}' were left in place; "
+                                    f"only remove them manually once you've confirmed this "
+                                    f"migration succeeded."
+                                )
                             # Only rotate backups if we loaded from the main file
                             if path == self._cache_loc:
                                 message = f"Loaded cache from {self._cache_loc}"
@@ -321,6 +348,11 @@ class AppInfoCache(InflationMonitor):
                                 logger.info(message)
                             else:
                                 logger.warning(f"Loaded cache from backup: {path}")
+                            if migrated_from and path == self._cache_loc:
+                                self.store()
+                                logger.info(
+                                    f"Re-encrypted cache under '{AppInfo.APP_IDENTIFIER}'"
+                                )
                             return
                         except Exception as e:
                             logger.error(f"Failed to load cache from {path}: {e}")

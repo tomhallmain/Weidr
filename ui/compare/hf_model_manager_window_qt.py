@@ -24,12 +24,14 @@ from PySide6.QtWidgets import (
 
 from compare.classifier_actions_manager import ClassifierActionsManager
 from extensions.hf_hub_api import HfHubApiBackend
+from image.audio_classifier_manager import audio_classifier_manager
+from image.audio_classifier_model_config import AudioClassifierModelConfig
 from image.image_classifier_manager import image_classifier_manager
 from image.image_classifier_model_config import ImageClassifierModelConfig
 from image.suggested_classifier_models import SUGGESTED_CLASSIFIER_MODELS, SuggestedClassifierModel
 from lib.multi_display_qt import SmartDialog
 from utils.config import config
-from utils.constants import HfHubSortDirection, HfHubSortOption, HfHubVisualMediaTask
+from utils.constants import HfHubModelTask, HfHubSortDirection, HfHubSortOption
 from utils.logging_setup import get_logger
 from utils.translations import _
 logger = get_logger("hf_model_manager_window_qt")
@@ -417,7 +419,11 @@ class _ClassifierPreloadWorker(QThread):
 
 
 class _SuggestedModelInstallWorker(QThread):
-    """Download a curated suggested model's file from HF Hub in a background thread."""
+    """Download a curated suggested *image* model's file from HF Hub in a background
+    thread. Audio suggestions skip this entirely (see
+    HfModelManagerWindow._install_selected_suggested_model) -- there's no specific
+    file to pre-download; the repo id is stored directly as model_location and
+    resolved by transformers' own from_pretrained caching on first load."""
 
     finished = Signal(str, str)  # model_name, downloaded_path
     failed = Signal(str, str)    # model_name, error_message
@@ -546,9 +552,9 @@ class HfModelManagerWindow(SmartDialog):
 
         query_row.addWidget(QLabel(_("Task")))
         self._task_combo = QComboBox()
-        for task in HfHubVisualMediaTask:
+        for task in HfHubModelTask:
             self._task_combo.addItem(task.display(), task.value)
-        self._task_combo.setCurrentText(HfHubVisualMediaTask.IMAGE_CLASSIFICATION.display())
+        self._task_combo.setCurrentText(HfHubModelTask.IMAGE_CLASSIFICATION.display())
         query_row.addWidget(self._task_combo)
 
         query_row.addWidget(QLabel(_("Sort")))
@@ -657,6 +663,7 @@ class HfModelManagerWindow(SmartDialog):
         self._installed_tree.setHeaderLabels(
             [
                 _("Model Name"),
+                _("Type"),
                 _("Backend"),
                 _("Categories"),
                 _("Model Location"),
@@ -721,7 +728,7 @@ class HfModelManagerWindow(SmartDialog):
         layout.addWidget(notice)
 
         self._suggested_tree = QTreeWidget()
-        self._suggested_tree.setHeaderLabels([_("Model"), _("Backend"), _("Status")])
+        self._suggested_tree.setHeaderLabels([_("Model"), _("Type"), _("Status")])
         self._suggested_tree.setRootIsDecorated(False)
         self._suggested_tree.setAlternatingRowColors(True)
         self._suggested_tree.itemSelectionChanged.connect(self._on_suggested_selection_changed)
@@ -744,14 +751,20 @@ class HfModelManagerWindow(SmartDialog):
         btn_row.addStretch()
         layout.addLayout(btn_row)
 
+    @staticmethod
+    def _installed_names_for_type(classifier_type: str) -> set[str]:
+        models = config.audio_classifier_models if classifier_type == "audio" else config.image_classifier_models
+        return {m.get("model_name") for m in models}
+
     def _refresh_suggested_models(self) -> None:
         self._suggested_tree.clear()
-        installed_names = {m.get("model_name") for m in config.image_classifier_models}
         for suggestion in SUGGESTED_CLASSIFIER_MODELS:
+            installed_names = self._installed_names_for_type(suggestion.classifier_type)
             status = _("Installed") if suggestion.model_name in installed_names else _("Not installed")
+            type_label = _("Audio") if suggestion.classifier_type == "audio" else _("Image")
             item = QTreeWidgetItem(
                 self._suggested_tree,
-                [suggestion.display_name, suggestion.backend, status],
+                [suggestion.display_name, type_label, status],
             )
             item.setData(0, Qt.ItemDataRole.UserRole, suggestion.model_name)
         if self._suggested_tree.topLevelItemCount() > 0 and not self._suggested_tree.selectedItems():
@@ -776,10 +789,19 @@ class HfModelManagerWindow(SmartDialog):
         if suggestion is None:
             self._app_actions.warn(_("Please select a suggested model first."))
             return
-        installed_names = {m.get("model_name") for m in config.image_classifier_models}
+        installed_names = self._installed_names_for_type(suggestion.classifier_type)
         if suggestion.model_name in installed_names:
             self._app_actions.toast(_("'{0}' is already installed.").format(suggestion.display_name))
             return
+
+        if suggestion.classifier_type == "audio":
+            # No local download step: model_location is the HF repo id itself,
+            # resolved (and cached) by AutoFeatureExtractor/AutoModelForAudioClassification
+            # at first classifier load -- unlike image classifiers, there's no
+            # specific file to pick out of the repo ahead of time.
+            self._finish_suggested_install(suggestion.model_name, suggestion.hf_repo_id)
+            return
+
         self._suggested_install_btn.setEnabled(False)
         self._suggested_install_btn.setText(_("Installing…"))
         worker = _SuggestedModelInstallWorker(suggestion)
@@ -796,18 +818,24 @@ class HfModelManagerWindow(SmartDialog):
         self._suggested_install_worker = None
         if worker is not None:
             worker.deleteLater()
+        self._finish_suggested_install(model_name, downloaded_path)
 
+    def _finish_suggested_install(self, model_name: str, downloaded_path: str) -> None:
+        """Shared tail of both the worker-based image install and the direct
+        (no-download) audio install path."""
         suggestion = next((s for s in SUGGESTED_CLASSIFIER_MODELS if s.model_name == model_name), None)
         if suggestion is None:
             return
         model_details = suggestion.to_model_details(downloaded_path)
+        model_config_cls = AudioClassifierModelConfig if suggestion.classifier_type == "audio" else ImageClassifierModelConfig
         try:
-            model_details = ImageClassifierModelConfig.from_dict(model_details, logger=logger).to_dict()
+            model_details = model_config_cls.from_dict(model_details, logger=logger).to_dict()
         except Exception as e:
             self._app_actions.alert(_("Invalid Model Configuration"), str(e), kind="error", master=self)
             return
         if self._persist_model_details(
             model_details,
+            classifier_type=suggestion.classifier_type,
             success_message=_("Installed suggested model '{0}'. Preload it from the Installed "
                                "Models tab to warm it into memory now.").format(suggestion.display_name),
         ):
@@ -863,10 +891,24 @@ class HfModelManagerWindow(SmartDialog):
             return None
         return selected[0].text(0)
 
+    _AUDIO_TASK_VALUES = {
+        HfHubModelTask.AUDIO_CLASSIFICATION.value,
+        HfHubModelTask.ZERO_SHOT_AUDIO_CLASSIFICATION.value,
+    }
+
+    def _selected_repo_is_audio(self) -> bool:
+        """True when the selected search result's own Task column (populated from
+        the repo's real pipeline_tag, not the search filter used to find it) is an
+        audio task -- a search run under "All tasks" can return mixed rows."""
+        selected = self._search_tree.selectedItems()
+        if not selected:
+            return False
+        return selected[0].text(1) in self._AUDIO_TASK_VALUES
+
     def _search(self) -> None:
         try:
             query = (self._query_edit.text() or "").strip()
-            task = HfHubVisualMediaTask.get(str(self._task_combo.currentData()))
+            task = HfHubModelTask.get(str(self._task_combo.currentData()))
             sort = HfHubSortOption.get(str(self._sort_combo.currentData()))
             direction = HfHubSortDirection.get(str(self._direction_combo.currentData()))
             limit = int(self._limit_combo.currentText())
@@ -1001,6 +1043,9 @@ class HfModelManagerWindow(SmartDialog):
         repo_id = self._selected_repo()
         if repo_id is None:
             return
+        if self._selected_repo_is_audio():
+            self._install_selected_audio_search_result(repo_id)
+            return
         filename = (self._filename_combo.currentText() or "").strip()
         if not filename:
             self._app_actions.warn(_("Please enter a filename to download."))
@@ -1060,16 +1105,69 @@ class HfModelManagerWindow(SmartDialog):
 
         if not self._persist_model_details(
             model_details,
+            classifier_type="image",
             success_message=_("Downloaded and installed model '{0}'.").format(model_name),
         ):
             return
         self._tabs.setCurrentIndex(1)
         self._model_name_edit.setText(model_name)
 
-    def _persist_model_details(self, model_details: dict[str, Any], *, success_message: str) -> bool:
-        """Add or replace a classifier config entry, prompting before overwriting. Returns True on success."""
+    def _install_selected_audio_search_result(self, repo_id: str) -> None:
+        """Audio counterpart to the image path in _download_and_install_selected.
+
+        No file download/selection step -- model_location is the repo id itself,
+        resolved by transformers' own from_pretrained caching on first load (same
+        as the Suggested Models tab's audio install path). Reuses the same model
+        name / categories fields as the image path; backend, input shape, and
+        architecture fields are image-only and don't apply here.
+        """
+        default_name = self._default_model_name(repo_id)
+        model_name = (self._model_name_edit.text() or default_name).strip()
+        if not model_name:
+            self._app_actions.warn(_("Model name must not be empty."))
+            return
+
+        categories_text = (self._categories_edit.text() or "").strip()
+        categories = [c.strip() for c in categories_text.split(",") if c.strip()]
+        if not categories:
+            self._app_actions.warn(_("Please enter at least one category."))
+            return
+
+        model_details = {
+            "model_name": model_name,
+            "model_location": repo_id,
+            "model_categories": categories,
+            "hf_repo_id": repo_id,
+        }
+        try:
+            model_details = AudioClassifierModelConfig.from_dict(model_details, logger=logger).to_dict()
+        except Exception as e:
+            self._app_actions.alert(_("Invalid Model Configuration"), str(e), kind="error", master=self)
+            return
+
+        if not self._persist_model_details(
+            model_details,
+            classifier_type="audio",
+            success_message=_("Installed audio model '{0}'.").format(model_name),
+        ):
+            return
+        self._model_name_edit.setText(model_name)
+
+    def _persist_model_details(
+        self, model_details: dict[str, Any], *, classifier_type: str = "image", success_message: str
+    ) -> bool:
+        """Add or replace a classifier config entry, prompting before overwriting. Returns True on success.
+
+        classifier_type picks which config list / manager this writes to -- the
+        "Installed Models" tab and "HF Hub Search" tab only ever deal in image
+        classifiers today (classifier_type="image", the default), so their call
+        sites are unaffected; only the "Suggested Models" tab's audio entries pass
+        classifier_type="audio".
+        """
+        is_audio = classifier_type == "audio"
+        existing_models = config.audio_classifier_models if is_audio else config.image_classifier_models
         model_name = str(model_details.get("model_name", "")).strip()
-        existing_names = {m.get("model_name") for m in config.image_classifier_models}
+        existing_names = {m.get("model_name") for m in existing_models}
         if model_name in existing_names:
             should_replace = self._app_actions.alert(
                 _("Replace Existing Model?"),
@@ -1082,7 +1180,7 @@ class HfModelManagerWindow(SmartDialog):
 
         updated_models = []
         replaced = False
-        for existing in config.image_classifier_models:
+        for existing in existing_models:
             if existing.get("model_name") == model_name:
                 updated_models.append(model_details)
                 replaced = True
@@ -1092,15 +1190,24 @@ class HfModelManagerWindow(SmartDialog):
             updated_models.append(model_details)
 
         try:
-            config.set_image_classifier_models(updated_models)
-            image_classifier_manager.set_classifier_metadata(config.image_classifier_models)
+            if is_audio:
+                config.set_audio_classifier_models(updated_models)
+                audio_classifier_manager.set_classifier_metadata(config.audio_classifier_models)
+            else:
+                config.set_image_classifier_models(updated_models)
+                image_classifier_manager.set_classifier_metadata(config.image_classifier_models)
             ClassifierActionsManager.reset_prevalidation_lazy_init()
         except Exception as e:
             logger.error(f"Failed to persist model details: {e}")
             self._app_actions.alert(_("Config Update Error"), str(e), kind="error", master=self)
             return False
 
-        self._refresh_installed_models()
+        if not is_audio:
+            # The "Installed Models" tab only lists image classifiers today (see
+            # docs/audio-embeddings-and-classification-design.md -- a dedicated audio
+            # management UI is deliberately out of scope for this pass); refreshing it
+            # for an audio-only change would be a no-op, so skip it.
+            self._refresh_installed_models()
         self._app_actions.success(success_message)
         return True
 
@@ -1130,36 +1237,11 @@ class HfModelManagerWindow(SmartDialog):
         valid_count = 0
         total_count = 0
         for model in list(config.image_classifier_models):
+            valid_count += self._add_installed_tree_row(model, "image")
             total_count += 1
-            normalized_model, parse_err = self._parse_installed_model(model)
-            if normalized_model is not None and self._is_valid_installed_model(normalized_model):
-                valid_count += 1
-            display_model = normalized_model if normalized_model is not None else model
-            categories = display_model.get("model_categories") or []
-            categories_text = ", ".join(str(c) for c in categories)
-            backend = str(display_model.get("backend", "auto"))
-            if parse_err:
-                config_col = parse_err if len(parse_err) <= 120 else parse_err[:117] + "…"
-            else:
-                config_col = _("OK")
-            model_name = str(display_model.get("model_name", ""))
-            loaded_col = _("yes") if image_classifier_manager.is_loaded(model_name) else _("no")
-            item = QTreeWidgetItem(
-                self._installed_tree,
-                [
-                    model_name,
-                    backend,
-                    categories_text,
-                    str(display_model.get("model_location", "")),
-                    loaded_col,
-                    config_col,
-                ],
-            )
-            item.setData(0, Qt.ItemDataRole.UserRole, dict(display_model))
-            item.setToolTip(
-                5,
-                parse_err if parse_err else _("Configuration is valid."),
-            )
+        for model in list(config.audio_classifier_models):
+            valid_count += self._add_installed_tree_row(model, "audio")
+            total_count += 1
         if valid_count == 0:
             self._installed_notice_label.setText(
                 _("No valid installed models found. Use the HF Hub Search tab to discover and install models, or add one manually.")
@@ -1168,6 +1250,53 @@ class HfModelManagerWindow(SmartDialog):
             self._installed_notice_label.setText(
                 _("Installed models: {0} valid of {1} total").format(valid_count, total_count)
             )
+
+    def _add_installed_tree_row(self, model: dict[str, Any], classifier_type: str) -> bool:
+        """Build one Installed Models tree row. Returns True if the entry is valid
+        (counted towards the notice label's valid/total tally)."""
+        is_audio = classifier_type == "audio"
+        if is_audio:
+            normalized_model, parse_err = self._parse_installed_audio_model(model)
+            is_valid = normalized_model is not None and self._is_valid_installed_audio_model(normalized_model)
+            manager = audio_classifier_manager
+        else:
+            normalized_model, parse_err = self._parse_installed_model(model)
+            is_valid = normalized_model is not None and self._is_valid_installed_model(normalized_model)
+            manager = image_classifier_manager
+
+        display_model = normalized_model if normalized_model is not None else model
+        categories = display_model.get("model_categories") or []
+        categories_text = ", ".join(str(c) for c in categories)
+        backend = str(display_model.get("backend", "auto")) if not is_audio else "-"
+        if parse_err:
+            config_col = parse_err if len(parse_err) <= 120 else parse_err[:117] + "…"
+        else:
+            config_col = _("OK")
+        model_name = str(display_model.get("model_name", ""))
+        loaded_col = _("yes") if manager.is_loaded(model_name) else _("no")
+        type_label = _("Audio") if is_audio else _("Image")
+        item = QTreeWidgetItem(
+            self._installed_tree,
+            [
+                model_name,
+                type_label,
+                backend,
+                categories_text,
+                str(display_model.get("model_location", "")),
+                loaded_col,
+                config_col,
+            ],
+        )
+        item.setData(0, Qt.ItemDataRole.UserRole, dict(display_model))
+        # Raw (untranslated, stable) type string -- read back by
+        # _selected_installed_model_classifier_type(); the Type column's visible
+        # text is translated and must not be parsed back for routing decisions.
+        item.setData(1, Qt.ItemDataRole.UserRole, classifier_type)
+        item.setToolTip(
+            6,
+            parse_err if parse_err else _("Configuration is valid."),
+        )
+        return is_valid
 
     @staticmethod
     def _is_valid_installed_model(model: dict[str, Any]) -> bool:
@@ -1184,11 +1313,38 @@ class HfModelManagerWindow(SmartDialog):
         except Exception as e:
             return None, str(e)
 
+    @staticmethod
+    def _is_valid_installed_audio_model(model: dict[str, Any]) -> bool:
+        # No os.path.exists check: model_location is a bare HF repo id/directory
+        # handed to from_pretrained, not necessarily a path that exists locally yet.
+        model_name = str(model.get("model_name", "") or "").strip()
+        model_location = str(model.get("model_location", "") or "").strip()
+        categories = model.get("model_categories") or []
+        return bool(model_name and model_location and isinstance(categories, list) and len(categories) > 0)
+
+    @staticmethod
+    def _parse_installed_audio_model(model: dict[str, Any]) -> tuple[Optional[dict[str, Any]], str]:
+        try:
+            normalized = AudioClassifierModelConfig.from_dict(model, warn_unknown_keys=False).to_dict()
+            return normalized, ""
+        except Exception as e:
+            return None, str(e)
+
     def _selected_installed_model_name(self) -> Optional[str]:
         selected = self._installed_tree.selectedItems()
         if not selected:
             return None
         return selected[0].text(0)
+
+    def _selected_installed_model_classifier_type(self) -> str:
+        """"image" or "audio", read from the raw (untranslated) data stored on the
+        Type column. Defaults to "image" when nothing is selected or the data is
+        missing, matching every pre-existing caller's assumption."""
+        selected = self._installed_tree.selectedItems()
+        if not selected:
+            return "image"
+        stored = selected[0].data(1, Qt.ItemDataRole.UserRole)
+        return stored if stored in ("image", "audio") else "image"
 
     def _selected_installed_model_details(self) -> Optional[dict[str, Any]]:
         selected = self._installed_tree.selectedItems()
@@ -1198,7 +1354,12 @@ class HfModelManagerWindow(SmartDialog):
         if isinstance(model_data, dict):
             return dict(model_data)
         model_name = selected[0].text(0)
-        for model in config.image_classifier_models:
+        source = (
+            config.audio_classifier_models
+            if self._selected_installed_model_classifier_type() == "audio"
+            else config.image_classifier_models
+        )
+        for model in source:
             if model.get("model_name") == model_name:
                 return dict(model)
         return None
@@ -1217,6 +1378,9 @@ class HfModelManagerWindow(SmartDialog):
         model = self._selected_installed_model_details()
         if model is None:
             self._app_actions.warn(_("Please select an installed model first."))
+            return
+        if self._selected_installed_model_classifier_type() == "audio":
+            self._app_actions.warn(_("Editing audio classifiers isn't supported yet. Remove and reinstall to change one."))
             return
         _InstalledModelEditDialog(
             parent=self,
@@ -1258,6 +1422,9 @@ class HfModelManagerWindow(SmartDialog):
         model = self._selected_installed_model_details()
         if model is None:
             self._app_actions.warn(_("Please select an installed model first."))
+            return
+        if self._selected_installed_model_classifier_type() == "audio":
+            self._app_actions.warn(_("Testing audio classifiers from this tab isn't supported yet."))
             return
         model_name = str(model.get("model_name", "")).strip()
         if not model_name:
@@ -1321,6 +1488,9 @@ class HfModelManagerWindow(SmartDialog):
         model = self._selected_installed_model_details()
         if model is None:
             self._app_actions.warn(_("Please select an installed model first."))
+            return
+        if self._selected_installed_model_classifier_type() == "audio":
+            self._app_actions.warn(_("Preloading audio classifiers from this tab isn't supported yet."))
             return
         model_name = str(model.get("model_name", "")).strip()
         if not model_name:
@@ -1429,6 +1599,8 @@ class HfModelManagerWindow(SmartDialog):
         if model is None:
             self._app_actions.warn(_("Please select an installed model first."))
             return
+        classifier_type = self._selected_installed_model_classifier_type()
+        is_audio = classifier_type == "audio"
         model_name = str(model.get("model_name", "")).strip()
         model_kwargs = dict(model.get("model_kwargs", {}))
         api_backend: Optional[HfHubApiBackend] = None
@@ -1443,7 +1615,9 @@ class HfModelManagerWindow(SmartDialog):
         # Confirmation #1 (always)
         should_remove = self._app_actions.alert(
             _("Remove Installed Model?"),
-            _("Remove '{0}' from configured image classifier models?").format(model_name),
+            _("Remove '{0}' from configured {1} classifier models?").format(
+                model_name, _("audio") if is_audio else _("image")
+            ),
             kind="askokcancel",
             master=self,
         )
@@ -1476,14 +1650,19 @@ class HfModelManagerWindow(SmartDialog):
             if not second_confirm:
                 return
 
-        updated_models = [m for m in config.image_classifier_models if m.get("model_name") != model_name]
-        if len(updated_models) == len(config.image_classifier_models):
+        existing_models = config.audio_classifier_models if is_audio else config.image_classifier_models
+        updated_models = [m for m in existing_models if m.get("model_name") != model_name]
+        if len(updated_models) == len(existing_models):
             self._app_actions.warn(_("No matching model named '{0}' was found.").format(model_name))
             return
 
         try:
-            config.set_image_classifier_models(updated_models)
-            image_classifier_manager.set_classifier_metadata(config.image_classifier_models)
+            if is_audio:
+                config.set_audio_classifier_models(updated_models)
+                audio_classifier_manager.set_classifier_metadata(config.audio_classifier_models)
+            else:
+                config.set_image_classifier_models(updated_models)
+                image_classifier_manager.set_classifier_metadata(config.image_classifier_models)
             ClassifierActionsManager.reset_prevalidation_lazy_init()
         except Exception as e:
             logger.error(f"Failed to remove model details: {e}")

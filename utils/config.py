@@ -193,6 +193,7 @@ class Config:
         self.enable_audio = True
         self.enable_images = True
         self.image_classifier_models = []
+        self.audio_classifier_models = []
         self.enable_videos = True
         self.enable_gifs = True
         self.enable_pdfs = False
@@ -268,7 +269,8 @@ class Config:
                             "audio_types",
                             "text_embedding_search_presets",
                             "directories_to_search_for_related_images",
-                            "image_classifier_models")
+                            "image_classifier_models",
+                            "audio_classifier_models")
             self.set_values(str,
                             "foreground_color",
                             "background_color",
@@ -714,6 +716,7 @@ class Config:
         """Build a config dict preserving unknown keys and updated runtime values."""
         persisted = dict(self.dict) if isinstance(self.dict, dict) else {}
         persisted["image_classifier_models"] = list(self.image_classifier_models)
+        persisted["audio_classifier_models"] = list(self.audio_classifier_models)
         persisted["enable_prevalidations"] = bool(self.enable_prevalidations)
         persisted["compare_group_sort"] = self.compare_group_sort.name
         return persisted
@@ -784,6 +787,12 @@ class Config:
         if not isinstance(model_details_list, list):
             raise TypeError("model_details_list must be a list")
         self.image_classifier_models = model_details_list
+        self.persist()
+
+    def set_audio_classifier_models(self, model_details_list):
+        if not isinstance(model_details_list, list):
+            raise TypeError("model_details_list must be a list")
+        self.audio_classifier_models = model_details_list
         self.persist()
 
     def next_text_embedding_search_preset(self):

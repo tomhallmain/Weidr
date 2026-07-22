@@ -25,10 +25,11 @@ from PySide6.QtWidgets import (
 
 from compare.classifier_action import (
     ClassifierAction,
-    ImageClassifierClassificationMode,
+    ClassifierClassificationMode,
     Prevalidation,
 )
 from compare.classifier_actions_manager import ClassifierActionsManager
+from image.audio_classifier_manager import audio_classifier_manager
 from image.image_classifier_manager import image_classifier_manager
 from lib.fast_directory_picker_qt import get_existing_directory
 from lib.multi_display_qt import SmartDialog
@@ -163,7 +164,7 @@ class ClassifierActionModifyWindow(SmartDialog):
         grid.addWidget(self._use_embedding_cb, row, 1)
         row += 1
 
-        self._use_classifier_cb = QCheckBox(_("Use Image Classifier"))
+        self._use_classifier_cb = QCheckBox(_("Use Classifier"))
         self._use_classifier_cb.setChecked(ca.use_image_classifier)
         self._use_classifier_cb.stateChanged.connect(self._update_ui_for_validation_types)
         grid.addWidget(self._use_classifier_cb, row, 1)
@@ -265,26 +266,36 @@ class ClassifierActionModifyWindow(SmartDialog):
         grid.addWidget(self._lbl(_("Action Modifier")), row, 0, Qt.AlignLeft)
         self._action_modifier_edit = QLineEdit(ca.action_modifier)
         self._action_modifier_hint_text = _(
-            "Leave blank to auto-route by image-classifier selected category."
+            "Leave blank to auto-route by classifier selected category."
         )
         self._action_modifier_edit.setToolTip(self._action_modifier_hint_text)
         grid.addWidget(self._action_modifier_edit, row, 1)
         row += 1
 
-        # -- Image classifier name ----------------------------------------
-        self._ic_name_lbl = self._lbl(_("Image Classifier Name"))
+        # -- Classifier domain (image vs audio) ----------------------------
+        self._ic_domain_lbl = self._lbl(_("Classifier Domain"))
+        grid.addWidget(self._ic_domain_lbl, row, 0, Qt.AlignLeft)
+        self._ic_domain_combo = QComboBox()
+        self._ic_domain_combo.addItem(_("Image"), "image")
+        self._ic_domain_combo.addItem(_("Audio"), "audio")
+        domain_idx = self._ic_domain_combo.findData(getattr(ca, "classifier_domain", "image"))
+        self._ic_domain_combo.setCurrentIndex(domain_idx if domain_idx >= 0 else 0)
+        self._ic_domain_combo.currentIndexChanged.connect(self._on_classifier_domain_changed)
+        grid.addWidget(self._ic_domain_combo, row, 1)
+        row += 1
+
+        # -- Classifier name -------------------------------------------
+        self._ic_name_lbl = self._lbl(_("Classifier Name"))
         grid.addWidget(self._ic_name_lbl, row, 0, Qt.AlignLeft)
         self._ic_name_combo = QComboBox()
-        name_options = [""]
-        name_options.extend(image_classifier_manager.get_model_names())
-        self._ic_name_combo.addItems(name_options)
+        self._populate_ic_name_options()
         self._ic_name_combo.setCurrentText(ca.image_classifier_name)
         self._ic_name_combo.currentTextChanged.connect(self._on_image_classifier_changed)
         grid.addWidget(self._ic_name_combo, row, 1)
         row += 1
 
-        # -- Image classifier categories (multi-select list) ---------------
-        self._ic_cat_lbl = self._lbl(_("Image Classifier Selected Category"))
+        # -- Classifier categories (multi-select list) ---------------
+        self._ic_cat_lbl = self._lbl(_("Classifier Selected Category"))
         grid.addWidget(self._ic_cat_lbl, row, 0, Qt.AlignLeft | Qt.AlignTop)
         self._ic_cat_list = QListWidget()
         self._ic_cat_list.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
@@ -293,13 +304,13 @@ class ClassifierActionModifyWindow(SmartDialog):
         grid.addWidget(self._ic_cat_list, row, 1)
         row += 1
 
-        # -- Image classifier mode ----------------------------------------
-        self._ic_mode_lbl = self._lbl(_("Image Classifier Classification Mode"))
+        # -- Classifier mode ----------------------------------------
+        self._ic_mode_lbl = self._lbl(_("Classifier Classification Mode"))
         grid.addWidget(self._ic_mode_lbl, row, 0, Qt.AlignLeft)
         self._ic_mode_combo = QComboBox()
-        self._ic_mode_combo.addItem(_("Selected categories"), ImageClassifierClassificationMode.SELECTED_CATEGORIES.value)
-        self._ic_mode_combo.addItem(_("Model strategy"), ImageClassifierClassificationMode.MODEL_STRATEGY.value)
-        mode_value = ca.classification_mode.value if hasattr(ca, "classification_mode") else ImageClassifierClassificationMode.SELECTED_CATEGORIES.value
+        self._ic_mode_combo.addItem(_("Selected categories"), ClassifierClassificationMode.SELECTED_CATEGORIES.value)
+        self._ic_mode_combo.addItem(_("Model strategy"), ClassifierClassificationMode.MODEL_STRATEGY.value)
+        mode_value = ca.classification_mode.value if hasattr(ca, "classification_mode") else ClassifierClassificationMode.SELECTED_CATEGORIES.value
         idx = self._ic_mode_combo.findData(mode_value)
         self._ic_mode_combo.setCurrentIndex(idx if idx >= 0 else 0)
         self._ic_mode_combo.currentIndexChanged.connect(self._update_ui_for_validation_types)
@@ -403,11 +414,13 @@ class ClassifierActionModifyWindow(SmartDialog):
         self._text_thresh_lbl.setVisible(use_emb)
         self._text_thresh_slider.setVisible(use_emb)
 
-        # Image classifier fields
+        # Classifier fields (image or audio, per domain toggle)
+        self._ic_domain_lbl.setVisible(use_ic)
+        self._ic_domain_combo.setVisible(use_ic)
         self._ic_name_lbl.setVisible(use_ic)
         self._ic_name_combo.setVisible(use_ic)
-        mode = ImageClassifierClassificationMode.from_value(self._ic_mode_combo.currentData())
-        uses_selected_categories = mode == ImageClassifierClassificationMode.SELECTED_CATEGORIES
+        mode = ClassifierClassificationMode.from_value(self._ic_mode_combo.currentData())
+        uses_selected_categories = mode == ClassifierClassificationMode.SELECTED_CATEGORIES
         if use_ic and uses_selected_categories:
             self._action_modifier_edit.setPlaceholderText(self._action_modifier_hint_text)
         else:
@@ -445,8 +458,34 @@ class ClassifierActionModifyWindow(SmartDialog):
         self._update_specific_ui_for_validation_types()
 
     # ------------------------------------------------------------------
-    # Image classifier category helpers
+    # Classifier (image or audio) helpers
     # ------------------------------------------------------------------
+    def _selected_classifier_domain(self) -> str:
+        return self._ic_domain_combo.currentData() or "image"
+
+    def _classifier_manager_for_domain(self, domain: str):
+        return audio_classifier_manager if domain == "audio" else image_classifier_manager
+
+    def _populate_ic_name_options(self) -> None:
+        manager = self._classifier_manager_for_domain(self._selected_classifier_domain())
+        self._ic_name_combo.blockSignals(True)
+        self._ic_name_combo.clear()
+        name_options = [""]
+        name_options.extend(manager.get_model_names())
+        self._ic_name_combo.addItems(name_options)
+        self._ic_name_combo.blockSignals(False)
+
+    def _on_classifier_domain_changed(self, _index: int) -> None:
+        # Switching domains invalidates any cached classifier/categories from the
+        # other registry -- reset the name selection rather than risk leaving a
+        # stale image classifier wired up while classifier_domain says "audio" (or
+        # vice versa).
+        self._classifier_action.classifier_domain = self._selected_classifier_domain()
+        self._populate_ic_name_options()
+        self._ic_name_combo.setCurrentText("")
+        self._classifier_action.set_image_classifier("")
+        self._populate_ic_categories()
+
     def _populate_ic_categories(self) -> None:
         ca = self._classifier_action
         self._ic_cat_list.clear()
@@ -561,10 +600,11 @@ class ClassifierActionModifyWindow(SmartDialog):
         ca.move_to_same_dir = self._move_to_same_dir_cb.isChecked()
         ca.action_modifier = self._action_modifier_edit.text().strip()
 
+        ca.classifier_domain = self._selected_classifier_domain()
         ca.image_classifier_selected_categories = [
             item.text() for item in self._ic_cat_list.selectedItems()
         ]
-        ca.classification_mode = ImageClassifierClassificationMode.from_value(
+        ca.classification_mode = ClassifierClassificationMode.from_value(
             self._ic_mode_combo.currentData()
         )
 

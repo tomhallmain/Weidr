@@ -13,6 +13,7 @@ from compare.classifier_pipeline import (
     # Conditions
     EmbeddingCondition,
     ClassifierRankCondition,
+    AudioClassifierRankCondition,
     MediaTypeCondition,
     PrototypeCondition,
     PromptCondition,
@@ -84,6 +85,24 @@ class TestConditionSerialization:
         assert c2.min_rank == 2
         assert c2.max_rank == 3
         assert c2.min_confidence == 0.15
+
+    def test_audio_classifier_rank_roundtrip(self):
+        c = AudioClassifierRankCondition(
+            classifier_name="nsfw_audio_v1",
+            categories=["explicit"],
+            min_rank=1,
+            max_rank=2,
+            min_confidence=0.3,
+            negate=True,
+        )
+        c2 = _condition_from_dict(c.to_dict())
+        assert isinstance(c2, AudioClassifierRankCondition)
+        assert c2.classifier_name == "nsfw_audio_v1"
+        assert c2.categories == ["explicit"]
+        assert c2.min_rank == 1
+        assert c2.max_rank == 2
+        assert c2.min_confidence == 0.3
+        assert c2.negate is True
 
     def test_prototype_roundtrip(self):
         c = PrototypeCondition(
@@ -671,6 +690,27 @@ class TestValidation:
         )
         errors = p.validate()
         assert any("min_rank" in e for e in errors)
+
+    def test_audio_classifier_rank_bad_ranks(self):
+        p = _simple_pipeline(
+            _make_node("n1", AudioClassifierRankCondition("mdl", ["x"], min_rank=3, max_rank=1)),
+        )
+        errors = p.validate()
+        assert any("max_rank" in e for e in errors)
+
+    def test_audio_classifier_rank_zero_min_rank(self):
+        p = _simple_pipeline(
+            _make_node("n1", AudioClassifierRankCondition("mdl", ["x"], min_rank=0, max_rank=1)),
+        )
+        errors = p.validate()
+        assert any("min_rank" in e for e in errors)
+
+    def test_audio_classifier_rank_missing_classifier_name(self):
+        p = _simple_pipeline(
+            _make_node("n1", AudioClassifierRankCondition("", ["x"])),
+        )
+        errors = p.validate()
+        assert any("classifier_name" in e for e in errors)
 
     def test_empty_node_name(self):
         from utils.translations import _
@@ -1584,6 +1624,63 @@ class TestClassifierRankNegate:
     def test_summary_has_no_not_prefix_when_not_negated(self):
         c = ClassifierRankCondition(classifier_name="m", categories=["_a"], negate=False)
         assert not c.summary().startswith("NOT ")
+
+
+class TestAudioClassifierRankCondition:
+    """AudioClassifierRankCondition -- audio-domain sibling of ClassifierRankCondition."""
+
+    def test_condition_type(self):
+        c = AudioClassifierRankCondition(classifier_name="m")
+        assert c.condition_type == "audio_classifier_rank"
+
+    def test_defaults(self):
+        c = AudioClassifierRankCondition(classifier_name="m")
+        assert c.categories == []
+        assert c.min_rank == 1
+        assert c.max_rank == 1
+        assert c.min_confidence == 0.0
+        assert c.inherit_categories is False
+        assert c.negate is False
+
+    def test_roundtrip_preserves_all_fields(self):
+        c = AudioClassifierRankCondition(
+            classifier_name="m", categories=["a", "b"], min_rank=2, max_rank=4,
+            min_confidence=0.4, inherit_categories=True, negate=True,
+        )
+        c2 = _condition_from_dict(c.to_dict())
+        assert c2 == c
+
+    def test_backward_compat_missing_negate_key_defaults_false(self):
+        d = {"condition_type": "audio_classifier_rank", "classifier_name": "m",
+             "categories": ["a"], "min_rank": 1, "max_rank": 1, "min_confidence": 0.0}
+        c = _condition_from_dict(d)
+        assert c.negate is False
+        assert c.inherit_categories is False
+
+    def test_summary_shows_not_prefix_when_negated(self):
+        c = AudioClassifierRankCondition(classifier_name="m", categories=["a"], negate=True)
+        assert c.summary().startswith("NOT ")
+
+    def test_summary_uses_audio_label(self):
+        c = AudioClassifierRankCondition(classifier_name="m", categories=["a"])
+        assert "AudioClassifierRank" in c.summary()
+
+    def test_display_summary_translates_pipeline_categories_token(self):
+        # Mirrors ClassifierRankCondition's test_display_summary_translates_pipeline_categories_token:
+        # display_summary() is what every actual UI surface renders (flow_preview,
+        # flow_summary, the pipeline editor's node list/graph all call it) and is
+        # translated, so assert against _() rather than a hardcoded literal. summary()
+        # is the separate, deliberately-untranslated variant ("keeps English literal")
+        # -- has no production caller of its own today, but stays literal for
+        # locale-independent contexts (tests, future logging/debug use).
+        from utils.translations import _
+        c = AudioClassifierRankCondition(classifier_name="m", inherit_categories=True)
+        assert _("(pipeline categories)") in c.display_summary()
+        assert "(pipeline categories)" in c.summary()
+
+    def test_is_distinct_type_from_classifier_rank_condition(self):
+        c = AudioClassifierRankCondition(classifier_name="m")
+        assert not isinstance(c, ClassifierRankCondition)
 
 
 # ---------------------------------------------------------------------------

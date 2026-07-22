@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from utils.constants import HfHubSortDirection, HfHubSortOption, HfHubVisualMediaTask
+from utils.constants import HfHubModelTask, HfHubSortDirection, HfHubSortOption
 from utils.logging_setup import get_logger
 
 logger = get_logger("image_to_prompt.model_download")
@@ -85,7 +85,7 @@ class HfModelSearchResult:
 class HfHubApiBackend:
     """Hugging Face Hub API backend for model search + download."""
 
-    VISUAL_MEDIA_TASKS = HfHubVisualMediaTask.api_values()
+    KNOWN_MEDIA_TASKS = HfHubModelTask.api_values()
 
     def __init__(self):
         try:
@@ -157,8 +157,8 @@ class HfHubApiBackend:
         self,
         query: str = "",
         *,
-        task: Optional[str | HfHubVisualMediaTask] = None,
-        visual_only: bool = True,
+        task: Optional[str | HfHubModelTask] = None,
+        known_task_only: bool = True,
         limit: int = 100,
         sort: str | HfHubSortOption = HfHubSortOption.DOWNLOADS,
         direction: int | HfHubSortDirection = HfHubSortDirection.DESCENDING,
@@ -167,7 +167,7 @@ class HfHubApiBackend:
         """Search models on HF Hub with metadata useful for UI filtering."""
         sort_value = sort.value if isinstance(sort, HfHubSortOption) else str(sort)
         direction_value = direction.value if isinstance(direction, HfHubSortDirection) else int(direction)
-        if isinstance(task, HfHubVisualMediaTask):
+        if isinstance(task, HfHubModelTask):
             task_value = task.value
         else:
             task_value = str(task or "")
@@ -199,7 +199,7 @@ class HfHubApiBackend:
             # keep a client-side fallback.
             if task_value and pipeline_tag != task_value and task_value not in tags:
                 continue
-            if visual_only and not task_value and pipeline_tag not in self.VISUAL_MEDIA_TASKS:
+            if known_task_only and not task_value and pipeline_tag not in self.KNOWN_MEDIA_TASKS:
                 continue
             license_tag = ""
             for t in tags:

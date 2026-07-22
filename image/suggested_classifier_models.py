@@ -28,22 +28,64 @@ class SuggestedClassifierModel:
     model_name: str
     description: str
     hf_repo_id: str
-    hf_selected_filename: str
     model_categories: tuple[str, ...]
+    # "image" (default, backward compatible with entries predating this field) or
+    # "audio". Determines which ModelConfig shape to_model_details() builds and
+    # which config list / manager the Model Manager window installs into.
+    classifier_type: str = "image"
+    # Required for classifier_type="image" (the specific file to download from the
+    # repo); unused for "audio" -- AutoModelForAudioClassification.from_pretrained
+    # resolves the whole repo snapshot itself, no single-file selection needed.
+    hf_selected_filename: str = ""
     backend: str = "pytorch"
     input_shape: Optional[tuple[int, int]] = None
+    # Audio-only. None means fall through to AudioClassifierModelConfig's own
+    # defaults (16000 / 10.0) rather than redundantly restating them here.
+    sample_rate: Optional[int] = None
+    max_duration_seconds: Optional[float] = None
     model_kwargs: dict[str, Any] = field(default_factory=dict)
     # (url, filename) pairs downloaded into the same directory as the HF
     # snapshot, for models whose architecture code isn't published alongside
     # their weights on HF (fetched fresh at install time, never bundled here).
+    # Image-only -- audio installs never download a snapshot locally (see above).
     extra_source_files: tuple[tuple[str, str], ...] = ()
     positive_groups: tuple[tuple[str, ...], ...] = ()
     neutral_categories: tuple[str, ...] = ()
     severity_order: tuple[str, ...] = ()
 
     def to_model_details(self, downloaded_path: str) -> dict[str, Any]:
-        """Build an ``ImageClassifierModelConfig``-shaped dict for a downloaded file."""
-        details: dict[str, Any] = {
+        """Build a ModelConfig-shaped dict -- ``ImageClassifierModelConfig`` or
+        ``AudioClassifierModelConfig`` depending on ``classifier_type``.
+
+        For images, *downloaded_path* is the local path to the downloaded model
+        file. For audio, callers pass ``hf_repo_id`` itself as *downloaded_path*
+        (see ``_SuggestedModelInstallWorker`` / the audio fast path in
+        ``HfModelManagerWindow`` -- no local download step) since ``model_location``
+        for an audio classifier is the repo id/directory handed straight to
+        ``from_pretrained``, not a specific file.
+        """
+        if self.classifier_type == "audio":
+            details: dict[str, Any] = {
+                "model_name": self.model_name,
+                "model_location": downloaded_path,
+                "model_categories": list(self.model_categories),
+                "hf_repo_id": self.hf_repo_id,
+            }
+            if self.sample_rate is not None:
+                details["sample_rate"] = self.sample_rate
+            if self.max_duration_seconds is not None:
+                details["max_duration_seconds"] = self.max_duration_seconds
+            if self.model_kwargs:
+                details["model_kwargs"] = dict(self.model_kwargs)
+            if self.positive_groups:
+                details["positive_groups"] = [list(g) for g in self.positive_groups]
+            if self.neutral_categories:
+                details["neutral_categories"] = list(self.neutral_categories)
+            if self.severity_order:
+                details["severity_order"] = list(self.severity_order)
+            return details
+
+        details = {
             "model_name": self.model_name,
             "model_location": downloaded_path,
             "model_categories": list(self.model_categories),
@@ -74,15 +116,31 @@ def _parse_extra_source_files(raw: Any) -> tuple[tuple[str, str], ...]:
     return tuple(out)
 
 
+_VALID_CLASSIFIER_TYPES = {"image", "audio"}
+
+
 def _parse_entry(raw: dict[str, Any]) -> SuggestedClassifierModel:
     categories = raw.get("model_categories")
     if not isinstance(categories, list) or not categories:
         raise ValueError("model_categories must be a non-empty list")
 
+    classifier_type = str(raw.get("classifier_type", "image")).strip().lower()
+    if classifier_type not in _VALID_CLASSIFIER_TYPES:
+        raise ValueError(
+            f"classifier_type must be one of {sorted(_VALID_CLASSIFIER_TYPES)}, got {classifier_type!r}"
+        )
+    if classifier_type == "image" and not raw.get("hf_selected_filename"):
+        raise ValueError("hf_selected_filename is required for classifier_type='image'")
+
     input_shape_raw = raw.get("input_shape")
     input_shape: Optional[tuple[int, int]] = None
     if isinstance(input_shape_raw, list) and len(input_shape_raw) == 2:
         input_shape = (int(input_shape_raw[0]), int(input_shape_raw[1]))
+
+    sample_rate_raw = raw.get("sample_rate")
+    sample_rate = int(sample_rate_raw) if sample_rate_raw is not None else None
+    max_duration_raw = raw.get("max_duration_seconds")
+    max_duration_seconds = float(max_duration_raw) if max_duration_raw is not None else None
 
     positive_groups_raw = raw.get("positive_groups", [])
     positive_groups = tuple(
@@ -94,10 +152,13 @@ def _parse_entry(raw: dict[str, Any]) -> SuggestedClassifierModel:
         model_name=str(raw["model_name"]),
         description=str(raw.get("description", "")),
         hf_repo_id=str(raw["hf_repo_id"]),
-        hf_selected_filename=str(raw["hf_selected_filename"]),
+        classifier_type=classifier_type,
+        hf_selected_filename=str(raw.get("hf_selected_filename", "")),
         model_categories=tuple(str(c) for c in categories),
         backend=str(raw.get("backend", "pytorch")),
         input_shape=input_shape,
+        sample_rate=sample_rate,
+        max_duration_seconds=max_duration_seconds,
         model_kwargs=dict(raw.get("model_kwargs", {})),
         extra_source_files=_parse_extra_source_files(raw.get("extra_source_files")),
         positive_groups=positive_groups,

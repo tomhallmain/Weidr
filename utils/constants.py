@@ -232,8 +232,16 @@ class Sort(Enum):
         return [s for s in cls if s != Sort.RANDOM]
 
 
-class HfHubVisualMediaTask(Enum):
-    ALL_VISUAL_MEDIA = ""
+class HfHubModelTask(Enum):
+    """HF Hub ``pipeline_tag``-style task filters offered in the Model Manager's search tab.
+
+    Originally visual-media-only (hence callers may still see the shorter history in
+    git blame); expanded to include audio tasks once audio classifier support
+    (Track B, see docs/audio-embeddings-and-classification-design.md) needed a way to
+    search the Hub for audio-classification models the same way image classification
+    search already worked.
+    """
+    ALL_TASKS = ""
     TEXT_TO_IMAGE = "text-to-image"
     IMAGE_TO_IMAGE = "image-to-image"
     IMAGE_TO_TEXT = "image-to-text"
@@ -246,25 +254,29 @@ class HfHubVisualMediaTask(Enum):
     VIDEO_CLASSIFICATION = "video-classification"
     TEXT_TO_VIDEO = "text-to-video"
     IMAGE_FEATURE_EXTRACTION = "image-feature-extraction"
+    AUDIO_CLASSIFICATION = "audio-classification"
+    ZERO_SHOT_AUDIO_CLASSIFICATION = "zero-shot-audio-classification"
 
     def __str__(self):
         return self.value
 
     def display(self):
         return {
-            HfHubVisualMediaTask.ALL_VISUAL_MEDIA: _("All visual media"),
-            HfHubVisualMediaTask.TEXT_TO_IMAGE: _("Text to Image"),
-            HfHubVisualMediaTask.IMAGE_TO_IMAGE: _("Image to Image"),
-            HfHubVisualMediaTask.IMAGE_TO_TEXT: _("Image to Text"),
-            HfHubVisualMediaTask.IMAGE_CLASSIFICATION: _("Image Classification"),
-            HfHubVisualMediaTask.ZERO_SHOT_IMAGE_CLASSIFICATION: _("Zero-shot Image Classification"),
-            HfHubVisualMediaTask.OBJECT_DETECTION: _("Object Detection"),
-            HfHubVisualMediaTask.IMAGE_SEGMENTATION: _("Image Segmentation"),
-            HfHubVisualMediaTask.DEPTH_ESTIMATION: _("Depth Estimation"),
-            HfHubVisualMediaTask.VISUAL_QUESTION_ANSWERING: _("Visual Question Answering"),
-            HfHubVisualMediaTask.VIDEO_CLASSIFICATION: _("Video Classification"),
-            HfHubVisualMediaTask.TEXT_TO_VIDEO: _("Text to Video"),
-            HfHubVisualMediaTask.IMAGE_FEATURE_EXTRACTION: _("Image Feature Extraction"),
+            HfHubModelTask.ALL_TASKS: _("All tasks"),
+            HfHubModelTask.TEXT_TO_IMAGE: _("Text to Image"),
+            HfHubModelTask.IMAGE_TO_IMAGE: _("Image to Image"),
+            HfHubModelTask.IMAGE_TO_TEXT: _("Image to Text"),
+            HfHubModelTask.IMAGE_CLASSIFICATION: _("Image Classification"),
+            HfHubModelTask.ZERO_SHOT_IMAGE_CLASSIFICATION: _("Zero-shot Image Classification"),
+            HfHubModelTask.OBJECT_DETECTION: _("Object Detection"),
+            HfHubModelTask.IMAGE_SEGMENTATION: _("Image Segmentation"),
+            HfHubModelTask.DEPTH_ESTIMATION: _("Depth Estimation"),
+            HfHubModelTask.VISUAL_QUESTION_ANSWERING: _("Visual Question Answering"),
+            HfHubModelTask.VIDEO_CLASSIFICATION: _("Video Classification"),
+            HfHubModelTask.TEXT_TO_VIDEO: _("Text to Video"),
+            HfHubModelTask.IMAGE_FEATURE_EXTRACTION: _("Image Feature Extraction"),
+            HfHubModelTask.AUDIO_CLASSIFICATION: _("Audio Classification"),
+            HfHubModelTask.ZERO_SHOT_AUDIO_CLASSIFICATION: _("Zero-shot Audio Classification"),
         }[self]
 
     @classmethod
@@ -273,14 +285,14 @@ class HfHubVisualMediaTask(Enum):
 
     @staticmethod
     def get(name):
-        for key, value in HfHubVisualMediaTask.__members__.items():
+        for key, value in HfHubModelTask.__members__.items():
             if key == name or value.value == name or value.display() == name:
                 return value
-        raise Exception(f"Not a valid HF Hub visual media task: {name}")
+        raise Exception(f"Not a valid HF Hub model task: {name}")
 
     @staticmethod
     def api_values():
-        return [item.value for item in HfHubVisualMediaTask if item != HfHubVisualMediaTask.ALL_VISUAL_MEDIA]
+        return [item.value for item in HfHubModelTask if item != HfHubModelTask.ALL_TASKS]
 
 
 class HfHubSortOption(Enum):

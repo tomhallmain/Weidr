@@ -23,6 +23,7 @@ import pytest
 from PySide6.QtWidgets import QApplication
 
 from compare.classifier_pipeline import (
+    AudioClassifierRankCondition,
     ClassifierPipeline,
     ClassifierPipelines,
     ClassifierRankCondition,
@@ -39,6 +40,7 @@ from compare.classifier_pipeline import (
 )
 from ui.compare.classifier_pipeline_editor_qt import (
     ClassifierPipelineEditorDialog,
+    _AudioClassifierRankPanel,
     _BaseStemMatchPanel,
     _ClassifierRankPanel,
     _CompositePanel,
@@ -262,6 +264,75 @@ class TestClassifierRankPanel:
         p._negate.setChecked(True)
         p.load(None)
         assert p._negate.isChecked() is False
+
+
+# ---------------------------------------------------------------------------
+# _AudioClassifierRankPanel
+# ---------------------------------------------------------------------------
+
+class TestAudioClassifierRankPanel:
+    """Audio-domain sibling of TestClassifierRankPanel -- identical widget shape."""
+
+    def test_default_load_none(self, qtbot):
+        p = _AudioClassifierRankPanel()
+        qtbot.addWidget(p)
+        p.load(None)
+        c = p.get_condition()
+        assert isinstance(c, AudioClassifierRankCondition)
+        assert c.categories == []
+        assert c.min_rank == 1
+        assert c.max_rank == 1
+        assert c.min_confidence == 0.0
+        assert c.negate is False
+
+    def test_condition_type(self, qtbot):
+        p = _AudioClassifierRankPanel()
+        qtbot.addWidget(p)
+        assert p.get_condition().condition_type == "audio_classifier_rank"
+
+    def test_round_trip(self, qtbot):
+        p = _AudioClassifierRankPanel()
+        qtbot.addWidget(p)
+        p._categories.set_items(["explicit"])
+        p._min_rank.setValue(2)
+        p._max_rank.setValue(3)
+        p._min_confidence.setValue(0.25)
+        p._negate.setChecked(True)
+        c = p.get_condition()
+        assert c.categories == ["explicit"]
+        assert c.min_rank == 2
+        assert c.max_rank == 3
+        assert abs(c.min_confidence - 0.25) < 1e-6
+        assert c.negate is True
+
+    def test_load_condition_sets_fields(self, qtbot):
+        p = _AudioClassifierRankPanel()
+        qtbot.addWidget(p)
+        cond = AudioClassifierRankCondition(
+            classifier_name="nsfw_audio_v1",
+            categories=["explicit"],
+            min_rank=1,
+            max_rank=2,
+            min_confidence=0.5,
+            negate=True,
+        )
+        p.load(cond)
+        c = p.get_condition()
+        assert c.categories == ["explicit"]
+        assert c.min_rank == 1
+        assert c.max_rank == 2
+        assert abs(c.min_confidence - 0.5) < 1e-6
+        assert c.negate is True
+
+    def test_loading_classifier_rank_condition_does_not_populate_audio_panel(self, qtbot):
+        """A plain (image) ClassifierRankCondition is not an AudioClassifierRankCondition
+        -- the panel must fall through to its defaults rather than misreading it."""
+        p = _AudioClassifierRankPanel()
+        qtbot.addWidget(p)
+        p.load(ClassifierRankCondition(classifier_name="m", categories=["x"]))
+        c = p.get_condition()
+        assert c.categories == []
+        assert c.min_rank == 1
 
 
 # ---------------------------------------------------------------------------

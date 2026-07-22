@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
 
 from compare.classifier_pipeline import (
     AlwaysCondition,
+    AudioClassifierRankCondition,
     ClassifierPipeline,
     ClassifierPipelines,
     ClassifierRankCondition,
@@ -80,6 +81,7 @@ _CONDITION_ENTRIES = [
     ("composite",           _("Composite")),
     ("group",               _("Group")),
     ("always",              _("No Check (Always)")),
+    ("audio_classifier_rank", _("Audio Classifier Rank")),
 ]
 _CONDITION_TYPES   = [k for k, _ in _CONDITION_ENTRIES]
 _CONDITION_LABELS  = [v for _, v in _CONDITION_ENTRIES]
@@ -504,6 +506,147 @@ class _ClassifierRankPanel(QWidget):
 
     def get_condition(self) -> ClassifierRankCondition:
         return ClassifierRankCondition(
+            classifier_name=self._classifier_combo.currentText(),
+            inherit_categories=self._inherit_categories.isChecked(),
+            categories=self._categories.get_items(),
+            min_rank=self._min_rank.value(),
+            max_rank=self._max_rank.value(),
+            negate=self._negate.isChecked(),
+            min_confidence=self._min_confidence.value(),
+        )
+
+
+class _AudioClassifierRankPanel(QWidget):
+    """Audio-domain sibling of :class:`_ClassifierRankPanel` -- identical fields and
+    tooltips, sourced from ``audio_classifier_manager`` instead of the image classifier
+    registry. See :class:`compare.classifier_pipeline.AudioClassifierRankCondition`.
+    """
+    condition_type = "audio_classifier_rank"
+
+    def __init__(self, on_changed: Callable = None, parent=None):
+        super().__init__(parent)
+        self._on_changed = on_changed or (lambda: None)
+        form = QFormLayout(self)
+        form.setContentsMargins(0, 4, 0, 4)
+        form.setSpacing(4)
+
+        self._classifier_combo = QComboBox()
+        self._populate_classifiers()
+        self._classifier_combo.currentIndexChanged.connect(self._on_changed)
+        form.addRow(_("Audio classifier:"), self._classifier_combo)
+
+        self._inherit_categories = QCheckBox(_("Inherit from pipeline category map"))
+        self._inherit_categories.setChecked(False)
+        self._inherit_categories.setToolTip(
+            _("When checked, matches against ALL of the pipeline's category_map values "
+              "instead of the list below. Leave unchecked to name only specific categories "
+              "(e.g. just the ones you want to exclude), which is usually what you want when "
+              "this condition is guarding a single category node rather than the whole seed.")
+        )
+        self._inherit_categories.stateChanged.connect(self._on_inherit_toggled)
+        form.addRow(_("Categories:"), self._inherit_categories)
+
+        self._categories = _StringListEditor(_("category name"), on_changed=self._on_changed)
+        self._categories.setToolTip(
+            _("Categories this condition matches against. Matching is OR across this list: "
+              "the condition succeeds if ANY of these categories occupies a qualifying rank "
+              "position (see Rank range) with a high enough score (see Min confidence).")
+        )
+        form.addRow("", self._categories)
+
+        rank_row = QHBoxLayout()
+        self._min_rank = QSpinBox()
+        self._min_rank.setRange(1, 20)
+        self._min_rank.setValue(1)
+        self._min_rank.setToolTip(
+            _("Position in the classifier's own ranked output to start checking, where rank 1 "
+              "is the single category the classifier considers most likely, rank 2 the next "
+              "most likely, and so on. Min/Max together define an inclusive window of "
+              "positions to inspect -- they are NOT a confidence range.")
+        )
+        self._min_rank.valueChanged.connect(self._on_changed)
+        rank_row.addWidget(_label(_("Min:")))
+        rank_row.addWidget(self._min_rank)
+        rank_row.addSpacing(8)
+        self._max_rank = QSpinBox()
+        self._max_rank.setRange(1, 20)
+        self._max_rank.setValue(1)
+        self._max_rank.setToolTip(
+            _("End of the rank-position window (inclusive). Min=Max=1 (the default) only "
+              "checks the classifier's single top guess, so a listed category ranked 2nd or "
+              "lower will NOT match even if it's a strong secondary signal. Widen this (e.g. "
+              "1-3) to catch a category anywhere in the top N guesses.")
+        )
+        self._max_rank.valueChanged.connect(self._on_changed)
+        rank_row.addWidget(_label(_("Max:")))
+        rank_row.addWidget(self._max_rank)
+        rank_row.addStretch()
+        form.addRow(_("Rank range:"), rank_row)
+
+        self._min_confidence = QDoubleSpinBox()
+        self._min_confidence.setRange(0.0, 1.0)
+        self._min_confidence.setSingleStep(0.01)
+        self._min_confidence.setDecimals(3)
+        self._min_confidence.setValue(0.0)
+        self._min_confidence.setToolTip(
+            _("Minimum score (0-1) a listed category must have at its rank position to count "
+              "as a match. The default of 0.0 is the LEAST strict setting -- it accepts any "
+              "score, so only rank position and category membership decide the match. Raise "
+              "this (e.g. 0.3-0.5) to require the classifier to actually be confident, rather "
+              "than matching on a near-zero score that happened to land in the rank window.")
+        )
+        self._min_confidence.valueChanged.connect(self._on_changed)
+        form.addRow(_("Min confidence:"), self._min_confidence)
+
+        self._negate = QCheckBox(_("Negate (match when categories are NOT found)"))
+        self._negate.setChecked(False)
+        self._negate.setToolTip(
+            _("Unchecked (default): matches when a listed category IS found in the rank "
+              "window with enough confidence -- a positive detection. Check this to flip "
+              "that, so the condition matches when NONE of the listed categories qualify.")
+        )
+        self._negate.stateChanged.connect(self._on_changed)
+        form.addRow(_("Negate:"), self._negate)
+
+    def _on_inherit_toggled(self, state: int) -> None:
+        self._categories.setEnabled(not bool(state))
+        self._on_changed()
+
+    def _populate_classifiers(self) -> None:
+        self._classifier_combo.clear()
+        try:
+            from image.audio_classifier_manager import audio_classifier_manager
+            names = list(audio_classifier_manager.classifier_metadata.keys())
+        except Exception:
+            names = []
+        if names:
+            self._classifier_combo.addItems(names)
+        else:
+            self._classifier_combo.addItem(_("(no audio classifiers)"))
+
+    def load(self, condition) -> None:
+        if isinstance(condition, AudioClassifierRankCondition):
+            idx = self._classifier_combo.findText(condition.classifier_name)
+            if idx >= 0:
+                self._classifier_combo.setCurrentIndex(idx)
+            self._inherit_categories.setChecked(condition.inherit_categories)
+            self._categories.set_items(condition.categories)
+            self._categories.setEnabled(not condition.inherit_categories)
+            self._min_rank.setValue(condition.min_rank)
+            self._max_rank.setValue(condition.max_rank)
+            self._min_confidence.setValue(condition.min_confidence)
+            self._negate.setChecked(condition.negate)
+        else:
+            self._inherit_categories.setChecked(False)
+            self._categories.set_items([])
+            self._categories.setEnabled(True)
+            self._min_rank.setValue(1)
+            self._max_rank.setValue(1)
+            self._min_confidence.setValue(0.0)
+            self._negate.setChecked(False)
+
+    def get_condition(self) -> AudioClassifierRankCondition:
+        return AudioClassifierRankCondition(
             classifier_name=self._classifier_combo.currentText(),
             inherit_categories=self._inherit_categories.isChecked(),
             categories=self._categories.get_items(),
@@ -1151,6 +1294,7 @@ class _SubCondRow(QWidget):
             _LookaheadPanel(on_changed=self._on_changed),
             _NodeResultPanel(on_changed=self._on_changed),
             _AlwaysPanel(on_changed=self._on_changed),
+            _AudioClassifierRankPanel(on_changed=self._on_changed),
         ]
         for p in self._panels:
             self._stack.addWidget(p)
@@ -1384,6 +1528,7 @@ class _GroupPanel(QWidget):
             _LookaheadPanel(on_changed=changed_cb),
             _NodeResultPanel(on_changed=changed_cb),
             _AlwaysPanel(on_changed=changed_cb),
+            _AudioClassifierRankPanel(on_changed=changed_cb),
         ]
         self._child_stack = QStackedWidget()
         for p in self._child_panels:
@@ -1989,6 +2134,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._composite_panel           = _CompositePanel(on_changed=changed_cb)
         self._group_panel               = _GroupPanel(on_changed=changed_cb)
         self._always_panel              = _AlwaysPanel(on_changed=changed_cb)
+        self._audio_classifier_rank_panel = _AudioClassifierRankPanel(on_changed=changed_cb)
 
         self._cond_panels = [
             self._embedding_panel, self._classifier_rank_panel,
@@ -2001,6 +2147,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
             self._composite_panel,
             self._group_panel,
             self._always_panel,
+            self._audio_classifier_rank_panel,
         ]
 
         self._condition_stack = _AdaptiveStack()

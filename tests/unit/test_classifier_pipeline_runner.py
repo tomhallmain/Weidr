@@ -16,6 +16,7 @@ from files.related_image import clear_base_stem_dir_cache
 from utils.config import config
 
 from compare.classifier_pipeline import (
+    AudioClassifierRankCondition,
     BaseStemMatchCondition,
     ClassifierPipeline,
     ClassifierRankCondition,
@@ -38,6 +39,7 @@ from compare.classifier_pipeline import (
 from compare.pipeline_run_report import PipelineRunReport, PipelineRunStats
 from compare.classifier_pipeline_runner import (
     _evaluate_condition,
+    _eval_audio_classifier_rank,
     _eval_base_stem_match,
     _eval_unknown_suffix,
     _eval_classifier_rank,
@@ -241,6 +243,118 @@ class TestClassifierRankCondition:
             IMAGE,
         )
         assert result is False
+
+
+# ---------------------------------------------------------------------------
+# AudioClassifierRankCondition
+# ---------------------------------------------------------------------------
+
+class TestAudioClassifierRankCondition:
+    """Audio-domain sibling of TestClassifierRankCondition -- same behavior,
+    dispatched against image.audio_classifier_manager instead."""
+
+    def _mock_classifier(self, monkeypatch, predictions: dict):
+        """predictions = {category: score}"""
+        import image.audio_classifier_manager as mgr_mod
+
+        class FakeClassifier:
+            def predict_audio(self, path):
+                return predictions
+
+            def predict_audio_ranked(self, path):
+                return sorted(predictions.items(), key=lambda kv: kv[1], reverse=True)
+
+        class FakeManager:
+            def get_classifier(self, name):
+                return FakeClassifier()
+
+        monkeypatch.setattr(mgr_mod, "audio_classifier_manager", FakeManager())
+
+    def test_top1_match(self, monkeypatch):
+        self._mock_classifier(monkeypatch, {"safe": 0.1, "explicit": 0.9})
+        result, score = _eval_audio_classifier_rank(
+            AudioClassifierRankCondition("m", ["explicit"], min_rank=1, max_rank=1),
+            IMAGE,
+        )
+        assert result is True
+        assert score == pytest.approx(0.9)
+
+    def test_top1_no_match(self, monkeypatch):
+        self._mock_classifier(monkeypatch, {"safe": 0.9, "explicit": 0.1})
+        result, _ = _eval_audio_classifier_rank(
+            AudioClassifierRankCondition("m", ["explicit"], min_rank=1, max_rank=1),
+            IMAGE,
+        )
+        assert result is False
+
+    def test_rank_range_match(self, monkeypatch):
+        self._mock_classifier(monkeypatch, {"safe": 0.5, "suggestive": 0.3, "explicit": 0.2})
+        result, _ = _eval_audio_classifier_rank(
+            AudioClassifierRankCondition("m", ["explicit"], min_rank=2, max_rank=3),
+            IMAGE,
+        )
+        assert result is True
+
+    def test_min_confidence_not_met(self, monkeypatch):
+        self._mock_classifier(monkeypatch, {"safe": 0.8, "explicit": 0.05})
+        result, _ = _eval_audio_classifier_rank(
+            AudioClassifierRankCondition("m", ["explicit"], min_rank=2, max_rank=2,
+                                          min_confidence=0.1),
+            IMAGE,
+        )
+        assert result is False
+
+    def test_missing_classifier(self, monkeypatch):
+        import image.audio_classifier_manager as mgr_mod
+
+        class FakeManager:
+            def get_classifier(self, name):
+                return None
+
+        monkeypatch.setattr(mgr_mod, "audio_classifier_manager", FakeManager())
+        result, _ = _eval_audio_classifier_rank(
+            AudioClassifierRankCondition("missing_model", ["x"], 1, 1),
+            IMAGE,
+        )
+        assert result is False
+
+    def test_negate_flips_a_match_to_no_match(self, monkeypatch):
+        self._mock_classifier(monkeypatch, {"safe": 0.1, "explicit": 0.9})
+        result, score = _eval_audio_classifier_rank(
+            AudioClassifierRankCondition("m", ["explicit"], min_rank=1, max_rank=1, negate=True),
+            IMAGE,
+        )
+        assert result is False
+        assert score == pytest.approx(0.9)
+
+    def test_negate_flips_a_no_match_to_match(self, monkeypatch):
+        self._mock_classifier(monkeypatch, {"safe": 0.9, "explicit": 0.1})
+        result, score = _eval_audio_classifier_rank(
+            AudioClassifierRankCondition("m", ["explicit"], min_rank=1, max_rank=1, negate=True),
+            IMAGE,
+        )
+        assert result is True
+        assert score is None
+
+    def test_negate_does_not_rescue_empty_categories(self, monkeypatch):
+        self._mock_classifier(monkeypatch, {"safe": 0.9, "explicit": 0.1})
+        result, _ = _eval_audio_classifier_rank(
+            AudioClassifierRankCondition("m", [], min_rank=1, max_rank=1, negate=True),
+            IMAGE,
+        )
+        assert result is False
+
+    def test_evaluate_condition_dispatches_to_audio_eval(self, monkeypatch):
+        """Confirms _evaluate_condition's isinstance branch actually routes
+        AudioClassifierRankCondition to the audio-specific eval function rather than
+        falling through to the image ClassifierRankCondition path (or raising)."""
+        self._mock_classifier(monkeypatch, {"safe": 0.1, "explicit": 0.9})
+        result, score = _evaluate_condition(
+            AudioClassifierRankCondition("m", ["explicit"], min_rank=1, max_rank=1),
+            IMAGE, {}, {},
+        )
+        assert result is True
+        assert score == pytest.approx(0.9)
 
 
 # ---------------------------------------------------------------------------

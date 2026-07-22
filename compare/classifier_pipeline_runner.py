@@ -21,6 +21,7 @@ from compare.debounced_generate_queue import DebouncedGenerateQueue
 from compare.pipeline_run_report import PipelineRunReport
 from compare.classifier_pipeline import (
     AlwaysCondition,
+    AudioClassifierRankCondition,
     ClassifierPipeline,
     CompositeCondition,
     ClassifierRankCondition,
@@ -556,6 +557,9 @@ def _evaluate_condition(
     if isinstance(condition, ClassifierRankCondition):
         return _eval_classifier_rank(condition, image_path, pipeline_categories=pipeline_categories)
 
+    if isinstance(condition, AudioClassifierRankCondition):
+        return _eval_audio_classifier_rank(condition, image_path, pipeline_categories=pipeline_categories)
+
     if isinstance(condition, PrototypeCondition):
         return _eval_prototype(condition, image_path)
 
@@ -638,6 +642,51 @@ def _eval_classifier_rank(
         return False, None
 
     ranked = classifier.predict_image_ranked(image_path)
+
+    matched_score = None
+    for rank_idx, (category, score) in enumerate(ranked, start=1):
+        if rank_idx > condition.max_rank:
+            break
+        if rank_idx < condition.min_rank:
+            continue
+        if category in categories and score >= condition.min_confidence:
+            matched_score = score
+            break
+
+    matched = matched_score is not None
+    if condition.negate:
+        return (not matched), matched_score
+    return matched, matched_score
+
+
+def _eval_audio_classifier_rank(
+    condition: AudioClassifierRankCondition,
+    image_path: str,
+    pipeline_categories: list = [],
+) -> tuple[bool, object]:
+    """Audio-domain sibling of :func:`_eval_classifier_rank` -- same rank/category/
+    confidence/negate logic, dispatched to ``audio_classifier_manager`` instead of
+    the image classifier registry. See :class:`AudioClassifierRankCondition`.
+    """
+    from image.audio_classifier_manager import audio_classifier_manager
+    classifier = audio_classifier_manager.get_classifier(condition.classifier_name)
+    if classifier is None:
+        logger.error(
+            "AudioClassifierRankCondition: classifier %r not found", condition.classifier_name
+        )
+        return False, None
+
+    categories = (
+        pipeline_categories
+        if condition.inherit_categories and not condition.categories
+        else condition.categories
+    )
+    if not categories:
+        # Misconfiguration -- always no-match, regardless of negate, so a broken
+        # condition can't accidentally flip into "always allow".
+        return False, None
+
+    ranked = classifier.predict_audio_ranked(image_path)
 
     matched_score = None
     for rank_idx, (category, score) in enumerate(ranked, start=1):

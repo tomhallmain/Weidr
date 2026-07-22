@@ -17,6 +17,7 @@ from compare.embedding_prototype import EmbeddingPrototype
 from compare.lookahead import Lookahead
 from files.directory_profile import DirectoryProfile
 from files.file_action import FileAction
+from image.audio_classifier_manager import audio_classifier_manager
 from image.image_classifier_manager import image_classifier_manager
 from image.image_data_extractor import image_data_extractor
 from image.frame_cache import FrameCache
@@ -58,18 +59,18 @@ class TriggerFrameResult:
     detail: Optional["TriggerDetail"] = None      # what triggered (populated for manual seeks)
 
 
-class ImageClassifierClassificationMode(Enum):
+class ClassifierClassificationMode(Enum):
     SELECTED_CATEGORIES = "selected_categories"
     MODEL_STRATEGY = "model_strategy"
 
     @staticmethod
     def from_value(value):
-        if isinstance(value, ImageClassifierClassificationMode):
+        if isinstance(value, ClassifierClassificationMode):
             return value
         value_str = str(value or "").strip().lower()
-        if value_str == ImageClassifierClassificationMode.MODEL_STRATEGY.value:
-            return ImageClassifierClassificationMode.MODEL_STRATEGY
-        return ImageClassifierClassificationMode.SELECTED_CATEGORIES
+        if value_str == ClassifierClassificationMode.MODEL_STRATEGY.value:
+            return ClassifierClassificationMode.MODEL_STRATEGY
+        return ClassifierClassificationMode.SELECTED_CATEGORIES
 
 
 
@@ -92,11 +93,22 @@ class ClassifierAction:
     action: ClassifierActionType = field(default=ClassifierActionType.NOTIFY)
     action_modifier: str = ""
     related_image_edit_suffix: str = ""
+    # Despite the "image_classifier" naming (kept for backward compatibility with
+    # every already-serialized ClassifierAction/Prevalidation), these three fields
+    # are domain-generic: classifier_domain picks which registry the name is
+    # resolved against (image_classifier_manager or audio_classifier_manager), and
+    # everything else -- validation flow, MOVE-target category resolution, model
+    # strategy caching -- is shared. Only the discrete per-file classifier call
+    # actually differs by domain (see _classify_with_classifier() and friends).
     image_classifier_name: str = ""
     image_classifier_selected_categories: list = field(default_factory=list)
-    classification_mode: ImageClassifierClassificationMode = field(
-        default=ImageClassifierClassificationMode.SELECTED_CATEGORIES
+    classification_mode: ClassifierClassificationMode = field(
+        default=ClassifierClassificationMode.SELECTED_CATEGORIES
     )
+    # "image" or "audio". A single ClassifierAction only ever targets one domain's
+    # classifier at a time -- consistent with applies_to_media_types already
+    # scoping an action to a single kind of media.
+    classifier_domain: str = "image"
     use_embedding: bool = True
     use_image_classifier: bool = False
     use_prompts: bool = False
@@ -142,7 +154,12 @@ class ClassifierAction:
         if not isinstance(self.action, Enum):
             self.action = ClassifierActionType[self.action]
         # Normalize classification mode
-        self.classification_mode = ImageClassifierClassificationMode.from_value(self.classification_mode)
+        self.classification_mode = ClassifierClassificationMode.from_value(self.classification_mode)
+        # Normalize classifier_domain: any unrecognized/garbage value falls back to
+        # "image" (the pre-existing, only-ever-supported behavior before audio
+        # classifiers existed) rather than raising -- keeps old serialized data safe.
+        if self.classifier_domain not in ("image", "audio"):
+            self.classifier_domain = "image"
         # Normalize list fields that callers may pass as None
         self.lookahead_names = list(self.lookahead_names) if self.lookahead_names else []
         self.filename_contains_patterns = list(self.filename_contains_patterns) if self.filename_contains_patterns else []
@@ -205,9 +222,44 @@ class ClassifierAction:
         else:
             return ClassifierAction.NO_POSITIVES_STR
 
+    # ------------------------------------------------------------------
+    # Classifier domain dispatch
+    #
+    # The only place image vs. audio classifiers genuinely differ is the
+    # discrete per-file call (different manager, different wrapper method
+    # names -- predict_image vs. predict_audio, etc). Everything else --
+    # config fields, validation flow, MOVE-target resolution, model-strategy
+    # caching -- is shared and reads self.classifier_domain to decide which
+    # registry/method pair to use. Centralizing that choice here means none
+    # of the call sites below need their own if/else.
+    # ------------------------------------------------------------------
+    def _classifier_domain_manager(self):
+        return audio_classifier_manager if self.classifier_domain == "audio" else image_classifier_manager
+
+    def _classify_with_classifier(self, path: str) -> Optional[str]:
+        if self.image_classifier is None:
+            return None
+        if self.classifier_domain == "audio":
+            return self.image_classifier.classify_audio(path)
+        return self.image_classifier.classify_image(path)
+
+    def _predict_ranked_with_classifier(self, path: str):
+        if self.image_classifier is None:
+            return None
+        if self.classifier_domain == "audio":
+            return self.image_classifier.predict_audio_ranked(path)
+        return self.image_classifier.predict_image_ranked(path)
+
+    def _test_categories_with_classifier(self, path: str, categories) -> bool:
+        if self.image_classifier is None:
+            return False
+        if self.classifier_domain == "audio":
+            return self.image_classifier.test_audio_for_categories(path, categories)
+        return self.image_classifier.test_image_for_categories(path, categories)
+
     def set_image_classifier(self, classifier_name):
         self.image_classifier_name = classifier_name
-        self.image_classifier = image_classifier_manager.get_classifier(classifier_name)
+        self.image_classifier = self._classifier_domain_manager().get_classifier(classifier_name)
         self._missing_image_classifier_logged = False
         self.image_classifier_categories = []
         self._invalidate_model_strategy_cache()
@@ -215,14 +267,18 @@ class ClassifierAction:
             self.image_classifier_categories.extend(list(self.image_classifier.model_categories))
 
     def ensure_image_classifier_loaded(self, notify_callback):
-        """Lazy load the image classifier if it hasn't been loaded yet."""
+        """Lazy load the classifier (image or audio, per classifier_domain) if it
+        hasn't been loaded yet."""
         if self.image_classifier is None and self.image_classifier_name:
             try:
                 if notify_callback is not None:
-                    notify_callback(_("Loading image classifier <{0}> ...").format(self.image_classifier_name))
+                    notify_callback(_("Loading {0} classifier <{1}> ...").format(
+                        _("audio") if self.classifier_domain == "audio" else _("image"),
+                        self.image_classifier_name,
+                    ))
                 self.set_image_classifier(self.image_classifier_name)
             except Exception as e:
-                logger.error(f"Error loading image classifier <{self.image_classifier_name}>: {e}")
+                logger.error(f"Error loading {self.classifier_domain} classifier <{self.image_classifier_name}>: {e}")
 
     def is_selected_category_unset(self):
         # TODO - this may be incorrect, would make more sense to be the opposite logic, need to check
@@ -678,21 +734,19 @@ class ClassifierAction:
                 # Lazy attempt; no notify callback here.
                 self.ensure_image_classifier_loaded(None)
             if self.image_classifier is not None:
-                if self.classification_mode == ImageClassifierClassificationMode.MODEL_STRATEGY:
-                    predicted_category = self.image_classifier.classify_image(image_path)
+                if self.classification_mode == ClassifierClassificationMode.MODEL_STRATEGY:
+                    predicted_category = self._classify_with_classifier(image_path)
                     positive_categories = self._resolve_model_strategy_positive_categories()
                     if predicted_category in positive_categories:
                         if _detail_out is not None:
                             _detail_out[0] = self._build_classifier_detail(image_path, predicted_category)
                         return True, predicted_category
                 else:
-                    if self.image_classifier.test_image_for_categories(
+                    if self._test_categories_with_classifier(
                         image_path, self.image_classifier_selected_categories
                     ):
                         try:
-                            predicted_category = self.image_classifier.classify_image(
-                                image_path
-                            )
+                            predicted_category = self._classify_with_classifier(image_path)
                         except Exception:
                             predicted_category = None
                         if _detail_out is not None:
@@ -702,7 +756,7 @@ class ClassifierAction:
                         return True, None
             else:
                 if not self._missing_image_classifier_logged:
-                    logger.error(f"Image classifier {self.image_classifier_name} not found for classifier action {self.name}")
+                    logger.error(f"{self.classifier_domain.capitalize()} classifier {self.image_classifier_name} not found for classifier action {self.name}")
                     self._missing_image_classifier_logged = True
 
         if self.use_prompts:
@@ -727,15 +781,17 @@ class ClassifierAction:
         return False, None
 
     def _build_classifier_detail(self, image_path: str, category: Optional[str]) -> "TriggerDetail":
-        """Build a TriggerDetail for an image-classifier match, including ranked predictions.
-        predict_image caches internally so this is effectively free after classify_image ran."""
+        """Build a TriggerDetail for a classifier match (image or audio domain),
+        including ranked predictions. predict_image/predict_audio cache internally
+        so this is effectively free after classify_image/classify_audio ran."""
         top_preds = None
         try:
             if self.image_classifier:
-                top_preds = self.image_classifier.predict_image_ranked(image_path)
+                top_preds = self._predict_ranked_with_classifier(image_path)
         except Exception:
             pass
-        return TriggerDetail(trigger_type="image_classifier", category=category, top_predictions=top_preds)
+        trigger_type = "audio_classifier" if self.classifier_domain == "audio" else "image_classifier"
+        return TriggerDetail(trigger_type=trigger_type, category=category, top_predictions=top_preds)
 
     def media_type_allowed(self, path: str) -> bool:
         """Return False when applies_to_media_types is set and path's type is not in it."""
@@ -982,10 +1038,10 @@ class ClassifierAction:
             self.ensure_image_classifier_loaded(None)
         if self.image_classifier is None:
             return None
-        predicted_category = self.image_classifier.classify_image(image_path)
+        predicted_category = self._classify_with_classifier(image_path)
         if predicted_category is None:
             return None
-        if self.classification_mode == ImageClassifierClassificationMode.MODEL_STRATEGY:
+        if self.classification_mode == ClassifierClassificationMode.MODEL_STRATEGY:
             positive_categories = self._resolve_model_strategy_positive_categories()
             return predicted_category if predicted_category in positive_categories else None
         if self.image_classifier_selected_categories:
@@ -1258,26 +1314,28 @@ class ClassifierAction:
         # Validate image classifier settings if enabled (registry only — no lazy load here;
         # wrappers load lazily during prevalidation via ensure_image_classifier_loaded).
         if self.use_image_classifier:
+            domain_label = "audio" if self.classifier_domain == "audio" else "image"
+            manager = self._classifier_domain_manager()
             name = (self.image_classifier_name or "").strip()
             if name:
-                resolved = image_classifier_manager.resolve_registered_model_name(self.image_classifier_name)
+                resolved = manager.resolve_registered_model_name(self.image_classifier_name)
                 if resolved is None:
-                    keys = list(image_classifier_manager.classifier_metadata.keys())
+                    keys = list(manager.classifier_metadata.keys())
                     raise Exception(
-                        f"The image classifier \"{self.image_classifier_name}\" was not found in the available image classifiers. "
+                        f"The {domain_label} classifier \"{self.image_classifier_name}\" was not found in the available {domain_label} classifiers. "
                         f"Registered model_name keys: {keys}. "
                         f"If this is a Hugging Face repo id, ensure the model config sets hf_repo_id to match."
                     )
-                model_cfg = image_classifier_manager.classifier_metadata[resolved]
+                model_cfg = manager.classifier_metadata[resolved]
                 allowed = set(model_cfg.model_categories)
                 if self.image_classifier_selected_categories:
                     bad = [c for c in self.image_classifier_selected_categories if c not in allowed]
                     if bad:
                         raise Exception(
-                            f"One or more selected categories {bad} were not found in the image classifier's "
+                            f"One or more selected categories {bad} were not found in the {domain_label} classifier's "
                             f"category options (model \"{resolved}\": {list(model_cfg.model_categories)})"
                         )
-            if self.classification_mode == ImageClassifierClassificationMode.MODEL_STRATEGY:
+            if self.classification_mode == ClassifierClassificationMode.MODEL_STRATEGY:
                 self._resolve_model_strategy_positive_categories()
         
         if self.is_move_action():
@@ -1288,7 +1346,7 @@ class ClassifierAction:
             if (
                 not self.action_modifier
                 and self.use_image_classifier
-                and self.classification_mode == ImageClassifierClassificationMode.SELECTED_CATEGORIES
+                and self.classification_mode == ClassifierClassificationMode.SELECTED_CATEGORIES
                 and not self.image_classifier_selected_categories
             ):
                 raise Exception(
@@ -1353,6 +1411,7 @@ class ClassifierAction:
             "image_classifier_name": self.image_classifier_name,
             "image_classifier_selected_categories": self.image_classifier_selected_categories,
             "classification_mode": self.classification_mode.value,
+            "classifier_domain": self.classifier_domain,
             "use_embedding": self.use_embedding,
             "use_image_classifier": self.use_image_classifier,
             "use_prompts": self.use_prompts,
@@ -1394,7 +1453,9 @@ class ClassifierAction:
         if 'use_image_classifier' not in d:
             d['use_image_classifier'] = False
         if 'classification_mode' not in d:
-            d['classification_mode'] = ImageClassifierClassificationMode.SELECTED_CATEGORIES.value
+            d['classification_mode'] = ClassifierClassificationMode.SELECTED_CATEGORIES.value
+        if 'classifier_domain' not in d:
+            d['classifier_domain'] = "image"
         if 'lookahead_names' not in d:
             d['lookahead_names'] = []
         if 'use_prompts' not in d:
@@ -1448,14 +1509,16 @@ class ClassifierAction:
         return ClassifierAction(**d)
 
     def _resolve_model_strategy_positive_categories(self) -> frozenset[str]:
+        domain_label = "Audio" if self.classifier_domain == "audio" else "Image"
         name = (self.image_classifier_name or "").strip()
         if not name:
             raise Exception(
-                "Image classifier name must be set when using model strategy classification mode."
+                f"{domain_label} classifier name must be set when using model strategy classification mode."
             )
-        resolved = image_classifier_manager.resolve_registered_model_name(name)
+        manager = self._classifier_domain_manager()
+        resolved = manager.resolve_registered_model_name(name)
         cfg = (
-            image_classifier_manager.classifier_metadata.get(resolved)
+            manager.classifier_metadata.get(resolved)
             if resolved
             else None
         )
@@ -1464,24 +1527,27 @@ class ClassifierAction:
             for g in ((cfg.positive_groups if cfg else None) or [])
             if isinstance(g, list) and g
         )
-        sig = (resolved, groups_sig)
+        # classifier_domain is part of the cache key -- it can change without a
+        # set_image_classifier() call (e.g. the UI's domain toggle), which is the
+        # only other thing that invalidates this cache.
+        sig = (self.classifier_domain, resolved, groups_sig)
         if sig == self._model_strategy_sig and self._model_strategy_positives is not None:
             return self._model_strategy_positives
 
         if cfg is None:
             raise Exception(
-                f'Image classifier model config "{name}" is invalid or unavailable; '
+                f'{domain_label} classifier model config "{name}" is invalid or unavailable; '
                 "objects depending on this model strategy are invalid."
             )
         if not groups_sig:
             raise Exception(
-                f'Image classifier model config "{name}" must define positive_groups '
+                f'{domain_label} classifier model config "{name}" must define positive_groups '
                 "for model strategy classification mode."
             )
         positives = frozenset(c for grp in groups_sig for c in grp)
         if not positives:
             raise Exception(
-                f'Image classifier model config "{name}" has no usable positive categories.'
+                f'{domain_label} classifier model config "{name}" has no usable positive categories.'
             )
         self._model_strategy_sig = sig
         self._model_strategy_positives = positives
@@ -1493,7 +1559,10 @@ class ClassifierAction:
         if self.use_embedding:
             validation_types.append(_("embedding"))
         if self.use_image_classifier and self.image_classifier_name and self.image_classifier_name.strip():
-            validation_types.append(_("classifier {0}").format(self.image_classifier_name))
+            if self.classifier_domain == "audio":
+                validation_types.append(_("audio classifier {0}").format(self.image_classifier_name))
+            else:
+                validation_types.append(_("classifier {0}").format(self.image_classifier_name))
         if self.use_prompts:
             validation_types.append(_("prompts"))
         if self.use_prototype:
@@ -1669,7 +1738,9 @@ class Prevalidation(ClassifierAction):
         if 'use_image_classifier' not in d:
             d['use_image_classifier'] = False
         if 'classification_mode' not in d:
-            d['classification_mode'] = ImageClassifierClassificationMode.SELECTED_CATEGORIES.value
+            d['classification_mode'] = ClassifierClassificationMode.SELECTED_CATEGORIES.value
+        if 'classifier_domain' not in d:
+            d['classifier_domain'] = "image"
         if 'use_prompts' not in d:
             d['use_prompts'] = False
         if 'use_blacklist' not in d:

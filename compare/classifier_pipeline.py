@@ -130,6 +130,69 @@ class ClassifierRankCondition:
 
 
 @dataclass
+class AudioClassifierRankCondition:
+    """Audio-domain sibling of :class:`ClassifierRankCondition`.
+
+    Same shape and semantics (rank window, categories, min confidence, negate,
+    inherit_categories), evaluated against ``image.audio_classifier_manager``'s
+    registry instead of the image classifier registry. Kept as a separate
+    condition type rather than a ``domain`` field on ``ClassifierRankCondition``
+    -- see ``docs/audio-embeddings-and-classification-design.md`` Track B for
+    the rationale (mirrors how distinct concerns already get distinct condition
+    types in this module, e.g. ``PrototypeCondition`` vs ``LookaheadCondition``).
+    Typically paired with a ``MediaTypeCondition([CompareMediaType.AUDIO])``
+    gate earlier in the pipeline, since nothing here restricts evaluation to
+    audio files on its own.
+    """
+    condition_type: ClassVar[str] = "audio_classifier_rank"
+
+    classifier_name: str = ""
+    categories: Optional[list] = None
+    min_rank: int = 1
+    max_rank: int = 1
+    min_confidence: float = 0.0
+    inherit_categories: bool = False
+    negate: bool = False
+
+    def __post_init__(self):
+        self.categories = list(self.categories) if self.categories else []
+
+    def to_dict(self) -> dict:
+        return {
+            "condition_type": self.condition_type,
+            "classifier_name": self.classifier_name,
+            "categories": self.categories,
+            "min_rank": self.min_rank,
+            "max_rank": self.max_rank,
+            "min_confidence": self.min_confidence,
+            "inherit_categories": self.inherit_categories,
+            "negate": self.negate,
+        }
+
+    def summary(self) -> str:
+        if self.inherit_categories and not self.categories:
+            cats = "(pipeline categories)"
+        else:
+            cats = ", ".join(self.categories) if self.categories else "(none)"
+        rank = f"rank {self.min_rank}" if self.min_rank == self.max_rank else f"rank {self.min_rank}-{self.max_rank}"
+        prefix = "NOT " if self.negate else ""
+        return f"{prefix}AudioClassifierRank({self.classifier_name}, [{cats}], {rank})"
+
+    def display_summary(self) -> str:
+        if self.inherit_categories and not self.categories:
+            cats = _("(pipeline categories)")
+        else:
+            cats = ", ".join(self.categories) if self.categories else _("(none)")
+        rank = (
+            _("rank {0}").format(self.min_rank)
+            if self.min_rank == self.max_rank
+            else _("rank {0}-{1}").format(self.min_rank, self.max_rank)
+        )
+        prefix = _("NOT ") if self.negate else ""
+        return prefix + _("AudioClsRank") + f"({self.classifier_name}, [{cats}], {rank})"
+
+
+@dataclass
 class PrototypeCondition:
     """Embedding prototype similarity check."""
     condition_type: ClassVar[str] = "prototype"
@@ -580,6 +643,7 @@ class GroupChildResultCondition:
 NodeCondition = (
     EmbeddingCondition
     | ClassifierRankCondition
+    | AudioClassifierRankCondition
     | PrototypeCondition
     | PromptCondition
     | FilenameContainsCondition
@@ -607,6 +671,16 @@ def _condition_from_dict(d: dict):
         )
     if ct == "classifier_rank":
         return ClassifierRankCondition(
+            classifier_name=d.get("classifier_name", ""),
+            categories=d.get("categories", []),
+            min_rank=d.get("min_rank", 1),
+            max_rank=d.get("max_rank", 1),
+            min_confidence=d.get("min_confidence", 0.0),
+            inherit_categories=d.get("inherit_categories", False),
+            negate=d.get("negate", False),
+        )
+    if ct == "audio_classifier_rank":
+        return AudioClassifierRankCondition(
             classifier_name=d.get("classifier_name", ""),
             categories=d.get("categories", []),
             min_rank=d.get("min_rank", 1),
@@ -1088,6 +1162,28 @@ class ClassifierPipeline:
             if condition.max_rank < condition.min_rank:
                 errors.append(_("Node {0}: max_rank must be ≥ min_rank.").format(node_name))
 
+        elif isinstance(condition, AudioClassifierRankCondition):
+            if not condition.classifier_name:
+                errors.append(
+                    _("Node {0}: AudioClassifierRankCondition has no classifier_name.").format(node_name)
+                )
+            else:
+                try:
+                    from image.audio_classifier_manager import audio_classifier_manager
+                    names = audio_classifier_manager.get_model_names()
+                    if names and condition.classifier_name not in names:
+                        errors.append(
+                            _("Node {0}: audio classifier {1} is not registered.").format(
+                                node_name, condition.classifier_name
+                            )
+                        )
+                except Exception:
+                    pass  # manager not available during unit tests — skip
+            if condition.min_rank < 1:
+                errors.append(_("Node {0}: min_rank must be ≥ 1.").format(node_name))
+            if condition.max_rank < condition.min_rank:
+                errors.append(_("Node {0}: max_rank must be ≥ min_rank.").format(node_name))
+
         elif isinstance(condition, FilenameContainsCondition):
             if not condition.patterns:
                 errors.append(
@@ -1237,6 +1333,11 @@ class ClassifierPipeline:
                 warnings.append(
                     _("Node {0}: ClassifierRankCondition has inherit_categories=True but the pipeline has no category map — condition will match nothing.").format(node_name)
                 )
+        elif isinstance(condition, AudioClassifierRankCondition):
+            if condition.inherit_categories and not known_suffixes:
+                warnings.append(
+                    _("Node {0}: AudioClassifierRankCondition has inherit_categories=True but the pipeline has no category map — condition will match nothing.").format(node_name)
+                )
         elif isinstance(condition, BaseStemMatchCondition):
             if known_suffixes:
                 for sf in condition.suffix_filter:
@@ -1271,6 +1372,7 @@ class ClassifierPipeline:
         _LABELS = {
             "embedding": _("Embedding"),
             "classifier_rank": _("ClsRank"),
+            "audio_classifier_rank": _("AudioClsRank"),
             "prototype": _("Prototype"),
             "prompt": _("Prompt"),
             "always": _("Always"),

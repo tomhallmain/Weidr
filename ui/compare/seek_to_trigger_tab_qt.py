@@ -609,7 +609,7 @@ def _format_trigger_detail(detail: Optional[TriggerDetail]) -> str:
     """Format a TriggerDetail into a human-readable line for the detail label."""
     if detail is None:
         return ""
-    if detail.trigger_type == "image_classifier":
+    if detail.trigger_type in ("image_classifier", "audio_classifier"):
         parts = []
         if detail.category:
             parts.append(_("matched category: {cat}").format(cat=detail.category))
@@ -621,7 +621,8 @@ def _format_trigger_detail(detail: Optional[TriggerDetail]) -> str:
             if scores:
                 parts.append(f"[{scores}]")
         inner = "  ".join(parts) if parts else ""
-        return _("Trigger: image classifier") + (f" — {inner}" if inner else "")
+        label = _("Trigger: audio classifier") if detail.trigger_type == "audio_classifier" else _("Trigger: image classifier")
+        return label + (f" — {inner}" if inner else "")
     labels = {
         "embedding": _("Trigger: text embedding"),
         "prompt": _("Trigger: prompt match"),

@@ -307,6 +307,8 @@ class CompareWrapper:
         '''
         While in group mode, navigate to the previous group.
         '''
+        if self._in_group_complement_mode():
+            return
         if file_browser:
             self.find_next_unrelated_media(file_browser, forward=False)
             return
@@ -322,6 +324,8 @@ class CompareWrapper:
         '''
         While in group mode, navigate to the next group.
         '''
+        if self._in_group_complement_mode():
+            return
         if file_browser:
             self.find_next_unrelated_media(file_browser, forward=True)
             return
@@ -331,6 +335,18 @@ class CompareWrapper:
         else:
             self.current_group_index += 1
         self.set_current_group()
+
+    def _in_group_complement_mode(self) -> bool:
+        '''
+        True while the app is showing GROUP_COMPLEMENT. Group/supergroup
+        navigation is meaningless there and would corrupt state: current_group_index /
+        group_indexes / file_groups are deliberately left untouched while in
+        this mode (see enter_complement_mode), so rebuilding files_matched
+        from them via set_current_group() would silently swap the complement
+        list out for a real group's members while still showing "Group
+        Complement Mode".
+        '''
+        return getattr(self._master, "mode", None) == Mode.GROUP_COMPLEMENT
 
     def _get_supergroups(self) -> list:
         '''
@@ -359,6 +375,8 @@ class CompareWrapper:
         self._show_adjacent_supergroup(forward=True)
 
     def _show_adjacent_supergroup(self, forward: bool) -> None:
+        if self._in_group_complement_mode():
+            return
         supergroups = self._get_supergroups()
         if not supergroups:
             self._app_actions.toast(_("No Supergroups Found"))
@@ -531,15 +549,87 @@ class CompareWrapper:
         self._master.update()
         self._app_actions.create_media(self.current_match())
 
+    def enter_complement_mode(self) -> None:
+        '''
+        Switch to GROUP_COMPLEMENT mode, showing the files from the current
+        compare run that were not placed into any group. file_groups /
+        group_indexes / current_group_index are deliberately left untouched so
+        return_to_group_mode() can restore the exact group being browsed.
+        '''
+        grouped_paths = {
+            path for group in self.file_groups.values() for path in group
+        }
+        scanned = self._compare.compare_data.files_found
+        ungrouped = {f for f in scanned if f not in grouped_paths}
+        if not ungrouped:
+            self._app_actions.alert(
+                _("No Ungrouped Files"),
+                _("Every scanned file was placed into a group."),
+            )
+            return
+        # The complement has no similarity-derived order of its own (unlike a
+        # GROUP), so order it by the file browser's active sort (name/date/
+        # size/etc.) instead of the compare engine's raw scan order.
+        complement = [f for f in self._master.file_browser.get_files() if f in ungrouped]
+        # Guard against any ungrouped file the file browser's own filters
+        # exclude (e.g. a hidden/type filter difference from what the compare
+        # scan covered) -- append it in scan order so it isn't silently lost.
+        seen = set(complement)
+        complement += [f for f in scanned if f in ungrouped and f not in seen]
+        self.files_matched = complement
+        self.match_index = 0
+        self._app_actions.set_mode(Mode.GROUP_COMPLEMENT, do_update=False)
+        self._app_actions._add_buttons_for_mode()
+        self._app_actions.create_media(self.files_matched[0])
+        self._app_actions.refresh_masonry()
+        self._app_actions.toast(_("{0} ungrouped files").format(len(complement)))
+
+    def return_to_group_mode(self) -> None:
+        '''
+        Leave GROUP_COMPLEMENT mode and restore the group being browsed
+        before enter_complement_mode() was called.
+        '''
+        self._app_actions.set_mode(Mode.GROUP, do_update=False)
+        self.set_current_group()
+        self._app_actions._add_buttons_for_mode()
+
+    def remove_from_complement(self, filepath: str) -> None:
+        '''
+        Remove a deleted file from the live GROUP_COMPLEMENT files_matched
+        list. There is no group membership to update for ungrouped files, so
+        _update_groups_for_removed_file is not involved on this path.
+        '''
+        if filepath in self.files_matched:
+            self.files_matched.remove(filepath)
+        if not self.files_matched:
+            self._app_actions.alert(
+                _("No More Ungrouped Files"),
+                _("There are no more ungrouped files remaining."),
+            )
+            self.return_to_group_mode()
+            return
+        if self.match_index >= len(self.files_matched):
+            self.match_index = 0
+        self._app_actions.create_media(self.files_matched[self.match_index])
+        self._app_actions.refresh_masonry()
+
     def show_boundary_match(self, last_file=False) -> None:
         '''
         Home/End within compare results: show the first (or last) match of the
         first (or last) group, honoring skips before anything is displayed
-        (config prevalidate_on_direct_media_display).
+        (config prevalidate_on_direct_media_display). In GROUP_COMPLEMENT mode
+        there is no group to jump within -- current_group_index / group_indexes /
+        file_groups are deliberately left untouched (see enter_complement_mode)
+        -- so this jumps to the boundary of the flat complement list instead,
+        without rebuilding files_matched from the real groups.
         '''
-        if len(self.group_indexes) > 0:
-            self.current_group_index = len(self.group_indexes) - 1 if last_file else 0
-        if not self._load_current_group():
+        in_complement = self._in_group_complement_mode()
+        if not in_complement:
+            if len(self.group_indexes) > 0:
+                self.current_group_index = len(self.group_indexes) - 1 if last_file else 0
+            if not self._load_current_group():
+                return
+        elif not self.files_matched:
             return
         self.match_index = len(self.files_matched) - 1 if last_file else 0
         if config.prevalidate_on_direct_media_display:
@@ -550,7 +640,10 @@ class CompareWrapper:
                 if media == start_media:
                     self._app_actions.toast(_("All media in the group are skipped"))
                     break
-        self._display_current_match()
+        if in_complement:
+            self._app_actions.create_media(self.current_match())
+        else:
+            self._display_current_match()
 
     def _supergroup_label_suffix(self, actual_group_index: int) -> str:
         '''

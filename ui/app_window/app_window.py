@@ -178,6 +178,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             Mode.GROUP: False,
             Mode.SEARCH: False,
             Mode.DUPLICATES: False,
+            Mode.GROUP_COMPLEMENT: False,
         }
         # Refresh guards:
         # - Prevent nested refresh execution.
@@ -928,6 +929,8 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             self.sidebar_panel.remove_search_mode_buttons()
         if mode not in (Mode.GROUP, Mode.DUPLICATES):
             self.sidebar_panel.remove_group_mode_buttons()
+        if mode != Mode.GROUP_COMPLEMENT:
+            self.sidebar_panel.remove_complement_mode_buttons()
 
     def restore_compare_state_for_undone_move(self) -> None:
         """Reverse the compare-result change of a move-out whose move was undone.
@@ -952,6 +955,13 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             # The removal had emptied the last group and dropped the app back
             # to browse mode; return to the compare view the user was in.
             self.set_mode(snapshot.app_mode)
+        if snapshot.app_mode == Mode.GROUP_COMPLEMENT:
+            # files_matched/match_index were already restored verbatim by
+            # maybe_restore_removal_undo_snapshot() -- unlike GROUP/DUPLICATES,
+            # there is no group to rebuild from (file_groups holds the real,
+            # untouched groups, not the complement), so just redisplay it.
+            self.media_navigator.create_media(self.compare_manager.current_match())
+            return
         self.compare_manager.set_current_group(start_match_index=snapshot.match_index)
 
     def _sync_media_empty_directory_message(self) -> None:
@@ -1292,6 +1302,8 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         """
         if self.mode == Mode.BROWSE:
             return self.file_browser.get_files()
+        if self.mode == Mode.GROUP_COMPLEMENT:
+            return list(self.compare_manager.files_matched)
         if self.compare_manager.has_compare():
             return self.compare_manager.get_grouped_filepaths(self.mode)
         return []
@@ -1348,6 +1360,10 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             # SEARCH mode has a single flat group; files_matched is already sorted
             # correctly by run_search(). Seeking via set_current_group would rebuild
             # files_matched in the wrong order (ascending vs. score-descending).
+            self.compare_manager.seek_to_file(filepath)
+            self.media_navigator.create_media(filepath)
+        elif self.mode == Mode.GROUP_COMPLEMENT:
+            # files_matched is the complement list itself; no group lookup needed.
             self.compare_manager.seek_to_file(filepath)
             self.media_navigator.create_media(filepath)
         else:

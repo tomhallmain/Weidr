@@ -310,9 +310,13 @@ class WindowLauncher:
             if self._app.mode == Mode.GROUP:
                 len_groups = len(cm.file_groups)
                 group_idx = cm.current_group_index + 1
-                index_text = f"{_index} of {len_matched} (Group {group_idx} of {len_groups})"
+                index_text = _("{0} of {1} (Group {2} of {3})").format(
+                    _index, len_matched, group_idx, len_groups)
             elif self._app.mode == Mode.SEARCH and self._app.is_toggled_view_matches:
-                index_text = f"{_index} of {len_matched} ({self._app.file_browser.get_index_details()})"
+                index_text = _("{0} of {1} ({2})").format(
+                    _index, len_matched, self._app.file_browser.get_index_details())
+            elif self._app.mode == Mode.GROUP_COMPLEMENT:
+                index_text = _("{0} of {1} (Ungrouped)").format(_index, len_matched)
             else:
                 index_text = ""
 

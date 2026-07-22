@@ -676,6 +676,21 @@ class CompareManager:
         if self._primary_wrapper() is not None:
             return self._primary_wrapper().set_current_group(start_match_index)
 
+    def enter_complement_mode(self):
+        """Switch to GROUP_COMPLEMENT mode (delegated to primary wrapper)."""
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().enter_complement_mode()
+
+    def return_to_group_mode(self):
+        """Leave GROUP_COMPLEMENT mode (delegated to primary wrapper)."""
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().return_to_group_mode()
+
+    def remove_from_complement(self, filepath: str):
+        """Remove a deleted file from GROUP_COMPLEMENT's live list (delegated to primary wrapper)."""
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().remove_from_complement(filepath)
+
     def show_boundary_match(self, last_file=False):
         """Home/End within compare results (delegated to primary wrapper)."""
         if self._primary_wrapper() is not None:

@@ -462,9 +462,21 @@ class SidebarPanel(QWidget):
                 "Random purge",
                 self._app.compare_manager.random_purge_groups,
             )
+            self.add_button(
+                "view_ungrouped_btn",
+                "View ungrouped files",
+                self._app.compare_manager.enter_complement_mode,
+            )
 
         elif mode == Mode.DUPLICATES:
             pass  # no extra buttons currently
+
+        elif mode == Mode.GROUP_COMPLEMENT:
+            self.add_button(
+                "return_to_groups_btn",
+                "Return to groups",
+                self._app.compare_manager.return_to_group_mode,
+            )
 
         self._app.has_added_buttons_for_mode[mode] = True
 
@@ -479,11 +491,21 @@ class SidebarPanel(QWidget):
         """Remove buttons specific to search mode."""
         for name in ("toggle_media_view_btn", "replace_current_media_btn"):
             self.destroy_button(name)
+        # Buttons are gone -- clear the "already added" guard so a later
+        # add_buttons_for_mode() call actually re-adds them instead of no-op'ing.
+        self._app.has_added_buttons_for_mode[Mode.SEARCH] = False
 
     def remove_group_mode_buttons(self) -> None:
         """Remove buttons specific to group/duplicates mode."""
-        for name in ("prev_group_btn", "next_group_btn", "random_purge_btn"):
+        for name in ("prev_group_btn", "next_group_btn", "random_purge_btn", "view_ungrouped_btn"):
             self.destroy_button(name)
+        self._app.has_added_buttons_for_mode[Mode.GROUP] = False
+        self._app.has_added_buttons_for_mode[Mode.DUPLICATES] = False
+
+    def remove_complement_mode_buttons(self) -> None:
+        """Remove buttons specific to group-complement mode."""
+        self.destroy_button("return_to_groups_btn")
+        self._app.has_added_buttons_for_mode[Mode.GROUP_COMPLEMENT] = False
 
     # ==================================================================
     # Progress bar

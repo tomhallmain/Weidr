@@ -18,6 +18,7 @@ class Mode(Enum):
     SEARCH = _("Searching Mode")
     GROUP = _("Group Comparison Mode")
     DUPLICATES = _("Duplicate Detection Mode")
+    GROUP_COMPLEMENT = _("Group Complement Mode")
 
     # NOTE need this method because this class is initialized before the config
     # locale overwrites the default I18N settings.
@@ -30,6 +31,8 @@ class Mode(Enum):
             return _("Group Comparison Mode")
         elif self == Mode.DUPLICATES:
             return _("Duplicate Detection Mode")
+        elif self == Mode.GROUP_COMPLEMENT:
+            return _("Group Complement Mode")
         raise Exception("Unhandled Mode text: " + str(self))
 
     def __str__(self):

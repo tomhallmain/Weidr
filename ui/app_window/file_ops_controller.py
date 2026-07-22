@@ -132,6 +132,17 @@ class FileOpsController:
             self._fb.checking_files = True
             return
 
+        if self._app.mode == Mode.GROUP_COMPLEMENT:
+            filepath = self._nav.get_active_media_filepath()
+            if filepath is not None:
+                MarkedFiles.handle_file_removal(filepath)
+                self._app.release_media_canvas()
+                self._handle_delete(filepath)
+                if self._cm.has_compare():
+                    self._cm.compare().remove_from_groups([filepath])
+                self._cm.remove_from_complement(filepath)
+            return
+
         is_toggled_search_media = self._nav.is_toggled_search_media()
 
         if len(self._cm.files_matched) == 0 and not is_toggled_search_media:
@@ -815,6 +826,21 @@ class FileOpsController:
         # (see AppWindow.restore_compare_state_for_undone_move).
         self._cm.capture_removal_undo_snapshot(files, self._app.mode)
         current_media = self._cm.current_match()
+        if self._app.mode == Mode.GROUP_COMPLEMENT:
+            # _get_file_group_map / _update_groups_for_removed_file assume the
+            # removed file belongs to the group at current_group_index, which
+            # still points at whatever real group was last being browsed
+            # (deliberately left untouched -- see
+            # CompareWrapper.enter_complement_mode). Going through that path
+            # here would risk corrupting the live complement list or the real
+            # group data, so route every file through remove_from_complement
+            # instead, same as the GROUP_COMPLEMENT branch in delete_media.
+            for filepath in files:
+                if filepath == self._cm.search_media_path:
+                    self._cm.search_media_path = None
+                self._cm.remove_from_complement(filepath)
+                self._cm._sync_result_after_deletion(filepath)
+            return
         for filepath in files:
             if filepath == self._cm.search_media_path:
                 self._cm.search_media_path = None

@@ -384,12 +384,22 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
 
         # Handle an initial explicit file list (browsing a user-defined list
         # of files instead of scanning a directory -- e.g. FileActionsWindow's
-        # "Search in New Window", whose corpus has no single base_dir; see
-        # FileBrowser.enable_explicit_file_list()). Scheduled like
-        # set_base_dir() above so it settles before the media_path/do_search
-        # timer below, which may need to find media_path within it.
+        # "Search in New Window" / "Open in New Window", whose corpus has no
+        # single base_dir; see FileBrowser.enable_explicit_file_list()).
+        # Scheduled like set_base_dir() above so it settles before the
+        # media_path/do_search timer below, which may need to find media_path
+        # within it.
         if file_list:
-            QTimer.singleShot(0, lambda fl=file_list: self.file_browser.enable_explicit_file_list(fl))
+            def _activate_file_list(fl=file_list):
+                self.file_browser.enable_explicit_file_list(fl)
+                # Mirror set_base_dir()'s own "show the first file" fallback --
+                # nothing else displays anything if there's no media_path to
+                # navigate to below (e.g. "Open in New Window", a browse-only
+                # companion to "Search in New Window" with no query media).
+                if media_path is None:
+                    self.set_mode(Mode.BROWSE)
+                    self.media_navigator.show_next_media()
+            QTimer.singleShot(0, _activate_file_list)
 
         # Handle initial media_path / do_search
         if media_path is not None:

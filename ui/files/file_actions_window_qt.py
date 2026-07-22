@@ -131,6 +131,12 @@ class FileActionsWindow(SmartWindow):
         )
         header.addWidget(search_window_btn)
 
+        open_window_btn = QPushButton(_("Open in New Window"))
+        open_window_btn.clicked.connect(
+            lambda _checked=False: self._open_in_new_window()
+        )
+        header.addWidget(open_window_btn)
+
         clear_btn = QPushButton(_("Clear History"))
         clear_btn.clicked.connect(self._clear_action_history)
         header.addWidget(clear_btn)
@@ -166,6 +172,9 @@ class FileActionsWindow(SmartWindow):
         )
         QShortcut(QKeySequence("Shift+S"), self).activated.connect(
             self._open_search_in_new_window
+        )
+        QShortcut(QKeySequence("Shift+O"), self).activated.connect(
+            self._open_in_new_window
         )
 
         # Focus the scroll area so key events are captured
@@ -763,8 +772,22 @@ class FileActionsWindow(SmartWindow):
         self._rebuild_content()
 
     # ==================================================================
-    # Search in new window
+    # Search / open in new window
     # ==================================================================
+    def _collect_existing_destination_files(self) -> list[str]:
+        """Unique, still-existing destination files from the full action
+        history, in history order. original_marks (source paths) are
+        intentionally excluded -- the user wants to find where files are
+        now, not where they were."""
+        seen: set[str] = set()
+        file_list: list[str] = []
+        for action in FileAction.action_history:
+            for filepath in action.new_files:
+                if filepath not in seen and os.path.isfile(filepath):
+                    seen.add(filepath)
+                    file_list.append(filepath)
+        return file_list
+
     def _open_search_in_new_window(self) -> None:
         """Open a new AppWindow and run a similarity search against every
         existing destination file in the action history, using the active
@@ -780,17 +803,7 @@ class FileActionsWindow(SmartWindow):
             app_actions.toast(_("No active media file to search with."))
             return
 
-        # Collect unique existing destination files from the full action
-        # history. original_marks (source paths) are intentionally excluded --
-        # the user wants to find where files are now, not where they were.
-        seen: set[str] = set()
-        file_list: list[str] = []
-        for action in FileAction.action_history:
-            for filepath in action.new_files:
-                if filepath not in seen and os.path.isfile(filepath):
-                    seen.add(filepath)
-                    file_list.append(filepath)
-
+        file_list = self._collect_existing_destination_files()
         if not file_list:
             app_actions.toast(
                 _("No existing destination files found in action history.")
@@ -806,6 +819,33 @@ class FileActionsWindow(SmartWindow):
             base_dir=None,
             media_path=media_path,
             do_search=True,
+            file_list=file_list,
+        )
+
+    def _open_in_new_window(self) -> None:
+        """Open a new AppWindow browsing every existing destination file in
+        the action history, with no search -- the browse-only companion to
+        "Search in New Window" for when the user just wants to look through
+        where things ended up."""
+        from ui.app_window.window_manager import WindowManager
+
+        _app_master, app_actions = self._active_context()
+
+        file_list = self._collect_existing_destination_files()
+        if not file_list:
+            app_actions.toast(
+                _("No existing destination files found in action history.")
+            )
+            return
+
+        # No media_path: AppWindow.__init__ shows the first file in the list
+        # once FileBrowser.enable_explicit_file_list() activates (mirrors
+        # set_base_dir()'s own "show the first file" fallback for a real
+        # directory). Deliberately no base_dir -- see
+        # _open_search_in_new_window's comment above.
+        WindowManager.add_secondary_window(
+            base_dir=None,
+            do_search=False,
             file_list=file_list,
         )
 

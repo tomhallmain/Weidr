@@ -1,20 +1,19 @@
 """
-UI tests for FileActionsWindow's "Search in New Window" feature
-(docs/file-actions-search-in-new-window.md).
+UI tests for FileActionsWindow's "Search in New Window" and "Open in New
+Window" features (docs/file-actions-search-in-new-window.md).
 
-TestOpenSearchInNewWindow covers FileActionsWindow._open_search_in_new_window()'s
-own logic (file-list construction from action history, active-media
-resolution) with WindowManager.add_secondary_window mocked out, so no second
-real window is spawned. base_dir is always None here -- deliberately: the
-file list spans wherever its files actually live, not one directory, and a
-derived directory would incorrectly scope base_dir-keyed prevalidations to
-whatever directory happened to be most common (see design doc section 5).
-The compare engine's own internal base_dir gets a designated substitute
-elsewhere -- see TestFileListCompareArgs in
-tests/ui/test_search_controller_advanced.py.
+TestOpenSearchInNewWindow / TestOpenInNewWindow cover FileActionsWindow's own
+logic (file-list construction from action history, active-media resolution)
+with WindowManager.add_secondary_window mocked out, so no second real window
+is spawned. base_dir is always None here -- deliberately: the file list spans
+wherever its files actually live, not one directory, and a derived directory
+would incorrectly scope base_dir-keyed prevalidations to whatever directory
+happened to be most common (see design doc section 5). The compare engine's
+own internal base_dir gets a designated substitute elsewhere -- see
+TestFileListCompareArgs in tests/ui/test_search_controller_advanced.py.
 
-TestAddSecondaryWindowFileList and TestDoSearchMediaPathBug cover two real
-bugs found when this feature was manually tested end to end (not just
+TestAddSecondaryWindowFileList and TestDoSearchMediaPathBug cover real bugs
+found when "Search in New Window" was manually tested end to end (not just
 mocked): (1) opening a new window with do_search=True never worked for ANY
 caller -- AppWindow.__init__ just called set_search() with no arguments,
 which reads the sidebar's search_media_path_box, and nothing populates that
@@ -25,6 +24,10 @@ FileBrowser content, so normal browsing (arrow keys, etc.) didn't work while
 or after a file-list compare ran -- fixed by activating FileBrowser's
 pre-PySide6-port "explicit file list" mode (use_file_paths_json), previously
 only a global config toggle with no per-window activation path or UI hook.
+(3) That same fix surfaced a further gap once "Open in New Window" (do_search
+always False, no media_path at all) was added: nothing showed any file at
+all for a file-list window with no media_path to navigate to -- fixed by
+mirroring set_base_dir()'s own "show the first file" fallback.
 """
 from __future__ import annotations
 
@@ -162,6 +165,79 @@ class TestOpenSearchInNewWindow:
         assert len(toasts) == 1
 
 
+class TestOpenInNewWindow:
+    """FileActionsWindow._open_in_new_window() -- the browse-only companion
+    to "Search in New Window": same file-list construction, but do_search is
+    always False and no active media / query is required at all."""
+
+    def test_builds_file_list_and_opens_with_no_search(
+        self, file_actions_window, monkeypatch
+    ):
+        actions_win, win, media_dir = file_actions_window
+        existing1 = os.path.join(media_dir, "img01.png")
+        existing2 = os.path.join(media_dir, "img02.png")
+        assert os.path.isfile(existing1) and os.path.isfile(existing2)
+
+        FileAction.action_history.extend([
+            FileAction(Utils.move_file, os.path.dirname(existing1),
+                       original_marks=["/src/a.png"], new_files=[existing1]),
+            FileAction(Utils.copy_file, os.path.dirname(existing2),
+                       original_marks=["/src/b.png"], new_files=[existing2]),
+        ])
+
+        captured = {}
+        monkeypatch.setattr(
+            WindowManager,
+            "add_secondary_window",
+            classmethod(lambda cls, **kwargs: captured.update(kwargs)),
+        )
+
+        actions_win._open_in_new_window()
+
+        assert captured["file_list"] == [existing1, existing2]
+        assert captured["do_search"] is False
+        assert captured.get("media_path") is None
+        # Deliberately no base_dir -- same reasoning as "Search in New Window".
+        assert captured["base_dir"] is None
+
+    def test_does_not_require_active_media(self, file_actions_window, monkeypatch):
+        """Unlike _open_search_in_new_window, no query media is needed."""
+        actions_win, win, media_dir = file_actions_window
+        FileAction.action_history.append(
+            FileAction(Utils.move_file, media_dir, new_files=[os.path.join(media_dir, "img01.png")])
+        )
+        monkeypatch.setattr(win.app_actions, "get_active_media_filepath", lambda: None)
+        captured = {}
+        monkeypatch.setattr(
+            WindowManager,
+            "add_secondary_window",
+            classmethod(lambda cls, **kwargs: captured.update(kwargs)),
+        )
+
+        actions_win._open_in_new_window()
+
+        assert captured.get("file_list") == [os.path.join(media_dir, "img01.png")]
+
+    def test_no_existing_destination_files_toasts_and_does_not_open_window(
+        self, file_actions_window, monkeypatch
+    ):
+        actions_win, win, media_dir = file_actions_window
+        FileAction.action_history.append(
+            FileAction(Utils.move_file, media_dir, new_files=[os.path.join(media_dir, "gone.png")])
+        )
+        opened = []
+        monkeypatch.setattr(
+            WindowManager, "add_secondary_window", classmethod(lambda cls, **kwargs: opened.append(kwargs))
+        )
+        toasts = []
+        monkeypatch.setattr(win.app_actions, "toast", lambda msg, **k: toasts.append(msg))
+
+        actions_win._open_in_new_window()
+
+        assert opened == []
+        assert len(toasts) == 1
+
+
 class TestAddSecondaryWindowFileList:
     """WindowManager.add_secondary_window's file_list plumbing: both the
     reuse-an-existing-window and open-a-new-window branches must thread
@@ -235,6 +311,28 @@ class TestAddSecondaryWindowFileList:
             # Browsing works with no real directory -- base_dir stays unset,
             # never surfaced to prevalidation's directory-profile matching.
             assert new_window.get_base_dir() is None
+        finally:
+            _teardown_app_window(new_window)
+
+    def test_new_window_with_no_media_path_shows_the_first_file(self, window_with_dir, qtbot):
+        """Regression: a file-list window opened with no media_path (e.g.
+        "Open in New Window") must still show something -- mirrors
+        set_base_dir()'s own "show the first file" fallback for a real
+        directory, which the file-list activation path didn't have at all
+        until this was added (previously always paired with a media_path, so
+        the gap was never visible)."""
+        win, media_dir = window_with_dir
+        file_list = [os.path.join(media_dir, "img01.png"), os.path.join(media_dir, "img02.png")]
+
+        ids_before = set(WindowManager._secondary_toplevels.keys())
+        WindowManager.add_secondary_window(base_dir=None, do_search=False, file_list=file_list)
+        new_ids = set(WindowManager._secondary_toplevels.keys()) - ids_before
+        assert len(new_ids) == 1
+        new_window = WindowManager._secondary_toplevels[new_ids.pop()]
+        try:
+            qtbot.waitUntil(lambda: new_window.media_path is not None, timeout=2000)
+            assert new_window.media_path in file_list
+            assert new_window.mode == Mode.BROWSE
         finally:
             _teardown_app_window(new_window)
 

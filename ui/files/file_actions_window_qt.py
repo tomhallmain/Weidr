@@ -125,17 +125,17 @@ class FileActionsWindow(SmartWindow):
         search_btn.clicked.connect(lambda _checked=False: self._search_for_active_media())
         header.addWidget(search_btn)
 
-        search_window_btn = QPushButton(_("Search in New Window"))
-        search_window_btn.clicked.connect(
-            lambda _checked=False: self._open_search_in_new_window()
-        )
-        header.addWidget(search_window_btn)
-
         open_window_btn = QPushButton(_("Open in New Window"))
         open_window_btn.clicked.connect(
             lambda _checked=False: self._open_in_new_window()
         )
         header.addWidget(open_window_btn)
+
+        search_window_btn = QPushButton(_("Search in New Window"))
+        search_window_btn.clicked.connect(
+            lambda _checked=False: self._open_search_in_new_window()
+        )
+        header.addWidget(search_window_btn)
 
         clear_btn = QPushButton(_("Clear History"))
         clear_btn.clicked.connect(self._clear_action_history)
@@ -710,6 +710,23 @@ class FileActionsWindow(SmartWindow):
         self._rebuild_content()
 
     def _clear_action_history(self) -> None:
+        if not FileAction.action_history:
+            return
+
+        _app_master, app_actions = self._active_context()
+        confirmed = app_actions.alert(
+            _("Clear File Action History?"),
+            _(
+                "This will permanently clear the entire recorded file action "
+                "history. This cannot be undone.\n\n"
+                "Proceed?"
+            ),
+            kind="askyesno",
+            master=self,
+        )
+        if not confirmed:
+            return
+
         FileAction.action_history.clear()
         self._filtered_history.clear()
         self._action_type_filter = None

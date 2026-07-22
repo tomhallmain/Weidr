@@ -272,3 +272,59 @@ class TestFileActionsWindowFilters:
             lambda: not any("moved.png" in t for t in _label_texts(actions_win)),
             timeout=2000,
         )
+
+    def test_clear_history_prompts_for_confirmation(
+        self, file_actions_window, qtbot, monkeypatch
+    ):
+        """A confirmation must actually be shown before clearing -- not just
+        skipped by the autouse ui_block_alert_dialogs fixture, which patches
+        the dialog to always answer True regardless of whether it was really
+        asked. Clearing history is permanent (no undo), so this must never
+        be a silent, no-warning action."""
+        actions_win, app_win = file_actions_window
+        qtbot.waitUntil(
+            lambda: any("moved.png" in t for t in _label_texts(actions_win)),
+            timeout=3000,
+        )
+        calls = []
+        monkeypatch.setattr(
+            app_win.app_actions,
+            "alert",
+            lambda *a, **k: calls.append((a, k)) or True,
+        )
+
+        actions_win._clear_action_history()
+
+        assert len(calls) == 1
+        assert calls[0][1].get("kind") == "askyesno"
+        assert len(FileAction.action_history) == 0
+
+    def test_clear_history_skipped_if_confirmation_declined(
+        self, file_actions_window, qtbot, monkeypatch
+    ):
+        actions_win, app_win = file_actions_window
+        qtbot.waitUntil(
+            lambda: any("moved.png" in t for t in _label_texts(actions_win)),
+            timeout=3000,
+        )
+        assert FileAction.action_history  # sanity: something to clear
+        monkeypatch.setattr(app_win.app_actions, "alert", lambda *a, **k: False)
+
+        actions_win._clear_action_history()
+
+        assert len(FileAction.action_history) > 0
+
+    def test_clear_history_noop_when_already_empty(
+        self, file_actions_window, monkeypatch
+    ):
+        """No history to clear -- must not prompt for nothing."""
+        actions_win, app_win = file_actions_window
+        FileAction.action_history.clear()
+        calls = []
+        monkeypatch.setattr(
+            app_win.app_actions, "alert", lambda *a, **k: calls.append((a, k)) or True
+        )
+
+        actions_win._clear_action_history()  # must not raise
+
+        assert calls == []

@@ -226,7 +226,12 @@ class BaseCompare:
 
         To override the default file inclusion behavior, pass a gather_files_func to the Compare object.
         '''
-        if self.gather_files_func:
+        if self.args.file_list:
+            # Explicit file list (e.g. FileActionsWindow's "Search in New
+            # Window") bypasses the directory scan entirely. base_dir is still
+            # used for the embedding cache path (CompareData) even here.
+            self.files = list(self.args.file_list)
+        elif self.gather_files_func:
             exts = config.image_types
             self.files = self.gather_files_func(
                 base_dir=self.base_dir, exts=exts, recursive=self.args.recursive, include_videos=self.args.include_videos, include_gifs=self.args.include_gifs, include_pdfs=self.args.include_pdfs)

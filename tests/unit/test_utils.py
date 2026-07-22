@@ -326,3 +326,25 @@ class TestRoundUp:
 
     def test_zero(self):
         assert Utils.round_up(0, 5) == 0
+
+
+class TestGetNoDirectoryCompareCacheDir:
+    """Designated cache location for compares with no real base_dir (e.g.
+    FileActionsWindow's "Search in New Window"). Redirects get_user_dir() to
+    tmp_path so the test never touches the real invoking user's home dir."""
+
+    def test_creates_and_returns_a_stable_directory(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(Utils, "get_user_dir", staticmethod(lambda: str(tmp_path)))
+
+        result = Utils.get_no_directory_compare_cache_dir()
+
+        assert os.path.isdir(result)
+        assert result == Utils.get_no_directory_compare_cache_dir()
+
+    def test_is_under_the_user_dir_in_a_dedicated_subfolder(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(Utils, "get_user_dir", staticmethod(lambda: str(tmp_path)))
+
+        result = Utils.get_no_directory_compare_cache_dir()
+
+        assert result.startswith(str(tmp_path))
+        assert ".weidr" in result

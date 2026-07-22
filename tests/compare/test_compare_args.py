@@ -61,6 +61,16 @@ class TestClone:
         clone = args.clone()
         assert clone.compare_mode == CompareMode.COLOR_MATCHING
 
+    def test_clone_deep_copies_file_list(self):
+        args = CompareArgs()
+        args.file_list = ["/a.jpg", "/b.jpg"]
+        clone = args.clone()
+        clone.file_list.append("/c.jpg")
+        assert args.file_list == ["/a.jpg", "/b.jpg"]
+
+    def test_file_list_default_empty(self):
+        assert CompareArgs().file_list == []
+
 
 class TestIsNewDataRequestRequired:
     def _base(self):

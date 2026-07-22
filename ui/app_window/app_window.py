@@ -24,7 +24,7 @@ import functools
 import threading
 import time
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from PySide6.QtCore import Qt, QTimer, Signal, Slot, QThread, QMetaObject
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QSplitter, QStackedWidget, QWidget, QVBoxLayout, QFrame
@@ -134,6 +134,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         sidebar_visible: bool = config.sidebar_visible,
         do_search: bool = False,
         window_id: int = 0,
+        file_list: Optional[List[str]] = None,
     ):
         super().__init__(restore_geometry=(window_id == 0))
 
@@ -381,10 +382,27 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             # Re-open secondary windows that were open last session
             QTimer.singleShot(100, self._restore_secondary_windows)
 
+        # Handle an initial explicit file list (browsing a user-defined list
+        # of files instead of scanning a directory -- e.g. FileActionsWindow's
+        # "Search in New Window", whose corpus has no single base_dir; see
+        # FileBrowser.enable_explicit_file_list()). Scheduled like
+        # set_base_dir() above so it settles before the media_path/do_search
+        # timer below, which may need to find media_path within it.
+        if file_list:
+            QTimer.singleShot(0, lambda fl=file_list: self.file_browser.enable_explicit_file_list(fl))
+
         # Handle initial media_path / do_search
         if media_path is not None:
             if do_search:
-                QTimer.singleShot(200, lambda: self.search_ctrl.set_search())
+                # Populate the search box with media_path directly rather than
+                # relying on it already being set (nothing does that for a
+                # brand-new window) -- Utils.get_valid_file resolves an
+                # absolute, already-existing path regardless of base_dir, so
+                # this works whether base_dir is real or None (file_list case).
+                def _run_initial_search(mp=media_path, fl=file_list):
+                    self.sidebar_panel.search_media_path_box.setText(mp)
+                    self.search_ctrl.set_search(file_list=fl)
+                QTimer.singleShot(200, _run_initial_search)
             else:
                 QTimer.singleShot(200, lambda ip=media_path: self.media_navigator.go_to_file(search_text=ip))
 

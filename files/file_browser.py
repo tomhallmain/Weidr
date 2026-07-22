@@ -7,6 +7,7 @@ import re
 import threading
 from time import sleep
 from typing import Dict, List, Optional
+import uuid
 
 from files.sortable_file import SortableFile
 from utils.config import config
@@ -21,7 +22,9 @@ class FileBrowser:
     have_confirmed_directories: List[str] = []
 
     def __init__(self, directory: str = ".", recursive: bool = False,
-                 filter: Optional[str] = None, sort_by: SortBy = SortBy.NAME) -> None:
+                 filter: Optional[str] = None, sort_by: SortBy = SortBy.NAME,
+                 use_file_paths_json: Optional[bool] = None,
+                 file_paths_json_path: Optional[str] = None) -> None:
         self.directory = directory
         self.recursive = recursive
         self.filter = filter
@@ -34,7 +37,16 @@ class FileBrowser:
         self.file_cursor = -1
         self.cursor_lock = threading.Lock()
         self.checking_files = False
-        self.use_file_paths_json = config.use_file_paths_json
+        # Per-instance overrides of the global config defaults -- lets one
+        # FileBrowser (e.g. a file-list-only secondary window) browse an
+        # explicit file list without affecting any other window. See
+        # enable_explicit_file_list().
+        self.use_file_paths_json = (
+            config.use_file_paths_json if use_file_paths_json is None else use_file_paths_json
+        )
+        self.file_paths_json_path = (
+            config.file_paths_json_path if file_paths_json_path is None else file_paths_json_path
+        )
         self._preferred_initial_file: Optional[str] = None
         self.is_incremental_loading = False
         self._incremental_thread: Optional[threading.Thread] = None
@@ -109,7 +121,7 @@ class FileBrowser:
     def refresh(self, refresh_cursor: bool = True, file_check: bool = False,
                 removed_files: List[str] = [], direction: Direction = Direction.FORWARD) -> List[str]:
         last_files = self.get_files() if file_check else []
-        if config.use_file_paths_json:
+        if self.use_file_paths_json:
             self.update_json_for_removed_files(removed_files)
         if refresh_cursor:
             with self.cursor_lock:
@@ -241,12 +253,12 @@ class FileBrowser:
         return files[self.file_cursor]
 
     def load_file_paths_json(self) -> List[str]:
-        logger.info(f"Loading external file paths from JSON: {config.file_paths_json_path}")
+        logger.info(f"Loading external file paths from JSON: {self.file_paths_json_path}")
         try:
-            with open(config.file_paths_json_path, "r", encoding="utf-8") as f:
+            with open(self.file_paths_json_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
-            logger.error("Failed to load file paths JSON from %s: %s", config.file_paths_json_path, e)
+            logger.error("Failed to load file paths JSON from %s: %s", self.file_paths_json_path, e)
             raise
 
     def update_json_for_removed_files(self, removed_file_paths: List[str] = []) -> None:
@@ -257,9 +269,45 @@ class FileBrowser:
         for removed_filepath in removed_file_paths:
             files.remove(removed_filepath)
 
-        with open(config.file_paths_json_path,"w") as f:
+        with open(self.file_paths_json_path,"w") as f:
             json.dump(files, f, indent=4)
-            logger.info(f"JSON file updated: {config.file_paths_json_path}")
+            logger.info(f"JSON file updated: {self.file_paths_json_path}")
+
+    def enable_explicit_file_list(self, files: List[str], json_path: Optional[str] = None) -> List[str]:
+        """
+        Switch this browser to an explicit, caller-supplied file list instead
+        of scanning self.directory -- e.g. a secondary window opened from
+        FileActionsWindow's "Search in New Window", which has no real base_dir
+        to browse (see docs/file-actions-search-in-new-window.md).
+
+        Activates use_file_paths_json mode: a pre-PySide6-port feature
+        (predates this app's Tkinter -> Qt migration) that already correctly
+        skips every directory-exists / incremental-load check elsewhere in
+        this class -- it just never had a per-window activation path or UI
+        hook, only a single global config toggle nothing in the app ever set.
+        This is the first caller to activate it per-instance rather than
+        globally, which is why use_file_paths_json / file_paths_json_path
+        needed to become real per-instance attributes (see __init__) instead
+        of a couple of stray direct `config.*` reads.
+
+        json_path defaults to a freshly-named file under
+        Utils.get_no_directory_compare_cache_dir() (same designated,
+        non-media directory used when the compare engine itself has no real
+        base_dir) so concurrent/sequential file-list windows never collide.
+        """
+        if json_path is None:
+            json_path = os.path.join(
+                Utils.get_no_directory_compare_cache_dir(), f"file_list_{uuid.uuid4().hex}.json"
+            )
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(list(files), f, indent=4)
+        self.file_paths_json_path = json_path
+        self.use_file_paths_json = True
+        self._files_cache = {}
+        self.checking_files = True
+        self._recompute_incremental_decision()
+        self._incremental_refresh_armed = self._use_incremental_on_full_refresh
+        return self.refresh()
 
     def get_index_details(self):
         files = self.get_files()
@@ -426,12 +474,17 @@ class FileBrowser:
         and avoids re-creating SortableFile objects.
         """
         try:
-            # Create a temporary file browser with the specified sorting
+            # Create a temporary file browser with the specified sorting.
+            # Must inherit file-list mode too, or a file-list browser (no
+            # real self.directory to glob-scan) would silently come back
+            # empty here.
             temp_browser = FileBrowser(
-                directory=self.directory, 
-                recursive=self.recursive, 
-                filter=self.filter, 
-                sort_by=sort_by
+                directory=self.directory,
+                recursive=self.recursive,
+                filter=self.filter,
+                sort_by=sort_by,
+                use_file_paths_json=self.use_file_paths_json,
+                file_paths_json_path=self.file_paths_json_path,
             )
             temp_browser._files = self._files.copy()  # Use the same file cache
             temp_browser._get_sortable_files()

@@ -77,6 +77,13 @@ class TestClone:
         clone = args.clone()
         assert clone.app_actions is None
 
+    def test_clone_deep_copies_file_list(self):
+        args = CompareArgs()
+        args.file_list = ["/a.jpg", "/b.jpg"]
+        clone = args.clone()
+        clone.file_list.append("/c.jpg")
+        assert args.file_list == ["/a.jpg", "/b.jpg"]
+
 
 class TestIsNewDataRequestRequired:
     def _pair(self, **overrides):
@@ -140,3 +147,6 @@ class TestCompareArgsInit:
 
     def test_negative_search_media_path_default_none(self):
         assert CompareArgs().negative_search_media_path is None
+
+    def test_file_list_default_empty(self):
+        assert CompareArgs().file_list == []

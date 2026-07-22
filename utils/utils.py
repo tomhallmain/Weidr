@@ -80,6 +80,26 @@ class Utils:
         return os.path.expanduser("~")
 
     @staticmethod
+    def get_no_directory_compare_cache_dir() -> str:
+        """
+        Designated on-disk location for a compare's embedding/checkpoint cache
+        when there is no real base_dir to key it off of -- e.g.
+        FileActionsWindow's "Search in New Window", whose corpus is a file
+        list spanning many directories rather than one.
+
+        This is purely an internal detail of where the compare engine (whose
+        core, self.base_dir, is used pervasively as a real path -- os.path.join,
+        log strings, Utils.get_valid_file, etc. -- and would raise on None)
+        persists its own cache files in that case. It must never be surfaced
+        as AppWindow.base_dir or passed to prevalidation's directory-profile
+        matching (ClassifierActionsManager.prevalidate_media), which should
+        keep seeing no directory at all so no profile is ever scoped to it.
+        """
+        cache_dir = os.path.join(Utils.get_user_dir(), ".weidr", "compare_cache_no_dir")
+        os.makedirs(cache_dir, exist_ok=True)
+        return cache_dir
+
+    @staticmethod
     def get_pictures_dir():
         """Get the Pictures directory for the current OS."""
         import platform

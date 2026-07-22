@@ -38,6 +38,7 @@ class CompareArgs:
         self.use_matrix_comparison = use_matrix_comparison
         self.app_actions = app_actions
         self.data_filter: Optional['CompareFilter'] = None
+        self.file_list: list[str] = []
 
     def not_searching(self):
         def _empty(v):

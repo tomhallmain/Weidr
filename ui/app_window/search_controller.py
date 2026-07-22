@@ -146,12 +146,20 @@ class SearchController:
             self._sidebar.search_media_negative_path_box.setText(str(self._app.media_path))
         self.set_search()
 
-    def set_search(self, event=None) -> None:
+    def set_search(self, event=None, file_list: Optional[list] = None) -> None:
         """
         Set the search media or text using the provided UI values.
         Set the mode based on the result.
+
+        file_list, if given, is an explicit search corpus (e.g.
+        FileActionsWindow's "Search in New Window") that bypasses the usual
+        directory scan -- see BaseCompare.get_files() and
+        Utils.get_no_directory_compare_cache_dir(), which _run_compare()
+        substitutes for base_dir in that case.
         """
         args = CompareArgs()
+        if file_list:
+            args.file_list = list(file_list)
         media_path = self.get_search_media_path()
         negative_media_path = self.get_negative_search_media_path()
         search_text = self._sidebar.search_text_box.text()
@@ -184,7 +192,8 @@ class SearchController:
             )
 
         if media_path is not None and media_path.strip() != "":
-            if media_path.startswith(self._app.get_base_dir()):
+            base_dir = self._app.get_base_dir()
+            if base_dir and media_path.startswith(base_dir):
                 self._sidebar.search_media_path_box.setText(os.path.basename(media_path))
             self._app.search_dir = os.path.dirname(media_path)
             args.search_media_path = media_path
@@ -274,6 +283,18 @@ class SearchController:
         args.base_dir = self._app.get_base_dir()
         args.mode = self._app.mode
         args.recursive = self._fb.recursive
+
+        if args.file_list:
+            # A file-list search (e.g. FileActionsWindow's "Search in New
+            # Window", set via SearchController.set_search(file_list=...))
+            # has no real base_dir -- its corpus spans wherever the files
+            # actually live, not one directory. AppWindow.get_base_dir()
+            # stays None/whatever it already was (never touched here) so
+            # prevalidation's directory-profile matching is unaffected. But
+            # self.base_dir is used pervasively as a real path throughout the
+            # compare engine itself, so it still needs a real, designated
+            # directory to key its own cache off of.
+            args.base_dir = Utils.get_no_directory_compare_cache_dir()
 
         # Apply all compare settings from CompareManager
         self._cm.apply_settings_to_args(args)
@@ -398,7 +419,7 @@ class SearchController:
     def _set_media_run_search(self, filepath: str) -> None:
         """Set the search media path and trigger the search."""
         base_dir = self._app.get_base_dir()
-        if filepath.startswith(base_dir):
+        if base_dir and filepath.startswith(base_dir):
             filepath = filepath[len(base_dir) + 1 :]
         self._sidebar.search_media_path_box.setText(filepath)
         self.set_search()
@@ -430,7 +451,7 @@ class SearchController:
         """Set up a negative media search."""
         base_dir = self._app.get_base_dir()
         display_path = filepath
-        if filepath.startswith(base_dir):
+        if base_dir and filepath.startswith(base_dir):
             display_path = filepath[len(base_dir) + 1 :]
         self._sidebar.search_media_negative_path_box.clear()
         self._sidebar.search_media_negative_path_box.setText(display_path)

@@ -162,27 +162,43 @@ class WindowManager:
     @classmethod
     def add_secondary_window(
         cls,
-        base_dir: str,
+        base_dir: Optional[str],
         media_path: Optional[str] = None,
         do_search: bool = False,
         master: Optional[AppWindow] = None,
+        file_list: list[str] = [],
     ) -> None:
         """
         Open a new secondary AppWindow.
 
         Reuses an existing window for the same base_dir unless
-        ``config.always_open_new_windows`` is set.
+        ``config.always_open_new_windows`` is set. A window with no base_dir
+        at all (``base_dir=None`` -- e.g. FileActionsWindow's "Search in New
+        Window", whose corpus has no single directory) is never matched
+        against another such window: "no directory" isn't a real,
+        distinguishing location, so every request for one opens a fresh
+        window rather than risking two independent file-list searches
+        silently clobbering each other's window.
+
+        ``file_list``, if given, gives the new window's ``FileBrowser`` an
+        explicit list of files to browse instead of scanning ``base_dir``
+        (see ``FileBrowser.enable_explicit_file_list()``) -- this is what lets
+        normal navigation (arrow keys, etc.) keep working for a directory-less
+        window, including while a ``do_search`` compare is still running. It
+        also becomes the compare's search corpus if ``do_search`` triggers a
+        search (see ``AppWindow.__init__`` / ``SearchController.set_search``).
         """
         from ui.app_window.app_window import AppWindow
 
-        # Reuse existing window for the same directory unless config says otherwise
-        if not config.always_open_new_windows:
+        # Reuse existing window for the same directory unless config says
+        # otherwise. Skipped entirely when base_dir is None (see docstring).
+        if base_dir is not None and not config.always_open_new_windows:
             for win in cls._windows:
                 if win.base_dir == base_dir:
                     if media_path is not None and media_path != "":
                         if do_search:
                             win.sidebar_panel.search_media_path_box.setText(media_path)
-                            win.search_ctrl.set_search()
+                            win.search_ctrl.set_search(file_list=file_list or None)
                         else:
                             win.media_navigator.go_to_file(search_text=media_path)
                     win.raise_()
@@ -200,6 +216,7 @@ class WindowManager:
             sidebar_visible=False,
             do_search=do_search,
             window_id=new_id,
+            file_list=file_list or None,
         )
         # Staggered positioning: offset from the last secondary window
         cls._position_secondary(window)

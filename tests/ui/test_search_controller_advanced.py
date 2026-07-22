@@ -153,3 +153,98 @@ class TestCompareRefreshPaths:
         WindowManager.refresh_all_compares()
 
         assert len(calls) == 1
+
+
+class TestFileListCompareArgs:
+    """A file-list search (e.g. FileActionsWindow's "Search in New Window",
+    via SearchController.set_search(file_list=...)) has no real base_dir --
+    its corpus spans wherever the files actually live. _run_compare() must
+    not fall back to self._app.get_base_dir() in that case (it may be None,
+    and the compare engine's own self.base_dir is used pervasively as a real
+    path and would raise on None) -- it substitutes a designated cache
+    directory instead, without ever touching AppWindow.base_dir itself."""
+
+    def test_file_list_overrides_base_dir(
+        self, window_with_dir, qtbot, bypass_password, immediate_compare_debounce, monkeypatch
+    ):
+        from utils.utils import Utils
+
+        win, media_dir = window_with_dir
+        immediate_compare_debounce(win.search_ctrl)
+        run_calls = []
+        _search_mocks(win, monkeypatch, run_calls)
+        monkeypatch.setattr(win.search_ctrl, "_validate_run", lambda: True)
+
+        file_list = [os.path.join(media_dir, "img01.png"), os.path.join(media_dir, "img02.png")]
+        args = CompareArgs()
+        args.file_list = list(file_list)
+
+        win.search_ctrl.run_compare(compare_args=args)
+
+        qtbot.waitUntil(lambda: len(run_calls) == 1, timeout=5000)
+        assert run_calls[0].file_list == file_list
+        assert run_calls[0].base_dir == Utils.get_no_directory_compare_cache_dir()
+        # AppWindow's own base_dir is untouched -- prevalidation profile
+        # matching (which reads get_base_dir(), not args.base_dir) must keep
+        # seeing whatever directory the window actually has (or none).
+        assert win.get_base_dir() == media_dir
+
+    def test_no_file_list_uses_normal_base_dir(
+        self, window_with_dir, qtbot, bypass_password, immediate_compare_debounce, monkeypatch
+    ):
+        """Sanity check: the substitution is file-list-specific -- an
+        ordinary compare run must be unaffected."""
+        win, media_dir = window_with_dir
+        immediate_compare_debounce(win.search_ctrl)
+        run_calls = []
+        _search_mocks(win, monkeypatch, run_calls)
+        monkeypatch.setattr(win.search_ctrl, "_validate_run", lambda: True)
+
+        win.search_ctrl.run_compare(compare_args=CompareArgs())
+
+        qtbot.waitUntil(lambda: len(run_calls) == 1, timeout=5000)
+        assert run_calls[0].file_list == []
+        assert run_calls[0].base_dir == media_dir
+
+
+class TestSetSearchFileList:
+    """SearchController.set_search(file_list=...) -- the direct entry point
+    AppWindow.__init__'s do_search path (and add_secondary_window's
+    reuse-existing-window branch) use to run a file-list search, rather than
+    relying on any separate staged/pending state on AppWindow."""
+
+    def test_file_list_flows_through_to_compare_args(
+        self, window_with_dir, qtbot, bypass_password, immediate_compare_debounce, monkeypatch
+    ):
+        win, media_dir = window_with_dir
+        immediate_compare_debounce(win.search_ctrl)
+        run_calls = []
+        _search_mocks(win, monkeypatch, run_calls)
+
+        query = os.path.join(media_dir, "img01.png")
+        win.sidebar_panel.search_media_path_box.setText(query)
+        file_list = [
+            os.path.join(media_dir, "img01.png"),
+            os.path.join(media_dir, "img02.png"),
+        ]
+
+        win.search_ctrl.set_search(file_list=file_list)
+
+        qtbot.waitUntil(lambda: len(run_calls) == 1, timeout=5000)
+        assert run_calls[0].file_list == file_list
+        assert run_calls[0].search_media_path == query
+        assert win.mode == Mode.SEARCH
+
+    def test_no_file_list_defaults_to_empty(
+        self, window_with_dir, qtbot, bypass_password, immediate_compare_debounce, monkeypatch
+    ):
+        win, media_dir = window_with_dir
+        immediate_compare_debounce(win.search_ctrl)
+        run_calls = []
+        _search_mocks(win, monkeypatch, run_calls)
+        win.sidebar_panel.search_media_path_box.setText(os.path.join(media_dir, "img01.png"))
+
+        win.search_ctrl.set_search()
+
+        qtbot.waitUntil(lambda: len(run_calls) == 1, timeout=5000)
+        assert run_calls[0].file_list == []

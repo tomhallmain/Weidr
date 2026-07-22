@@ -1,5 +1,6 @@
 """Unit tests for files/file_browser.py — gather, extensions, recursive, sort."""
 
+import json
 import os
 import time
 
@@ -377,3 +378,104 @@ class TestIncrementalSeedAlias:
         fb, _alias = self._browser_with_alias_seed(tmp_path, monkeypatch)
         files = fb.get_files()
         assert fb.find(search_text=files[0], exact_match=True) == files[0]
+
+
+class TestExplicitFileList:
+    """FileBrowser.enable_explicit_file_list() -- a per-window explicit file
+    list to browse instead of scanning a directory (e.g. FileActionsWindow's
+    "Search in New Window", which has no single directory to scan). Activates
+    use_file_paths_json, a feature that predates this app's Tkinter -> PySide6
+    port and already correctly skips every directory-exists / incremental-load
+    check elsewhere in this class -- it just previously only had a single
+    global config toggle with no per-instance activation path or UI hook."""
+
+    def test_enable_explicit_file_list_browses_the_given_files(self, tmp_path):
+        _make_png(tmp_path / "b.png")
+        _make_png(tmp_path / "a.png")
+        files = [str(tmp_path / "b.png"), str(tmp_path / "a.png")]
+        json_path = str(tmp_path / "list.json")
+
+        fb = FileBrowser(directory=".", sort_by=SortBy.NAME)
+        result = fb.enable_explicit_file_list(files, json_path=json_path)
+
+        assert fb.use_file_paths_json is True
+        assert fb.file_paths_json_path == json_path
+        assert set(result) == set(files)
+        # NAME sort still applies, like any other browsing mode.
+        assert [os.path.basename(f) for f in fb.get_files()] == ["a.png", "b.png"]
+
+    def test_auto_generated_json_path_under_designated_cache_dir(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(Utils, "get_user_dir", staticmethod(lambda: str(tmp_path)))
+        _make_png(tmp_path / "only.png")
+        files = [str(tmp_path / "only.png")]
+
+        fb = FileBrowser(directory=".")
+        fb.enable_explicit_file_list(files)
+
+        assert os.path.isfile(fb.file_paths_json_path)
+        assert fb.file_paths_json_path.startswith(str(tmp_path))
+
+    def test_works_with_no_real_directory(self, tmp_path):
+        """The whole point: self.directory need not exist at all."""
+        _make_png(tmp_path / "only.png")
+        files = [str(tmp_path / "only.png")]
+        fb = FileBrowser(directory="/definitely/does/not/exist")
+        fb.enable_explicit_file_list(files, json_path=str(tmp_path / "list.json"))
+
+        assert fb.has_files()
+        assert fb.current_file() == files[0]
+        assert fb.next_file() == files[0]  # only one file -- wraps to itself
+        assert fb.previous_file() == files[0]
+
+    def test_per_instance_flag_does_not_leak_to_other_browsers(self, tmp_path, browser_tree):
+        _make_png(tmp_path / "only.png")
+        fb_explicit = FileBrowser(directory=".")
+        fb_explicit.enable_explicit_file_list(
+            [str(tmp_path / "only.png")], json_path=str(tmp_path / "list.json")
+        )
+
+        fb_normal = FileBrowser(browser_tree, recursive=False)
+        fb_normal.set_directory(browser_tree)
+
+        assert fb_explicit.use_file_paths_json is True
+        assert fb_normal.use_file_paths_json is False
+        assert os.path.basename(fb_normal.get_files()[0]) == "aaa.png"
+
+    def test_refresh_updates_own_json_path_not_global_config(self, tmp_path, monkeypatch):
+        """update_json_for_removed_files (via refresh()) must be gated by
+        self.use_file_paths_json, not the global config flag -- otherwise a
+        per-instance-only file-list browser would never persist a removal
+        even though it's actively in file-list mode."""
+        monkeypatch.setattr(config, "use_file_paths_json", False)
+        a = str(tmp_path / "a.png")
+        b = str(tmp_path / "b.png")
+        _make_png(a)
+        _make_png(b)
+        json_path = str(tmp_path / "list.json")
+
+        fb = FileBrowser(directory=".")
+        fb.enable_explicit_file_list([a, b], json_path=json_path)
+
+        fb.refresh(removed_files=[a])
+
+        with open(json_path) as f:
+            remaining = json.load(f)
+        assert remaining == [b]
+
+    def test_closest_sort_lookup_inherits_file_list_mode(self, tmp_path):
+        """_get_sorted_files_for_sort_type()'s temp FileBrowser must inherit
+        use_file_paths_json / file_paths_json_path -- otherwise find() with a
+        closest_sort_by fallback would come back empty for a file-list
+        browser, since its self.directory has no real files to glob-scan."""
+        a = str(tmp_path / "a.png")
+        b = str(tmp_path / "b.png")
+        _make_png(a)
+        _make_png(b)
+        json_path = str(tmp_path / "list.json")
+
+        fb = FileBrowser(directory="/definitely/does/not/exist", sort_by=SortBy.NAME)
+        fb.enable_explicit_file_list([a, b], json_path=json_path)
+
+        sorted_files = fb._get_sorted_files_for_sort_type(fb.get_files(), SortBy.CREATION_TIME)
+
+        assert {sf.full_file_path for sf in sorted_files} == {a, b}

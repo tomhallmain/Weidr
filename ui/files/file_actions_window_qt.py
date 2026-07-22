@@ -125,6 +125,12 @@ class FileActionsWindow(SmartWindow):
         search_btn.clicked.connect(lambda _checked=False: self._search_for_active_media())
         header.addWidget(search_btn)
 
+        search_window_btn = QPushButton(_("Search in New Window"))
+        search_window_btn.clicked.connect(
+            lambda _checked=False: self._open_search_in_new_window()
+        )
+        header.addWidget(search_window_btn)
+
         clear_btn = QPushButton(_("Clear History"))
         clear_btn.clicked.connect(self._clear_action_history)
         header.addWidget(clear_btn)
@@ -157,6 +163,9 @@ class FileActionsWindow(SmartWindow):
         QShortcut(QKeySequence("Shift+Escape"), self).activated.connect(self.close)
         QShortcut(QKeySequence("Shift+A"), self).activated.connect(
             self._search_for_active_media
+        )
+        QShortcut(QKeySequence("Shift+S"), self).activated.connect(
+            self._open_search_in_new_window
         )
 
         # Focus the scroll area so key events are captured
@@ -486,7 +495,11 @@ class FileActionsWindow(SmartWindow):
             )
 
     def _undo(self, action: FileAction, specific_image: str | None = None) -> None:
-        _, app_actions = self._active_context()
+        # Bind the unused first element to a real name, not "_" -- that would
+        # shadow the module-level _() translation function for the rest of
+        # this method (reachable via the action.auto branch just below,
+        # which raised TypeError: 'AppWindow' object is not callable).
+        _app_master, app_actions = self._active_context()
         # If this was an automated prevalidation action, confirm that the user
         # wants to create an override so it won't fire on these files again.
         override_paths: list[str] = []
@@ -710,7 +723,9 @@ class FileActionsWindow(SmartWindow):
         if media_path is not None and not isinstance(media_path, str):
             media_path = None
         if media_path is None:
-            _, app_actions = self._active_context()
+            # Not "_," -- see _open_search_in_new_window()'s comment on why
+            # that shadows the module-level _() translation function.
+            _app_master, app_actions = self._active_context()
             media_path = app_actions.get_active_media_filepath()
             if media_path is None:
                 raise Exception("No active media")
@@ -746,6 +761,53 @@ class FileActionsWindow(SmartWindow):
         self._filtered_history = self._filter_by_action_type(temp)
         self._visible_count = self.INITIAL_PAGE_SIZE
         self._rebuild_content()
+
+    # ==================================================================
+    # Search in new window
+    # ==================================================================
+    def _open_search_in_new_window(self) -> None:
+        """Open a new AppWindow and run a similarity search against every
+        existing destination file in the action history, using the active
+        media as the query -- for finding a moved/renamed file again."""
+        from ui.app_window.window_manager import WindowManager
+
+        # Bind the unused first element to a real name, not "_" -- that would
+        # shadow the module-level _() translation function for the rest of
+        # this method, breaking every _("...") call below it.
+        _app_master, app_actions = self._active_context()
+        media_path = app_actions.get_active_media_filepath()
+        if not media_path:
+            app_actions.toast(_("No active media file to search with."))
+            return
+
+        # Collect unique existing destination files from the full action
+        # history. original_marks (source paths) are intentionally excluded --
+        # the user wants to find where files are now, not where they were.
+        seen: set[str] = set()
+        file_list: list[str] = []
+        for action in FileAction.action_history:
+            for filepath in action.new_files:
+                if filepath not in seen and os.path.isfile(filepath):
+                    seen.add(filepath)
+                    file_list.append(filepath)
+
+        if not file_list:
+            app_actions.toast(
+                _("No existing destination files found in action history.")
+            )
+            return
+
+        # Deliberately no base_dir: the search corpus spans wherever the
+        # action history's files actually live, not one directory, and a
+        # derived base_dir would wrongly scope base_dir-keyed prevalidations
+        # (see ClassifierActionsManager.prevalidate_media's directory profile
+        # matching) to whatever directory happened to be most common.
+        WindowManager.add_secondary_window(
+            base_dir=None,
+            media_path=media_path,
+            do_search=True,
+            file_list=file_list,
+        )
 
     # ==================================================================
     # Filter by typing

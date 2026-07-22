@@ -209,7 +209,9 @@ class ComparePromptsExact(BaseCompare):
         To override the default file inclusion behavior, pass a gather_files_func to the Compare object.
         '''
         self._files_found = []
-        if self.gather_files_func:
+        if self.args.file_list:
+            self.files = list(self.args.file_list)
+        elif self.gather_files_func:
             exts = config.image_types
             if self.args.include_gifs:
                 exts.append(".gif")

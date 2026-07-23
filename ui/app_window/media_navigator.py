@@ -74,9 +74,14 @@ class MediaNavigator:
         if self._app.mode == Mode.BROWSE or self._app.search_ctrl.is_compare_running():
             start_media = self._fb.current_file()
             previous_media = self._fb.previous_file()
-            if self._app.media_path == previous_media:
+            if self._app.media_path == previous_media and os.path.isfile(previous_media):
                 return True  # already at this file (refresh case)
-            while self._cm.skip_media(previous_media) and previous_media != start_media:
+            # A stale directory-listing cache can momentarily still contain a
+            # file that was just moved/deleted (see docs/refresh_mark_move_timing_bug.md);
+            # skip past it rather than trying to display something that's gone.
+            while previous_media != start_media and (
+                self._cm.skip_media(previous_media) or not os.path.isfile(previous_media)
+            ):
                 previous_media = self._fb.previous_file()
             try:
                 self.create_media(previous_media)
@@ -94,9 +99,14 @@ class MediaNavigator:
         if self._app.mode == Mode.BROWSE or self._app.search_ctrl.is_compare_running():
             start_media = self._fb.current_file()
             next_media = self._fb.next_file()
-            if self._app.media_path == next_media:
+            if self._app.media_path == next_media and os.path.isfile(next_media):
                 return True  # already at this file (refresh case)
-            while self._cm.skip_media(next_media) and next_media != start_media:
+            # A stale directory-listing cache can momentarily still contain a
+            # file that was just moved/deleted (see docs/refresh_mark_move_timing_bug.md);
+            # skip past it rather than trying to display something that's gone.
+            while next_media != start_media and (
+                self._cm.skip_media(next_media) or not os.path.isfile(next_media)
+            ):
                 next_media = self._fb.next_file()
             try:
                 self.create_media(next_media)

@@ -136,9 +136,15 @@ class FileBrowser:
         if file_check and current_file and os.path.isfile(current_file) and current_file in files:
             with self.cursor_lock:
                 self.file_cursor = files.index(current_file)
-                if len(removed_files) > 0:
-                    if self.file_cursor > -1:
-                        self.file_cursor += direction.get_correction()
+                # Only pre-position with the -1 correction when the removed file was
+                # the one at the cursor -- AppWindow.refresh() then follows up with a
+                # show_next_media()-family call that applies the compensating +1. If
+                # some other file was removed, files.index() above is already the
+                # correct, final position; shifting it here would leave the cursor
+                # permanently one off, since no follow-up call is coming
+                # (see docs/refresh_mark_move_timing_bug.md, Bug 3).
+                if current_file in removed_files:
+                    self.file_cursor += direction.get_correction()
         elif file_check and current_file and os.path.isfile(current_file):
             # current_file still exists on disk but was filtered out (e.g. its
             # media type was just disabled in configuration) -- fall back to a
@@ -152,7 +158,10 @@ class FileBrowser:
             with self.cursor_lock:
                 if len(files) - 1 < self.file_cursor:
                     self.file_cursor = direction.get_correction()
-                else:
+                # Same reasoning as the branch above: only apply the -1 correction
+                # (relying on a subsequent show_next_media()-family +1) when the
+                # removed file was the one at the cursor.
+                elif current_file in removed_files:
                     self.file_cursor += direction.get_correction()
         return files
 
@@ -200,6 +209,12 @@ class FileBrowser:
                 cursor = 0
                 with self.cursor_lock:
                     cursor = self.file_cursor
+                if cursor < 0:
+                    # -1 is a deliberate pre-position sentinel (set just before a
+                    # next_file() call that increments it to land on index 0), not
+                    # a real position -- resolve it the same way next_file() would
+                    # rather than let Python's negative indexing wrap to the last file.
+                    cursor = 0
                 return self.get_files()[cursor]
             except Exception:
                 with self.cursor_lock:

@@ -90,6 +90,8 @@ class RelatedImagesWindow(SmartDialog):
              lambda: app.file_marks_ctrl.mark_sources_with_downstream_in_dir()),
             (_("Mark all downstream files in current directory"), "—",
              lambda: app.file_marks_ctrl.mark_downstream_files_in_dir()),
+            (_("Mark files without a related image in current directory"), "—",
+             lambda: app.file_marks_ctrl.mark_files_without_related_images_in_dir()),
             (_("Search all open windows for downstream images"), "Alt+Y",
              lambda: app.file_marks_ctrl.set_marks_from_downstream_related_images_all_windows()),
         ]

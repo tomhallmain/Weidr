@@ -224,6 +224,22 @@ class TestGetSourcesWithDownstreamInDir:
         result = get_sources_with_downstream_in_dir([source], str(dir_y))
         assert result == []
 
+    def test_same_directory_on_both_sides(self, tmp_path):
+        """other_base_dir may be the same directory source_paths came from --
+        used by mark_files_without_related_images_in_dir to find files with a
+        source/downstream relationship to another file in their own directory."""
+        source = str(tmp_path / "source.png")
+        derived = str(tmp_path / "derived.png")
+        isolated = str(tmp_path / "isolated.png")
+        _make_png(source)
+        _make_png(derived, related_image=source)
+        _make_png(isolated)
+
+        result = get_sources_with_downstream_in_dir(
+            [source, derived, isolated], str(tmp_path)
+        )
+        assert result == [source]
+
 
 # ---------------------------------------------------------------------------
 # TestGetDownstreamFilesForSources
@@ -353,6 +369,23 @@ class TestGetDownstreamFilesForSources:
 
         result = get_downstream_files_for_sources([source], str(dir_y))
         assert result == []
+
+    def test_same_directory_on_both_sides(self, tmp_path):
+        """other_base_dir may be the same directory source_paths came from --
+        used by mark_files_without_related_images_in_dir to find files that
+        are themselves a downstream derivative of another file in their own
+        directory."""
+        source = str(tmp_path / "source.png")
+        derived = str(tmp_path / "derived.png")
+        isolated = str(tmp_path / "isolated.png")
+        _make_png(source)
+        _make_png(derived, related_image=source)
+        _make_png(isolated)
+
+        result = get_downstream_files_for_sources(
+            [source, derived, isolated], str(tmp_path)
+        )
+        assert result == [derived]
 
 
 # ---------------------------------------------------------------------------

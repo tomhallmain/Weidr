@@ -613,6 +613,50 @@ class FileMarksController:
             window.file_marks_ctrl.go_to_mark()
             window.media_frame.setFocus()
 
+    @require_password(ProtectedActions.VIEW_MEDIA_DETAILS)
+    def mark_files_without_related_images_in_dir(self, event=None) -> None:
+        """Mark every file in the current directory that has no related image
+        (as a source or as a downstream derivative) elsewhere in that same
+        directory.
+
+        Reuses get_sources_with_downstream_in_dir / get_downstream_files_for_sources
+        with the current directory passed as both sides of the comparison --
+        together they cover both directions of the relationship, so their
+        union is every file connected to at least one other file in the dir;
+        the complement is what this marks.
+        """
+        base_dir = self._app.get_base_dir()
+        source_paths = self._fb.filepaths
+        if not source_paths:
+            self._app.notification_ctrl.toast(_("No files in current directory."))
+            return
+
+        related = set(get_sources_with_downstream_in_dir(source_paths, base_dir))
+        related.update(get_downstream_files_for_sources(source_paths, base_dir))
+        unrelated = [p for p in source_paths if p not in related]
+
+        if not unrelated:
+            message = _("Every file in the current directory has a related image.")
+            self._app.notification_ctrl.toast(message)
+            self._notify_related_result(
+                message, _("Mark files without related images"),
+                found=0, base_dir=base_dir)
+            return
+
+        if not MarkedFiles.guard_mark_mutation(
+            self._app.app_actions, _("Mark files without related images")
+        ):
+            return
+
+        MarkedFiles.file_marks = unrelated
+        message = _("{0} file(s) without a related image marked").format(len(unrelated))
+        self._app.notification_ctrl.toast(message)
+        self._notify_related_result(
+            message, _("Mark files without related images"),
+            found=len(unrelated), base_dir=base_dir)
+        self.go_to_mark()
+        self._app.media_frame.setFocus()
+
     @require_password(ProtectedActions.RUN_FILE_ACTIONS)
     def set_marked_file_as_related_to_current(self, event=None) -> None:
         """Rename the single marked file to make it a named derivative of the current media.

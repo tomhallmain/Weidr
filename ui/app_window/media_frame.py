@@ -28,7 +28,7 @@ from ui.app_style import AppStyle
 from ui.app_window.media_controls_overlay import MediaControlsOverlay, OVERLAY_HEIGHT
 from utils.config import config
 from utils.logging_setup import get_logger
-from image.frame_cache import FrameCache, has_imported_pypdfium2
+from image.frame_cache import FrameCache, has_imported_pypdfium2, has_imported_pyppeteer
 from image.video_ops import probe_has_video_stream
 from utils.media_utils import (
     MATROSKA_EXTENSIONS,
@@ -786,6 +786,16 @@ class MediaFrame(QFrame):
                 from ui.app_window.pdf_page_viewer import PdfPageViewer
                 self._pdf_viewer = PdfPageViewer(self)
             self._pdf_viewer.show(path)
+            return
+        if path.lower().endswith(('.html', '.htm')) and has_imported_pyppeteer:
+            # No QImageReader/PIL codec can decode HTML directly -- resolve it
+            # to FrameCache's rendered raster first (same cache MediaDetails
+            # uses), same as the PDF branch above going through PdfPageViewer.
+            try:
+                self._show_image_in_view(FrameCache.get_image_path(path))
+            except Exception as e:
+                logger.warning("Failed to render HTML path=%s error=%s", path, e)
+                self._show_placeholder(_("Unable to display this file: ") + os.path.basename(path))
             return
         try:
             self._show_image_in_view(self.path)

@@ -3,6 +3,7 @@
 import pytest
 from PySide6.QtGui import QImage, QImageReader
 
+from image.frame_cache import FrameCache
 from ui.app_window.media_frame import VideoUI
 from tests.fixtures.show_media_assets import show_media_files
 from utils.config import config
@@ -41,11 +42,14 @@ class TestShowMediaDocumentPaths:
             return img
 
         monkeypatch.setattr(media_frame, "_load_image_to_qimage", _fake_load)
-        # When pypdfium2 is installed, show_media routes PDF through PdfPageViewer
-        # (bypassing _load_image_to_qimage). Force the fallback path so this test
-        # can verify the mocked-decode contract regardless of pypdfium2 availability.
+        # When pypdfium2/pyppeteer is installed, show_media routes PDF/HTML
+        # through PdfPageViewer / FrameCache (bypassing _load_image_to_qimage
+        # on the raw path). Force the fallback path so this test can verify
+        # the mocked-decode contract regardless of library availability.
         if kind == "pdf":
             monkeypatch.setattr("ui.app_window.media_frame.has_imported_pypdfium2", False)
+        if kind == "html":
+            monkeypatch.setattr("ui.app_window.media_frame.has_imported_pyppeteer", False)
         media_frame.show_media(path)
 
         qtbot.waitUntil(lambda: media_frame.media_displayed, timeout=8000)
@@ -80,6 +84,57 @@ class TestShowMediaDocumentPaths:
         monkeypatch.setattr(media_frame, "_load_image_to_qimage", _raise_on_load)
         monkeypatch.setattr("ui.app_window.media_frame.has_imported_pypdfium2", False)
         media_frame.show_media(path)
+        qtbot.waitUntil(
+            lambda: not media_frame.media_displayed
+            and bool(media_frame._placeholder_label.text().strip()),
+            timeout=8000,
+        )
+
+    def test_show_media_html_routes_through_frame_cache(
+        self, media_frame, show_media_files, qtbot, monkeypatch
+    ):
+        """HTML has no native QImageReader/PIL codec -- show_media must resolve
+        it through FrameCache.get_image_path() (the same cache MediaDetails
+        uses) before decoding, rather than handing the raw .html path to
+        _load_image_to_qimage (which always fails for HTML)."""
+        media_frame.resize(360, 280)
+        html_path = show_media_files["html"]
+        resolved_path = show_media_files["png"]
+        loaded = []
+
+        def _fake_load(image_path, **kwargs):
+            loaded.append(image_path)
+            img = QImage(24, 18, QImage.Format.Format_RGB32)
+            img.fill(0xFF112233)
+            return img
+
+        monkeypatch.setattr(media_frame, "_load_image_to_qimage", _fake_load)
+        monkeypatch.setattr("ui.app_window.media_frame.has_imported_pyppeteer", True)
+        monkeypatch.setattr(
+            FrameCache, "get_image_path", classmethod(lambda _cls, _path: resolved_path)
+        )
+
+        media_frame.show_media(html_path)
+
+        qtbot.waitUntil(lambda: media_frame.media_displayed, timeout=8000)
+        assert loaded == [resolved_path]
+
+    def test_show_media_html_shows_placeholder_when_frame_cache_fails(
+        self, media_frame, show_media_files, qtbot, monkeypatch
+    ):
+        media_frame.resize(360, 280)
+        html_path = show_media_files["html"]
+
+        def _raise_frame_cache_error(_cls, _path):
+            raise RuntimeError("simulated pyppeteer failure")
+
+        monkeypatch.setattr("ui.app_window.media_frame.has_imported_pyppeteer", True)
+        monkeypatch.setattr(
+            FrameCache, "get_image_path", classmethod(_raise_frame_cache_error)
+        )
+
+        media_frame.show_media(html_path)
+
         qtbot.waitUntil(
             lambda: not media_frame.media_displayed
             and bool(media_frame._placeholder_label.text().strip()),

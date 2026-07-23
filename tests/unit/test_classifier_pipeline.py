@@ -670,12 +670,36 @@ class TestValidation:
         errors = p.validate()
         assert any("XOR" in e for e in errors)
 
-    def test_composite_and_requires_at_least_two(self):
+    def test_composite_and_with_one_subcondition_is_valid(self):
+        """AND/OR generalize fine to a single operand -- all([x]) == x and
+        any([x]) == x, so one sub-condition is well-defined (just redundant),
+        unlike NOT/XOR whose semantics are fixed-arity by definition."""
         p = _simple_pipeline(
             _make_node("n1", CompositeCondition("AND", [EmbeddingCondition()])),
         )
         errors = p.validate()
+        assert not any("AND" in e for e in errors)
+
+    def test_composite_or_with_one_subcondition_is_valid(self):
+        p = _simple_pipeline(
+            _make_node("n1", CompositeCondition("OR", [EmbeddingCondition()])),
+        )
+        errors = p.validate()
+        assert not any("OR" in e for e in errors)
+
+    def test_composite_and_requires_at_least_one(self):
+        p = _simple_pipeline(
+            _make_node("n1", CompositeCondition("AND", [])),
+        )
+        errors = p.validate()
         assert any("AND" in e for e in errors)
+
+    def test_composite_or_requires_at_least_one(self):
+        p = _simple_pipeline(
+            _make_node("n1", CompositeCondition("OR", [])),
+        )
+        errors = p.validate()
+        assert any("OR" in e for e in errors)
 
     def test_classifier_rank_bad_ranks(self):
         p = _simple_pipeline(

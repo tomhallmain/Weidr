@@ -1251,9 +1251,14 @@ class ClassifierPipeline:
                 errors.append(
                     _("Node {0}: XOR requires exactly 2 sub-conditions, got {1}.").format(node_name, n)
                 )
-            if condition.operator in ("AND", "OR") and n < 2:
+            if condition.operator in ("AND", "OR") and n < 1:
+                # Unlike NOT (fixed arity 1) and XOR (fixed arity 2), AND/OR
+                # generalize to any operand count: all([x]) == x and
+                # any([x]) == x, so a single sub-condition is well-defined
+                # (just redundant) rather than invalid. Only an empty list
+                # has no sub-condition to evaluate at all.
                 errors.append(
-                    _("Node {0}: {1} requires ≥ 2 sub-conditions, got {2}.").format(
+                    _("Node {0}: {1} requires at least 1 sub-condition, got {2}.").format(
                         node_name, condition.operator, n
                     )
                 )

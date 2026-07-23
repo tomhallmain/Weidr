@@ -73,6 +73,29 @@ class ClassifierClassificationMode(Enum):
         return ClassifierClassificationMode.SELECTED_CATEGORIES
 
 
+class ValidationCombineMode(Enum):
+    """How multiple enabled validation types on one ClassifierAction/Prevalidation
+    combine into a single match/no-match result.
+
+    OR (default, existing behavior): the first enabled type that matches wins
+    (short-circuit) -- see ClassifierAction._evaluate_image_path_match().
+    AND (new): every enabled type must match -- see
+    ClassifierAction._evaluate_image_path_match_and(). NOT/XOR are deliberately
+    not offered here; the enabled-type set can be arbitrarily large (unlike the
+    binary ClassifierPipeline CompositeCondition operators), so only the two
+    combinators that generalize to N types are exposed.
+    """
+    OR = "or"
+    AND = "and"
+
+    @staticmethod
+    def from_value(value):
+        if isinstance(value, ValidationCombineMode):
+            return value
+        value_str = str(value or "").strip().lower()
+        if value_str == ValidationCombineMode.AND.value:
+            return ValidationCombineMode.AND
+        return ValidationCombineMode.OR
 
 
 
@@ -129,6 +152,7 @@ class ClassifierAction:
     filename_contains_case_sensitive: bool = False
     use_base_stem_match: bool = False
     base_stem_match_require_match: bool = True
+    validation_combine_mode: ValidationCombineMode = field(default=ValidationCombineMode.OR)
     applies_to_media_types: Optional[list] = None
     can_run: bool = True
     initialization_error: Optional[str] = None
@@ -155,6 +179,8 @@ class ClassifierAction:
             self.action = ClassifierActionType[self.action]
         # Normalize classification mode
         self.classification_mode = ClassifierClassificationMode.from_value(self.classification_mode)
+        # Normalize validation combine mode
+        self.validation_combine_mode = ValidationCombineMode.from_value(self.validation_combine_mode)
         # Normalize classifier_domain: any unrecognized/garbage value falls back to
         # "image" (the pre-existing, only-ever-supported behavior before audio
         # classifiers existed) rather than raising -- keeps old serialized data safe.
@@ -285,26 +311,36 @@ class ClassifierAction:
         return len(self.image_classifier_selected_categories) > 0
 
     def _check_prompt_validation(self, image_path):
-        """Check if image prompts match the positive or negative criteria."""
+        """Check if image prompts match the positive and negative criteria.
+
+        positive_match/negative_match each default to True when their side
+        (self.positives / self.negatives) isn't configured, so an unconfigured
+        side never blocks the other. Combined with `and` (not `or`): a rule
+        with only positives set requires the positive terms to actually be
+        found -- previously `or` meant the unconfigured negative side's
+        default-True made the whole check always pass regardless of the
+        positive terms, which defeated positive-only (or negative-only)
+        prompt rules entirely.
+        """
         try:
             positive_prompt, negative_prompt = image_data_extractor.extract_prompts_all_strategies(image_path)
 
             # Skip if no prompts found (None indicates failure to extract prompts)
             if positive_prompt is None:
                 return False
-            
+
             # Check positive prompts
             positive_match = True
             if self.positives:
                 positive_match = any(pos.lower() in positive_prompt.lower() for pos in self.positives)
-            
+
             # Check negative prompts
             negative_match = True
             if self.negatives:
                 negative_match = any(neg.lower() in negative_prompt.lower() for neg in self.negatives)
-            
-            return positive_match or negative_match
-            
+
+            return positive_match and negative_match
+
         except Exception as e:
             logger.error(f"Error checking prompt validation for {image_path}: {e}")
             return False
@@ -780,6 +816,138 @@ class ClassifierAction:
         # No validation type passed
         return False, None
 
+    def _evaluate_image_path_match_and(
+        self, image_path: str, lookahead_eval_cache=None, _detail_out: Optional[list] = None
+    ) -> tuple[bool, Optional[str]]:
+        """AND-mode counterpart to _evaluate_image_path_match(): every enabled
+        validation type must match, rather than short-circuiting on the first
+        one that does. Kept as a fully separate method (mirroring the OR
+        method's structure type-by-type) rather than adding branches inside
+        _evaluate_image_path_match() -- short-circuit-on-first-True and
+        require-all-True don't share enough control flow to interleave
+        cleanly, and this way the existing OR method stays byte-for-byte
+        untouched.
+
+        Lookaheads keep their existing veto semantics: any lookahead passing
+        means "do not match this rule" in both AND and OR mode, checked
+        before any validation type (a lookahead is a veto, not one of the
+        types being AND-combined).
+
+        If no validation type is enabled at all, returns (False, None) --
+        matching the OR method's behavior for the same degenerate case,
+        rather than vacuously satisfying an empty AND.
+
+        _detail_out (when provided) ends up describing the last enabled type
+        evaluated (in the same fixed order as the OR method), since with AND
+        semantics every enabled type must match and there's no single
+        "the one that triggered it" answer the way there is for OR.
+        """
+        if not self.can_run:
+            return False, None
+
+        # Lookaheads are a veto, not a type to AND together -- same
+        # short-circuit-to-no-match semantics as the OR method.
+        if self._check_lookaheads(image_path, lookahead_eval_cache=lookahead_eval_cache):
+            return False, None
+
+        matched_category: Optional[str] = None
+        any_type_enabled = False
+
+        if self.use_prototype:
+            any_type_enabled = True
+            if not self._check_prototype_validation(image_path):
+                return False, None
+            if _detail_out is not None:
+                _detail_out[0] = TriggerDetail(trigger_type="prototype")
+
+        if self.use_embedding:
+            any_type_enabled = True
+            if not CompareEmbeddingClip.multi_text_compare(
+                image_path, self.positives, self.negatives, self.text_embedding_threshold
+            ):
+                return False, None
+            if _detail_out is not None:
+                _detail_out[0] = TriggerDetail(trigger_type="embedding")
+
+        if self.use_image_classifier:
+            any_type_enabled = True
+            if self.image_classifier is None and self.image_classifier_name:
+                self.ensure_image_classifier_loaded(None)
+            if self.image_classifier is None:
+                if not self._missing_image_classifier_logged:
+                    logger.error(
+                        f"{self.classifier_domain.capitalize()} classifier "
+                        f"{self.image_classifier_name} not found for classifier action {self.name}"
+                    )
+                    self._missing_image_classifier_logged = True
+                return False, None
+            if self.classification_mode == ClassifierClassificationMode.MODEL_STRATEGY:
+                predicted_category = self._classify_with_classifier(image_path)
+                positive_categories = self._resolve_model_strategy_positive_categories()
+                if predicted_category not in positive_categories:
+                    return False, None
+                if _detail_out is not None:
+                    _detail_out[0] = self._build_classifier_detail(image_path, predicted_category)
+                matched_category = predicted_category
+            else:
+                if not self._test_categories_with_classifier(
+                    image_path, self.image_classifier_selected_categories
+                ):
+                    return False, None
+                try:
+                    predicted_category = self._classify_with_classifier(image_path)
+                except Exception:
+                    predicted_category = None
+                if _detail_out is not None:
+                    _detail_out[0] = self._build_classifier_detail(image_path, predicted_category)
+                if predicted_category in self.image_classifier_selected_categories:
+                    matched_category = predicted_category
+
+        if self.use_prompts:
+            any_type_enabled = True
+            if not self._check_prompt_validation(image_path):
+                return False, None
+            if _detail_out is not None:
+                _detail_out[0] = TriggerDetail(trigger_type="prompt")
+
+        if self.use_filename_contains:
+            any_type_enabled = True
+            if not self._check_filename_contains(image_path):
+                return False, None
+            if _detail_out is not None:
+                _detail_out[0] = TriggerDetail(trigger_type="filename")
+
+        if self.use_base_stem_match:
+            any_type_enabled = True
+            if not self._check_base_stem_match(image_path):
+                return False, None
+            if _detail_out is not None:
+                _detail_out[0] = TriggerDetail(trigger_type="base_stem_match")
+
+        if not any_type_enabled:
+            # No validation type enabled -- mirror the OR method's "no
+            # validation type passed" result rather than vacuously matching
+            # everything (an empty AND is trivially true otherwise).
+            return False, None
+
+        return True, matched_category
+
+    def _evaluate_image_path_match_for_mode(
+        self, *args, **kwargs
+    ) -> tuple[bool, Optional[str]]:
+        """Dispatch to the OR (default) or AND evaluator per validation_combine_mode.
+
+        Forwards args/kwargs transparently (not re-declared as named
+        parameters with defaults) so callers -- and tests that patch
+        _evaluate_image_path_match or _evaluate_image_path_match_and with a
+        narrower signature matching only the kwargs a given call site
+        actually passes -- see exactly the same call shape as calling the
+        target method directly.
+        """
+        if self.validation_combine_mode == ValidationCombineMode.AND:
+            return self._evaluate_image_path_match_and(*args, **kwargs)
+        return self._evaluate_image_path_match(*args, **kwargs)
+
     def _build_classifier_detail(self, image_path: str, category: Optional[str]) -> "TriggerDetail":
         """Build a TriggerDetail for a classifier match (image or audio domain),
         including ranked predictions. predict_image/predict_audio cache internally
@@ -858,7 +1026,7 @@ class ClassifierAction:
 
         for local_idx, frame_path in enumerate(scan_frames):
             try:
-                is_match, _unused = self._evaluate_image_path_match(frame_path)
+                is_match, _unused = self._evaluate_image_path_match_for_mode(frame_path)
             except Exception:
                 is_match = False
             if is_match:
@@ -870,7 +1038,7 @@ class ClassifierAction:
                     # caches results internally so this extra call is effectively free.
                     detail_out: list = [None]
                     try:
-                        self._evaluate_image_path_match(first_positive[1], _detail_out=detail_out)
+                        self._evaluate_image_path_match_for_mode(first_positive[1], _detail_out=detail_out)
                     except Exception:
                         pass
                     return TriggerFrameResult(
@@ -927,7 +1095,7 @@ class ClassifierAction:
                         try:
                             processed_samples += 1
                             last_processed_index = idx
-                            is_match, matched_category = self._evaluate_image_path_match(
+                            is_match, matched_category = self._evaluate_image_path_match_for_mode(
                                 sampled_path, lookahead_eval_cache=lookahead_eval_cache
                             )
                             if is_match:
@@ -1019,7 +1187,7 @@ class ClassifierAction:
     ) -> Optional[ClassifierActionType]:
         if not self.can_run:
             return None
-        is_match, matched_category = self._evaluate_image_path_match(image_path)
+        is_match, matched_category = self._evaluate_image_path_match_for_mode(image_path)
         if is_match:
             if dry_run:
                 return self.action
@@ -1431,6 +1599,7 @@ class ClassifierAction:
             "filename_contains_case_sensitive": self.filename_contains_case_sensitive,
             "use_base_stem_match": self.use_base_stem_match,
             "base_stem_match_require_match": self.base_stem_match_require_match,
+            "validation_combine_mode": self.validation_combine_mode.value,
             "applies_to_media_types": (
                 [mt.value for mt in self.applies_to_media_types]
                 if self.applies_to_media_types is not None
@@ -1492,6 +1661,8 @@ class ClassifierAction:
             d['use_base_stem_match'] = False
         if 'base_stem_match_require_match' not in d:
             d['base_stem_match_require_match'] = True
+        if 'validation_combine_mode' not in d:
+            d['validation_combine_mode'] = ValidationCombineMode.OR.value
         if 'applies_to_media_types' not in d:
             d['applies_to_media_types'] = None
         if 'related_image_edit_suffix' not in d:
@@ -1765,6 +1936,8 @@ class Prevalidation(ClassifierAction):
             d['profile_name'] = None
         if 'is_active' not in d:
             d['is_active'] = True  # Default to active for prevalidations
+        if 'validation_combine_mode' not in d:
+            d['validation_combine_mode'] = ValidationCombineMode.OR.value
         # Handle threshold backward compatibility
         if 'text_embedding_threshold' not in d:
             # Use existing threshold as text_embedding_threshold

@@ -27,6 +27,7 @@ from compare.classifier_action import (
     ClassifierAction,
     ClassifierClassificationMode,
     Prevalidation,
+    ValidationCombineMode,
 )
 from compare.classifier_actions_manager import ClassifierActionsManager
 from image.audio_classifier_manager import audio_classifier_manager
@@ -223,6 +224,24 @@ class ClassifierActionModifyWindow(SmartDialog):
         )
         self._base_stem_require_match_cb.setChecked(ca.base_stem_match_require_match)
         grid.addWidget(self._base_stem_require_match_cb, row, 1)
+        row += 1
+
+        # -- Validation combine mode (OR vs AND across enabled types) -----
+        self._combine_mode_lbl = self._lbl(_("Combine Validation Types"))
+        grid.addWidget(self._combine_mode_lbl, row, 0, Qt.AlignLeft)
+        self._combine_mode_combo = QComboBox()
+        self._combine_mode_combo.addItem(
+            _("OR - any enabled type matching is enough"), ValidationCombineMode.OR.value
+        )
+        self._combine_mode_combo.addItem(
+            _("AND - every enabled type must match"), ValidationCombineMode.AND.value
+        )
+        combine_mode_value = getattr(
+            ca, "validation_combine_mode", ValidationCombineMode.OR
+        ).value
+        combine_idx = self._combine_mode_combo.findData(combine_mode_value)
+        self._combine_mode_combo.setCurrentIndex(combine_idx if combine_idx >= 0 else 0)
+        grid.addWidget(self._combine_mode_combo, row, 1)
         row += 1
 
         # -- Text Embedding Threshold -------------------------------------
@@ -449,6 +468,15 @@ class ClassifierActionModifyWindow(SmartDialog):
         use_bsm = self._use_base_stem_match_cb.isChecked()
         self._base_stem_require_match_cb.setVisible(use_bsm)
 
+        # Combine mode (AND/OR) only means something once 2+ validation types
+        # are enabled -- with 0 or 1, there's nothing to combine.
+        enabled_type_count = sum(
+            (use_emb, use_ic, use_pr, use_proto, use_fn, use_bsm)
+        )
+        show_combine_mode = enabled_type_count >= 2
+        self._combine_mode_lbl.setVisible(show_combine_mode)
+        self._combine_mode_combo.setVisible(show_combine_mode)
+
         is_generate = (
             ClassifierActionType.get_action(self._action_combo.currentText())
             == ClassifierActionType.GENERATE
@@ -593,6 +621,9 @@ class ClassifierActionModifyWindow(SmartDialog):
         ca.filename_contains_case_sensitive = self._filename_case_sensitive_cb.isChecked()
         ca.use_base_stem_match = self._use_base_stem_match_cb.isChecked()
         ca.base_stem_match_require_match = self._base_stem_require_match_cb.isChecked()
+        ca.validation_combine_mode = ValidationCombineMode.from_value(
+            self._combine_mode_combo.currentData()
+        )
 
         ca.action = ClassifierActionType.get_action(
             self._action_combo.currentText()

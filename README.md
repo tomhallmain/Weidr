@@ -52,7 +52,7 @@ The UI can be used as a media file browser. The following features are available
 
 For image files, zoom and drag functionality is available in both browsing mode as well as when viewing grouped media after a comparison has been run.
 
-Note that depending on your configuration, videos, GIFs, PDFs, SVGs, and HTML may be disabled; use the file-type configuration window (`Ctrl+J`) or edit `image_types` / `video_types` in config. Default extensions and optional dependencies (HEIC, AVIF, VLC, etc.) are listed in [USAGE.md](USAGE.md#supported-file-types-defaults).
+Note that depending on your configuration, videos, GIFs, PDFs, SVGs, and HTML may be disabled; use the file-type configuration window (`Ctrl+V`) or edit `image_types` / `video_types` in config. Default extensions and optional dependencies (HEIC, AVIF, VLC, etc.) are listed in [USAGE.md](USAGE.md#supported-file-types-defaults).
 
 ---
 
@@ -90,7 +90,7 @@ Each model offers different tradeoffs between accuracy, speed, and resource usag
 
 ## Prevalidation Rules and Classifier Actions
 
-The application includes a flexible prevalidation system that can automatically process media before they're shown to the user, as well as classifier actions that can be run ad-hoc on selected directories. Both are managed through a unified window. This is useful for:
+The application includes a flexible prevalidation system that can automatically process media before they're shown to the user, as well as classifier actions that can be run ad-hoc on selected directories. Both are managed through a unified window (shortcut: `Ctrl+J`) with tabs for Classifier Actions, Pipelines, Prevalidations, Seek to Trigger, Lookaheads, and Directory Profiles. This is useful for:
 
 <details>
 <summary>View Use Cases</summary>
@@ -100,6 +100,7 @@ The application includes a flexible prevalidation system that can automatically 
 <li>Filtering media using CLIP embeddings, embedding prototypes, H5 image classifiers, PyTorch image classifiers, prompt string detection</li>
 <li>Setting up rules that apply to specific directories</li>
 <li>Running one-off classification actions on selected directories</li>
+<li>Building multi-step decision logic (branching, grouping, AND/OR/NOT/XOR condition composition) for cases a single rule can't express</li>
 </ul>
 </details>
 
@@ -108,18 +109,24 @@ Prevalidation rules and classifier actions can be configured with:
 <details>
 <summary>View Rule Options</summary>
 <ul>
-<li>Multiple validation types enabled simultaneously (OR logic - any type can trigger the action)</li>
+<li>Multiple validation types enabled simultaneously, combined with OR (any enabled type can trigger the action) or AND (every enabled type must match) logic</li>
 <li>Positive and negative text prompts shared across embedding and prompt validation</li>
 <li><strong>Embedding prototypes</strong>: Create prototype embeddings from directories of sample images, then compare images against these prototypes. Supports both positive and negative prototypes with configurable weighting (lambda) for fine-tuning similarity matching</li>
 <li>Custom thresholds for embedding-based matching</li>
 <li>Different actions (skip, hide, notify, move, copy, delete, add mark, blur)</li>
-<li>Directory-specific rules</li>
+<li>Directory-specific rules, including reusable <strong>Directory Profiles</strong> that scope multiple rules to the same directory set at once</li>
 <li>H5 model-based classification rules</li>
 <li>PyTorch model-based classification rules (supports .pth, .pt, .safetensors, and .bin formats)</li>
+<li>Separate image and audio classifier domains, plus a model-strategy classification mode for classifiers that expose ranked categories</li>
+<li>Filename substring matching and related-file ("base stem") existence checks</li>
+<li>Dynamic media (video/GIF) sampling with pseudo-static detection to avoid redundant checks on near-identical frames</li>
+<li><strong>Lookaheads</strong>: named, reusable checks (embedding text or a reference to another prevalidation) that veto a rule's match when triggered, shareable across multiple rules</li>
 </ul>
 </details>
 
 Prevalidations automatically run on media as you browse, while classifier actions can be executed manually on selected media directories when needed. These features are particularly useful for maintaining clean media collections and automating local content filtering. Prevalidations can be toggled on or off per directory/window via the context menu or the dedicated keybind — the setting is remembered per directory and defaults to the global `enable_prevalidations` config value for directories opened for the first time. The classifier action management window allows copying between types of classifier action to reduce the burden of action configuration.
+
+For decision logic that a single rule's OR/AND combination can't express — branching on intermediate results, grouping conditions, or NOT/XOR composition — the **Pipelines** tab builds a node-based decision tree: each node evaluates a condition (embedding, prompt, classifier rank, filename, related-image, a composite AND/OR/NOT/XOR of other conditions, etc.) and routes to an outcome (execute an action, continue to the next node, jump to a named node, or accept/reject). The **Seek to Trigger** tab lets you interactively jump the currently displayed video/GIF/PDF to the first sampled frame that would trigger a chosen rule, useful for tuning thresholds without a full re-run.
 
 Classifier models can be added manually or discovered through the in-app model manager, which supports searching Hugging Face repositories, viewing model cards, and installing selected model files. The **Suggested Models** tab offers curated, one-click installs for models known to work well with this app:
 - [Coherence Detection](https://huggingface.co/reddesert/coherence_detection) - A PyTorch ResNet-34 model for classifying AI-generated images into coherent, incoherent, or semi-incoherent categories

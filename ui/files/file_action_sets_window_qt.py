@@ -18,7 +18,7 @@ from ui.auth.password_utils import require_password
 from utils.app_actions import AppActions
 from utils.constants import ProtectedActions
 from utils.logging_setup import get_logger
-from utils.translations import _
+from utils.translations import _, format_shortcut
 from utils.utils import Utils
 logger = get_logger("file_action_sets_window_qt")
 
@@ -337,7 +337,7 @@ class FileActionSetsWindow(SmartWindow):
         menu = QMenu(self)
         if permanent is not None:
             action_label = _("Move") if permanent.is_move_action() else _("Copy")
-            label = f"Ctrl+T: {action_label} → {Utils.get_relative_dirpath(permanent.target, levels=2)}"
+            label = f"{format_shortcut('Ctrl+T')}: {action_label} → {Utils.get_relative_dirpath(permanent.target, levels=2)}"
             menu.addAction(label, lambda _=False, a=permanent: self._add_to_pool(
                 FileAction.convert_action_to_text(a.action), a.target
             ))

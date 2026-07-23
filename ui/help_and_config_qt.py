@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 from lib.multi_display_qt import SmartDialog
 from ui.app_style import AppStyle
 from utils.config import config
-from utils.translations import _
+from utils.translations import _, format_shortcut
 
 
 class HelpAndConfig(SmartDialog):
@@ -657,7 +657,7 @@ class HelpAndConfig(SmartDialog):
 
     def _add_help_table(self, items: dict[str, str], col_0_width: int) -> None:
         for key, value in items.items():
-            key_label = self._make_label(key, col_0_width)
+            key_label = self._make_label(format_shortcut(key), col_0_width)
             # Keep command labels visually stable: no auto-wrap in column 0.
             # Explicit newlines in the shortcut text still render as intended.
             key_label.setFixedWidth(col_0_width)

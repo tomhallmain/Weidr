@@ -1,5 +1,6 @@
 import gettext
 import os
+import re
 
 from utils.logging_setup import get_logger
 from utils.utils import Utils
@@ -58,3 +59,18 @@ def marks_transfer_running_warn(action: str) -> str:
     '''
 
 _ = I18N._
+
+# Modifier names only — avoid short verbs like "Delete" (already msgid → "Löschen").
+# Keep QKeySequence("Ctrl+…") bindings in English; use this for UI labels only.
+_SHORTCUT_MODIFIER_RE = re.compile(r"\b(?:Ctrl|Shift|Alt)\b")
+
+
+def format_shortcut(text: str) -> str:
+    """Localize modifier names in a shortcut chord for display (e.g. Ctrl→Strg)."""
+    # Literal _() calls so pygettext extracts these as keyboard keycap labels.
+    modifiers = {
+        "Ctrl": _("Ctrl"),
+        "Shift": _("Shift"),
+        "Alt": _("Alt"),
+    }
+    return _SHORTCUT_MODIFIER_RE.sub(lambda m: modifiers[m.group(0)], text)

@@ -26,7 +26,7 @@ from PySide6.QtWidgets import QGridLayout, QLabel, QPushButton, QVBoxLayout
 
 from lib.multi_display_qt import SmartDialog
 from ui.app_style import AppStyle
-from utils.translations import _
+from utils.translations import _, format_shortcut
 
 
 class RelatedImagesWindow(SmartDialog):
@@ -104,7 +104,7 @@ class RelatedImagesWindow(SmartDialog):
             btn = QPushButton(label)
             btn.clicked.connect(lambda _=False, f=func: f())
             grid.addWidget(btn, row, 0)
-            chord_lbl = QLabel(chord)
+            chord_lbl = QLabel(format_shortcut(chord))
             chord_lbl.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
             chord_lbl.setAlignment(Qt.AlignCenter)
             grid.addWidget(chord_lbl, row, 1)

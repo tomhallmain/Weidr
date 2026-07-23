@@ -8311,3 +8311,15 @@ msgstr "Compare正在运行，操作不可用: {0}"
 #: utils/translations.py:43
 msgid "Marked files are being moved or copied, action not available: {0}"
 msgstr "标记的文件正在移动或复制，操作不可用: {0}"
+
+#: utils/translations.py
+msgid "Ctrl"
+msgstr "Ctrl"
+
+#: utils/translations.py
+msgid "Shift"
+msgstr "Shift"
+
+#: utils/translations.py
+msgid "Alt"
+msgstr "Alt"

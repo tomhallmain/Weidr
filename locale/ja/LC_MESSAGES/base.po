@@ -8327,3 +8327,15 @@ msgstr "Compareが実行中です。アクションは利用できません: {0}
 #: utils/translations.py:43
 msgid "Marked files are being moved or copied, action not available: {0}"
 msgstr "マークされたファイルが移動またはコピー中であるため、操作を実行できません: {0}"
+
+#: utils/translations.py
+msgid "Ctrl"
+msgstr "Ctrl"
+
+#: utils/translations.py
+msgid "Shift"
+msgstr "Shift"
+
+#: utils/translations.py
+msgid "Alt"
+msgstr "Alt"

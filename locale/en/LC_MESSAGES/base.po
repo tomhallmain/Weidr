@@ -8450,3 +8450,15 @@ msgstr "Compare is running, action not available: {0}"
 #: utils/translations.py:43
 msgid "Marked files are being moved or copied, action not available: {0}"
 msgstr "Marked files are being moved or copied, action not available: {0}"
+
+#: utils/translations.py
+msgid "Ctrl"
+msgstr "Ctrl"
+
+#: utils/translations.py
+msgid "Shift"
+msgstr "Shift"
+
+#: utils/translations.py
+msgid "Alt"
+msgstr "Alt"

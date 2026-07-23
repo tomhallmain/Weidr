@@ -8631,3 +8631,15 @@ msgid "Marked files are being moved or copied, action not available: {0}"
 msgstr ""
 "I file contrassegnati sono in fase di spostamento o copia, azione non "
 "disponibile: {0}"
+
+#: utils/translations.py
+msgid "Ctrl"
+msgstr "Ctrl"
+
+#: utils/translations.py
+msgid "Shift"
+msgstr "Maiusc"
+
+#: utils/translations.py
+msgid "Alt"
+msgstr "Alt"

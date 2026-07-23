@@ -8550,3 +8550,15 @@ msgstr "Compare выполняется, действие недоступно: {
 msgid "Marked files are being moved or copied, action not available: {0}"
 msgstr ""
 "Помеченные файлы перемещаются или копируются, действие недоступно: {0}"
+
+#: utils/translations.py
+msgid "Ctrl"
+msgstr "Ctrl"
+
+#: utils/translations.py
+msgid "Shift"
+msgstr "Shift"
+
+#: utils/translations.py
+msgid "Alt"
+msgstr "Alt"

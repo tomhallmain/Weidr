@@ -5489,7 +5489,7 @@ msgid ""
 "more with Ctrl+click)"
 msgstr ""
 "Konvertieren Sie die ausgewählten Knoten in untergeordnete Elemente eines "
-"neuen Gruppenknotens (wählen Sie 2 oder mehr mit STRG+Klick aus)"
+"neuen Gruppenknotens (wählen Sie 2 oder mehr mit Strg+Klick aus)"
 
 #: ui/compare/classifier_pipeline_editor_qt.py:1816
 #: ui/compare/classifier_pipeline_editor_qt.py:2062
@@ -8643,3 +8643,15 @@ msgid "Marked files are being moved or copied, action not available: {0}"
 msgstr ""
 "Markierte Dateien werden verschoben oder kopiert, Aktion nicht verfügbar: "
 "{0}"
+
+#: utils/translations.py
+msgid "Ctrl"
+msgstr "Strg"
+
+#: utils/translations.py
+msgid "Shift"
+msgstr "Umschalt"
+
+#: utils/translations.py
+msgid "Alt"
+msgstr "Alt"

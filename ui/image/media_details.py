@@ -164,12 +164,13 @@ class MediaDetails(SmartWindow):
             else None
         )
         media_ext = os.path.splitext(self._media_path)[1].lower()
-        self._show_temp_path = media_ext in {".svg", ".pdf"} and self._temp_path is not None
+        self._show_temp_path = media_ext in {".svg", ".pdf", ".html", ".htm"} and self._temp_path is not None
         self._app_actions = app_actions
         self._do_refresh = do_refresh
         self._take_focus = take_focus
         self._has_closed = False
         self.media_type = get_media_type_for_path(self._media_path)
+        self.setWindowTitle(self._window_title_for_media_type())
         self._full_positive_for_copy = None
         self._full_negative_for_copy = None
 
@@ -238,6 +239,15 @@ class MediaDetails(SmartWindow):
         self._bind_shortcuts()
         if self._take_focus:
             self.focus()
+
+    def _window_title_for_media_type(self) -> str:
+        if self.media_type.is_video():
+            return _("Video details")
+        if self.media_type.is_audio():
+            return _("Audio details")
+        if self.media_type.is_image():
+            return _("Image details")
+        return _("Media details")
 
     # -- UI construction -------------------------------------------
 
@@ -719,9 +729,10 @@ class MediaDetails(SmartWindow):
             else None
         )
         media_ext = os.path.splitext(self._media_path)[1].lower()
-        self._show_temp_path = media_ext in {".svg", ".pdf"} and self._temp_path is not None
+        self._show_temp_path = media_ext in {".svg", ".pdf", ".html", ".htm"} and self._temp_path is not None
         old_supports_raster = self.media_type.supports_raster_image_details()
         self.media_type = get_media_type_for_path(self._media_path)
+        self.setWindowTitle(self._window_title_for_media_type())
         if self.media_type.is_video():
             (
                 image_mode,
@@ -977,14 +988,14 @@ class MediaDetails(SmartWindow):
     # ── Image manipulation actions ────────────────────────────────
 
     def rotate_image(self, right: bool = False) -> None:
-        new_filepath = ImageOps.rotate_image(self._image_path, right)
+        new_filepath = ImageOps.rotate_image(self._editable_image_path(), right)
         msg = (
             _("Rotated image right") if right else _("Rotated image left")
         )
         self._handle_action_result(new_filepath, msg)
 
     def crop_image(self, event=None) -> None:
-        saved_files = Cropper.smart_crop_multi_detect(self._image_path, "")
+        saved_files = Cropper.smart_crop_multi_detect(self._editable_image_path(), "")
         if len(saved_files) > 0:
             self.close_windows()
             self._app_actions.refresh()
@@ -998,16 +1009,16 @@ class MediaDetails(SmartWindow):
             self._app_actions.toast(_("No crops found"))
 
     def enhance_image(self) -> None:
-        new_filepath = ImageOps.enhance_image(self._image_path)
+        new_filepath = ImageOps.enhance_image(self._editable_image_path())
         self._handle_action_result(new_filepath, _("Enhanced image"))
 
     def random_crop(self) -> None:
-        new_filepath = ImageOps.random_crop_and_upscale(self._image_path)
+        new_filepath = ImageOps.random_crop_and_upscale(self._editable_image_path())
         self._handle_action_result(new_filepath, _("Randomly cropped image"))
 
     def random_modification(self) -> None:
         MediaDetails.randomly_modify_image(
-            self._image_path, self._app_actions, self._parent_ref
+            self._editable_image_path(), self._app_actions, self._parent_ref
         )
 
     @staticmethod
@@ -1029,7 +1040,7 @@ class MediaDetails(SmartWindow):
 
     def scramble_image(self) -> None:
         MediaDetails.scramble_image_static(
-            self._image_path, self._app_actions, self._parent_ref
+            self._editable_image_path(), self._app_actions, self._parent_ref
         )
 
     @staticmethod
@@ -1050,7 +1061,7 @@ class MediaDetails(SmartWindow):
             app_actions.toast(_("No new image created"))
 
     def _scramble_image_and_mark(self) -> None:
-        new_filepath = ImageOps.scramble_image(self._image_path)
+        new_filepath = ImageOps.scramble_image(self._editable_image_path())
         self.close_windows()
         self._app_actions.refresh()
         if new_filepath and os.path.exists(new_filepath):
@@ -1076,12 +1087,12 @@ class MediaDetails(SmartWindow):
             ):
                 return
         new_filepath = ImageOps.flip_image(
-            self._image_path, top_bottom=top_bottom
+            self._editable_image_path(), top_bottom=top_bottom
         )
         self._handle_action_result(new_filepath, _("Flipped image"))
 
     def _get_current_dimensions(self) -> tuple[int, int]:
-        with Image.open(self._image_path) as image:
+        with Image.open(self._editable_image_path()) as image:
             return image.size
 
     @staticmethod
@@ -1115,7 +1126,7 @@ class MediaDetails(SmartWindow):
             return False
         try:
             new_filepath = ImageOps.change_aspect_ratio(
-                self._image_path,
+                self._editable_image_path(),
                 ratio_text,
             )
             self._store_aspect_ratio_settings(ratio_text)
@@ -1128,6 +1139,20 @@ class MediaDetails(SmartWindow):
             logger.error(f"Error changing image aspect ratio: {e}")
             self._app_actions.warn(_("Error changing image aspect ratio"))
             return False
+
+    def _editable_image_path(self) -> str:
+        """Raster path for editing ops (rotate/crop/enhance/flip/aspect-ratio/etc).
+
+        Same as ``_image_path`` for everything FrameCache already resolves to a
+        real raster up front (plain image, video first-frame, PDF/SVG/HTML page
+        render) -- but GIF's ``_image_path`` is deliberately left pointing at the
+        original animated file (so metadata/tags/file-stat surfaces see the real
+        file), so this additionally resolves GIF to an actual single-frame
+        raster on demand, right before an edit runs.
+        """
+        if self.media_type.is_gif():
+            return FrameCache.get_first_frame(self._media_path, self.media_type)
+        return self._image_path
 
     def flip_aspect_ratio(self) -> None:
         if not self.media_type.supports_raster_image_details():
@@ -1178,7 +1203,7 @@ class MediaDetails(SmartWindow):
 
     def copy_without_exif(self) -> None:
         try:
-            new_filepath = image_data_extractor.copy_without_exif(self._image_path)
+            new_filepath = image_data_extractor.copy_without_exif(self._editable_image_path())
             self._handle_action_result(
                 new_filepath,
                 _("Copied image without EXIF data"),
@@ -1190,7 +1215,7 @@ class MediaDetails(SmartWindow):
 
     def convert_to_jpg(self) -> None:
         try:
-            new_filepath = ImageOps.convert_to_jpg(self._image_path)
+            new_filepath = ImageOps.convert_to_jpg(self._editable_image_path())
             self._handle_action_result(new_filepath, _("Converted image to JPG"))
         except Exception as e:
             logger.error(f"Error converting image to JPG: {e}")
@@ -1199,12 +1224,12 @@ class MediaDetails(SmartWindow):
     # ── Mark-and-action variants ──────────────────────────────────
 
     def _rotate_image_and_mark(self, right: bool = False) -> None:
-        new_filepath = ImageOps.rotate_image(self._image_path, right)
+        new_filepath = ImageOps.rotate_image(self._editable_image_path(), right)
         msg = _("Rotated image right") if right else _("Rotated image left")
         self._handle_action_result(new_filepath, msg, mark=True)
 
     def _crop_image_and_mark(self, event=None) -> None:
-        saved_files = Cropper.smart_crop_multi_detect(self._image_path, "")
+        saved_files = Cropper.smart_crop_multi_detect(self._editable_image_path(), "")
         if len(saved_files) > 0:
             self.close_windows()
             self._app_actions.refresh()
@@ -1217,7 +1242,7 @@ class MediaDetails(SmartWindow):
 
     def _enhance_image_and_mark(self) -> None:
         """Enhance and mark.  Uses toast (not success) per original."""
-        new_filepath = ImageOps.enhance_image(self._image_path)
+        new_filepath = ImageOps.enhance_image(self._editable_image_path())
         self.close_windows()
         self._app_actions.refresh()
         self._app_actions.toast(_("Enhanced image"))
@@ -1227,13 +1252,13 @@ class MediaDetails(SmartWindow):
             )
 
     def _random_crop_and_mark(self) -> None:
-        new_filepath = ImageOps.random_crop_and_upscale(self._image_path)
+        new_filepath = ImageOps.random_crop_and_upscale(self._editable_image_path())
         self._handle_action_result(
             new_filepath, _("Randomly cropped image"), mark=True
         )
 
     def _random_modification_and_mark(self) -> None:
-        new_filepath = ImageOps.randomly_modify_image(self._image_path)
+        new_filepath = ImageOps.randomly_modify_image(self._editable_image_path())
         self.close_windows()
         self._app_actions.refresh()
         if new_filepath and os.path.exists(new_filepath):
@@ -1245,12 +1270,12 @@ class MediaDetails(SmartWindow):
             self._app_actions.toast(_("No new image created"))
 
     def _flip_image_and_mark(self, top_bottom: bool = False) -> None:
-        new_filepath = ImageOps.flip_image(self._image_path, top_bottom=top_bottom)
+        new_filepath = ImageOps.flip_image(self._editable_image_path(), top_bottom=top_bottom)
         self._handle_action_result(new_filepath, _("Flipped image"), mark=True)
 
     def _copy_without_exif_and_mark(self) -> None:
         try:
-            new_filepath = image_data_extractor.copy_without_exif(self._image_path)
+            new_filepath = image_data_extractor.copy_without_exif(self._editable_image_path())
             self._handle_action_result(
                 new_filepath,
                 _("Copied image without EXIF data"),
@@ -1263,7 +1288,7 @@ class MediaDetails(SmartWindow):
 
     def _convert_to_jpg_and_mark(self) -> None:
         try:
-            new_filepath = ImageOps.convert_to_jpg(self._image_path)
+            new_filepath = ImageOps.convert_to_jpg(self._editable_image_path())
             self._handle_action_result(new_filepath, _("Converted image to JPG"), mark=True)
         except Exception as e:
             logger.error(f"Error converting image to JPG: {e}")

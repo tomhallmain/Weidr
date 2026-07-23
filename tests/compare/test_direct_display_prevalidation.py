@@ -21,6 +21,7 @@ from compare.lookahead import Lookahead
 from files.file_action import FileAction, _delete_file_sentinel
 from utils.config import config
 from utils.constants import ClassifierActionType, CompareMode
+from utils.translations import _
 from utils.utils import Utils
 
 
@@ -313,7 +314,7 @@ class TestShowBoundaryMatch:
         wrapper.show_boundary_match(last_file=False)
 
         assert created == ["/d/a.jpg"]
-        assert any("skipped" in t.lower() for t in toasts)
+        assert any(_("All media in the group are skipped") in t for t in toasts)
 
     def test_config_off_skips_no_prevalidation(self, monkeypatch):
         wrapper, created, _ = _boundary_wrapper()

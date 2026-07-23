@@ -177,11 +177,12 @@ class TestAllWindowsDownstreamSearch:
         MarkedFiles.file_marks = []  # don't leak fake paths into teardown
         assert marks == ["/x/a.png", "/x/b.png", "/x/c.png"]
         assert goto_calls  # first-result owner is the real window
-        assert any("2 window(s)" in t for t in toasts)
+        expected_window_frag = _("{0} file marks set from {1} window(s)").format(3, 2)
+        assert any(expected_window_frag in t for t in toasts)
         # The structured report reaches the listener with the payload data.
         assert len(reports) == 1
         message, data = reports[0]
-        assert "2 window(s)" in message
+        assert expected_window_frag in message
         assert data["found"] == 3
         assert data["skipped_dirs"] == []
         # Per-directory breakdown: post-dedup contributions sum to the total
@@ -229,7 +230,8 @@ class TestAllWindowsDownstreamSearch:
         MarkedFiles.file_marks = []  # don't leak fake paths into teardown
         assert other_dir not in queried
         assert marks == ["/x/a.png"]
-        assert any("Skipped" in t for t in toasts)
+        expected_skip_frag = _("Skipped {0} large unconfirmed director(ies).").format(1)
+        assert any(expected_skip_frag in t for t in toasts)
         # Breakdown: a skipped directory is absent from found_by_dir entirely
         # (0 would mean "searched, nothing found"), and appears in skipped_dirs.
         assert len(reports) == 1

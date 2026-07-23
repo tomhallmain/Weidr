@@ -1055,6 +1055,10 @@ msgstr ""
 msgid "FILE_BROWSER_INDEX_DETAILS"
 msgstr ""
 
+#: ui/app_window/app_window.py:1164
+msgid "NEW_MEDIA_QUEUED"
+msgstr ""
+
 #: files/file_browser.py:332
 msgid "Index must be 1 or greater."
 msgstr ""

@@ -30,7 +30,6 @@ class FileBrowser:
         self.filter = filter
         self._files_cache = {}
         self._files = []
-        self._new_files = []
         self.filepaths = []
         self.sort_by = sort_by
         self.sort = Sort.ASC
@@ -120,7 +119,6 @@ class FileBrowser:
 
     def refresh(self, refresh_cursor: bool = True, file_check: bool = False,
                 removed_files: List[str] = [], direction: Direction = Direction.FORWARD) -> List[str]:
-        last_files = self.get_files() if file_check else []
         if self.use_file_paths_json:
             self.update_json_for_removed_files(removed_files)
         if refresh_cursor:
@@ -141,7 +139,6 @@ class FileBrowser:
                 if len(removed_files) > 0:
                     if self.file_cursor > -1:
                         self.file_cursor += direction.get_correction()
-            self._new_files = list(set(files) - set(last_files))
         elif file_check and current_file and os.path.isfile(current_file):
             # current_file still exists on disk but was filtered out (e.g. its
             # media type was just disabled in configuration) -- fall back to a
@@ -151,7 +148,6 @@ class FileBrowser:
                     self.file_cursor = direction.get_correction()
                 else:
                     self.file_cursor += direction.get_correction()
-            self._new_files = list(set(files) - set(last_files))
         elif not refresh_cursor:
             with self.cursor_lock:
                 if len(files) - 1 < self.file_cursor:
@@ -159,13 +155,6 @@ class FileBrowser:
                 else:
                     self.file_cursor += direction.get_correction()
         return files
-
-    def update_cursor_to_new_media(self) -> bool:
-        if len(self._new_files) == 0:
-            return False
-        with self.cursor_lock:
-            self.file_cursor = self.filepaths.index(self._new_files[0]) - 1
-        return True
 
     def set_directory(self, directory: str) -> List[str]:
         self.directory = directory

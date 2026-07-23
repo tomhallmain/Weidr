@@ -23,8 +23,9 @@ import os
 import functools
 import threading
 import time
+from collections import deque
 from datetime import datetime
-from typing import List, Optional
+from typing import Deque, List, Optional, Set
 
 from PySide6.QtCore import Qt, QTimer, Signal, Slot, QThread, QMetaObject
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QSplitter, QStackedWidget, QWidget, QVBoxLayout, QFrame
@@ -189,6 +190,10 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         self._incremental_status_timer: Optional[QTimer] = None
         self._base_dir_load_spinner_active = False
         self._startup_media_path: Optional[str] = media_path
+        # Show-new-media slideshow queue: files discovered by the periodic
+        # file-check while the mode is active, shown one per tick.
+        self._new_media_queue: Deque[str] = deque()
+        self._new_media_queue_set: Set[str] = set()
 
         # ------------------------------------------------------------------
         # Backend (non-UI) objects -- shared across controllers
@@ -1082,12 +1087,24 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             self.media_navigator.get_active_media_filepath() in removed_files
         )
         try:
+            prev_files = set(self.file_browser.get_files()) if show_new_media else None
+
             self.file_browser.refresh(
                 refresh_cursor=refresh_cursor,
                 file_check=file_check,
                 removed_files=removed_files,
                 direction=self.direction,
             )
+
+            if prev_files is not None:
+                current_files = self.file_browser.get_files()
+                # Iterate current_files (not a set difference) so the queue
+                # preserves the browser's sort order.
+                new_files = [f for f in current_files if f not in prev_files]
+                self._new_media_queue.extend(
+                    f for f in new_files if f not in self._new_media_queue_set
+                )
+                self._new_media_queue_set.update(new_files)
 
             if len(removed_files) > 0:
                 # Give the just-moved state time to settle before the next periodic file-check refresh.
@@ -1104,18 +1121,16 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
                     self._sync_media_empty_directory_message()
                     return
                 has_new_media = False
-                if show_new_media:
-                    has_new_media = self.file_browser.update_cursor_to_new_media()
-                    if has_new_media:
-                        self.media_navigator.show_next_media()
+                if show_new_media and self._new_media_queue:
+                    has_new_media = self._show_next_queued_media()
                 if active_media_in_removed:
                     self.media_navigator.last_chosen_direction_func()
-                self.notification_ctrl.set_label_state()
+                if not has_new_media:
+                    self.notification_ctrl.set_label_state()
                 if show_new_media and has_new_media:
                     # Brief delete-lock to prevent misdeletion after automatic media change
                     self.delete_lock = True
-                    time.sleep(1)
-                    self.delete_lock = False
+                    QTimer.singleShot(1000, lambda: setattr(self, 'delete_lock', False))
             else:
                 self.media_navigator.clear_media()
                 self.notification_ctrl.set_label_state()
@@ -1128,6 +1143,33 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
                 logger.debug("Refreshed files")
         finally:
             self._is_refreshing = False
+
+    def _show_next_queued_media(self) -> bool:
+        """Pop and display the next file from the show-new-media queue."""
+        if not self._new_media_queue:
+            return False
+        next_file = self._new_media_queue.popleft()
+        self._new_media_queue_set.discard(next_file)
+        if not os.path.isfile(next_file):
+            return self._show_next_queued_media()
+        self.file_browser.go_to_file(next_file)
+        self.media_navigator.create_media(next_file)
+        self._update_queue_notification()
+        return True
+
+    def _update_queue_notification(self) -> None:
+        remaining = len(self._new_media_queue)
+        if remaining > 0:
+            self.notification_ctrl.set_label_state(
+                text=_("NEW_MEDIA_QUEUED").format(remaining)
+            )
+        else:
+            self.notification_ctrl.set_label_state()
+
+    def clear_new_media_queue(self) -> None:
+        """Discard the show-new-media queue (called when the mode is toggled off)."""
+        self._new_media_queue.clear()
+        self._new_media_queue_set.clear()
 
     def refocus(self, event=None) -> None:
         """Return keyboard focus to the main window."""

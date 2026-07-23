@@ -1565,18 +1565,19 @@ class TestPipelineRunReport:
         """Seed-category GENERATE skips are equivalent to the seed file list —
         the report should show one clear note with a total count, not every
         filename."""
+        from utils.translations import _
         r = PipelineRunReport()
+        detail = "Seed image is assigned to category 'Apple'; GENERATE skipped."
         for i in range(3):
             r.add(
-                "INFO", "gen_apple", f"/dir/seed{i}.png",
-                "Seed image is assigned to category 'Apple'; GENERATE skipped.",
+                "INFO", "gen_apple", f"/dir/seed{i}.png", detail,
                 data={"seed_category_skip": True},
             )
         text = r.format_completion_report(
             PipelineRunStats(pipeline_name="p", files_evaluated=3)
         )
-        assert "3 file(s)" in text
-        assert text.count("Seed image is assigned to category 'Apple'; GENERATE skipped.") == 1
+        assert _("  {0} ({1} file(s))").format(detail, 3) in text
+        assert text.count(detail) == 1
         assert "seed0.png" not in text
         assert "seed1.png" not in text
         assert "seed2.png" not in text

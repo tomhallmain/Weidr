@@ -520,6 +520,7 @@ class MediaNavigator:
         else:
             message = _("Slideshows ended")
             self.stop_slideshow_timers()
+            self._app.clear_new_media_queue()
         self._app.notification_ctrl.toast(message)
 
     def stop_slideshow_timers(self) -> None:

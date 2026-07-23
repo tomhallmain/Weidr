@@ -1170,6 +1170,10 @@ msgstr "No files found for current browsing settings."
 msgid "FILE_BROWSER_INDEX_DETAILS"
 msgstr "{0} out of {1} files in directory, ordered by {2} {3}"
 
+#: ui/app_window/app_window.py:1164
+msgid "NEW_MEDIA_QUEUED"
+msgstr "{0} new media file(s) queued"
+
 #: files/file_browser.py:332
 msgid "Index must be 1 or greater."
 msgstr "Index must be 1 or greater."

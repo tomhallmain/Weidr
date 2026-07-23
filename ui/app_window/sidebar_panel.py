@@ -550,6 +550,7 @@ class SidebarPanel(QWidget):
         """Handle inclusion pattern entry Return key."""
         if self._app.slideshow_config.end_slideshows():
             self._app.media_navigator.stop_slideshow_timers()
+            self._app.clear_new_media_queue()
             self._app.notification_ctrl.toast(_("Ended slideshows"))
         pattern = self.file_filter_entry.text().strip()
         self._app.file_browser.set_filter(pattern if pattern else None)

@@ -106,10 +106,79 @@ class WindowLauncher:
         """Open the favorites directory window."""
         try:
             from ui.files.favorites_window_qt import FavoritesWindow
-            window = FavoritesWindow(self._app, self._app.app_actions)
-            window.show()
+            FavoritesWindow.show_window(self._app, self._app.app_actions)
         except Exception as e:
             self._handle_error(e, "Favorites Window Error")
+
+    def open_embedding_seed_library_window(self, event=None) -> None:
+        """Open the embedding seed library window."""
+        try:
+            from ui.compare.embedding_seed_library_window_qt import EmbeddingSeedLibraryWindow
+            EmbeddingSeedLibraryWindow.show_window(self._app, self._app.app_actions)
+        except Exception as e:
+            self._handle_error(e, "Embedding Seed Library Window Error")
+
+    def save_supergroup_as_embedding_seed(self, seed_data: dict) -> None:
+        """
+        Open the create dialog to save a supergroup centroid (resolved by
+        CompareManager.get_current_supergroup_seed_data) as a new named
+        embedding seed. See docs/embedding-seed-library.md, section 5.1.
+        """
+        try:
+            from datetime import datetime
+            from compare.embedding_seed import EmbeddingSeed
+            from ui.compare.embedding_seed_edit_window_qt import EmbeddingSeedEditWindow
+
+            base_dir = seed_data.get("base_dir") or self._app.get_base_dir() or ""
+            default_name = _("Supergroup from {0} ({1})").format(
+                os.path.basename(os.path.normpath(base_dir)) if base_dir else "",
+                datetime.now().strftime("%Y-%m-%d"),
+            )
+            pending = EmbeddingSeed(
+                name=default_name,
+                positive=seed_data["vector"],
+                embedding_model=seed_data["compare_mode"],
+                embedding_dim=len(seed_data["vector"]),
+                source={
+                    "kind": "supergroup_centroid",
+                    "compare_mode": seed_data["compare_mode"],
+                    "member_count": seed_data["member_count"],
+                    "group_indexes": seed_data["group_indexes"],
+                    "directory": base_dir or None,
+                },
+            )
+            EmbeddingSeedEditWindow(
+                self._app, self._app.app_actions, lambda: None, pending_seed=pending
+            ).show()
+        except Exception as e:
+            self._handle_error(e, "Save Embedding Seed Error")
+
+    def save_current_media_as_embedding_seed(self, media_path: str) -> None:
+        """
+        Open the create dialog for a new embedding seed captured from a
+        single file. The user picks which embedding architecture to use
+        (independent of whatever compare mode is currently active, via
+        compare.embedding_capture.embedding_capture_modes()) and the actual
+        embedding computation is deferred until the dialog is confirmed.
+        See docs/embedding-seed-library.md, section 5.4.
+        """
+        try:
+            from datetime import datetime
+            from ui.compare.embedding_seed_edit_window_qt import EmbeddingSeedEditWindow
+
+            default_name = _("{0} ({1})").format(
+                os.path.basename(media_path), datetime.now().strftime("%Y-%m-%d")
+            )
+            EmbeddingSeedEditWindow(
+                self._app,
+                self._app.app_actions,
+                lambda: None,
+                pending_media_path=media_path,
+                default_name=default_name,
+                default_compare_mode=self._app.compare_manager.compare_mode,
+            ).show()
+        except Exception as e:
+            self._handle_error(e, "Save Embedding Seed Error")
 
     def open_related_images_window(self, event=None) -> None:
         """Open the related images actions window."""

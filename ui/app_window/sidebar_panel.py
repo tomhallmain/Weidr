@@ -252,6 +252,14 @@ class SidebarPanel(QWidget):
             self.hf_model_manager_btn,
             _("Manage HuggingFace models used for media embeddings and comparison."),
         )
+        self.embedding_seed_library_btn = self._make_button(
+            _("Embedding Seed Library"),
+            lambda: self._app.window_launcher.open_embedding_seed_library_window(),
+        )
+        create_tooltip(
+            self.embedding_seed_library_btn,
+            _("Browse and manage named embedding vectors saved as reusable search seeds."),
+        )
         self._add_spacer()
 
         # ========== Run context-aware UI ==================================

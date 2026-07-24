@@ -187,6 +187,27 @@ def reset_app_globals():
         except Exception:
             pass
 
+        # FavoritesWindow — singleton dialog reference
+        try:
+            from ui.files.favorites_window_qt import FavoritesWindow
+            FavoritesWindow._instance = None
+        except Exception:
+            pass
+
+        # EmbeddingSeed — shared list of embedding seed library entries
+        try:
+            from compare.embedding_seed import EmbeddingSeed
+            EmbeddingSeed.seeds = []
+        except Exception:
+            pass
+
+        # EmbeddingSeedLibraryWindow — singleton dialog reference
+        try:
+            from ui.compare.embedding_seed_library_window_qt import EmbeddingSeedLibraryWindow
+            EmbeddingSeedLibraryWindow._instance = None
+        except Exception:
+            pass
+
         # SeekToTriggerTab — class-level action cache and cycling state
         try:
             from ui.compare.seek_to_trigger_tab_qt import SeekToTriggerTab

@@ -213,6 +213,21 @@ class ContextMenuBuilder:
             lambda: app.search_ctrl.add_current_media_to_negative_search(),
         )
 
+        # ------------------------------------------------------------------
+        # Embedding seed library
+        # ------------------------------------------------------------------
+        seed_data = app.compare_manager.get_current_supergroup_seed_data()
+        if seed_data is not None:
+            menu.addAction(
+                _("Save Supergroup as Embedding Seed…"),
+                lambda: app.window_launcher.save_supergroup_as_embedding_seed(seed_data),
+            )
+        if media_type.supports_embedding_capture():
+            menu.addAction(
+                _("Add Current Media to Embedding Seed Library…"),
+                lambda: app.window_launcher.save_current_media_as_embedding_seed(media_path),
+            )
+
         menu.addSeparator()
 
         # ------------------------------------------------------------------

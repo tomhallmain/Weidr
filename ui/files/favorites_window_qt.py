@@ -34,6 +34,7 @@ class FavoritesWindow(SmartDialog):
 
     MAX_ROWS = 30
     has_any_favorites: bool = False
+    _instance: Optional['FavoritesWindow'] = None
 
     # ------------------------------------------------------------------
     # Persistence (class-level)
@@ -88,6 +89,7 @@ class FavoritesWindow(SmartDialog):
             offset_y=0,
             respect_title_bar=True,
         )
+        FavoritesWindow._instance = self
         self._app_master = app_master
         self._app_actions = app_actions
 
@@ -117,6 +119,28 @@ class FavoritesWindow(SmartDialog):
         self._build_widgets()
 
         QShortcut(QKeySequence(Qt.Key_Escape), self).activated.connect(self.close)
+
+    # ------------------------------------------------------------------
+    # Factory (singleton)
+    # ------------------------------------------------------------------
+    @classmethod
+    def show_window(cls, parent: QWidget, app_actions) -> None:
+        if cls._instance is not None:
+            try:
+                if cls._instance.isVisible():
+                    if cls._instance.isMinimized():
+                        cls._instance.showNormal()
+                    cls._instance._refresh()
+                    cls._instance.raise_()
+                    cls._instance.activateWindow()
+                    return
+                else:
+                    # Exists but hidden (e.g. via reject()) -- discard stale ref.
+                    cls._instance = None
+            except Exception:
+                cls._instance = None
+        win = cls(parent, app_actions)
+        win.show()
 
     # ------------------------------------------------------------------
     # Data gathering
@@ -254,3 +278,17 @@ class FavoritesWindow(SmartDialog):
 
     def close_window(self, event=None) -> None:
         self.close()
+
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
+    def _on_close(self) -> None:
+        FavoritesWindow._instance = None
+
+    def reject(self) -> None:  # noqa: N802  (Escape key -- does NOT call closeEvent)
+        self._on_close()
+        super().reject()
+
+    def closeEvent(self, event) -> None:  # noqa: N802  (X button -> default QDialog.closeEvent calls reject())
+        self._on_close()
+        super().closeEvent(event)

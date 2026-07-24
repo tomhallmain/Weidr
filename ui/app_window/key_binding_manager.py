@@ -324,6 +324,7 @@ class KeyBindingManager:
         )
         self._bind("Ctrl+J", app.window_launcher.open_prevalidations_window, guarded=False)
         self._bind("Ctrl+Shift+M", app.window_launcher.open_hf_model_manager_window, guarded=False)
+        self._bind("Ctrl+Shift+L", app.window_launcher.open_embedding_seed_library_window, guarded=False)
         self._bind("Ctrl+V", app.window_launcher.open_type_configuration_window)
         self._bind("Ctrl+Shift+C", app.window_launcher.open_compare_settings_window)
 

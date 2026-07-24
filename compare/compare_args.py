@@ -39,6 +39,13 @@ class CompareArgs:
         self.app_actions = app_actions
         self.data_filter: Optional['CompareFilter'] = None
         self.file_list: list[str] = []
+        # Embedding-seed-library search inputs (docs/embedding-seed-library.md,
+        # section 6.1) -- already-computed vectors appended alongside whatever
+        # positive_embeddings/negative_embeddings search_multimodal() builds
+        # from search_media_path/search_text, so a seed search composes with
+        # an ordinary path/text search rather than replacing it.
+        self.positive_seed_vectors: Optional[list] = None
+        self.negative_seed_vectors: Optional[list] = None
 
     def not_searching(self):
         def _empty(v):
@@ -48,7 +55,8 @@ class CompareArgs:
                 return v.strip() == ""
             return True  # e.g. dict or other type treated as "no search"
         return (_empty(self.search_media_path) and _empty(self.search_text)
-                and _empty(self.search_text_negative) and _empty(self.negative_search_media_path))
+                and _empty(self.search_text_negative) and _empty(self.negative_search_media_path)
+                and not self.positive_seed_vectors and not self.negative_seed_vectors)
 
     def _is_new_data_request_required(self, other):
         return (self.threshold != other.threshold

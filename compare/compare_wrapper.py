@@ -3,6 +3,8 @@ import os
 import pprint
 from typing import Optional
 
+import numpy as np
+
 from compare.compare_args import CompareArgs
 from compare.compare_result import CompareResult
 from compare.compare_colors import CompareColors
@@ -644,6 +646,52 @@ class CompareWrapper:
             self._app_actions.create_media(self.current_match())
         else:
             self._display_current_match()
+
+    def get_current_supergroup_seed_data(self) -> Optional[dict]:
+        '''
+        Resolve the supergroup (if any) containing the currently-displayed
+        group and return everything needed to save it as an embedding seed:
+        the averaged + renormalized centroid vector, member group indexes,
+        and provenance. Returns None when not applicable (no compare loaded,
+        a non-embedding compare mode, or the current group isn't in a
+        "meaningful" supergroup). See docs/embedding-seed-library.md, section 5.1.
+
+        Membership lookup (not current_supergroup_index) for the same reason
+        _supergroup_label_suffix uses it: plain group navigation can move
+        into a different supergroup without updating that cursor.
+        '''
+        if self._in_group_complement_mode():
+            # group_indexes/file_groups are deliberately stale in this mode
+            # (see _in_group_complement_mode's docstring) -- not a reliable
+            # source for "the current supergroup".
+            return None
+        if self._compare is None or not self.group_indexes:
+            return None
+        if not hasattr(self._compare, "compute_group_centroids"):
+            return None  # non-embedding compare mode
+        compare_result = getattr(self._compare, "compare_result", None)
+        if compare_result is None or not compare_result.has_meaningful_supergroups():
+            return None
+        actual_group_index = self.actual_group_index()
+        supergroups = self._get_supergroups()
+        cluster = next((c for c in supergroups if actual_group_index in c), None)
+        if cluster is None:
+            return None
+        centroids = self._compare.compute_group_centroids()
+        vectors = [centroids[g] for g in cluster if g in centroids]
+        if not vectors:
+            return None
+        mean = np.mean(vectors, axis=0)
+        norm = np.linalg.norm(mean)
+        vector = mean / norm if norm > 0 else mean
+        member_count = sum(len(compare_result.file_groups.get(g, [])) for g in cluster)
+        return {
+            "vector": vector,
+            "group_indexes": list(cluster),
+            "member_count": member_count,
+            "compare_mode": self.compare_mode.name,
+            "base_dir": getattr(self._compare, "base_dir", None),
+        }
 
     def _supergroup_label_suffix(self, actual_group_index: int) -> str:
         '''

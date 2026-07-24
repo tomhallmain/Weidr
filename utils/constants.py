@@ -499,6 +499,17 @@ class CompareMediaType(Enum):
         rectangle-selection only for now."""
         return self.is_interactive_crop_supported() and not self.is_video()
 
+    def supports_embedding_capture(self) -> bool:
+        """True for types compare.embedding_capture.compute_media_embedding can
+        produce an embedding for (image, GIF, video, PDF, SVG) -- gates the
+        "Add Current Media to Embedding Seed Library" context-menu action.
+        See docs/embedding-seed-library.md, section 5.4."""
+        return self not in (
+            CompareMediaType.AUDIO,
+            CompareMediaType.HTML,
+            CompareMediaType.UNCONFIGURED,
+        )
+
 
 # UI-friendly alias (same members and methods as :class:`CompareMediaType`).
 MediaType = CompareMediaType

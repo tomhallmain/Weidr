@@ -689,8 +689,12 @@ class BaseCompareEmbedding(BaseCompare):
         if self.verbose:
             logger.info("Identifying similar image files...")
 
-        if self.args.search_media_path is None and self.args.negative_search_media_path is None:
-            # NOTE It is much less likely for text to match exactly
+        if (self.args.search_media_path is None and self.args.negative_search_media_path is None
+                and not self.args.positive_seed_vectors and not self.args.negative_seed_vectors):
+            # NOTE It is much less likely for text to match exactly. A seed
+            # vector behaves like a real image match (it's a real embedding,
+            # not freeform text), so it's excluded from this looser threshold
+            # the same way an actual search_media_path is.
             adjusted_threshold = self.embedding_similarity_threshold / 3
         else:
             adjusted_threshold = self.embedding_similarity_threshold
@@ -728,6 +732,15 @@ class BaseCompareEmbedding(BaseCompare):
         if self.args.search_text_negative is not None and self.args.search_text_negative.strip() != "":
             for text in self.args.search_text_negative.split(","):
                 self._tokenize_text(text.strip(), negative_embeddings, "negative search text")
+
+        # Embedding-seed-library vectors (docs/embedding-seed-library.md, section
+        # 6.1) -- already-computed, so no tokenizing step needed; append directly
+        # alongside whatever path/text search produced above.
+        if self.args.positive_seed_vectors:
+            positive_embeddings.extend(self.args.positive_seed_vectors)
+
+        if self.args.negative_seed_vectors:
+            negative_embeddings.extend(self.args.negative_seed_vectors)
 
         if len(positive_embeddings) == 0 and len(negative_embeddings) == 0:
             logger.error(f"Failed to generate embeddings.\n"

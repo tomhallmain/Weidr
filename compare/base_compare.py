@@ -192,6 +192,8 @@ class BaseCompare:
                 return False
             if isinstance(value, str):
                 return value.strip() != ""
+            if isinstance(value, (list, tuple)):
+                return len(value) > 0
             return True
 
         return any(
@@ -201,6 +203,8 @@ class BaseCompare:
                 self.args.search_text,
                 self.args.search_text_negative,
                 self.args.negative_search_media_path,
+                self.args.positive_seed_vectors,
+                self.args.negative_seed_vectors,
             )
         )
 

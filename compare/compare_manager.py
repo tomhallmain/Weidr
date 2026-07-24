@@ -656,6 +656,12 @@ class CompareManager:
         if self._primary_wrapper() is not None:
             return self._primary_wrapper().show_next_group(event, file_browser)
 
+    def get_current_supergroup_seed_data(self) -> Optional[dict]:
+        """Resolve current-group's supergroup seed data (delegated to primary wrapper)."""
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().get_current_supergroup_seed_data()
+        return None
+
     def show_prev_supergroup(self, event=None):
         """Show previous supergroup (delegated to primary wrapper)."""
         if self._primary_wrapper() is not None:

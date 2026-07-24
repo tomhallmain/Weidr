@@ -50,6 +50,7 @@ class CacheController:
             from ui.files.favorites_window_qt import FavoritesWindow
             from ui.files.go_to_file_qt import GoToFile
             from ui.files.target_directory_window_qt import TargetDirectoryWindow
+            from compare.embedding_seed import EmbeddingSeed
 
             MarkedFiles.load_target_dirs()
             RecentDirectories.load_recent_directories()
@@ -64,6 +65,7 @@ class CacheController:
             FavoritesWindow.load_favorites()
             GoToFile.load_persisted_data()
             TargetDirectoryWindow.load_recent_directories()
+            EmbeddingSeed.load_seeds()
 
             return app_info_cache.get_meta("base_dir")
         except Exception as e:
@@ -88,6 +90,7 @@ class CacheController:
         from ui.files.target_directory_window_qt import TargetDirectoryWindow
         from ui.app_window.window_manager import WindowManager
         from image.frame_cache import FrameCache
+        from compare.embedding_seed import EmbeddingSeed
 
         base_dir = self._app.get_base_dir()
         if config.debug2:
@@ -138,6 +141,7 @@ class CacheController:
         FavoritesWindow.store_favorites()
         GoToFile.save_persisted_data()
         TargetDirectoryWindow.save_recent_directories()
+        EmbeddingSeed.store_seeds()
         from compare.classifier_actions_manager import ClassifierActionsManager
 
         ClassifierActionsManager.store_prevalidation_file_cache_to_disk()

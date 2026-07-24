@@ -495,6 +495,8 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             # Search / compare
             "run_image_generation": ts(self.search_ctrl.run_image_generation),
             "set_marks_from_downstream_related_images": ts(self.file_marks_ctrl.set_marks_from_downstream_related_images),
+            "run_compare": ts(self.search_ctrl.run_compare),
+            "get_compare_mode": lambda: self.compare_manager.compare_mode,
             # File navigation
             "go_to_file": ts(self.media_navigator.go_to_file),
             "go_to_file_by_index": ts(self.media_navigator.go_to_file_by_index),

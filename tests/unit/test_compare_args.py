@@ -40,6 +40,22 @@ class TestNotSearching:
         args = CompareArgs(search_media_path="")
         assert args.not_searching() is True
 
+    def test_with_positive_seed_vectors(self):
+        args = CompareArgs()
+        args.positive_seed_vectors = [[1.0, 0.0]]
+        assert args.not_searching() is False
+
+    def test_with_negative_seed_vectors(self):
+        args = CompareArgs()
+        args.negative_seed_vectors = [[0.0, 1.0]]
+        assert args.not_searching() is False
+
+    def test_empty_seed_vector_lists_are_not_searching(self):
+        args = CompareArgs()
+        args.positive_seed_vectors = []
+        args.negative_seed_vectors = []
+        assert args.not_searching() is True
+
 
 class TestClone:
     def test_clone_is_not_same_object(self):
@@ -83,6 +99,13 @@ class TestClone:
         clone = args.clone()
         clone.file_list.append("/c.jpg")
         assert args.file_list == ["/a.jpg", "/b.jpg"]
+
+    def test_clone_deep_copies_positive_seed_vectors(self):
+        args = CompareArgs()
+        args.positive_seed_vectors = [[1.0, 0.0]]
+        clone = args.clone()
+        clone.positive_seed_vectors.append([0.0, 1.0])
+        assert args.positive_seed_vectors == [[1.0, 0.0]]
 
 
 class TestIsNewDataRequestRequired:
@@ -150,3 +173,9 @@ class TestCompareArgsInit:
 
     def test_file_list_default_empty(self):
         assert CompareArgs().file_list == []
+
+    def test_positive_seed_vectors_default_none(self):
+        assert CompareArgs().positive_seed_vectors is None
+
+    def test_negative_seed_vectors_default_none(self):
+        assert CompareArgs().negative_seed_vectors is None

@@ -26,6 +26,7 @@ The UI can be used as a media file browser. The following features are available
     <li>Go to file by string search or by index (1-based)</li>
     <li>Mark groups of files to enable quick transitions and comparisons</li>
     <li>Mark favorite media and access them quickly via the Favorites window</li>
+    <li>Save reusable embedding vectors ("search seeds") from a supergroup or single file, independent of the source media, via the Embedding Seed Library</li>
     <li>Move, copy, and delete marked file groups without overwriting system clipboard</li>
     <li>Revert and modify historical file action changes</li>
     <li>Quickly find directories via recent directory picker window</li>

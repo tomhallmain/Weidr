@@ -144,6 +144,21 @@ For many `.safetensors` models, set architecture details in `model_kwargs` (at m
 
 ---
 
+## Embedding Seed Library
+
+The Embedding Seed Library (shortcut: `Ctrl+Shift+L`, or the sidebar button under Compare tools) stores named embedding vectors that can be reused as search inputs across directories and compare sessions, independent of the files that originally produced them. This is useful for capturing a visual concept once (e.g. "warm indoor portraits") and reusing it as a search seed later, even after the original source images have been moved, renamed, or deleted.
+
+There are two ways to capture a seed, both via the right-click context menu on any media:
+
+- **From a supergroup**: while in GROUP mode with meaningful supergroups computed, choose "Save Supergroup as Embedding Seed…" to save the mean of the current supergroup's member-group centroids.
+- **From a single file**: choose "Add Current Media to Embedding Seed Library…" (available for images, video, GIF, PDF, and SVG). You pick which embedding architecture to use for the capture, independent of whatever compare mode is currently active.
+
+Each seed records the embedding architecture (e.g. CLIP, SigLIP) it was captured with. In the library window, select a seed and click **Search** or **Add to Negative Search** to run a standalone search using that seed's vector as a positive or negative input (this replaces whatever search was previously active, rather than combining with it). If the active compare mode's architecture doesn't match the seed's, the search is refused with a warning instead of silently producing meaningless results — switch compare mode first.
+
+Seeds can be renamed, tagged, deprecated (hidden from use but kept for reference), or deleted from the library window, and the list can be filtered by tag.
+
+---
+
 ## Key and Mouse Bindings
 
 While the UI elements support normal usage in most cases, there are many bindings that enable extended functionality, mostly to minimize UI content unrelated to image viewers.

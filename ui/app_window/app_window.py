@@ -429,7 +429,9 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
     def _restore_secondary_windows(self) -> None:
         """Re-open secondary windows that were open in the previous session."""
         from utils.app_info_cache import app_info_cache
-        for _dir in app_info_cache.get_meta("secondary_base_dirs", default_val=[]):
+        cached_dirs = app_info_cache.get_meta("secondary_base_dirs", default_val=[])
+        # logger.info(f"Restoring {len(cached_dirs)} secondary window(s) from last session: {cached_dirs}")
+        for _dir in cached_dirs:
             WindowManager.add_secondary_window(_dir)
         # Re-focus the primary after all secondaries have been opened
         QTimer.singleShot(50, self._refocus_primary)
@@ -723,7 +725,14 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
                 new_dir = entry_text
                 dir_from_sidebar_entry = True
 
-        if not new_dir or not os.path.isdir(new_dir):
+        if not new_dir or not Utils.isdir_with_retry(new_dir):
+            # isdir_with_retry (not a plain os.path.isdir) matters here: this runs
+            # for every new/restored secondary window immediately after construction
+            # (via the base_dir_from_dir_window path), and a sleeping external or
+            # slow-to-mount network drive can report as invalid before it's had
+            # time to wake -- a plain single-shot check would silently abandon
+            # the window right here with no retry and no visible warning below
+            # (dir_from_sidebar_entry is False on that path).
             if dir_from_sidebar_entry:
                 self.app_actions.warn(
                     _("Path is not an existing directory:\n{0}").format(new_dir),
@@ -1515,6 +1524,15 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         resources; the primary window stores all caches, then destroys
         the application.
         """
+        # other_open = [
+        #     (w.window_id, w.is_secondary(), w.base_dir)
+        #     for w in WindowManager.get_open_windows()
+        # ]
+        # logger.info(
+        #     f"on_closing() for window id={self.window_id} "
+        #     f"(is_secondary={self.is_secondary()}, base_dir={self.base_dir!r}); "
+        #     f"currently registered windows: {other_open}"
+        # )
         # Stop all timers — notification timers must be stopped before the
         # window is destroyed so their callbacks cannot fire against a dead object.
         self.notification_ctrl.teardown()
@@ -1559,6 +1577,10 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
 
     def closeEvent(self, event):
         """Qt close event handler."""
+        # logger.info(
+        #     f"closeEvent() for window id={self.window_id} "
+        #     f"(is_secondary={self.is_secondary()}, _closing={self._closing})"
+        # )
         if self._closing:
             event.accept()
             return
@@ -1593,10 +1615,24 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         from PySide6.QtWidgets import QApplication
         from lib.qt_alert import qt_alert
 
+        # logger.info(f"quit() invoked from window id={self.window_id} (is_secondary={self.is_secondary()})")
         if qt_alert(self, _("Confirm Quit"), _("Would you like to quit the application?"), kind="askokcancel"):
             logger.warning("Exiting application")
             primary = WindowManager.get_primary()
             if primary:
+                # Set the reentrancy guard *before* the direct call, exactly
+                # as closeEvent() does -- QApplication.instance().quit() below
+                # can still cause Qt to deliver a genuine closeEvent() to this
+                # window later during teardown, in a nondeterministic order
+                # relative to other windows' own closeEvent(). Without the
+                # guard set here first, that second delivery re-runs
+                # on_closing() (since _closing was never set by this direct
+                # call), and its store_info_cache(store_window_state=True)
+                # recomputes secondary_base_dirs from WindowManager -- which,
+                # if some secondary window's own closeEvent() happened to
+                # unregister it first, silently overwrites the correct
+                # snapshot taken just below with an incomplete/empty one.
+                primary._closing = True
                 primary.on_closing()
             # Kills all windows and exits the event loop.
             QApplication.instance().quit()

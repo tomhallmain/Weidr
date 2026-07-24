@@ -117,10 +117,18 @@ class CacheController:
             )
 
         if store_window_state:
+            # open_windows_snapshot = [
+            #     (w.window_id, w.is_secondary(), w.base_dir) for w in WindowManager.get_open_windows()
+            # ]
             secondary_base_dirs = []
             for win in WindowManager.get_open_windows():
                 if win.is_secondary() and win.base_dir not in secondary_base_dirs:
                     secondary_base_dirs.append(win.base_dir)
+            # logger.info(
+            #     f"store_info_cache(store_window_state=True) on window id={self._app.window_id} "
+            #     f"(is_secondary={self._app.is_secondary()}): registered windows={open_windows_snapshot} "
+            #     f"-> computed secondary_base_dirs={secondary_base_dirs}"
+            # )
             app_info_cache.set_meta("secondary_base_dirs", secondary_base_dirs)
 
             # Store main window display position and virtual screen info

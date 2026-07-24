@@ -133,14 +133,27 @@ It keeps `image_classifier_models` in config in sync with what you manage in the
 If editing manually, each `image_classifier_models` entry should include:
 
 - `model_name`: unique display name for the model
-- `model_location`: local model path (`.h5`, `.pth`, `.pt`, `.safetensors`, `.bin`, etc.)
+- `model_location`: local model path (`.h5`, `.pth`, `.pt`, `.safetensors`, `.bin`, `.onnx`, etc.)
 - `model_categories`: non-empty list of class/category names
-- `backend`: `auto`, `hdf5`/`tensorflow`, or `pytorch`
+- `backend`: `auto`, `hdf5`/`tensorflow`, `pytorch`, or `onnx`
 - Optional: `use_hub_keras_layers` (H5 models)
 - Optional Hugging Face metadata: `hf_repo_id`, `hf_selected_filename`
-- Optional advanced backend args in `model_kwargs` (for example `architecture_module_name`, `architecture_class_path`, `weights_only`, `device`, `input_shape`, `use_transformers_auto_model`, `hf_pretrained_path`)
+- Optional advanced backend args in `model_kwargs` (for example `architecture_module_name`, `architecture_class_path`, `weights_only`, `device`, `input_shape`, `use_transformers_auto_model`, `hf_pretrained_path`, and — ONNX only — `rescale`, `channels_first`)
 
 For many `.safetensors` models, set architecture details in `model_kwargs` (at minimum `architecture_module_name` unless using transformers auto-model loading). See `configs/config_example.json` for examples.
+
+**ONNX (`.onnx`) models** need no architecture specification at all — the computation
+graph is embedded in the file, so `onnxruntime.InferenceSession` can load it directly.
+`device` selects the execution provider (`auto`/`cuda`/`cpu`; requires `onnxruntime-gpu`,
+already in `requirements.txt`, for `cuda`). `input_shape` is inferred from the model's own
+declared input tensor shape when left blank. Preprocessing defaults to ImageNet-style
+normalization (`normalize_mean`/`normalize_std`, overridable) after an assumed NCHW
+(`channels_first`) layout and a 0–1 rescale — matching how most PyTorch-exported ONNX
+models (including the classic ImageNet classifiers in the
+[ONNX Model Zoo](https://github.com/onnx/models?tab=readme-ov-file#image_classification))
+expect their input. Older Caffe-lineage exports that expect raw BGR pixel values with
+per-channel mean subtraction only aren't covered by these defaults and may need
+`rescale: false` plus matching `normalize_mean`/`normalize_std` values.
 
 ---
 

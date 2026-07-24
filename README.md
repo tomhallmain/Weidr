@@ -69,7 +69,7 @@ The Directory Notes feature allows you to maintain persistent notes and marked f
 
 ## Performing Media Comparisons
 
-Group large media sets by visual similarity using both embedding and color-comparison modes, or search by similarity to an input image or text embedding, then refine analysis with classifier models (H5/PyTorch) and rule-driven actions. For fine-point document/image review workflows, marked files can also be compared with `diff-pdf` output to highlight precise differences. Multiple embedding models are supported:
+Group large media sets by visual similarity using both embedding and color-comparison modes, or search by similarity to an input image or text embedding, then refine analysis with classifier models (H5/PyTorch/ONNX) and rule-driven actions. For fine-point document/image review workflows, marked files can also be compared with `diff-pdf` output to highlight precise differences. Multiple embedding models are supported:
 
 <details>
 <summary>View Embedding Models</summary>
@@ -118,6 +118,7 @@ Prevalidation rules and classifier actions can be configured with:
 <li>Directory-specific rules, including reusable <strong>Directory Profiles</strong> that scope multiple rules to the same directory set at once</li>
 <li>H5 model-based classification rules</li>
 <li>PyTorch model-based classification rules (supports .pth, .pt, .safetensors, and .bin formats)</li>
+<li>ONNX model-based classification rules (no architecture specification needed — the model graph is self-contained)</li>
 <li>Separate image and audio classifier domains, plus a model-strategy classification mode for classifiers that expose ranked categories</li>
 <li>Filename substring matching and related-file ("base stem") existence checks</li>
 <li>Dynamic media (video/GIF) sampling with pseudo-static detection to avoid redundant checks on near-identical frames</li>

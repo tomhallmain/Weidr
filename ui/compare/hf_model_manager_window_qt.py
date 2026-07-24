@@ -82,7 +82,7 @@ class _InstalledModelEditDialog(SmartDialog):
         row1.addWidget(self._model_name_edit, stretch=1)
         row1.addWidget(QLabel(_("Backend")))
         self._backend_combo = QComboBox()
-        self._backend_combo.addItems(["auto", "pytorch", "hdf5"])
+        self._backend_combo.addItems(["auto", "pytorch", "hdf5", "onnx"])
         self._backend_combo.setCurrentText(str(initial_model.get("backend", "auto")))
         row1.addWidget(self._backend_combo)
         layout.addLayout(row1)
@@ -108,7 +108,9 @@ class _InstalledModelEditDialog(SmartDialog):
             "Optional. PyTorch: width and height for the internal resize "
             "(defaults to 224x224 when left blank). "
             "HDF5 (.h5): the loaded model defines its own input size; this "
-            "value is stored in config but is not used when loading."
+            "value is stored in config but is not used when loading. "
+            "ONNX (.onnx): inferred from the model's own declared input tensor "
+            "shape when left blank; set this to override."
         )
         lbl_input_shape = QLabel(_("Input shape (WxH)"))
         lbl_input_shape.setToolTip(input_shape_tip)
@@ -629,7 +631,7 @@ class HfModelManagerWindow(SmartDialog):
         install_row_2.addWidget(self._categories_edit, stretch=1)
         install_row_2.addWidget(QLabel(_("Backend")))
         self._backend_combo = QComboBox()
-        self._backend_combo.addItems(["auto", "pytorch", "hdf5"])
+        self._backend_combo.addItems(["auto", "pytorch", "hdf5", "onnx"])
         install_row_2.addWidget(self._backend_combo)
         layout.addLayout(install_row_2)
 

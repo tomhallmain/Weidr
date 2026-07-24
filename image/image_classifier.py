@@ -23,6 +23,7 @@ class BackendType(Enum):
     """Backend type for image classifiers"""
     PYTORCH = "pytorch"
     HDF5 = "hdf5"
+    ONNX = "onnx"
     OTHER = "other"
 
     @staticmethod
@@ -38,6 +39,8 @@ class BackendType(Enum):
             return BackendType.HDF5
         if backend_str in ("pytorch", "torch"):
             return BackendType.PYTORCH
+        if backend_str == "onnx":
+            return BackendType.ONNX
         return BackendType.OTHER
 
 
@@ -788,6 +791,161 @@ class PyTorchImageClassifier(BaseImageClassifier):
             raise ValueError(f"Prediction failed: {str(e)}")
 
 
+def _softmax(x: np.ndarray, axis: int = -1) -> np.ndarray:
+    """Numerically-stable softmax (no torch/tf dependency available for ONNX Runtime output)."""
+    shifted = x - np.max(x, axis=axis, keepdims=True)
+    exp = np.exp(shifted)
+    return exp / np.sum(exp, axis=axis, keepdims=True)
+
+
+class ONNXImageClassifier(BaseImageClassifier):
+    """ONNX Runtime model classifier.
+
+    Unlike the PyTorch backend, an ONNX graph is self-contained -- no
+    architecture_module_name/architecture_class_path is needed to reconstruct
+    it from raw weights, since the computation graph is embedded in the file.
+    """
+
+    def __init__(self, model_path: str,
+                 device: str = 'auto',
+                 normalize_mean: Optional[List[float]] = None,
+                 normalize_std: Optional[List[float]] = None,
+                 input_shape: Optional[Tuple[int, int]] = None,
+                 rescale: bool = True,
+                 channels_first: bool = True):
+        """ONNX model classifier
+
+        Args:
+            model_path: Path to .onnx model file
+            device: 'auto', 'cuda', or 'cpu' -- selects the ONNX Runtime execution provider
+            normalize_mean: Normalization mean values (default: ImageNet)
+            normalize_std: Normalization std values (default: ImageNet)
+            input_shape: Optional (width, height) if not inferrable from the model's
+                declared input tensor shape
+            rescale: Divide pixel values by 255 before mean/std normalization (default
+                True). Set False for models expecting raw 0-255 input (rare; some
+                older Caffe-lineage exports also expect BGR channel order and
+                per-channel mean subtraction only -- not handled here, see USAGE.md)
+            channels_first: Whether the model expects NCHW input (default True,
+                matching most PyTorch-exported ONNX models). Set False for NHWC-exported
+                (e.g. TensorFlow-lineage) models.
+        """
+        super().__init__(model_path)
+        self.device = device
+        self.normalize_mean = normalize_mean or [0.485, 0.456, 0.406]
+        self.normalize_std = normalize_std or [0.229, 0.224, 0.225]
+        self._input_shape_override = input_shape
+        self.rescale = rescale
+        self.channels_first = channels_first
+        self.session = None
+        self.input_name = None
+        self.output_name = None
+        self.load_model()
+
+    def _get_providers(self, ort) -> List[str]:
+        """Select ONNX Runtime execution providers based on ``device``."""
+        available = ort.get_available_providers()
+        if self.device == 'cpu':
+            return ["CPUExecutionProvider"]
+        if self.device == 'cuda':
+            if "CUDAExecutionProvider" not in available:
+                logger.warning("CUDAExecutionProvider not available, falling back to CPU")
+                return ["CPUExecutionProvider"]
+            return ["CUDAExecutionProvider", "CPUExecutionProvider"]
+        # auto
+        if "CUDAExecutionProvider" in available:
+            return ["CUDAExecutionProvider", "CPUExecutionProvider"]
+        return ["CPUExecutionProvider"]
+
+    @staticmethod
+    def _infer_input_shape_from_dims(shape: list, channels_first: bool) -> Optional[Tuple[int, int]]:
+        """Infer (width, height) from a 4-D [N, C, H, W] or [N, H, W, C] shape.
+        Dynamic/symbolic dims (non-positive-int, e.g. a string batch-size axis)
+        are treated as unresolvable. Returns None when the shape can't be read."""
+        numeric = [d if isinstance(d, int) and d > 0 else None for d in shape]
+        if len(numeric) != 4:
+            return None
+        if channels_first:
+            _batch, _channels, height, width = numeric
+        else:
+            _batch, height, width, _channels = numeric
+        if height is None or width is None:
+            return None
+        return (width, height)
+
+    def load_model(self) -> bool:
+        """Load ONNX model via onnxruntime.InferenceSession"""
+        try:
+            import onnxruntime as ort
+        except ImportError:
+            logger.error(
+                "onnxruntime not installed. Install with: pip install onnxruntime "
+                "(or onnxruntime-gpu for CUDA)"
+            )
+            return False
+
+        try:
+            providers = self._get_providers(ort)
+            self.session = ort.InferenceSession(self.model_path, providers=providers)
+            input_meta = self.session.get_inputs()[0]
+            self.input_name = input_meta.name
+            self.output_name = self.session.get_outputs()[0].name
+
+            inferred = self._infer_input_shape_from_dims(list(input_meta.shape), self.channels_first)
+            self.input_shape = self._input_shape_override or inferred
+            if self.input_shape is None:
+                logger.warning(
+                    f"Could not infer input shape from ONNX model metadata {input_meta.shape}, "
+                    "using default (224, 224)"
+                )
+                self.input_shape = (224, 224)
+
+            self.is_loaded = True
+            logger.info(f"ONNX model loaded successfully with providers: {self.session.get_providers()}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to load ONNX model: {str(e)}")
+            return False
+
+    def preprocess_image(self, image_path: str) -> np.ndarray:
+        """Preprocess image for ONNX Runtime input"""
+        if not self.is_loaded:
+            raise ValueError("Model not loaded")
+
+        try:
+            with Image.open(image_path) as img:
+                img = img.convert('RGB')
+                img = img.resize(self.input_shape)
+                img_array = np.array(img, dtype=np.float32)
+                if self.rescale:
+                    img_array = img_array / 255.0
+                    mean = np.array(self.normalize_mean, dtype=np.float32)
+                    std = np.array(self.normalize_std, dtype=np.float32)
+                    img_array = (img_array - mean) / std
+                if self.channels_first:
+                    img_array = np.transpose(img_array, (2, 0, 1))  # HWC -> CHW
+                return np.expand_dims(img_array, axis=0)
+        except Exception as e:
+            raise ValueError(f"Image processing failed: {str(e)}")
+
+    def predict(self, preprocessed_image: np.ndarray, batch_size: int = 32) -> np.ndarray:
+        """Run prediction with ONNX Runtime"""
+        if self.session is None:
+            raise ValueError("Model not loaded")
+
+        try:
+            outputs = self.session.run(
+                [self.output_name], {self.input_name: preprocessed_image.astype(np.float32)}
+            )
+            output = outputs[0]
+            # Convert to probabilities if needed (mirrors the PyTorch backend's fallback)
+            if not (np.all(output >= 0) and np.all(output <= 1)):
+                output = _softmax(output, axis=1)
+            return output
+        except Exception as e:
+            raise ValueError(f"Prediction failed: {str(e)}")
+
+
 def derive_neutral_categories_from_positive_groups(
     model_categories: List[str],
     positive_groups: List[List[str]],
@@ -886,6 +1044,8 @@ class ImageClassifierWrapper:
                 self.backend = BackendType.HDF5
             elif self.model_location.lower().endswith(('.pth', '.pt', '.safetensors', '.bin')):
                 self.backend = BackendType.PYTORCH
+            elif self.model_location.lower().endswith('.onnx'):
+                self.backend = BackendType.ONNX
             else:
                 self.can_run = False
                 logger.error(f"Cannot determine backend for file: {self.model_location}")
@@ -954,6 +1114,16 @@ class ImageClassifierWrapper:
                 self.classifier = PyTorchImageClassifier(
                     self.model_location,
                     **pytorch_kwargs
+                )
+
+            elif self.backend == BackendType.ONNX:
+                onnx_kwargs = self.model_kwargs.copy()
+                if self.input_shape is not None:
+                    onnx_kwargs["input_shape"] = self.input_shape
+
+                self.classifier = ONNXImageClassifier(
+                    self.model_location,
+                    **onnx_kwargs
                 )
             else:
                 logger.error(f"Unsupported backend: {self.backend}")

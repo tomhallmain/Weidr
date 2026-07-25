@@ -1,8 +1,7 @@
 """
-UI tests for EmbeddingSeedLibraryWindow._search_with_seed
-(docs/embedding-seed-library.md, section 6.1): validates the seed's
-embedding_model against the active compare mode and fails fast -- before
-touching run_compare at all -- on a mismatch.
+UI tests for EmbeddingSeedLibraryWindow._search_with_seed: validates the
+seed's embedding_model against the active compare mode and fails fast --
+before touching run_compare at all -- on a mismatch.
 """
 from __future__ import annotations
 

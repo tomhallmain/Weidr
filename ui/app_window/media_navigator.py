@@ -77,8 +77,8 @@ class MediaNavigator:
             if self._app.media_path == previous_media and os.path.isfile(previous_media):
                 return True  # already at this file (refresh case)
             # A stale directory-listing cache can momentarily still contain a
-            # file that was just moved/deleted (see docs/refresh_mark_move_timing_bug.md);
-            # skip past it rather than trying to display something that's gone.
+            # file that was just moved/deleted; skip past it rather than
+            # trying to display something that's gone.
             while previous_media != start_media and (
                 self._cm.skip_media(previous_media) or not os.path.isfile(previous_media)
             ):
@@ -102,8 +102,8 @@ class MediaNavigator:
             if self._app.media_path == next_media and os.path.isfile(next_media):
                 return True  # already at this file (refresh case)
             # A stale directory-listing cache can momentarily still contain a
-            # file that was just moved/deleted (see docs/refresh_mark_move_timing_bug.md);
-            # skip past it rather than trying to display something that's gone.
+            # file that was just moved/deleted; skip past it rather than
+            # trying to display something that's gone.
             while next_media != start_media and (
                 self._cm.skip_media(next_media) or not os.path.isfile(next_media)
             ):
@@ -510,6 +510,20 @@ class MediaNavigator:
             interval_sec = 7.0
         interval_ms = max(1, int(interval_sec * 1000))
         self._slideshow_timer.start(interval_ms)
+
+    def restart_slideshow_timer_after_interaction(self) -> None:
+        """Give the classic slideshow interval a fresh countdown after a
+        non-navigational interaction (e.g. marking/moving files) that didn't
+        touch the currently displayed media.
+
+        The interval timer runs continuously in the background and is only
+        ever reset by ``create_media()``. Without this, a mark/move action on
+        a *different* file still lets that ambient countdown expire while the
+        user is busy, so the slideshow appears to "randomly" advance right as
+        (or shortly after) they finish -- even though the file they acted on
+        was never the one being displayed.
+        """
+        self._restart_classic_slideshow_primary_timer_if_running()
 
     def toggle_slideshow(self, event=None) -> None:
         """

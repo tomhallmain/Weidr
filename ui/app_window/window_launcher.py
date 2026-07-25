@@ -122,7 +122,7 @@ class WindowLauncher:
         """
         Open the create dialog to save a supergroup centroid (resolved by
         CompareManager.get_current_supergroup_seed_data) as a new named
-        embedding seed. See docs/embedding-seed-library.md, section 5.1.
+        embedding seed.
         """
         try:
             from datetime import datetime
@@ -160,7 +160,6 @@ class WindowLauncher:
         (independent of whatever compare mode is currently active, via
         compare.embedding_capture.embedding_capture_modes()) and the actual
         embedding computation is deferred until the dialog is confirmed.
-        See docs/embedding-seed-library.md, section 5.4.
         """
         try:
             from datetime import datetime

@@ -324,41 +324,26 @@ def is_classifier_dynamic_media_path(path: str) -> bool:
 # ---------------------------------------------------------------------------
 # ClassifierActionType.ROTATE resolution
 #
-# ClassifierAction.run_action dispatches ROTATE differently depending on the
-# media type of the path it receives, since the transformation itself differs
-# per format -- but none of them overwrite the original file. Every branch
-# writes a new "_rot"-suffixed sibling file, so the suffix always gives an
-# accurate audit trail of what's been done to the source, and behavior is
-# consistent across media types.
+# Non-destructive for every media type: always writes a new "_rot"-suffixed
+# sibling, never overwrites the source.
+#   - Images: lossless OpenCV/NumPy rot90 (image_ops.py).
+#   - GIF/video: reach run_action with their real source path (both count as
+#     dynamic media). GIF rotated frame-by-frame via PIL (duration/loop kept);
+#     video via ffmpeg transpose filter, re-encoded to H.264.
+#   - PDF/SVG/HTML: can't rotate in their own format, so a rendered raster
+#     stand-in is rotated instead; the source document is never touched. PDF
+#     is dynamic media and renders its first page on demand. SVG/HTML are
+#     not dynamic media, so by the time they reach run_action the path has
+#     already been substituted with a FrameCache temp render by an unrelated
+#     classification fallback -- resolve_rendered_frame_source() below
+#     reverses that lookup to recover the true source. That same
+#     substitution also affects MOVE/DELETE for these two types (a known,
+#     separate issue, not fixed here).
+#   - Audio/unmatched: no renderable frame or format, skipped with a notification.
 #
-# Static images are rotated losslessly using OpenCV/NumPy rot90 in
-# image_ops.py and saved as a new sibling file.
-#
-# GIFs and videos both reach run_action with their real source path, since
-# GIF and video both count as dynamic media for classifier sampling. Neither
-# is overwritten. GIFs are rotated frame by frame with PIL, preserving
-# duration and loop, and videos are rotated with ffmpeg's transpose filter
-# and re-encoded to H.264. Both write a new sibling file, since neither
-# transformation is guaranteed to reproduce the source exactly.
-#
-# PDF, SVG, and HTML cannot be rotated in their own format, so ROTATE instead
-# rotates a rendered raster stand-in and saves it as a new file next to the
-# real source. The source document is never modified. PDF also counts as
-# dynamic media, so it reaches run_action with its real path, and its first
-# page is rendered on demand. SVG and HTML are not dynamic media. By the time
-# a match reaches run_action, the path has already been substituted with a
-# FrameCache temp render by an unrelated classification fallback, and
-# resolve_rendered_frame_source below reverses that lookup to recover the
-# true source. That same substitution affects other actions such as MOVE and
-# DELETE for these two types. That is a known, separate issue this does not
-# fix.
-#
-# Audio and any other unmatched type has no renderable frame and no format
-# to rotate, so the action is skipped with a notification.
-#
-# Two checks run before any of this, for every type alike. A resolved angle
-# of 0 degrees is a no-op notify. A rotation angle that cannot be parsed from
-# the classifier label or a manual action_modifier is skipped.
+# Precedes all branches, for every type alike: a resolved angle of 0 is a
+# no-op notify, and an angle that can't be parsed from the classifier label
+# or a manual action_modifier is skipped.
 # ---------------------------------------------------------------------------
 
 

@@ -1,6 +1,6 @@
 """UI tests for RelatedImagesWindow and the all-windows downstream search.
 
-Covers docs/downstream-search-all-windows.md: window construction with all
+Covers the all-windows downstream search: window construction with all
 seven actions, result reporting into the persistent result area (including
 stopping after close), the FileMarksController all-windows aggregation
 (de-duplication, oversized-window skip, no-result path), and marking files

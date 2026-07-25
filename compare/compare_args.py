@@ -39,11 +39,11 @@ class CompareArgs:
         self.app_actions = app_actions
         self.data_filter: Optional['CompareFilter'] = None
         self.file_list: list[str] = []
-        # Embedding-seed-library search inputs (docs/embedding-seed-library.md,
-        # section 6.1) -- already-computed vectors appended alongside whatever
-        # positive_embeddings/negative_embeddings search_multimodal() builds
-        # from search_media_path/search_text, so a seed search composes with
-        # an ordinary path/text search rather than replacing it.
+        # Embedding-seed-library search inputs -- already-computed vectors
+        # appended alongside whatever positive_embeddings/negative_embeddings
+        # search_multimodal() builds from search_media_path/search_text, so a
+        # seed search composes with an ordinary path/text search rather than
+        # replacing it.
         self.positive_seed_vectors: Optional[list] = None
         self.negative_seed_vectors: Optional[list] = None
 

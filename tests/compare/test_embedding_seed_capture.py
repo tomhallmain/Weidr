@@ -1,10 +1,8 @@
 """
-Unit tests for CompareWrapper.get_current_supergroup_seed_data
-(docs/embedding-seed-library.md, section 5.1).
+Unit tests for CompareWrapper.get_current_supergroup_seed_data.
 
-The single-media capture path (section 5.4) is deliberately independent of
-CompareWrapper -- see compare/embedding_capture.py and
-tests/compare/test_embedding_capture.py.
+The single-media capture path is deliberately independent of CompareWrapper
+-- see compare/embedding_capture.py and tests/compare/test_embedding_capture.py.
 """
 from __future__ import annotations
 

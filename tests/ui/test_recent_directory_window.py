@@ -5,9 +5,9 @@ with the current media, then RecentDirectoryWindow._on_directory_selected()
 once the user picks a target directory).
 
 This is the simpler, pre-existing sibling of FileActionsWindow's "Search in
-New Window" (docs/file-actions-search-in-new-window.md): a real base_dir
-instead of a file list, but the exact same do_search=True /
-WindowManager.add_secondary_window() path -- and the exact same bug.
+New Window": a real base_dir instead of a file list, but the exact same
+do_search=True / WindowManager.add_secondary_window() path -- and the exact
+same bug.
 AppWindow.__init__'s do_search path called SearchController.set_search() with
 no arguments, which reads the sidebar's search_media_path_box; nothing
 populates that box for a brand-new window, so it always ran a GROUP compare

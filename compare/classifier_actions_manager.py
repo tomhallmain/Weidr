@@ -583,7 +583,7 @@ class ClassifierActionsManager:
     def is_exempt_from_direct_display_check(media_path: str) -> bool:
         """True when advisory prevalidation should be skipped for *media_path*.
 
-        Exemptions (see docs/skip-handling-direct-media-display.md, Appendix A):
+        Exemptions:
 
         - the file's name matches the first file of any of the last 100
           move/copy actions — the same test for both initiators, for different

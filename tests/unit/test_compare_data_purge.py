@@ -1,8 +1,8 @@
 """Unit tests for CompareData stale-entry purge (media data cache churn cleanup).
 
-Covers docs/media-data-cache-churn-cleanup.md: existence-based purge,
-inflation trigger with floor, extreme-scale bail-out with external-drive
-penalty factor, repeat-scan guard, and persistence of the purged dict.
+Covers existence-based purge, inflation trigger with floor, extreme-scale
+bail-out with external-drive penalty factor, repeat-scan guard, and
+persistence of the purged dict.
 """
 
 import os

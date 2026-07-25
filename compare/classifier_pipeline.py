@@ -1927,15 +1927,12 @@ class ClassifierPipelines:
         node_cherry = _make_category_node("Generate cherry", "_cherry", target_dir_cherry)
 
         # ------------------------------------------------------------------
-        # Node 2 — Stem uniqueness check
-        # Rejects when the base stem matches more than max_stem_group_size files
-        # across the configured target directories, indicating the stem is not
-        # unique enough for reliable per-image generation (e.g. a bare label
-        # like "photo" that collides with thousands of existing files).
-        # search_directory: empty → uses config.directories_to_search_for_related_images
-        # (all target dirs combined).
-        # on_match=REJECT: overflow detected → stem not unique.
-        # on_no_match=CONTINUE: within limit → proceed to category nodes.
+        # Node 2 — Stem uniqueness check: rejects when the base stem matches
+        # more than max_stem_group_size files across the target dirs (e.g. a
+        # bare label like "photo" colliding with thousands of files) --
+        # search_directory empty uses directories_to_search_for_related_images
+        # (all target dirs). on_match=REJECT (not unique); on_no_match=CONTINUE
+        # (within limit, proceed to category nodes).
         # ------------------------------------------------------------------
         node_uniqueness = PipelineNode(
             name="Stem uniqueness check",

@@ -1,7 +1,7 @@
 """
 EmbeddingSeed -- named, persisted embedding vectors reusable as search seeds
 across compare runs and directories, independent of the source files that
-produced them. See docs/embedding-seed-library.md for the design.
+produced them.
 
 Phase 1 only (CRUD + persistence): capture paths (supergroup context action)
 and compare-search consumption are wired elsewhere; nurturing features

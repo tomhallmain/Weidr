@@ -2,8 +2,7 @@
 Unit tests for compare-mode get_files() honoring an explicit CompareArgs.file_list.
 
 Lets FileActionsWindow's "Search in New Window" feature build a search corpus
-from action-history destination files instead of scanning a directory. See
-docs/file-actions-search-in-new-window.md.
+from action-history destination files instead of scanning a directory.
 
 BaseCompare.get_files() carries the file_list shortcut, but several compare
 modes (CompareSize, CompareModels, ComparePrompts, ComparePromptsExact) have

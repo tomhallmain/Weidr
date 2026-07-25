@@ -1477,7 +1477,7 @@ class MediaDetails(SmartWindow):
             return True
         if ClassifierActionsManager.is_dynamic_prevalidation_media(media_path):
             # Phase 1: dynamic-media advisory needs frame sampling (slow on the
-            # UI thread); deferred — see docs/skip-handling-direct-media-display.md.
+            # UI thread); deferred.
             logger.info("Advisory prevalidation skipped for dynamic media: %s", media_path)
             return True
         # Recent-file-action exemption — checked only after every other gate:

@@ -249,15 +249,12 @@ class ClassifierAction:
             return ClassifierAction.NO_POSITIVES_STR
 
     # ------------------------------------------------------------------
-    # Classifier domain dispatch
-    #
-    # The only place image vs. audio classifiers genuinely differ is the
-    # discrete per-file call (different manager, different wrapper method
-    # names -- predict_image vs. predict_audio, etc). Everything else --
-    # config fields, validation flow, MOVE-target resolution, model-strategy
-    # caching -- is shared and reads self.classifier_domain to decide which
-    # registry/method pair to use. Centralizing that choice here means none
-    # of the call sites below need their own if/else.
+    # Classifier domain dispatch: image vs. audio only really differ in the
+    # discrete per-file call (predict_image vs. predict_audio, different
+    # manager/wrapper). Everything else -- config, validation, MOVE-target
+    # resolution, model-strategy caching -- is shared and reads
+    # self.classifier_domain to pick the registry/method pair, so call sites
+    # below don't need their own if/else.
     # ------------------------------------------------------------------
     def _classifier_domain_manager(self):
         return audio_classifier_manager if self.classifier_domain == "audio" else image_classifier_manager

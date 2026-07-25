@@ -141,8 +141,7 @@ class FileBrowser:
                 # show_next_media()-family call that applies the compensating +1. If
                 # some other file was removed, files.index() above is already the
                 # correct, final position; shifting it here would leave the cursor
-                # permanently one off, since no follow-up call is coming
-                # (see docs/refresh_mark_move_timing_bug.md, Bug 3).
+                # permanently one off, since no follow-up call is coming.
                 if current_file in removed_files:
                     self.file_cursor += direction.get_correction()
         elif file_check and current_file and os.path.isfile(current_file):
@@ -282,7 +281,7 @@ class FileBrowser:
         Switch this browser to an explicit, caller-supplied file list instead
         of scanning self.directory -- e.g. a secondary window opened from
         FileActionsWindow's "Search in New Window", which has no real base_dir
-        to browse (see docs/file-actions-search-in-new-window.md).
+        to browse.
 
         Activates use_file_paths_json mode: a pre-PySide6-port feature
         (predates this app's Tkinter -> Qt migration) that already correctly

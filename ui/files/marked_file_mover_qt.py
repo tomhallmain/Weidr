@@ -177,6 +177,20 @@ class MarkedFileMover(SmartDialog):
                         win.showNormal()
                     win.raise_()
                     win.activateWindow()
+                    # Re-bind to *this* call's context. This dialog is a single
+                    # process-wide instance (file_marks is a MarkedFiles class
+                    # attribute shared by every open AppWindow), so reusing it
+                    # without refreshing these is stale in two ways: it may have
+                    # been opened from a *different* window (its app_actions/
+                    # base_dir would silently act on that other window instead
+                    # of the one that just asked for it), or it may simply have
+                    # sat open in the same window while the slideshow advanced
+                    # past whatever was active when it was first created.
+                    win._app_actions = app_actions
+                    win._current_media = current_media
+                    win._app_mode = app_mode
+                    win._base_dir = os.path.normpath(base_dir)
+                    win._single_image = single_image
                     return win
             except Exception:
                 MarkedFileMover._current_window = None
@@ -538,12 +552,15 @@ class MarkedFileMover(SmartDialog):
 
         total = len(MarkedFiles.file_marks)
         progress, callback = MarkedFileMover.build_marks_progress(self, total, move_func)
+        # Re-read now rather than trusting self._current_media, which was
+        # captured at window-open time and can be stale by execution time.
+        current_media = self._app_actions.get_active_media_filepath()
         MarkedFiles.move_marks_to_dir_static(
             self._app_actions,
             target_dir=target_dir,
             move_func=move_func,
             single_image=self._single_image,
-            current_media=self._current_media,
+            current_media=current_media,
             progress_callback=callback,
         )
         if progress is not None:
@@ -600,7 +617,10 @@ class MarkedFileMover(SmartDialog):
         ):
             return
 
-        if self._current_media and self._current_media in MarkedFiles.file_marks:
+        # Re-read rather than trusting self._current_media -- see the comment
+        # in _move_marks_to_dir for why the stale, open-time value is wrong here.
+        current_media = self._app_actions.get_active_media_filepath()
+        if current_media and current_media in MarkedFiles.file_marks:
             self._app_actions.release_media_canvas()
 
         removed_files: list[str] = []

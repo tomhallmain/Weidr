@@ -654,7 +654,7 @@ class CompareWrapper:
         the averaged + renormalized centroid vector, member group indexes,
         and provenance. Returns None when not applicable (no compare loaded,
         a non-embedding compare mode, or the current group isn't in a
-        "meaningful" supergroup). See docs/embedding-seed-library.md, section 5.1.
+        "meaningful" supergroup).
 
         Membership lookup (not current_supergroup_index) for the same reason
         _supergroup_label_suffix uses it: plain group navigation can move
@@ -1029,6 +1029,13 @@ class CompareWrapper:
                     self._app_actions.release_media_canvas()
                     media = self._get_prev_media() if show_next_media == Direction.BACKWARD else self.current_match()
                     self._app_actions.create_media(media)
+                elif hasattr(self._app_actions, "restart_slideshow_timer_after_interaction"):
+                    # The removed file wasn't the one on screen, so the display
+                    # isn't changing -- but give the slideshow interval a fresh
+                    # countdown so time spent on the mark/move action doesn't
+                    # count against it (see media_navigator.py's method of the
+                    # same name for the BROWSE-mode equivalent).
+                    self._app_actions.restart_slideshow_timer_after_interaction()
 
     def update_compare_for_readded_file(self, readded_file):
         self._compare.readd_files([readded_file])

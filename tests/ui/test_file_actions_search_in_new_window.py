@@ -1,6 +1,6 @@
 """
 UI tests for FileActionsWindow's "Search in New Window" and "Open in New
-Window" features (docs/file-actions-search-in-new-window.md).
+Window" features.
 
 TestOpenSearchInNewWindow / TestOpenInNewWindow cover FileActionsWindow's own
 logic (file-list construction from action history, active-media resolution)

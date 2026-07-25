@@ -1,6 +1,6 @@
 """
 embedding_capture -- ad-hoc single-file embedding computation for the
-embedding seed library (docs/embedding-seed-library.md, section 5.4).
+embedding seed library.
 
 Deliberately independent of CompareWrapper/CompareManager and any active
 compare instance: a seed can be captured using a different embedding
@@ -49,7 +49,6 @@ def embedding_capture_modes() -> List[CompareMode]:
     for the embedding seed library -- independent of whatever compare
     mode/instance is currently active, so a seed can be captured in a
     different architecture than the one currently loaded.
-    See docs/embedding-seed-library.md, section 5.4.
     '''
     return list(_EMBEDDING_MODE_CLASSES.keys())
 
@@ -68,7 +67,6 @@ def compute_media_embedding(media_path: str, compare_mode: CompareMode):
     (e.g. a QThread + spinner, mirroring
     CompareWrapper._run_dynamic_prevalidation_with_spinner) since
     dynamic-media multi-frame sampling can be slow.
-    See docs/embedding-seed-library.md, section 5.4.
     '''
     cls = _EMBEDDING_MODE_CLASSES.get(compare_mode)
     if cls is None or not media_path or not os.path.isfile(media_path):

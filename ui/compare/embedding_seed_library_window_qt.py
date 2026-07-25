@@ -2,7 +2,7 @@
 EmbeddingSeedLibraryWindow -- browse/manage the embedding seed library (PySide6).
 
 Global, singleton management window for EmbeddingSeed records: list, filter by
-tag, rename/retag, deprecate, delete. See docs/embedding-seed-library.md.
+tag, rename/retag, deprecate, delete.
 """
 from __future__ import annotations
 
@@ -183,7 +183,7 @@ class EmbeddingSeedLibraryWindow(SmartDialog):
         """
         Run a search using the selected seed's vector as a positive (or, if
         *negative*, negative) search input, via the generic run_compare
-        app_actions entry -- see docs/embedding-seed-library.md, section 6.1.
+        app_actions entry.
 
         Fails fast, before touching any compare machinery, if the seed's
         embedding_model doesn't match the active compare mode of whichever

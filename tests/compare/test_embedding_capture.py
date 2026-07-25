@@ -1,8 +1,7 @@
 """
 Unit tests for compare/embedding_capture.py -- ad-hoc single-file embedding
-computation for the embedding seed library (docs/embedding-seed-library.md,
-section 5.4), deliberately independent of CompareWrapper/CompareManager and
-any active compare instance.
+computation for the embedding seed library, deliberately independent of
+CompareWrapper/CompareManager and any active compare instance.
 
 The success path inside compute_media_embedding (real model inference) is
 not exercised here -- only the pure-Python early-return guards -- since

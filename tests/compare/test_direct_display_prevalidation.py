@@ -1,5 +1,5 @@
 """
-Tests for direct-display prevalidation support (docs/skip-handling-direct-media-display.md):
+Tests for direct-display prevalidation support:
 
 - dry_run on ClassifierAction: matching returns the would-be action without
   executing run_action, and _dispatch_action executes nothing under dry_run.

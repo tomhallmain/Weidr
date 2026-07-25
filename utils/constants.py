@@ -502,8 +502,7 @@ class CompareMediaType(Enum):
     def supports_embedding_capture(self) -> bool:
         """True for types compare.embedding_capture.compute_media_embedding can
         produce an embedding for (image, GIF, video, PDF, SVG) -- gates the
-        "Add Current Media to Embedding Seed Library" context-menu action.
-        See docs/embedding-seed-library.md, section 5.4."""
+        "Add Current Media to Embedding Seed Library" context-menu action."""
         return self not in (
             CompareMediaType.AUDIO,
             CompareMediaType.HTML,

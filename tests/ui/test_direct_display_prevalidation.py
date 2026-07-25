@@ -1,5 +1,5 @@
 """
-UI tests for direct-display prevalidation (docs/skip-handling-direct-media-display.md):
+UI tests for direct-display prevalidation:
 
 - go_to_file on a skippable file is suppressed (config on) or displayed
   (config off); the real skip_media pipeline is what runs.

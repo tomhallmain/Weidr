@@ -479,6 +479,9 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             "get_active_media_filepath": self.media_navigator.get_active_media_filepath,
             "create_media": ts(self.media_navigator.create_media),
             "show_next_media": ts(self.media_navigator.show_next_media),
+            "restart_slideshow_timer_after_interaction": ts(
+                self.media_navigator.restart_slideshow_timer_after_interaction
+            ),
             "play_media": ts(self.play_media),
             "pause_media": ts(self.pause_media),
             "toggle_media_play_pause": ts(self.toggle_media_play_pause),
@@ -1136,6 +1139,13 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
                     has_new_media = self._show_next_queued_media()
                 if active_media_in_removed:
                     self.media_navigator.last_chosen_direction_func()
+                elif len(removed_files) > 0:
+                    # A mark/move (or similar) operation touched files other than
+                    # the one on screen. The displayed media isn't changing, but
+                    # give the slideshow interval a fresh countdown so the time
+                    # spent on that operation doesn't count against it (see
+                    # MediaNavigator.restart_slideshow_timer_after_interaction).
+                    self.media_navigator.restart_slideshow_timer_after_interaction()
                 if not has_new_media:
                     self.notification_ctrl.set_label_state()
                 if show_new_media and has_new_media:
@@ -1620,18 +1630,15 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             logger.warning("Exiting application")
             primary = WindowManager.get_primary()
             if primary:
-                # Set the reentrancy guard *before* the direct call, exactly
-                # as closeEvent() does -- QApplication.instance().quit() below
-                # can still cause Qt to deliver a genuine closeEvent() to this
-                # window later during teardown, in a nondeterministic order
-                # relative to other windows' own closeEvent(). Without the
-                # guard set here first, that second delivery re-runs
-                # on_closing() (since _closing was never set by this direct
-                # call), and its store_info_cache(store_window_state=True)
-                # recomputes secondary_base_dirs from WindowManager -- which,
-                # if some secondary window's own closeEvent() happened to
-                # unregister it first, silently overwrites the correct
-                # snapshot taken just below with an incomplete/empty one.
+                # Set the reentrancy guard before the direct call: Qt can
+                # still deliver a real closeEvent() to this window later
+                # during quit() teardown, in nondeterministic order versus
+                # other windows'. Without the guard set first, that second
+                # delivery re-runs on_closing(), and its
+                # store_info_cache(store_window_state=True) recomputes
+                # secondary_base_dirs from WindowManager -- overwriting the
+                # correct snapshot below with an incomplete one if another
+                # window's closeEvent() already unregistered it.
                 primary._closing = True
                 primary.on_closing()
             # Kills all windows and exits the event loop.

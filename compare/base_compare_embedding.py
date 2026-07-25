@@ -733,9 +733,9 @@ class BaseCompareEmbedding(BaseCompare):
             for text in self.args.search_text_negative.split(","):
                 self._tokenize_text(text.strip(), negative_embeddings, "negative search text")
 
-        # Embedding-seed-library vectors (docs/embedding-seed-library.md, section
-        # 6.1) -- already-computed, so no tokenizing step needed; append directly
-        # alongside whatever path/text search produced above.
+        # Embedding-seed-library vectors are already-computed, so no
+        # tokenizing step needed; append directly alongside whatever
+        # path/text search produced above.
         if self.args.positive_seed_vectors:
             positive_embeddings.extend(self.args.positive_seed_vectors)
 

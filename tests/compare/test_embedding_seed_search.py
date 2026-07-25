@@ -1,9 +1,9 @@
 """
-Integration tests for the embedding-seed-library search consumption path
-(docs/embedding-seed-library.md, section 6.1): CompareArgs.positive_seed_vectors
-/ negative_seed_vectors feed straight into BaseCompareEmbedding.search_multimodal()
-alongside whatever a path/text search produces -- find_similars_to_embeddings
-already accepted raw vectors, so no change to the core similarity math.
+Integration tests for the embedding-seed-library search consumption path:
+CompareArgs.positive_seed_vectors / negative_seed_vectors feed straight into
+BaseCompareEmbedding.search_multimodal() alongside whatever a path/text
+search produces -- find_similars_to_embeddings already accepted raw vectors,
+so no change to the core similarity math.
 """
 from __future__ import annotations
 

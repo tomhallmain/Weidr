@@ -136,10 +136,11 @@ class AudioClassifierRankCondition:
     Same shape and semantics (rank window, categories, min confidence, negate,
     inherit_categories), evaluated against ``image.audio_classifier_manager``'s
     registry instead of the image classifier registry. Kept as a separate
-    condition type rather than a ``domain`` field on ``ClassifierRankCondition``
-    -- see ``docs/audio-embeddings-and-classification-design.md`` Track B for
-    the rationale (mirrors how distinct concerns already get distinct condition
-    types in this module, e.g. ``PrototypeCondition`` vs ``LookaheadCondition``).
+    condition type rather than a ``domain`` field on ``ClassifierRankCondition``,
+    mirroring how distinct concerns already get distinct condition types in
+    this module (e.g. ``PrototypeCondition`` vs ``LookaheadCondition``) rather
+    than retrofitting a field onto a condition type that already just shipped
+    a ``negate`` flag.
     Typically paired with a ``MediaTypeCondition([CompareMediaType.AUDIO])``
     gate earlier in the pipeline, since nothing here restricts evaluation to
     audio files on its own.

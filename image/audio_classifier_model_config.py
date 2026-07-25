@@ -13,13 +13,12 @@ class AudioClassifierModelConfig:
 
     Deliberately narrower than :class:`image.image_classifier_model_config.ImageClassifierModelConfig`
     (no backend selection, no custom architecture loading, no safetensors/H5
-    paths) -- Track B's first pass only supports the general Hugging Face
-    ``transformers`` audio-classification path (see
-    ``docs/audio-embeddings-and-classification-design.md``). ``model_location``
-    is passed directly to ``from_pretrained`` and may be either a local
-    directory or a bare Hugging Face repo id (``transformers`` resolves and
-    caches remote repo ids itself; unlike the image classifier's HF path, no
-    pre-download step is required).
+    paths) -- only the general Hugging Face ``transformers``
+    audio-classification path is supported. ``model_location`` is passed
+    directly to ``from_pretrained`` and may be either a local directory or a
+    bare Hugging Face repo id (``transformers`` resolves and caches remote
+    repo ids itself; unlike the image classifier's HF path, no pre-download
+    step is required).
     """
 
     model_name: str

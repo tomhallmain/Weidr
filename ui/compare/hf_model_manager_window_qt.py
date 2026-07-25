@@ -1205,10 +1205,9 @@ class HfModelManagerWindow(SmartDialog):
             return False
 
         if not is_audio:
-            # The "Installed Models" tab only lists image classifiers today (see
-            # docs/audio-embeddings-and-classification-design.md -- a dedicated audio
-            # management UI is deliberately out of scope for this pass); refreshing it
-            # for an audio-only change would be a no-op, so skip it.
+            # The "Installed Models" tab only lists image classifiers today (a
+            # dedicated audio management UI is deliberately out of scope for
+            # now); refreshing it for an audio-only change would be a no-op.
             self._refresh_installed_models()
         self._app_actions.success(success_message)
         return True

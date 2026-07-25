@@ -56,6 +56,7 @@ class CompareMode(Enum):
     SIZE = _("Size")
     MODELS = _("Models")
     COLOR_HISTOGRAM = _("Color Histogram")
+    AUDIO_CLAP_EMBEDDING = _("CLAP Audio Embedding")
 
     def get_text(self):
         if self == CompareMode.COLOR_MATCHING:
@@ -90,6 +91,8 @@ class CompareMode(Enum):
             return _("Models")
         elif self == CompareMode.COLOR_HISTOGRAM:
             return _("Color Histogram")
+        elif self == CompareMode.AUDIO_CLAP_EMBEDDING:
+            return _("CLAP Audio Embedding")
         raise Exception("Unhandled Compare Mode text: " + str(self))
 
     def __str__(self):
@@ -238,11 +241,9 @@ class Sort(Enum):
 class HfHubModelTask(Enum):
     """HF Hub ``pipeline_tag``-style task filters offered in the Model Manager's search tab.
 
-    Originally visual-media-only (hence callers may still see the shorter history in
-    git blame); expanded to include audio tasks once audio classifier support
-    (Track B, see docs/audio-embeddings-and-classification-design.md) needed a way to
-    search the Hub for audio-classification models the same way image classification
-    search already worked.
+    Originally visual-media-only; expanded to include audio tasks so the Hub
+    can be searched for audio-classification models the same way image
+    classification search already worked.
     """
     ALL_TASKS = ""
     TEXT_TO_IMAGE = "text-to-image"

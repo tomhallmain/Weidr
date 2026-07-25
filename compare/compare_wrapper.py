@@ -19,6 +19,7 @@ from compare.compare_embeddings_eva_clip import CompareEmbeddingEvaClip
 from compare.compare_embeddings_metaclip import CompareEmbeddingMetaClip
 from compare.compare_embeddings_vjepa2 import CompareEmbeddingVJepa2
 from compare.compare_embeddings_face import CompareEmbeddingFace
+from compare.compare_embeddings_audio_clap import CompareEmbeddingAudioClap
 from compare.compare_prompts import ComparePrompts
 from compare.compare_prompts_exact import ComparePromptsExact
 from compare.compare_size import CompareSize
@@ -282,6 +283,8 @@ class CompareWrapper:
             return CompareColors.is_related(media1, media2)
         if self.compare_mode == CompareMode.COLOR_HISTOGRAM:
             return CompareColorHistogram.is_related(media1, media2)
+        if self.compare_mode == CompareMode.AUDIO_CLAP_EMBEDDING:
+            return CompareEmbeddingAudioClap.is_related(media1, media2)
         return CompareEmbeddingClip.is_related(media1, media2)
 
     def find_next_unrelated_media(self, file_browser, forward=True):
@@ -845,6 +848,8 @@ class CompareWrapper:
             self._compare = CompareSize(args)
         elif self.compare_mode == CompareMode.MODELS:
             self._compare = CompareModels(args)
+        elif self.compare_mode == CompareMode.AUDIO_CLAP_EMBEDDING:
+            self._compare = CompareEmbeddingAudioClap(args)
         else:
             raise Exception(f"Unhandled compare mode: {self.compare_mode}")
 

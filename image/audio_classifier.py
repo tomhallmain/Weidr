@@ -1,6 +1,5 @@
 """
-Audio classification via Hugging Face ``transformers`` (Track B of
-``docs/audio-embeddings-and-classification-design.md``).
+Audio classification via Hugging Face ``transformers``.
 
 Deliberately narrow first pass: only the general
 ``AutoFeatureExtractor`` / ``AutoModelForAudioClassification`` path is

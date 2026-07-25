@@ -39,7 +39,9 @@ if _torch_version_tuple() < _MIN_TRANSFORMERS_TORCH_VERSION:
     )
     logging.getLogger("transformers").setLevel(logging.ERROR)
 
-from transformers import AutoModel, AutoProcessor, FlavaProcessor, FlavaModel, AlignProcessor, AlignModel
+from transformers import AutoModel, AutoProcessor, FlavaProcessor, FlavaModel, AlignProcessor, AlignModel, ClapModel, ClapProcessor
+
+from image.audio_classifier import decode_audio_waveform
 
 # XVLM may not be loaded if the config.json file is not updated
 # or if the model files are not downloaded
@@ -116,6 +118,10 @@ _eva_clip_model = None
 _eva_clip_preprocess = None
 _eva_clip_tokenizer = None
 
+# Lazy initialization variables for CLAP (audio)
+_clap_model = None
+_clap_processor = None
+
 # open_clip pretrained weights IDs keyed by model name
 EVA_CLIP_PRETRAINED = {
     'EVA01-g-14':       'laion400m_s11b_b41k',
@@ -182,6 +188,19 @@ def _get_align_processor():
     if _align_processor is None:
         _align_processor = AlignProcessor.from_pretrained("kakaobrain/align-base")
     return _align_processor
+
+def _get_clap_model():
+    global _clap_model
+    if _clap_model is None:
+        _clap_model = ClapModel.from_pretrained(config.clap_model).to(device)
+        _clap_model.eval()
+    return _clap_model
+
+def _get_clap_processor():
+    global _clap_processor
+    if _clap_processor is None:
+        _clap_processor = ClapProcessor.from_pretrained(config.clap_model)
+    return _clap_processor
 
 # Define preset configs for 4m/16m (extracted from YAMLs)
 XVLM_CONFIGS = {
@@ -716,3 +735,39 @@ def image_embeddings_face(media_path: str):
     if norm == 0:
         return None
     return (mean_emb / norm).tolist()
+
+
+# ---------------------------------------------------------------------------
+# CLAP — audio/text joint embedding space (audio analog of CLIP)
+# ---------------------------------------------------------------------------
+
+def image_embeddings_clap(audio_path):
+    """Named to match every other mode's image_embeddings_func slot, but this
+    takes an audio file path -- see BaseCompareEmbedding.compute_embedding_for_path,
+    which passes audio paths through FrameCache.get_image_path() unchanged
+    (no video/GIF/PDF/SVG/HTML extension matches), so no changes to the
+    shared embedding machinery were needed to support audio.
+
+    Single fixed-length window per file (config.compare_embedding_clap_max_duration_seconds),
+    no multi-segment sampling yet -- same first-pass scope as the audio classifier.
+    """
+    processor = _get_clap_processor()
+    sample_rate = getattr(processor.feature_extractor, "sampling_rate", 48000)
+    waveform = decode_audio_waveform(
+        audio_path, sample_rate, config.compare_embedding_clap_max_duration_seconds
+    )
+    inputs = processor(audios=waveform, sampling_rate=sample_rate, return_tensors="pt")
+    inputs = {k: v.to(device) for k, v in inputs.items()}
+    with torch.no_grad():
+        embedding = _get_clap_model().get_audio_features(**inputs)
+        embedding = embedding / embedding.norm(dim=-1, keepdim=True)
+        return embedding.tolist()[0]
+
+
+def text_embeddings_clap(text):
+    inputs = _get_clap_processor()(text=[text], return_tensors="pt", padding=True)
+    inputs = {k: v.to(device) for k, v in inputs.items()}
+    with torch.no_grad():
+        embedding = _get_clap_model().get_text_features(**inputs)
+        embedding = embedding / embedding.norm(dim=-1, keepdim=True)
+        return embedding.tolist()[0]

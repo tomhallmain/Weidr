@@ -114,6 +114,7 @@ class Config:
         self.debug2 = False
         self.log_level = "info"
         self.clip_model = "ViT-B/32"
+        self.clap_model = "laion/clap-htsat-unfused"
         self.compare_mode = CompareMode.CLIP_EMBEDDING
         self.max_search_results = 50
         self.file_actions_history_max = 200
@@ -231,6 +232,9 @@ class Config:
         # (smaller) sample cap since each sample costs a full model forward pass.
         self.compare_embedding_dynamic_media_sample_ratio = 0.1
         self.compare_embedding_dynamic_media_max_samples = 6
+        # CLAP audio embedding: single fixed-length window per file (no
+        # multi-segment sampling yet, mirroring Track B's own first-pass scope).
+        self.compare_embedding_clap_max_duration_seconds = 10.0
         self.pipeline_generate_batch_size = 150
         self.pipeline_scramble_batch_size = 100
         self.show_negative_prompt = True
@@ -282,6 +286,7 @@ class Config:
                             "default_main_window_size",
                             "default_secondary_window_size",
                             "clip_model",
+                            "clap_model",
                             "file_paths_json_path",
                             "sd_runner_client_password",
                             "refacdir_client_password",
@@ -365,6 +370,7 @@ class Config:
                             "large_image_promotion_min_free_ram_gb",
                             "large_image_promotion_available_ram_fraction",
                             "compare_embedding_dynamic_media_sample_ratio",
+                            "compare_embedding_clap_max_duration_seconds",
                             "slideshow_dynamic_video_max_seconds",
                             "slideshow_dynamic_gif_max_seconds")
 

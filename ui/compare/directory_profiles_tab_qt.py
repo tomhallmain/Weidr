@@ -14,25 +14,34 @@ protocol is in place.
 Cache-invalidation policy — profile operations
 ----------------------------------------------
 Profile *added* or *copied*:
-    No eviction — a brand-new profile has no prevalidations linked to it so
-    no files were ever cached under its scope.
+    No eviction — a brand-new profile has no prevalidations or pipelines
+    linked to it so no files were ever cached under its scope.
 
 Profile *edited* (directories changed):
-    Evict the union of the profile's directory set **before** the edit
-    (snapshot taken in ``_edit_profile``) and **after** the edit (read from
-    the now-modified profile object in the callback), but **only** if at
-    least one prevalidation currently references this profile.  If no
-    prevalidations reference it, no files were cached under its scope.
+    Evict the symmetric difference of the profile's directory set
+    **before** the edit (snapshot taken in ``_edit_profile``) and **after**
+    the edit (read from the now-modified profile object in the callback),
+    via ``ClassifierActionsManager.invalidate_for_profile_edit`` — but
+    **only** if at least one prevalidation or prevalidation pipeline
+    currently references this profile.  If nothing references it, no files
+    were cached under its scope.  Symmetric difference, not union, because
+    editing a *profile's own* directory list never changes any
+    prevalidation/pipeline's matching logic — only which directories that
+    unchanged logic applies to, so directories present both before and
+    after have an unchanged gating relationship and nothing cached under
+    them can have gone stale.
 
 Profile *removed*:
-    If prevalidations referenced it their scope expands to global (the
-    profile filter no longer applies), meaning cached ``None`` results in
-    previously unscoped directories may now be wrong → **full eviction**.
-    If no prevalidations referenced the profile, no eviction is needed.
+    If prevalidations or pipelines referenced it their scope expands to
+    global (the profile filter no longer applies), meaning cached ``None``
+    results in previously unscoped directories may now be wrong → **full
+    eviction**.  If nothing referenced the profile, no eviction is needed.
 
 ``_profile_linked_dirs`` returns the profile's directory set only when at
-least one prevalidation references the profile, otherwise an empty set so
-that unlinked profile changes never trigger unnecessary eviction.
+least one prevalidation or prevalidation pipeline references the profile
+(via ``ClassifierActionsManager.get_profile_usage``, which checks both),
+otherwise an empty set so that unlinked profile changes never trigger
+unnecessary eviction.
 """
 
 from __future__ import annotations
@@ -149,11 +158,24 @@ class DirectoryProfilesTab(QWidget):
         old_dirs = self._profile_linked_dirs(profile)
 
         def _on_edited(*_args) -> None:
-            new_dirs = self._profile_linked_dirs(profile)
-            self._invalidate_for_dir_sets(
-                old_dirs, new_dirs,
-                reason=f"profile '{profile.name}' edited",
-            )
+            usage = ClassifierActionsManager.get_profile_usage(profile.name)
+            if usage['prevalidations'] or usage['pipelines']:
+                new_dirs = self._profile_linked_dirs(profile)
+                ClassifierActionsManager.invalidate_for_profile_edit(
+                    old_dirs, new_dirs,
+                    reason=f"profile '{profile.name}' edited",
+                )
+            else:
+                # _profile_linked_dirs returns an empty set for both old_dirs
+                # and new_dirs when nothing references the profile, which
+                # would otherwise report a misleading "directory scope
+                # unchanged" even when directories were actually added or
+                # removed -- state the real reason instead.
+                logger.info(
+                    "Prevalidation cache: no eviction needed — profile '%s'"
+                    " edited (no prevalidation or pipeline references it)",
+                    profile.name,
+                )
             self._refresh_prof_listbox()
 
         DirectoryProfilesTab._profile_window = DirectoryProfileWindow(
@@ -220,45 +242,13 @@ class DirectoryProfilesTab(QWidget):
     @staticmethod
     def _profile_linked_dirs(profile: DirectoryProfile) -> set[str]:
         """
-        Return the profile's directory set if at least one prevalidation
-        currently references it, otherwise an empty set (nothing to evict).
+        Return the profile's directory set if at least one prevalidation or
+        prevalidation pipeline currently references it, otherwise an empty
+        set (nothing to evict).
         """
-        used = any(
-            pv.profile_name == profile.name or pv.profile is profile
-            for pv in ClassifierActionsManager.prevalidations
-        )
+        usage = ClassifierActionsManager.get_profile_usage(profile.name)
+        used = bool(usage['prevalidations'] or usage['pipelines'])
         return set(profile.directories) if used else set()
-
-    @staticmethod
-    def _invalidate_for_dir_sets(
-        *dir_sets: "set[str] | None", reason: str = ""
-    ) -> None:
-        """
-        Evict the union of *dir_sets* from both caches, or perform a full
-        eviction if any element is ``None`` (global prevalidation scope).
-        """
-        if any(d is None for d in dir_sets):
-            logger.info(
-                "Prevalidation cache: full eviction requested — %s"
-                " (global-scoped prevalidation affected)",
-                reason,
-            )
-            ClassifierActionsManager.clear_prevalidation_result_cache()
-            return
-        affected: set[str] = set()
-        for d in dir_sets:
-            affected |= d  # type: ignore[operator]
-        if affected:
-            logger.info(
-                "Prevalidation cache: targeted eviction requested — %s", reason
-            )
-            ClassifierActionsManager.invalidate_for_directories(affected)
-        else:
-            logger.info(
-                "Prevalidation cache: no eviction needed — %s"
-                " (no directories affected)",
-                reason,
-            )
 
     # ------------------------------------------------------------------
     # Public refresh

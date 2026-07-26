@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QSplitter, QStackedWidget, QVBoxLayout, QWidget,
 )
 
+from compare.classifier_actions_manager import ClassifierActionsManager
 from compare.classifier_pipeline import (
     AlwaysCondition,
     AudioClassifierRankCondition,
@@ -1856,6 +1857,15 @@ class ClassifierPipelineEditorDialog(SmartDialog):
     ) -> None:
         self._is_edit = pipeline is not None
         self._original_name = pipeline.name if self._is_edit else None
+        # Snapshot the *original* pipeline's profile-scoped dirs before any
+        # mutation -- self._pipeline below is a deep copy, so this reference
+        # stays valid for the eviction diff in _save(). No prior state (new
+        # pipeline, or editing a non-prevalidation pipeline) -> empty set.
+        self._save_old_dirs = (
+            ClassifierActionsManager.get_profile_scope_dirs(pipeline)
+            if self._is_edit and isinstance(pipeline, PrevalidationPipeline)
+            else set()
+        )
         self._pipeline = copy.deepcopy(pipeline) if pipeline else ClassifierPipeline()
         self._app_actions = app_actions
         self._refresh_callback = refresh_callback
@@ -2955,5 +2965,15 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         else:
             ClassifierPipelines.add_pipeline(final)
         ClassifierPipelines.store()
+
+        new_dirs = (
+            ClassifierActionsManager.get_profile_scope_dirs(final)
+            if isinstance(final, PrevalidationPipeline) else set()
+        )
+        ClassifierActionsManager.invalidate_for_policy_save(
+            self._save_old_dirs, new_dirs,
+            reason=f"pipeline '{final.name}' saved",
+        )
+
         self.close()
         self._refresh_callback()

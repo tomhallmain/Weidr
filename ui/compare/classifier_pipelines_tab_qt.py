@@ -5,6 +5,18 @@ Embedded as the third tab in ClassifierManagementWindow.
 Phase 4a: list view with active toggle, delete, move-down, duplicate, and
 "Run on Current" buttons.  New/Edit open ClassifierPipelineEditorDialog
 (Phase 4b, lazy import).
+
+Cache-invalidation policy
+--------------------------
+A ``PrevalidationPipeline`` is gated and cached by ``prevalidate_media()``
+exactly like a ``Prevalidation`` -- same ``prevalidated_cache``/file-bucket
+store, same ``profile``/``profile_name`` gating check. Toggle/copy/delete
+here mirror PrevalidationsTab's rules for the identical reasons documented
+there, reusing the same ``ClassifierActionsManager`` helpers
+(``get_profile_scope_dirs``, ``invalidate_for_removal``) so the two object
+kinds can't drift out of sync. Plain (non-prevalidation) ``ClassifierPipeline``
+mutations never touch this cache -- guarded by an ``isinstance`` check at
+each call site.
 """
 
 from __future__ import annotations
@@ -19,6 +31,7 @@ from PySide6.QtWidgets import (
     QScrollArea, QVBoxLayout, QWidget,
 )
 
+from compare.classifier_actions_manager import ClassifierActionsManager
 from compare.classifier_pipeline import (
     ClassifierPipeline,
     ClassifierPipelines,
@@ -292,6 +305,18 @@ class ClassifierPipelinesTab(QWidget):
     def _toggle_active(self, pipeline: ClassifierPipeline, value: bool) -> None:
         pipeline.is_active = value
         ClassifierPipelines.store()
+        if isinstance(pipeline, PrevalidationPipeline):
+            dirs = ClassifierActionsManager.get_profile_scope_dirs(pipeline)
+            label = f"pipeline '{pipeline.name}' {'activated' if value else 'deactivated'}"
+            if dirs is None:
+                # Global scope: clear all in-memory entries and memo, but leave
+                # buckets intact — stale entries self-invalidate via signature mismatch.
+                logger.info("Prevalidation cache: session-cache eviction — %s (global)", label)
+                ClassifierActionsManager.invalidate_session_cache_only()
+            else:
+                ClassifierActionsManager.invalidate_for_directories(
+                    dirs, evict_buckets=False
+                )
 
     def _open_editor(self, pipeline: Optional[ClassifierPipeline] = None) -> None:
         try:
@@ -328,11 +353,30 @@ class ClassifierPipelinesTab(QWidget):
         new_pipeline.name = candidate
         ClassifierPipelines.add_pipeline(new_pipeline)
         ClassifierPipelines.store()
+        if isinstance(new_pipeline, PrevalidationPipeline):
+            # New object has no prior state to diff against — conservative
+            # full eviction, mirroring PrevalidationsTab's copy handling.
+            logger.info(
+                "Prevalidation cache: full eviction — pipeline '%s' copied from '%s'"
+                " (no prior snapshot to diff against)",
+                candidate, base,
+            )
+            ClassifierActionsManager.clear_prevalidation_result_cache()
         self._rebuild_rows()
 
     def _delete(self, pipeline: ClassifierPipeline) -> None:
+        # Read dirs before removal; the object's profile attrs are still valid
+        # after list removal since we hold a reference to the same instance.
+        dirs = (
+            ClassifierActionsManager.get_profile_scope_dirs(pipeline)
+            if isinstance(pipeline, PrevalidationPipeline) else set()
+        )
         ClassifierPipelines.remove_pipeline(pipeline.name)
         ClassifierPipelines.store()
+        if isinstance(pipeline, PrevalidationPipeline):
+            ClassifierActionsManager.invalidate_for_removal(
+                dirs, reason=f"pipeline '{pipeline.name}' deleted"
+            )
         self._rebuild_rows()
 
     def _move_down(self, idx: int, pipeline: ClassifierPipeline) -> None:

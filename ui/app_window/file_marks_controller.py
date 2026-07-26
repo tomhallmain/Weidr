@@ -194,7 +194,8 @@ class FileMarksController:
                 self._app.app_actions, _("Add marks")
             ):
                 return
-            logger.debug(_("Including marks: {0}").format(override_marks))
+            if config.debug:
+                logger.debug(_("Including marks: {0}").format(override_marks))
             MarkedFiles.file_marks.extend(override_marks)
 
         current_media = filepath

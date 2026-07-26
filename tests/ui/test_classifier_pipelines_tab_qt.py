@@ -17,6 +17,7 @@ from __future__ import annotations
 import pytest
 from PySide6.QtWidgets import QCheckBox
 
+from compare.classifier_actions_manager import ClassifierActionsManager
 from compare.classifier_pipeline import (
     ClassifierPipeline,
     ClassifierPipelines,
@@ -26,6 +27,7 @@ from compare.classifier_pipeline import (
     PipelineNode,
     PrevalidationPipeline,
 )
+from files.directory_profile import DirectoryProfile
 from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
 
 
@@ -68,6 +70,12 @@ def _make_tab(qtbot, actions=None) -> ClassifierPipelinesTab:
     tab = ClassifierPipelinesTab(None, actions or _FakeActions())
     qtbot.addWidget(tab)
     return tab
+
+
+def _make_prevalidation_pipeline(
+    name: str, is_active: bool = True, profile_name: str | None = None
+) -> PrevalidationPipeline:
+    return PrevalidationPipeline(name=name, is_active=is_active, profile_name=profile_name)
 
 
 def _row_count(tab: ClassifierPipelinesTab) -> int:
@@ -319,6 +327,143 @@ class TestDelete:
         tab._delete(b)
         remaining = [p.name for p in ClassifierPipelines.get_all_pipelines()]
         assert remaining == ["keep_a", "keep_c"]
+
+
+# ---------------------------------------------------------------------------
+# Prevalidation-cache eviction parity with PrevalidationsTab (Defect 2/3 fix):
+# PrevalidationPipeline mutations must evict the same cache a Prevalidation
+# would, via the same shared ClassifierActionsManager helpers. Plain
+# (non-prevalidation) ClassifierPipeline mutations must never touch it.
+# ---------------------------------------------------------------------------
+
+class TestPrevalidationCacheEvictionOnToggle:
+    def test_toggle_profile_scoped_pipeline_evicts_targeted_dirs(self, qtbot, isolated_singletons, monkeypatch):
+        DirectoryProfile.directory_profiles.append(
+            DirectoryProfile(name="prof", directories=["/a", "/b"])
+        )
+        p = _make_prevalidation_pipeline("pv_toggle", profile_name="prof")
+        ClassifierPipelines.add_pipeline(p)
+        tab = _make_tab(qtbot)
+
+        targeted = []
+        monkeypatch.setattr(
+            ClassifierActionsManager, "invalidate_for_directories",
+            lambda dirs, **kw: targeted.append((dirs, kw)),
+        )
+        tab._toggle_active(p, False)
+        assert targeted == [({"/a", "/b"}, {"evict_buckets": False})]
+
+    def test_toggle_global_pipeline_evicts_session_cache_only(self, qtbot, isolated_singletons, monkeypatch):
+        p = _make_prevalidation_pipeline("pv_global_toggle")
+        ClassifierPipelines.add_pipeline(p)
+        tab = _make_tab(qtbot)
+
+        called = []
+        monkeypatch.setattr(
+            ClassifierActionsManager, "invalidate_session_cache_only",
+            lambda: called.append(1),
+        )
+        tab._toggle_active(p, False)
+        assert called == [1]
+
+    def test_toggle_action_pipeline_triggers_no_eviction(self, qtbot, isolated_singletons, monkeypatch):
+        """A plain ClassifierPipeline never gates prevalidation, so toggling
+        it must never touch the prevalidation cache at all."""
+        p = _make_pipeline("action_toggle")
+        ClassifierPipelines.add_pipeline(p)
+        tab = _make_tab(qtbot)
+
+        called = []
+        monkeypatch.setattr(
+            ClassifierActionsManager, "invalidate_for_directories",
+            lambda *a, **kw: called.append("targeted"),
+        )
+        monkeypatch.setattr(
+            ClassifierActionsManager, "invalidate_session_cache_only",
+            lambda: called.append("session"),
+        )
+        tab._toggle_active(p, False)
+        assert called == []
+
+
+class TestPrevalidationCacheEvictionOnCopy:
+    def test_copy_prevalidation_pipeline_triggers_full_eviction(self, qtbot, isolated_singletons, monkeypatch):
+        p = _make_prevalidation_pipeline("pv_copy_src", profile_name="prof")
+        ClassifierPipelines.add_pipeline(p)
+        tab = _make_tab(qtbot)
+
+        cleared = []
+        monkeypatch.setattr(
+            ClassifierActionsManager, "clear_prevalidation_result_cache",
+            lambda: cleared.append(1),
+        )
+        tab._copy(p)
+        assert cleared == [1]
+
+    def test_copy_action_pipeline_triggers_no_eviction(self, qtbot, isolated_singletons, monkeypatch):
+        p = _make_pipeline("action_copy_src")
+        ClassifierPipelines.add_pipeline(p)
+        tab = _make_tab(qtbot)
+
+        cleared = []
+        monkeypatch.setattr(
+            ClassifierActionsManager, "clear_prevalidation_result_cache",
+            lambda: cleared.append(1),
+        )
+        tab._copy(p)
+        assert cleared == []
+
+
+class TestPrevalidationCacheEvictionOnDelete:
+    def test_delete_profile_scoped_pipeline_evicts_its_own_dirs(self, qtbot, isolated_singletons, monkeypatch):
+        DirectoryProfile.directory_profiles.append(
+            DirectoryProfile(name="prof", directories=["/x", "/y"])
+        )
+        p = _make_prevalidation_pipeline("pv_delete", profile_name="prof")
+        ClassifierPipelines.add_pipeline(p)
+        tab = _make_tab(qtbot)
+
+        targeted = []
+        monkeypatch.setattr(
+            ClassifierActionsManager, "invalidate_for_directories",
+            lambda dirs, **kw: targeted.append(dirs),
+        )
+        tab._delete(p)
+        assert targeted == [{"/x", "/y"}]
+
+    def test_delete_global_pipeline_triggers_no_eviction(self, qtbot, isolated_singletons, monkeypatch):
+        p = _make_prevalidation_pipeline("pv_global_delete")
+        ClassifierPipelines.add_pipeline(p)
+        tab = _make_tab(qtbot)
+
+        called = []
+        monkeypatch.setattr(
+            ClassifierActionsManager, "invalidate_for_directories",
+            lambda *a, **kw: called.append(1),
+        )
+        monkeypatch.setattr(
+            ClassifierActionsManager, "clear_prevalidation_result_cache",
+            lambda: called.append(1),
+        )
+        tab._delete(p)
+        assert called == []
+
+    def test_delete_action_pipeline_triggers_no_eviction(self, qtbot, isolated_singletons, monkeypatch):
+        p = _make_pipeline("action_delete")
+        ClassifierPipelines.add_pipeline(p)
+        tab = _make_tab(qtbot)
+
+        called = []
+        monkeypatch.setattr(
+            ClassifierActionsManager, "invalidate_for_directories",
+            lambda *a, **kw: called.append(1),
+        )
+        monkeypatch.setattr(
+            ClassifierActionsManager, "clear_prevalidation_result_cache",
+            lambda: called.append(1),
+        )
+        tab._delete(p)
+        assert called == []
 
 
 # ---------------------------------------------------------------------------

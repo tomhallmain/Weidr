@@ -985,10 +985,11 @@ class FrameCache:
         )
         effective_frames = _apply_duration_cap(total_frames, fps, duration_seconds, max_duration_seconds)
         if effective_frames < total_frames and not suppress_cap_log:
-            logger.debug(
-                "Capping video sampling to first %.0fs (%.0fs total) for %s",
-                max_duration_seconds, duration_seconds, video_path,
-            )
+            if config.debug:
+                logger.debug(
+                    "Capping video sampling to first %.0fs (%.0fs total) for %s",
+                    max_duration_seconds, duration_seconds, video_path,
+                )
         frame_indices = cls._compute_sample_indices(
             total_items=effective_frames,
             sample_ratio=sample_ratio,
@@ -1197,10 +1198,11 @@ class FrameCache:
             )
             effective_frames = _apply_duration_cap(total_frames, fps, duration_seconds, max_duration_seconds)
             if effective_frames < total_frames and not suppress_cap_log:
-                logger.debug(
-                    "Capping video sampling to first %.0fs (%.0fs total) for %s",
-                    max_duration_seconds, duration_seconds, video_path,
-                )
+                if config.debug:
+                    logger.debug(
+                        "Capping video sampling to first %.0fs (%.0fs total) for %s",
+                        max_duration_seconds, duration_seconds, video_path,
+                    )
             frame_indices = cls._compute_sample_indices(
                 total_items=effective_frames,
                 sample_ratio=sample_ratio,

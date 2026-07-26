@@ -76,9 +76,12 @@ class ClassifierActionsManager:
             out.pop("_last_used_profile", None)
             return out
 
+        from compare.classifier_pipeline import ClassifierPipelines
+
         payload = {
             "prevalidations": [_strip_last_used(pv.to_dict()) for pv in ClassifierActionsManager.prevalidations],
             "classifier_actions": [_strip_last_used(a.to_dict()) for a in ClassifierActionsManager.classifier_actions],
+            "pipelines": [_strip_last_used(p.to_dict()) for p in ClassifierPipelines.get_prevalidation_pipelines()],
             "enable_prevalidations": config.enable_prevalidations,
             "dynamic_media_min_sample_count": config.dynamic_media_min_sample_count,
             "dynamic_media_max_sample_frames": config.dynamic_media_max_sample_frames,
@@ -261,6 +264,135 @@ class ClassifierActionsManager:
             if os.path.normcase(os.path.normpath(os.path.dirname(path))) in norm_dirs:
                 del ClassifierActionsManager.prevalidated_cache[path]
         set_signature_memo(None)
+
+    @staticmethod
+    def get_profile_scope_dirs(obj) -> Optional[set]:
+        """
+        Return the directory set a profile-scoped prevalidation or
+        prevalidation-pipeline is gated to, or ``None`` if it's global (no
+        profile). Works for both ``Prevalidation`` and
+        ``PrevalidationPipeline`` -- both expose the same
+        ``profile``/``profile_name`` attributes, resolved identically by
+        ``update_profile_instance()``. Shared so both object kinds compute
+        "which directories does this thing affect" the same way.
+        """
+        if obj.profile is not None:
+            return set(obj.profile.directories)
+        if obj.profile_name:
+            prof = DirectoryProfile.get_profile_by_name(obj.profile_name)
+            if prof:
+                return set(prof.directories)
+        return None
+
+    @staticmethod
+    def invalidate_for_profile_edit(
+        old_dirs: Optional[set], new_dirs: Optional[set], *, reason: str = ""
+    ) -> None:
+        """
+        For a DirectoryProfile's own directory-list edit (add/remove a
+        directory from the profile) -- evict only the directories whose
+        profile membership actually changed: the symmetric difference of
+        *old_dirs* and *new_dirs*.
+
+        Symmetric difference, not union, is correct specifically here
+        because editing a profile's directory list cannot change any
+        prevalidation/pipeline's own matching logic -- only which
+        directories that unchanged logic applies to. A directory present in
+        both snapshots had an unchanged gating relationship throughout, so
+        nothing cached under it could have gone stale. (This is the
+        opposite of ``invalidate_for_policy_save`` below, where the
+        object's own content may have changed too.)
+
+        Either side being ``None`` means global scope (no profile) and
+        forces a full eviction, since a global-scoped prevalidation/pipeline
+        can affect any directory.
+        """
+        if old_dirs is None or new_dirs is None:
+            logger.info(
+                "Prevalidation cache: full eviction — %s (global-scoped prevalidation/pipeline affected)",
+                reason,
+            )
+            ClassifierActionsManager.clear_prevalidation_result_cache()
+            return
+        affected = old_dirs ^ new_dirs
+        if affected:
+            logger.info(
+                "Prevalidation cache: targeted eviction for changed profile membership — %s",
+                reason,
+            )
+            ClassifierActionsManager.invalidate_for_directories(affected)
+        else:
+            logger.info(
+                "Prevalidation cache: no eviction needed — %s (directory scope unchanged)",
+                reason,
+            )
+
+    @staticmethod
+    def invalidate_for_policy_save(
+        old_dirs: Optional[set], new_dirs: Optional[set], *, reason: str = ""
+    ) -> None:
+        """
+        For a prevalidation/pipeline itself being saved (added or modified)
+        -- evict the union of its profile-scoped directories before and
+        after the edit.
+
+        Union, not symmetric difference, is correct here because the saved
+        object's own matching logic may have changed too, not just its
+        profile assignment -- any directory it was scoped to *or* is now
+        scoped to could have a stale cached result. A freshly added object
+        has no prior state, so callers should pass an empty set for
+        *old_dirs* in that case.
+
+        Either side being ``None`` means global scope (no profile) and
+        forces a full eviction.
+        """
+        if old_dirs is None or new_dirs is None:
+            logger.info(
+                "Prevalidation cache: full eviction — %s (global-scoped prevalidation/pipeline affected)",
+                reason,
+            )
+            ClassifierActionsManager.clear_prevalidation_result_cache()
+            return
+        affected = old_dirs | new_dirs
+        if affected:
+            logger.info(
+                "Prevalidation cache: targeted eviction requested — %s", reason
+            )
+            ClassifierActionsManager.invalidate_for_directories(affected)
+        else:
+            logger.info(
+                "Prevalidation cache: no eviction needed — %s (no directories affected)",
+                reason,
+            )
+
+    @staticmethod
+    def invalidate_for_removal(dirs: Optional[set], *, reason: str = "") -> None:
+        """
+        For a prevalidation/pipeline being deleted -- evict exactly its own
+        profile-scoped directories, or nothing if it was global-scoped
+        (removal only narrows the effective scope: no cached result becomes
+        wrong when a global rule stops applying).
+
+        *dirs* is the deleted object's own scope, from
+        ``get_profile_scope_dirs`` read *before* removal -- ``None`` means it
+        was global, an empty set means it was profile-scoped to a profile
+        with no directories.
+        """
+        if dirs is None:
+            logger.info(
+                "Prevalidation cache: no eviction — %s"
+                " (global scope narrows, no cached results become stale)",
+                reason,
+            )
+            return
+        if dirs:
+            logger.info("Prevalidation cache: targeted eviction — %s", reason)
+            ClassifierActionsManager.invalidate_for_directories(dirs)
+        else:
+            logger.info(
+                "Prevalidation cache: no eviction needed — %s (no directories affected)",
+                reason,
+            )
 
     @staticmethod
     def _prevalidations_post_init():
@@ -627,34 +759,51 @@ class ClassifierActionsManager:
     def get_profile_usage(profile_name: str) -> dict:
         """
         Get information about what's using a profile by checking the actual lists.
-        
+
+        Matches by object identity (``.profile is profile``) as well as by
+        name, so a reference survives an in-place profile rename
+        (``DirectoryProfile.update_profile()`` mutates the same object;
+        ``Prevalidation``/``PrevalidationPipeline`` resolve ``.profile`` to
+        that live object, but only refresh their own ``.profile_name``
+        string when explicitly re-saved).
+
         Returns:
             Dictionary with keys:
-            - 'prevalidations': List of prevalidation names using this profile
-            - 'classifier_actions': List of classifier action names that have this profile as their last used profile
+            - 'prevalidations': names of prevalidations using this profile
+            - 'pipelines': names of prevalidation pipelines using this profile
+            - 'classifier_actions': names of classifier actions that have this profile as their last used profile
         """
-        # Check prevalidations list directly
+        profile = DirectoryProfile.get_profile_by_name(profile_name)
+
+        def _references(obj) -> bool:
+            return (profile is not None and obj.profile is profile) or obj.profile_name == profile_name
+
         prevalidation_names = [
-            pv.name for pv in ClassifierActionsManager.prevalidations 
-            if pv.profile_name == profile_name
+            pv.name for pv in ClassifierActionsManager.prevalidations if _references(pv)
         ]
-        
+
+        from compare.classifier_pipeline import ClassifierPipelines
+        pipeline_names = [
+            p.name for p in ClassifierPipelines.get_prevalidation_pipelines() if _references(p)
+        ]
+
         # Check classifier actions for last used profile matching profile name
         classifier_action_names = [
             ca.name for ca in ClassifierActionsManager.classifier_actions
             if ca._last_used_profile and ca._last_used_profile == profile_name
         ]
-        
+
         return {
             'prevalidations': prevalidation_names,
+            'pipelines': pipeline_names,
             'classifier_actions': classifier_action_names
         }
-    
+
     @staticmethod
     def can_remove_profile(profile_name: str) -> tuple[bool, List[str]]:
         """
         Check if a profile can be safely removed.
-        
+
         Returns:
             Tuple of (can_remove, warnings)
             - can_remove: True if profile can be removed
@@ -662,13 +811,16 @@ class ClassifierActionsManager:
         """
         usage = ClassifierActionsManager.get_profile_usage(profile_name)
         warnings = []
-        
+
         if usage['prevalidations']:
             warnings.append(f"prevalidations: {', '.join(usage['prevalidations'])}")
-        
+
+        if usage['pipelines']:
+            warnings.append(f"pipelines: {', '.join(usage['pipelines'])}")
+
         if usage['classifier_actions']:
             warnings.append(f"classifier actions (last used profile): {', '.join(usage['classifier_actions'])}")
-        
+
         return (len(warnings) == 0, warnings)
     
     @staticmethod

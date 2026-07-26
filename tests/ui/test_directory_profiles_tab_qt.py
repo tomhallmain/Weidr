@@ -2,19 +2,34 @@
 Tests for DirectoryProfilesTab.
 
 Covers widget construction, list population, cache-eviction logic on
-remove/edit, _profile_linked_dirs, _invalidate_for_dir_sets, and refresh.
-DirectoryProfileWindow open/close paths are not exercised here.
+remove/edit, _profile_linked_dirs, ClassifierActionsManager.invalidate_for_profile_edit,
+and refresh. The real DirectoryProfileWindow dialog is not constructed;
+TestEditProfileEvictionMessaging substitutes a fake to capture and invoke
+the _on_edited callback directly.
 """
 
 from __future__ import annotations
 
+import pytest
+
 from compare.classifier_actions_manager import ClassifierActionsManager
 from compare.classifier_action import Prevalidation
+from compare.classifier_pipeline import ClassifierPipelines, PrevalidationPipeline
 from files.directory_profile import DirectoryProfile
 from ui.compare.directory_profiles_tab_qt import DirectoryProfilesTab
 
 # Isolation (DirectoryProfile.directory_profiles, ClassifierActionsManager.prevalidations)
 # is provided by the root conftest reset_app_globals autouse fixture.
+
+
+@pytest.fixture(autouse=True)
+def _reset_profile_window():
+    """DirectoryProfilesTab._profile_window is a class-level singleton
+    reference, not reset by the root conftest -- clear it so a fake window
+    substituted in one test can't leak into another."""
+    DirectoryProfilesTab._profile_window = None
+    yield
+    DirectoryProfilesTab._profile_window = None
 
 
 # ---------------------------------------------------------------------------
@@ -118,6 +133,33 @@ class TestProfileLinkedDirs:
         result = DirectoryProfilesTab._profile_linked_dirs(p)
         assert result == set()
 
+    def test_returns_dirs_when_pipeline_links_by_name(self):
+        p = _add_profile("pipeline_linked", dirs=["/x", "/y"])
+        pp = PrevalidationPipeline(name="pp")
+        pp.profile_name = "pipeline_linked"
+        ClassifierPipelines.add_pipeline(pp)
+        result = DirectoryProfilesTab._profile_linked_dirs(p)
+        assert result == {"/x", "/y"}
+
+    def test_returns_dirs_when_pipeline_links_by_instance(self):
+        p = _add_profile("pipeline_linked_inst", dirs=["/z"])
+        pp = PrevalidationPipeline(name="pp2")
+        pp.profile = p
+        ClassifierPipelines.add_pipeline(pp)
+        result = DirectoryProfilesTab._profile_linked_dirs(p)
+        assert result == {"/z"}
+
+    def test_profile_used_only_by_action_pipeline_is_not_linked(self):
+        """A plain (non-prevalidation) ClassifierPipeline never gates on a
+        profile, so it must not count as usage."""
+        from compare.classifier_pipeline import ClassifierPipeline
+
+        p = _add_profile("action_only", dirs=["/w"])
+        cp = ClassifierPipeline(name="cp")
+        ClassifierPipelines.add_pipeline(cp)
+        result = DirectoryProfilesTab._profile_linked_dirs(p)
+        assert result == set()
+
 
 # ---------------------------------------------------------------------------
 # Remove profile — cache eviction
@@ -173,18 +215,102 @@ class TestRemoveProfile:
 
 
 # ---------------------------------------------------------------------------
-# _invalidate_for_dir_sets
+# _edit_profile / _on_edited -- eviction messaging
 # ---------------------------------------------------------------------------
 
-class TestInvalidateForDirSets:
-    def test_none_in_dir_sets_triggers_full_eviction(self, monkeypatch):
+class _FakeProfileWindow:
+    """Stand-in for DirectoryProfileWindow that just captures the
+    refresh_callback (_on_edited) so tests can invoke it directly without
+    constructing the real dialog."""
+
+    captured_callback = None
+
+    def __init__(self, parent, app_actions, callback, profile=None, **kwargs):
+        _FakeProfileWindow.captured_callback = callback
+
+    def show(self) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
+
+class TestEditProfileEvictionMessaging:
+    def test_unused_profile_edit_skips_dirs_diff_entirely(self, qtbot, monkeypatch):
+        """Regression test: a profile edit with nothing referencing it must
+        not go through the symmetric-difference dirs-diff at all -- doing so
+        previously produced a misleading "directory scope unchanged" log even
+        when directories were actually added/removed, since
+        _profile_linked_dirs returns an empty set for both snapshots
+        whenever nothing is linked."""
+        import ui.compare.directory_profile_window_qt as dpw_module
+
+        p = _add_profile("unused_edit", dirs=["/a", "/b"])
+        monkeypatch.setattr(dpw_module, "DirectoryProfileWindow", _FakeProfileWindow)
+        tab = _make_tab(qtbot)
+        tab._prof_listbox.setCurrentRow(0)
+
+        called = []
+        monkeypatch.setattr(
+            ClassifierActionsManager, "invalidate_for_profile_edit",
+            lambda *a, **kw: called.append(1),
+        )
+
+        tab._edit_profile()
+        assert _FakeProfileWindow.captured_callback is not None
+        # Simulate the directory-removal edit, then the window's completion callback.
+        p.directories = ["/a"]
+        _FakeProfileWindow.captured_callback()
+
+        assert called == []
+
+    def test_linked_profile_edit_uses_dirs_diff(self, qtbot, monkeypatch):
+        import ui.compare.directory_profile_window_qt as dpw_module
+
+        p = _add_profile("linked_edit", dirs=["/a", "/b"])
+        pv = Prevalidation(name="pv")
+        pv.profile_name = "linked_edit"
+        ClassifierActionsManager.prevalidations.append(pv)
+        monkeypatch.setattr(dpw_module, "DirectoryProfileWindow", _FakeProfileWindow)
+        tab = _make_tab(qtbot)
+        tab._prof_listbox.setCurrentRow(0)
+
+        diffed = []
+        monkeypatch.setattr(
+            ClassifierActionsManager, "invalidate_for_profile_edit",
+            lambda old, new, **kw: diffed.append((old, new)),
+        )
+
+        tab._edit_profile()
+        p.directories = ["/a"]
+        _FakeProfileWindow.captured_callback()
+
+        assert diffed == [({"/a", "/b"}, {"/a"})]
+
+
+# ---------------------------------------------------------------------------
+# ClassifierActionsManager.invalidate_for_profile_edit
+# ---------------------------------------------------------------------------
+
+class TestInvalidateForProfileEdit:
+    def test_old_none_triggers_full_eviction(self, monkeypatch):
         cleared = []
         monkeypatch.setattr(
             ClassifierActionsManager,
             "clear_prevalidation_result_cache",
             lambda: cleared.append(1),
         )
-        DirectoryProfilesTab._invalidate_for_dir_sets(None, reason="test")
+        ClassifierActionsManager.invalidate_for_profile_edit(None, {"/a"}, reason="test")
+        assert cleared == [1]
+
+    def test_new_none_triggers_full_eviction(self, monkeypatch):
+        cleared = []
+        monkeypatch.setattr(
+            ClassifierActionsManager,
+            "clear_prevalidation_result_cache",
+            lambda: cleared.append(1),
+        )
+        ClassifierActionsManager.invalidate_for_profile_edit({"/a"}, None, reason="test")
         assert cleared == [1]
 
     def test_empty_dir_sets_triggers_no_eviction(self, monkeypatch):
@@ -200,16 +326,54 @@ class TestInvalidateForDirSets:
             "invalidate_for_directories",
             lambda dirs, **kw: targeted.append(dirs),
         )
-        DirectoryProfilesTab._invalidate_for_dir_sets(set(), set(), reason="test")
+        ClassifierActionsManager.invalidate_for_profile_edit(set(), set(), reason="test")
         assert cleared == []
         assert targeted == []
 
-    def test_non_empty_dir_sets_triggers_targeted_eviction(self, monkeypatch):
+    def test_disjoint_dir_sets_triggers_targeted_eviction_of_both(self, monkeypatch):
         targeted = []
         monkeypatch.setattr(
             ClassifierActionsManager,
             "invalidate_for_directories",
             lambda dirs, **kw: targeted.append(dirs),
         )
-        DirectoryProfilesTab._invalidate_for_dir_sets({"/a"}, {"/b"}, reason="test")
+        ClassifierActionsManager.invalidate_for_profile_edit({"/a"}, {"/b"}, reason="test")
         assert targeted == [{"/a", "/b"}]
+
+    def test_directory_added_to_profile_evicts_only_the_added_directory(self, monkeypatch):
+        """Regression test for the reported bug: adding one directory to a
+        profile with N existing directories must evict only the new one, not
+        all N+1 -- i.e. the symmetric difference, not the union."""
+        targeted = []
+        monkeypatch.setattr(
+            ClassifierActionsManager,
+            "invalidate_for_directories",
+            lambda dirs, **kw: targeted.append(dirs),
+        )
+        old_dirs = {f"/dir{i}" for i in range(18)}
+        new_dirs = old_dirs | {"/dir18"}
+        ClassifierActionsManager.invalidate_for_profile_edit(old_dirs, new_dirs, reason="test")
+        assert targeted == [{"/dir18"}]
+
+    def test_directory_removed_from_profile_evicts_only_the_removed_directory(self, monkeypatch):
+        targeted = []
+        monkeypatch.setattr(
+            ClassifierActionsManager,
+            "invalidate_for_directories",
+            lambda dirs, **kw: targeted.append(dirs),
+        )
+        old_dirs = {"/a", "/b", "/c"}
+        new_dirs = {"/a", "/b"}
+        ClassifierActionsManager.invalidate_for_profile_edit(old_dirs, new_dirs, reason="test")
+        assert targeted == [{"/c"}]
+
+    def test_unchanged_dir_sets_trigger_no_eviction(self, monkeypatch):
+        targeted = []
+        monkeypatch.setattr(
+            ClassifierActionsManager,
+            "invalidate_for_directories",
+            lambda dirs, **kw: targeted.append(dirs),
+        )
+        same = {"/a", "/b"}
+        ClassifierActionsManager.invalidate_for_profile_edit(same, set(same), reason="test")
+        assert targeted == []

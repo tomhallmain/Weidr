@@ -21,11 +21,14 @@ ClassifierActionsManager.clear_prevalidation_result_cache().  For
 interactive edits during a session, targeted eviction is preferred so that
 expensive dynamic-media results for unaffected directories are preserved.
 
-The helpers ``_pv_dirs`` (here) and ``_profile_linked_dirs``
-(DirectoryProfilesTab) compute the set of filesystem directories that a
-prevalidation or profile touches.  A return value of ``None`` from
-``_pv_dirs`` means the prevalidation is global-scoped (no profile), which
-forces a full eviction via the ``_invalidate_for_dir_sets`` dispatcher.
+``ClassifierActionsManager.get_profile_scope_dirs`` (shared with
+ClassifierPipelinesTab/ClassifierPipelineEditorDialog, since
+Prevalidation and PrevalidationPipeline expose the same profile/profile_name
+shape) and ``_profile_linked_dirs`` (DirectoryProfilesTab) compute the set
+of filesystem directories that a prevalidation or profile touches.  A
+return value of ``None`` from ``get_profile_scope_dirs`` means the
+prevalidation is global-scoped (no profile), which forces a full eviction
+via the ``ClassifierActionsManager.invalidate_for_policy_save`` dispatcher.
 
 Per-operation rules
 ~~~~~~~~~~~~~~~~~~~
@@ -33,9 +36,16 @@ Prevalidation *saved* (add or modify):
     Evict the union of the prevalidation's profile directories **before** the
     edit (snapshot taken in ``_open_modify_window`` before the window mutates
     the object) and **after** the edit (read back from the now-modified object
-    in the callback).  Either state being ``None`` (global scope) forces a
-    full eviction.  A freshly added prevalidation has no prior state, so
-    ``old_dirs`` is treated as an empty set.
+    in the callback), via ``ClassifierActionsManager.invalidate_for_policy_save``.
+    Either state being ``None`` (global scope) forces a full eviction.  A
+    freshly added prevalidation has no prior state, so ``old_dirs`` is
+    treated as an empty set.  Union, not symmetric difference, because the
+    prevalidation's own matching logic may have changed too (not just its
+    profile assignment) -- unlike a pure profile-directory-list edit (see
+    directory_profiles_tab_qt.py), a save here can't be assumed to leave the
+    object's own behavior unchanged, so both the old and new scope need
+    re-evaluation. ClassifierPipelineEditorDialog's pipeline save uses the
+    identical function for the identical reason.
 
 Prevalidation *added via copy* (``ClassifierActionCopyWindow``):
     The new prevalidation has no old state.  ``refresh_prevalidations`` falls
@@ -400,7 +410,8 @@ class PrevalidationsTab(QWidget):
         # modify window mutates the object in-place via _finalize_specific.
         # An add (prevalidation=None) has no prior state → treat as empty set.
         self._modify_old_dirs = (
-            self._pv_dirs(prevalidation) if prevalidation is not None else set()
+            ClassifierActionsManager.get_profile_scope_dirs(prevalidation)
+            if prevalidation is not None else set()
         )
         PrevalidationsTab._modify_window = PrevalidationModifyWindow(
             self.window(),
@@ -424,56 +435,6 @@ class PrevalidationsTab(QWidget):
             refresh_prevalidations_callback=self.refresh_prevalidations,
         ).show()
 
-    # ------------------------------------------------------------------
-    # Cache-eviction helpers
-    # ------------------------------------------------------------------
-    @staticmethod
-    def _pv_dirs(pv: Prevalidation) -> "set[str] | None":
-        """
-        Return the set of directories this prevalidation is scoped to, or
-        ``None`` if it is global (no profile).
-        """
-        if pv.profile is not None:
-            return set(pv.profile.directories)
-        if pv.profile_name:
-            prof = next(
-                (p for p in DirectoryProfile.directory_profiles
-                 if p.name == pv.profile_name),
-                None,
-            )
-            if prof:
-                return set(prof.directories)
-        return None
-
-    def _invalidate_for_dir_sets(
-        self, *dir_sets: "set[str] | None", reason: str = ""
-    ) -> None:
-        """
-        Evict the union of *dir_sets* from both caches, or perform a full
-        eviction if any element is ``None`` (global prevalidation scope).
-        """
-        if any(d is None for d in dir_sets):
-            logger.info(
-                "Prevalidation cache: full eviction requested — %s"
-                " (global-scoped prevalidation affected)",
-                reason,
-            )
-            ClassifierActionsManager.clear_prevalidation_result_cache()
-            return
-        affected: set[str] = set()
-        for d in dir_sets:
-            affected |= d  # type: ignore[operator]
-        if affected:
-            logger.info(
-                "Prevalidation cache: targeted eviction requested — %s", reason
-            )
-            ClassifierActionsManager.invalidate_for_directories(affected)
-        else:
-            logger.info(
-                "Prevalidation cache: no eviction needed — %s"
-                " (no directories affected)",
-                reason,
-            )
 
     def _rebuild_supporting_state(self) -> None:
         """Rebuild directories_to_exclude and repaint the prevalidation rows."""
@@ -503,12 +464,12 @@ class PrevalidationsTab(QWidget):
             old_dirs = self._modify_old_dirs
             del self._modify_old_dirs
             new_dirs = (
-                self._pv_dirs(prevalidation)
+                ClassifierActionsManager.get_profile_scope_dirs(prevalidation)
                 if prevalidation is not None
                 else set()
             )
             pv_name = prevalidation.name if prevalidation is not None else "<new>"
-            self._invalidate_for_dir_sets(
+            ClassifierActionsManager.invalidate_for_policy_save(
                 old_dirs, new_dirs,
                 reason=f"prevalidation '{pv_name}' saved",
             )
@@ -523,7 +484,7 @@ class PrevalidationsTab(QWidget):
 
     def _toggle_active(self, prevalidation, value: bool) -> None:
         prevalidation.is_active = value
-        dirs = self._pv_dirs(prevalidation)
+        dirs = ClassifierActionsManager.get_profile_scope_dirs(prevalidation)
         label = f"prevalidation '{prevalidation.name}' {'activated' if value else 'deactivated'}"
         if dirs is None:
             # Global scope: clear all in-memory entries and memo, but leave
@@ -538,26 +499,19 @@ class PrevalidationsTab(QWidget):
     def _delete(self, prevalidation) -> None:
         # Read dirs before removal; the object's profile attrs are still valid
         # after list removal since we hold a reference to the same instance.
-        dirs = self._pv_dirs(prevalidation) if prevalidation is not None else set()
+        dirs = (
+            ClassifierActionsManager.get_profile_scope_dirs(prevalidation)
+            if prevalidation is not None else set()
+        )
         if (
             prevalidation is not None
             and prevalidation in ClassifierActionsManager.prevalidations
         ):
             ClassifierActionsManager.prevalidations.remove(prevalidation)
-        # Global prevalidation (dirs is None) removed → effective scope narrows,
-        # no cached result becomes wrong → no eviction needed.
-        # Profile-scoped removal → evict only the affected directories.
-        if dirs is not None:
-            pv_name = prevalidation.name if prevalidation is not None else "<unknown>"
-            self._invalidate_for_dir_sets(
-                dirs, reason=f"prevalidation '{pv_name}' deleted"
-            )
-        else:
-            logger.info(
-                "Prevalidation cache: no eviction — global prevalidation '%s'"
-                " deleted (scope narrows, no cached results become stale)",
-                prevalidation.name if prevalidation is not None else "<unknown>",
-            )
+        pv_name = prevalidation.name if prevalidation is not None else "<unknown>"
+        ClassifierActionsManager.invalidate_for_removal(
+            dirs, reason=f"prevalidation '{pv_name}' deleted"
+        )
         self._rebuild_supporting_state()
 
     def _move_down(self, idx: int, prevalidation) -> None:

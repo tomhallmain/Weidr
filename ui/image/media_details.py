@@ -1478,14 +1478,16 @@ class MediaDetails(SmartWindow):
         if ClassifierActionsManager.is_dynamic_prevalidation_media(media_path):
             # Phase 1: dynamic-media advisory needs frame sampling (slow on the
             # UI thread); deferred.
-            logger.info("Advisory prevalidation skipped for dynamic media: %s", media_path)
+            if config.debug:
+                logger.debug("Advisory prevalidation skipped for dynamic media: %s", media_path)
             return True
         # Recent-file-action exemption — checked only after every other gate:
         # a recently moved/copied file was either displayable in its original
         # context (manual) or already skipped once (auto).
         if ClassifierActionsManager.is_exempt_from_direct_display_check(media_path):
-            logger.info("Advisory prevalidation exempt (recent file action or "
-                        "known move target): %s", media_path)
+            if config.debug:
+                logger.debug("Advisory prevalidation exempt (recent file action or "
+                             "known move target): %s", media_path)
             return True
         # The originating window's base_dir gates the advisory the same way it
         # gates normal prevalidation (excluded dirs, profiles, move targets);

@@ -8,7 +8,6 @@ import subprocess
 import sys
 import threading
 
-from utils.running_tasks_registry import start_thread
 from utils.logging_setup import get_logger
 
 class Utils:
@@ -492,15 +491,6 @@ class Utils:
             except FileNotFoundError:
                 pass
         Utils.open_file_location(filepath)
-
-    @staticmethod
-    def open_file_in_gimp(filepath, gimp_exe_loc="gimp-2.10"):
-        def gimp_process():
-            command = ["set", "LANG=en", "&&", gimp_exe_loc, filepath]
-            process = subprocess.call(command, shell=True)
-            if process != 0:
-                raise Exception("Could not open file in GIMP")
-        start_thread(gimp_process)
 
     @staticmethod
     def is_external_drive(filepath):

@@ -151,7 +151,25 @@ class GimpWrapper:
         self._original_file_path = None
         self._temp_file_path = None
         self._original_file_hash = None
-        
+
+    @staticmethod
+    def _build_gimp_launch_env() -> Dict[str, str]:
+        """
+        Build the environment for a GIMP child process.
+
+        Explicit rather than relying on shell inheritance, so every GIMP
+        launch site uses the same, inspectable environment. `LANG` is
+        `config.gimp_locale` if set, otherwise whatever `config.locale`
+        already resolved to (`os.environ["LANG"]`, set once in
+        `Config._load_config()`) -- GIMP follows Weidr's own locale by
+        default instead of being pinned to a hardcoded value.
+        """
+        env = dict(os.environ)
+        lang = config.gimp_locale or config.locale
+        if lang:
+            env["LANG"] = lang
+        return env
+
     def _wait_for_file_release(self, filepath: str, max_wait_seconds: int = 30) -> bool:
         """
         Wait for file to be released by GIMP process.
@@ -305,8 +323,8 @@ class GimpWrapper:
         logger.info("Attempting to unload current file from GIMP")
         try:
             # Call GIMP with no arguments to potentially unload current file
-            unload_command = ["set", "LANG=en", "&&", gimp_exe_loc]
-            subprocess.call(unload_command, shell=True, timeout=5)
+            unload_command = [gimp_exe_loc]
+            subprocess.call(unload_command, env=self._build_gimp_launch_env(), timeout=5)
             logger.info("GIMP unload command completed")
         except subprocess.TimeoutExpired:
             logger.warning("GIMP unload command timed out, proceeding anyway")
@@ -388,8 +406,8 @@ class GimpWrapper:
             global _gimp_process, _current_filepath, _is_gimp_running, _current_wrapper
             try:
                 start_time = time.time()
-                command = ["set", "LANG=en", "&&", gimp_exe_loc, filepath]
-                process = subprocess.Popen(command, shell=True)
+                command = [gimp_exe_loc, filepath]
+                process = subprocess.Popen(command, env=self._build_gimp_launch_env())
                 _gimp_process = process
                 _is_gimp_running = True
                 
@@ -460,8 +478,8 @@ class GimpWrapper:
                 try:
                     # Use subprocess.Popen for better process control
                     process = subprocess.Popen(
-                        ["set", "LANG=en", "&&", gimp_exe_loc, self._temp_file_path],
-                        shell=True
+                        [gimp_exe_loc, self._temp_file_path],
+                        env=self._build_gimp_launch_env(),
                     )
                     
                     # Store process reference for potential termination

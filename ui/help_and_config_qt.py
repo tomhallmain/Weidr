@@ -506,6 +506,9 @@ class HelpAndConfig(SmartDialog):
         self._le_gimp_exe = self._add_entry_row(
             _("GIMP Executable Location"), str(config.gimp_exe_loc or ""),
         )
+        self._le_gimp_locale = self._add_entry_row(
+            _("GIMP Locale (blank = follow app locale)"), str(config.gimp_locale or ""),
+        )
         self._le_sd_prompt_reader = self._add_entry_row(
             _("Stable Diffusion Prompt Reader Location"), str(config.sd_prompt_reader_loc or ""),
         )
@@ -593,6 +596,7 @@ class HelpAndConfig(SmartDialog):
             ("_le_large_promotion_max_mb",       "large_image_promotion_max_estimated_mb"),
             ("_le_large_promotion_ram_fraction", "large_image_promotion_available_ram_fraction"),
             ("_le_gimp_exe",                     "gimp_exe_loc"),
+            ("_le_gimp_locale",                  "gimp_locale"),
             ("_le_sd_prompt_reader",             "sd_prompt_reader_loc"),
         ]
 

@@ -84,6 +84,7 @@ class Config:
         "large_image_promotion_available_ram_fraction": float,
         # External tools
         "gimp_exe_loc":                        None,
+        "gimp_locale":                         None,
         "sd_prompt_reader_loc":                None,
     }
 
@@ -245,6 +246,9 @@ class Config:
         self.refacdir_client_port = 6001
         self.refacdir_client_password = "<PASSWORD>"
         self.gimp_exe_loc = "gimp-2.10"
+        # Unset by default: GIMP inherits Weidr's own resolved locale (self.locale /
+        # os.environ["LANG"]) unless a GIMP-specific locale is explicitly configured.
+        self.gimp_locale = None
         self._gimp_validated = False  # Cache for GIMP validation result
         self.gimp_gegl_enabled = True  # Will be overridden if GIMP 3 not available
         self.gimp_gegl_timeout = 60  # Timeout for GIMP operations in seconds
@@ -268,7 +272,7 @@ class Config:
         self._migrate_legacy_keys()
 
         if dict_set:
-            self.set_values(None, "trash_folder")
+            self.set_values(None, "trash_folder", "gimp_locale")
             self.set_values(list,
                             "image_types",
                             "video_types",

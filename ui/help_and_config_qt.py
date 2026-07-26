@@ -337,6 +337,10 @@ class HelpAndConfig(SmartDialog):
         self._le_default_secondary_window_size = self._add_entry_row(
             _("Default Secondary Window Size"), str(config.default_secondary_window_size),
         )
+        self._le_background_opacity = self._add_entry_row(
+            _("Background Opacity (0.0-1.0; depends on OS compositing support)"),
+            str(config.background_opacity),
+        )
         self._cb_show_negative_prompt = self._add_checkbox_row(
             _("Show Negative Prompt in Image Details"), config.show_negative_prompt,
         )
@@ -561,6 +565,7 @@ class HelpAndConfig(SmartDialog):
             ("_le_title_notify_persist",         "title_notify_persist_seconds"),
             ("_le_default_main_window_size",     "default_main_window_size"),
             ("_le_default_secondary_window_size","default_secondary_window_size"),
+            ("_le_background_opacity",           "background_opacity"),
             ("_le_slideshow_interval",           "slideshow_interval_seconds"),
             ("_le_slideshow_video_cap",          "slideshow_dynamic_video_max_seconds"),
             ("_le_slideshow_gif_cap",            "slideshow_dynamic_gif_max_seconds"),

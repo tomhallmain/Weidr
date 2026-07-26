@@ -249,6 +249,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
 
         # Splitter inside content: sidebar | media frame
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.splitter.setObjectName("contentSplitter")
         content_layout.addWidget(self.splitter)
 
         # Sidebar panel (left)
@@ -257,6 +258,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
 
         # Right-side stack: full viewer (index 0) or masonry grid (index 1)
         self._media_stack = QStackedWidget()
+        self._media_stack.setObjectName("mediaStack")
         self.splitter.addWidget(self._media_stack)
 
         self.media_frame = MediaFrame(parent=self)
@@ -554,6 +556,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
     def _apply_theme(self) -> None:
         """Apply the combined base + frameless stylesheet and title bar theme."""
         is_dark = AppStyle.IS_DEFAULT_THEME
+        AppStyle.set_background_opacity(config.background_opacity)
         stylesheet = AppStyle.get_stylesheet() + AppStyle.get_frameless_stylesheet(is_dark)
         self.setStyleSheet(stylesheet)
         self.media_frame.set_background_color(

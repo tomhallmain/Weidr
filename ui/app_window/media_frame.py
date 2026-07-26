@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QDialog,
 )
 from PySide6.QtCore import Qt, QRectF, QSize, QPoint, QRect, QEvent, QTimer, Signal, QObject, QThread, Slot
-from PySide6.QtGui import QColor, QImage, QPixmap, QImageReader, QPainter, QCursor, QMovie
+from PySide6.QtGui import QBrush, QColor, QImage, QPixmap, QImageReader, QPainter, QCursor, QMovie
 
 from lib.blur_overlay_qt import BlurOverlay
 from lib.zoomable_graphics_view_qt import ZoomableGraphicsView
@@ -175,6 +175,9 @@ class MediaFrame(QFrame):
         self._graphics_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._graphics_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._graphics_view.setStyleSheet(f"background-color: {AppStyle.MEDIA_BG};")
+        # Viewport auto-fills opaquely before drawBackground() runs, masking
+        # any alpha in the brush set below -- disable it.
+        self._graphics_view.viewport().setAutoFillBackground(False)
         self._graphics_view.set_interaction_enabled(False)
         self._scene = QGraphicsScene(self)
         self._graphics_view.setScene(self._scene)
@@ -269,8 +272,15 @@ class MediaFrame(QFrame):
 
     def set_background_color(self, background_color):
         color = background_color or AppStyle.MEDIA_BG
-        self.setStyleSheet(f"background-color: {color};")
-        self._graphics_view.setStyleSheet(f"background-color: {color};")
+        opacity = AppStyle.get_background_opacity()
+        rgba = AppStyle.hex_to_rgba(color, opacity)
+        self.setStyleSheet(f"background-color: {rgba};")
+        self._graphics_view.setStyleSheet(f"background-color: {rgba};")
+        # The QSS above only paints the view's frame, not the viewport where
+        # the scene renders -- that needs the background brush instead.
+        qcolor = QColor(color)
+        qcolor.setAlphaF(opacity)
+        self._graphics_view.setBackgroundBrush(QBrush(qcolor))
 
     def _next_request_id(self) -> int:
         self._image_request_id += 1

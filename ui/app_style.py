@@ -68,6 +68,7 @@ class AppStyle:
     # Configuration
     _corner_radius = 10
     _is_dark = True
+    _background_opacity = 1.0
 
     @staticmethod
     def get_theme_name():
@@ -104,12 +105,36 @@ class AppStyle:
     def set_corner_radius(cls, radius: int):
         """Set the corner radius for rounded window corners."""
         cls._corner_radius = radius
-    
+
     @classmethod
     def get_corner_radius(cls) -> int:
         """Get the current corner radius."""
         return cls._corner_radius
-    
+
+    @classmethod
+    def set_background_opacity(cls, opacity: float):
+        """Set the opacity (0.0-1.0) applied to MediaFrame's background.
+
+        Clamped to avoid an invalid stylesheet. Scoped to MediaFrame only --
+        title bar and sidebar paint their own background independently and
+        always stay opaque, since a widget that hits alpha 0 in this
+        layered/translucent window can become OS-level click-through.
+        """
+        cls._background_opacity = max(0.0, min(1.0, opacity))
+
+    @classmethod
+    def get_background_opacity(cls) -> float:
+        """Get the current media frame background opacity."""
+        return cls._background_opacity
+
+    @staticmethod
+    def hex_to_rgba(hex_color: str, opacity: float) -> str:
+        """Convert a ``#rrggbb`` color and an opacity (0.0-1.0) to a Qt ``rgba()`` string."""
+        hex_color = hex_color.lstrip("#")
+        r, g, b = (int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
+        a = round(max(0.0, min(1.0, opacity)) * 255)
+        return f"rgba({r}, {g}, {b}, {a})"
+
     @classmethod
     def is_dark_theme(cls) -> bool:
         """Check if dark theme is active."""
@@ -286,32 +311,51 @@ class AppStyle:
         
         colors = cls.get_colors(is_dark)
         radius = cls._corner_radius
-        
+
+        # Ancestors sitting directly behind MediaFrame: opaque at full opacity
+        # (no seams), transparent below it so MediaFrame's own alpha reaches
+        # the OS compositor instead of being masked.
+        behind_media_fill = "transparent" if cls._background_opacity < 1.0 else colors['bg']
+
         return f"""
             /* Base styling for frameless window */
             QMainWindow {{
                 background-color: transparent;
             }}
-            
+
             /* Transparent outer container for rounded corners */
             QWidget#transparentOuter {{
                 background-color: transparent;
             }}
-            
+
             /* Main frame with rounded corners - the visible window background */
             QFrame#mainFrame {{
-                background-color: {colors['bg']};
+                background-color: {behind_media_fill};
                 border: 1px solid {colors['border']};
                 border-radius: {radius}px;
             }}
-            
+
             /* Content area styling */
             QWidget#contentArea {{
-                background-color: {colors['bg']};
+                background-color: {behind_media_fill};
                 border-bottom-left-radius: {radius}px;
                 border-bottom-right-radius: {radius}px;
             }}
-            
+
+            QSplitter#contentSplitter {{
+                background-color: {behind_media_fill};
+            }}
+
+            /* Splitter handle has no background of its own -- always opaque
+               so it doesn't become a seam when the panes go transparent. */
+            QSplitter#contentSplitter::handle {{
+                background-color: {colors['bg']};
+            }}
+
+            QStackedWidget#mediaStack {{
+                background-color: {behind_media_fill};
+            }}
+
             /* Title bar menu dropdown styling */
             QMenu {{
                 background-color: {colors['sidebar']};
@@ -335,18 +379,23 @@ class AppStyle:
     @classmethod
     def get_title_bar_style(cls, is_dark: bool = None, bg_override: str = None) -> str:
         """Get the stylesheet for the custom title bar.
-        
+
+        Always fully opaque, independent of background_opacity -- see
+        AppStyle.set_background_opacity. The title bar holds interactive
+        controls (minimize/maximize/close) and per-directory custom colors
+        (bg_override) that must never be affected by media-frame transparency.
+
         Args:
             is_dark: Whether dark theme is active.
             bg_override: Optional hex color to use instead of the theme background.
         """
         if is_dark is None:
             is_dark = cls.IS_DEFAULT_THEME
-        
+
         colors = cls.get_colors(is_dark)
         radius = cls._corner_radius
         bg_color = bg_override if bg_override else colors['bg']
-        
+
         return f"""
             CustomTitleBar {{
                 background-color: {bg_color};

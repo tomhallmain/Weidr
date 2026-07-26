@@ -2,6 +2,7 @@
   "debug": false,
   "foreground_color": "white",
   "background_color": "#26242f",
+  "background_opacity": 1.0,
   "toast_color_warning": "#8B4513",
   "toast_color_success": "#2d5016",
   "locale": "en",

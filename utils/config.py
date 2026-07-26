@@ -34,6 +34,7 @@ class Config:
         "font_size":                           int,
         "default_main_window_size":            str,
         "default_secondary_window_size":       str,
+        "background_opacity":                  float,
         # Slideshow
         "slideshow_interval_seconds":          int,
         "slideshow_dynamic_video_max_seconds": float,
@@ -108,6 +109,7 @@ class Config:
         self.locale = Utils.get_default_user_language()
         self.foreground_color = None
         self.background_color = None
+        self.background_opacity = 1.0
         self.toast_color_warning = None
         self.toast_color_success = None
         self.debug = False
@@ -362,6 +364,7 @@ class Config:
                             "sd_runner_client_port",
                             "refacdir_client_port")
             self.set_values(float,
+                            "background_opacity",
                             "embedding_similarity_threshold",
                             "threshold_potential_duplicate_embedding",
                             "insightface_det_thresh",

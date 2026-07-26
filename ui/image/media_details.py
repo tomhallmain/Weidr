@@ -432,6 +432,10 @@ class MediaDetails(SmartWindow):
             _btn(_("Randomly Modify"), lambda: self.random_modification(), row, 1)
             row += 1
 
+            _btn(_("Scramble Image"), lambda: self.scramble_image(), row, 0)
+            _btn(_("Semi-Scramble Image"), lambda: self.semi_scramble_image(), row, 1)
+            row += 1
+
             _btn(_("Flip Image Horizontally"), lambda: self.flip_image(), row, 0)
             _btn(_("Flip Image Vertically"), lambda: self.flip_image(top_bottom=True), row, 1)
             row += 1
@@ -1039,26 +1043,8 @@ class MediaDetails(SmartWindow):
             app_actions.toast(_("No new image created"))
 
     def scramble_image(self) -> None:
-        MediaDetails.scramble_image_static(
-            self._editable_image_path(), self._app_actions, self._parent_ref
-        )
-
-    @staticmethod
-    def scramble_image_static(
-        image_path: str, app_actions, master=None
-    ) -> None:
-        new_filepath = ImageOps.scramble_image(image_path)
-        app_actions.refresh()
-        if os.path.exists(new_filepath):
-            app_actions.success(_("Scrambled image"))
-            if master is not None:
-                MediaDetails.open_temp_media_canvas(
-                    master=master,
-                    media_path=new_filepath,
-                    app_actions=app_actions,
-                )
-        else:
-            app_actions.toast(_("No new image created"))
+        new_filepath = ImageOps.scramble_image(self._editable_image_path())
+        self._handle_action_result(new_filepath, _("Scrambled image"))
 
     def _scramble_image_and_mark(self) -> None:
         new_filepath = ImageOps.scramble_image(self._editable_image_path())
@@ -1071,6 +1057,10 @@ class MediaDetails(SmartWindow):
             )
         else:
             self._app_actions.toast(_("No new image created"))
+
+    def semi_scramble_image(self) -> None:
+        new_filepath = ImageOps.semi_scramble_image(self._editable_image_path())
+        self._handle_action_result(new_filepath, _("Semi-scrambled image"))
 
     def flip_image(self, top_bottom: bool = False) -> None:
         if top_bottom:

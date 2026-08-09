@@ -104,13 +104,18 @@ class TestCutVideoAtMs:
     @patch("image.video_ops.is_video_file", return_value=True)
     @patch("image.video_ops.VideoOps.find_ffmpeg_executable", return_value="/usr/bin/ffmpeg")
     @patch("subprocess.run")
-    def test_maps_all_streams(self, mock_run, _ffmpeg, _is_video, fake_video, tmp_path):
+    def test_maps_video_and_audio_only(self, mock_run, _ffmpeg, _is_video, fake_video, tmp_path):
+        """Metadata/data tracks (e.g. iPhone HDR/exposure telemetry) must not be mapped:
+        ffmpeg can't stream-copy-trim them, and a leftover untrimmed track duration makes
+        the whole container report the original length even after a successful cut."""
         mock_run.return_value = _make_proc()
         out = str(tmp_path / "out.mp4")
         VideoOps.cut_video_at_ms(fake_video, 3000, VideoCutSide.KEEP_BEGINNING, 30000, out)
         cmd = mock_run.call_args[0][0]
         assert "-map" in cmd
-        assert "0" in cmd
+        assert "0:v" in cmd
+        assert "0:a?" in cmd
+        assert "0" not in cmd
         assert "-c" in cmd
         assert "copy" in cmd
 

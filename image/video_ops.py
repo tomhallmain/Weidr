@@ -612,12 +612,21 @@ class VideoOps:
 
         t_sec = cut_ms / 1000.0
 
+        # Map only video/audio, not the whole input: iPhone .MOV files carry
+        # auxiliary timed-metadata tracks (HDR/exposure telemetry) that ffmpeg
+        # can't stream-copy-trim — it degrades them into empty placeholder
+        # tracks that keep their *original*, untrimmed duration. Per the
+        # QuickTime/MP4 spec the container's overall duration is the max of
+        # all track durations, so a leftover full-length metadata track makes
+        # the whole file report the original duration even though picture and
+        # sound correctly stop at the cut point (only noticeable on players,
+        # e.g. macOS/AVFoundation, that trust that container-level duration).
         if side == VideoCutSide.KEEP_BEGINNING:
             cmd = [
                 ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
                 "-i", video_path,
                 "-to", str(t_sec),
-                "-map", "0", "-c", "copy",
+                "-map", "0:v", "-map", "0:a?", "-c", "copy",
                 out,
             ]
         else:
@@ -626,7 +635,7 @@ class VideoOps:
                 ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
                 "-ss", str(t_sec), "-i", video_path,
                 "-t", str(remain_sec),
-                "-map", "0", "-c", "copy",
+                "-map", "0:v", "-map", "0:a?", "-c", "copy",
                 out,
             ]
 

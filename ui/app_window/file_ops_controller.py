@@ -507,19 +507,19 @@ class FileOpsController:
             self._app.notification_ctrl.toast(_("No image files found to convert"))
             return
 
-        none_found = " " + _("(None found)") if existing_target_count == 0 else ""
+        none_found = " " + _("(none to skip)") if existing_target_count == 0 else ""
         choice = self._app.app_actions.alert(
             _("Convert Directory Images to JPG"),
             _(
                 "Confirm convert images in current directory scope.\n\n{0}\n\n"
-                "How should existing JPG files be handled?\n"
                 "- Existing JPG/JPEG files in scope: {1}\n"
                 "- Non-JPG files with existing JPG targets: {2}\n\n"
-                "Yes = overwrite existing JPG files (with no-EXIF conversion output)\n"
-                "No = skip conversion for files with target conflicts" + none_found + "\n"
-                "Cancel = cancel conversion"
-            ).format(base_dir, existing_jpg_count, existing_target_count),
+                "Overwrite existing JPG files (no-EXIF conversion output), or skip "
+                "conversion for files with target conflicts{3}?"
+            ).format(base_dir, existing_jpg_count, existing_target_count, none_found),
             kind="askyesnocancel",
+            yes_text=_("Overwrite existing JPG"),
+            no_text=_("Skip conflicts"),
         )
         if choice == QMessageBox.StandardButton.Cancel:
             return
@@ -620,18 +620,19 @@ class FileOpsController:
             return
             
         count_target_pngs = len([f for f in convert_candidates if os.path.exists(_target_png_path(f))])
-        none_found = " " + _("(None found)") if count_target_pngs == 0 else ""
+        none_found = " " + _("(none to skip)") if count_target_pngs == 0 else ""
         choice = self._app.app_actions.alert(
             _("Convert Directory SVG to PNG"),
             _(
                 "Convert SVGs in the current directory scope to PNG?\n\n"
                 "{0}\n\n"
                 "{1} SVG(s) already have a PNG at the matching output path.\n\n"
-                "Yes = convert all SVGs and overwrite any existing PNGs\n"
-                "No = skip conversion for SVGs with target conflicts" + none_found + "\n"
-                "Cancel = cancel"
-            ).format(base_dir, count_target_pngs),
+                "Convert all SVGs and overwrite any existing PNGs, or skip "
+                "conversion for SVGs with target conflicts{2}?"
+            ).format(base_dir, count_target_pngs, none_found),
             kind="askyesnocancel",
+            yes_text=_("Overwrite existing PNG"),
+            no_text=_("Skip conflicts"),
         )
         
         if choice == QMessageBox.StandardButton.Cancel:
@@ -1029,9 +1030,9 @@ class FileOpsController:
             yes_text=_("Keep beginning"),
             no_text=_("Keep end"),
         )
-        if choice is None:
+        if choice == QMessageBox.StandardButton.Cancel:
             return
-        side = VideoCutSide.KEEP_BEGINNING if choice else VideoCutSide.KEEP_END
+        side = VideoCutSide.KEEP_BEGINNING if choice == QMessageBox.StandardButton.Yes else VideoCutSide.KEEP_END
 
         if hasattr(self._app.media_frame, "pause_video_if_playing"):
             self._app.media_frame.pause_video_if_playing()

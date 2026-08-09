@@ -15,8 +15,14 @@ def _make_box(
     message: str,
     buttons: QMessageBox.StandardButton,
     default: QMessageBox.StandardButton,
+    overrides: Optional[dict] = None,
 ) -> QMessageBox:
-    """Create a QMessageBox with translated button labels and the given default."""
+    """Create a QMessageBox with translated button labels and the given default.
+
+    *overrides* maps a QMessageBox.StandardButton to a custom label that
+    takes precedence over the default translation (e.g. renaming Yes/No to
+    describe the actual choice being made).
+    """
     box = QMessageBox(icon, title, message, buttons, parent)
     box.setDefaultButton(default)
 
@@ -27,6 +33,8 @@ def _make_box(
         QMessageBox.StandardButton.Yes: _("Yes"),
         QMessageBox.StandardButton.No: _("No"),
     }
+    if overrides:
+        _translations.update(overrides)
     for btn_type, label in _translations.items():
         btn = box.button(btn_type)
         if btn is not None:
@@ -40,8 +48,20 @@ def qt_alert(
     title: str,
     message: str,
     kind: str = "info",
+    yes_text: Optional[str] = None,
+    no_text: Optional[str] = None,
 ):
-    """Show a Qt message box. kind: info, warning, error, askokcancel, askyesno, askyesnocancel."""
+    """Show a Qt message box. kind: info, warning, error, askokcancel, askyesno, askyesnocancel.
+
+    *yes_text* and *no_text* override the Yes/No button labels for the
+    askyesno and askyesnocancel kinds; they are ignored otherwise.
+    """
+    overrides = {}
+    if yes_text:
+        overrides[QMessageBox.StandardButton.Yes] = yes_text
+    if no_text:
+        overrides[QMessageBox.StandardButton.No] = no_text
+
     if kind == "askokcancel":
         box = _make_box(
             parent, QMessageBox.Icon.Question, title, message,
@@ -54,6 +74,7 @@ def qt_alert(
             parent, QMessageBox.Icon.Question, title, message,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.Yes,
+            overrides=overrides,
         )
         return box.exec() == QMessageBox.StandardButton.Yes
     if kind == "askyesnocancel":
@@ -61,6 +82,7 @@ def qt_alert(
             parent, QMessageBox.Icon.Question, title, message,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Yes,
+            overrides=overrides,
         )
         return box.exec()
     if kind == "error":

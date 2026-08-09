@@ -35,16 +35,28 @@ class AppActions:
             return self._actions[name]
         raise AttributeError(f"Action '{name}' not found")
     
-    def alert(self, title: str, message: str, kind: str = "info", severity: str = "normal", master: Optional[object] = None) -> None:
+    def alert(
+        self,
+        title: str,
+        message: str,
+        kind: str = "info",
+        severity: str = "normal",
+        master: Optional[object] = None,
+        yes_text: Optional[str] = None,
+        no_text: Optional[str] = None,
+    ) -> None:
         """
         Override the alert method to automatically inject the master parameter.
         If master is explicitly provided, use it; otherwise use the stored master.
         """
         # Use provided master or fall back to stored master
         parent_window = master if master is not None else self._master
-        
+
         # Call the original alert method with the determined parent window
-        return self._alert(title, message, kind=kind, severity=severity, master=parent_window)
+        return self._alert(
+            title, message, kind=kind, severity=severity, master=parent_window,
+            yes_text=yes_text, no_text=no_text,
+        )
 
     def warn(self, message: str, time_in_seconds: int = None) -> None:
         """

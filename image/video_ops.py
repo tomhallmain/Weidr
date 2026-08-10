@@ -548,6 +548,13 @@ class VideoOps:
         return out
 
     @staticmethod
+    def _time_tag_ms(ms: int) -> str:
+        """*ms* as a filename-safe ``MMmSSsFFF`` tag, e.g. ``01m23s456``."""
+        total_s, msec = divmod(ms, 1000)
+        total_m, s = divmod(total_s, 60)
+        return f"{total_m:02d}m{s:02d}s{msec:03d}"
+
+    @staticmethod
     def default_output_path_cut(video_path: str, side: "VideoCutSide", cut_ms: int) -> str:
         """
         ``dir/foo.ext`` → ``dir/foo_cut_before_01m23s456.ext`` (keep beginning)
@@ -555,9 +562,7 @@ class VideoOps:
         """
         dirname = os.path.dirname(os.path.abspath(video_path)) or "."
         stem, ext = os.path.splitext(os.path.basename(video_path))
-        total_s, ms = divmod(cut_ms, 1000)
-        total_m, s = divmod(total_s, 60)
-        tag = f"{total_m:02d}m{s:02d}s{ms:03d}"
+        tag = VideoOps._time_tag_ms(cut_ms)
         label = "before" if side == VideoCutSide.KEEP_BEGINNING else "after"
         base = os.path.join(dirname, f"{stem}_cut_{label}_{tag}")
         candidate = f"{base}{ext}"
@@ -668,6 +673,102 @@ class VideoOps:
             raise RuntimeError(f"ffmpeg failed{detail}")
 
         logger.info("Cut video (%s) at %d ms → %s", side.value, cut_ms, out)
+        return out
+
+    @staticmethod
+    def default_output_path_mute_audio(video_path: str, start_ms: int, end_ms: int) -> str:
+        """
+        ``dir/foo.ext`` → ``dir/foo_muted_00m20s500-00m21s500.ext``, collision-safe.
+        """
+        dirname = os.path.dirname(os.path.abspath(video_path)) or "."
+        stem, ext = os.path.splitext(os.path.basename(video_path))
+        tag = f"{VideoOps._time_tag_ms(start_ms)}-{VideoOps._time_tag_ms(end_ms)}"
+        base = os.path.join(dirname, f"{stem}_muted_{tag}")
+        candidate = f"{base}{ext}"
+        n = 1
+        while os.path.exists(candidate):
+            candidate = f"{base}_{n}{ext}"
+            n += 1
+        return candidate
+
+    @staticmethod
+    def mute_audio_range_ms(
+        video_path: str,
+        start_ms: int,
+        end_ms: int,
+        output_path: str | None = None,
+    ) -> str:
+        """
+        Write a new sibling file with the audio silenced between *start_ms* and *end_ms*.
+
+        Video is stream-copied untouched; only the audio track is re-encoded (as AAC),
+        since running it through a volume filter rules out ``-c:a copy``.
+        The source file is never modified.
+
+        Returns:
+            Path to the written output file.
+
+        Raises:
+            RuntimeError: Validation failure, missing ffmpeg, or ffmpeg error.
+        """
+        if not is_video_file(video_path):
+            raise RuntimeError(_("Not a video file"))
+        ffmpeg = VideoOps.find_ffmpeg_executable()
+        if not ffmpeg:
+            raise RuntimeError(_("ffmpeg not found on PATH"))
+
+        if start_ms < 0:
+            raise RuntimeError(_("Mute range must start at or after the beginning of the video"))
+        if end_ms <= start_ms:
+            raise RuntimeError(_("Mute range end must be after its start"))
+
+        out = output_path or VideoOps.default_output_path_mute_audio(video_path, start_ms, end_ms)
+        out = os.path.abspath(out)
+        if os.path.abspath(video_path) == out:
+            raise RuntimeError(_("Output path must differ from the source file"))
+        if os.path.exists(out):
+            raise RuntimeError(_("Output file already exists: {0}").format(out))
+
+        start_s = start_ms / 1000.0
+        end_s = end_ms / 1000.0
+
+        cmd = [
+            ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
+            "-i", video_path,
+            "-af", f"volume=enable='between(t,{start_s},{end_s})':volume=0",
+            "-c:v", "copy", "-c:a", "aac",
+            out,
+        ]
+
+        try:
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                stdin=subprocess.DEVNULL,
+                timeout=3600,
+            )
+        except subprocess.TimeoutExpired:
+            try:
+                if os.path.isfile(out):
+                    os.unlink(out)
+            except OSError:
+                pass
+            raise RuntimeError(_("ffmpeg timed out while muting audio")) from None
+        except OSError as e:
+            raise RuntimeError(_("Failed to run ffmpeg: {0}").format(e)) from e
+
+        if proc.returncode != 0:
+            try:
+                if os.path.isfile(out):
+                    os.unlink(out)
+            except OSError:
+                pass
+            err = (proc.stderr or proc.stdout or "").strip()
+            detail = f": {err}" if err else ""
+            raise RuntimeError(f"ffmpeg failed{detail}")
+
+        logger.info("Muted audio [%d, %d) ms in video → %s", start_ms, end_ms, out)
         return out
 
     @staticmethod

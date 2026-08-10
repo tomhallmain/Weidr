@@ -259,6 +259,10 @@ class ContextMenuBuilder:
                 _("Cut video at current position…"),
                 lambda: app.file_ops_ctrl.cut_current_video_at_playback_position(),
             )
+            menu.addAction(
+                _("Mute audio at current position…"),
+                lambda: app.file_ops_ctrl.mute_current_video_audio_at_playback_position(),
+            )
 
         menu.addAction(
             _("Convert directory images to JPG"),

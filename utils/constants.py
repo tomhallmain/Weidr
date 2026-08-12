@@ -401,7 +401,7 @@ class ImageGenerationType(Enum):
         for key, value in ImageGenerationType.__members__.items():
             if value.name == name or value.value == name or value.get_text() == name:
                 return value
-        raise Exception(f"Not a valid prompt mode: {name}")
+        raise Exception(f"Not a valid image generation mode: {name}")
 
     @staticmethod
     def members():

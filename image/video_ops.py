@@ -60,6 +60,18 @@ class VideoOps:
         return Utils.unique_sibling_path(video_path, "_noaudio")
 
     @staticmethod
+    def default_output_path_audio_only(video_path: str) -> str:
+        """
+        ``dir/foo.ext`` → ``dir/foo_audio.mka``, or ``foo_audio_N.mka`` if that exists.
+
+        Always uses Matroska audio (``.mka``): it accepts an audio stream copy
+        (``-c:a copy``) regardless of source codec, unlike containers such as
+        MP4 that only allow specific audio codecs.
+        """
+        mka_stem = os.path.splitext(video_path)[0] + ".mka"
+        return Utils.unique_sibling_path(mka_stem, "_audio")
+
+    @staticmethod
     def _reencoded_output_path(video_path: str, suffix: str) -> str:
         """Collision-safe sibling path for an H.264/AAC re-encoded output.
 
@@ -462,6 +474,80 @@ class VideoOps:
         return out_path
 
     @staticmethod
+    def extract_audio_only(
+        video_path: str, output_path: str | None = None
+    ) -> str:
+        """
+        Write a new file containing only the audio stream(s) (ffmpeg audio stream copy, ``-vn``).
+
+        Does not modify *video_path*. Default output is a sibling like ``foo_audio.mka``
+        (see :meth:`default_output_path_audio_only`).
+
+        Returns:
+            Path to the written file on success.
+
+        Raises:
+            RuntimeError: If the file is not a video, ffmpeg is missing, or processing fails.
+        """
+        if not is_video_file(video_path):
+            raise RuntimeError("Not a video file")
+        ffmpeg = VideoOps.find_ffmpeg_executable()
+        if not ffmpeg:
+            raise RuntimeError("ffmpeg not found on PATH")
+
+        out_path = output_path or VideoOps.default_output_path_audio_only(video_path)
+        if os.path.exists(out_path):
+            try:
+                os.unlink(out_path)
+            except OSError as e:
+                raise RuntimeError(f"Could not remove existing output file: {e}") from e
+
+        cmd = [
+            ffmpeg,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-nostdin",
+            "-y",
+            "-i",
+            video_path,
+            "-vn",
+            "-c:a",
+            "copy",
+            out_path,
+        ]
+        try:
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                stdin=subprocess.DEVNULL,
+                timeout=3600,
+            )
+        except subprocess.TimeoutExpired as e:
+            try:
+                if os.path.isfile(out_path):
+                    os.unlink(out_path)
+            except OSError:
+                pass
+            raise RuntimeError("ffmpeg timed out while extracting audio") from e
+        except OSError as e:
+            raise RuntimeError(f"Failed to run ffmpeg: {e}") from e
+
+        if proc.returncode != 0:
+            try:
+                if os.path.isfile(out_path):
+                    os.unlink(out_path)
+            except OSError:
+                pass
+            err = (proc.stderr or proc.stdout or "").strip()
+            detail = f": {err}" if err else ""
+            raise RuntimeError(f"ffmpeg failed{detail}")
+
+        logger.info("Wrote audio-only file: %s", out_path)
+        return out_path
+
+    @staticmethod
     def copy_video_without_metadata(
         video_path: str,
         output_path: str | None = None,
@@ -714,6 +800,15 @@ class VideoOps:
         except json.JSONDecodeError as e:
             raise RuntimeError(f"Invalid ffprobe JSON: {e}") from e
         return data if isinstance(data, dict) else {}
+
+    @staticmethod
+    def probe_has_audio_stream(video_path: str) -> bool:
+        """Return True if ffprobe reports at least one audio stream in *video_path*."""
+        try:
+            probe = VideoOps.ffprobe_json(video_path)
+        except RuntimeError:
+            return False
+        return any(s.get("codec_type") == "audio" for s in probe.get("streams") or [])
 
     @staticmethod
     def merge_ffprobe_tag_dicts(probe: dict[str, Any]) -> dict[str, str]:

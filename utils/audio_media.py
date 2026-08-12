@@ -12,7 +12,7 @@ import os
 # Default browse extensions when ``audio_types`` is missing from config.
 DEFAULT_AUDIO_EXTENSIONS = (
     ".mp3", ".flac", ".ogg", ".opus", ".wav", ".m4a", ".m4b",
-    ".aac", ".wma", ".weba", ".aiff", ".aif", ".au", ".ape", ".wv",
+    ".aac", ".wma", ".weba", ".aiff", ".aif", ".au", ".ape", ".wv", ".mka",
 )
 
 # Masonry grid placeholder when no thumbnail is decoded.

@@ -351,7 +351,7 @@ class Utils:
                 return True
             
             if attempt < retries:
-                logger.debug(f"Directory check failed for '{path}', retrying in {retry_delay}s (attempt {attempt + 1}/{retries})")
+                Utils._logger.debug(f"Directory check failed for '{path}', retrying in {retry_delay}s (attempt {attempt + 1}/{retries})")
                 time.sleep(retry_delay)
         
         return False
@@ -390,7 +390,7 @@ class Utils:
                 return True
             
             if attempt < retries:
-                logger.debug(f"File check failed for '{path}', retrying in {retry_delay}s (attempt {attempt + 1}/{retries})")
+                Utils._logger.debug(f"File check failed for '{path}', retrying in {retry_delay}s (attempt {attempt + 1}/{retries})")
                 time.sleep(retry_delay)
         
         return False

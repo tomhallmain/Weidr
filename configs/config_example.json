@@ -83,7 +83,7 @@
   ],
   "audio_types": [
     ".mp3", ".flac", ".ogg", ".opus", ".wav", ".m4a", ".m4b",
-    ".aac", ".wma", ".weba", ".aiff", ".aif", ".au", ".ape", ".wv"
+    ".aac", ".wma", ".weba", ".aiff", ".aif", ".au", ".ape", ".wv", ".mka"
   ],
   "media_volume_use_eq": true,
   "enable_images": true,

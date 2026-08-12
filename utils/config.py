@@ -192,7 +192,7 @@ class Config:
         ]
         self.audio_types = [
             ".mp3", ".flac", ".ogg", ".opus", ".wav", ".m4a", ".m4b",
-            ".aac", ".wma", ".weba", ".aiff", ".aif", ".au", ".ape", ".wv",
+            ".aac", ".wma", ".weba", ".aiff", ".aif", ".au", ".ape", ".wv", ".mka",
         ]
         self.enable_audio = True
         self.enable_images = True

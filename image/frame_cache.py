@@ -1,5 +1,6 @@
 import hashlib
 import os
+import sys
 import tempfile
 import asyncio
 from dataclasses import dataclass
@@ -43,6 +44,12 @@ try:
 
     has_imported_pyav = True
     try:
+        # PyAV's Python logging callback can deadlock when an FFmpeg worker
+        # thread (spawned by frame-threaded decode, e.g. thread_type="AUTO")
+        # logs a message: it re-enters the GIL from a thread Python never
+        # created. restore_default_callback() reverts to FFmpeg's native
+        # (non-Python) logging, which sidesteps that hazard entirely.
+        av.logging.restore_default_callback()
         av.logging.set_level(av.logging.ERROR)
     except (AttributeError, ValueError):
         pass
@@ -55,6 +62,23 @@ from utils.constants import CompareMediaType
 from utils.media_utils import is_video_path_by_extension
 
 logger = get_logger("frame_cache")
+
+# On macOS, freeing a PyAV codec context that was decoded with frame-threading
+# (thread_type="AUTO") has been observed to hang indefinitely — the native
+# teardown joins FFmpeg's worker-thread pool while holding the GIL, freezing
+# the whole process. Windows is unaffected. Stick to single-threaded decode
+# on macOS to avoid ever spinning up that worker pool.
+_ALLOW_PYAV_FRAME_THREADING = sys.platform != "darwin"
+
+
+def _configure_stream_threading(stream) -> None:
+    """Enable PyAV frame-threaded decode on platforms where it's safe to tear down."""
+    if not _ALLOW_PYAV_FRAME_THREADING:
+        return
+    try:
+        stream.thread_type = "AUTO"
+    except Exception:
+        pass
 
 
 @dataclass
@@ -379,15 +403,14 @@ def _pyav_first_decoded_bgr(video_path: str) -> Optional[np.ndarray]:
     """First successfully decoded frame only (fast; no blank-frame scan)."""
     assert av is not None
     container = av.open(video_path, metadata_errors="ignore")
+    decoder = None
     try:
         if not container.streams.video:
             return None
         stream = container.streams.video[0]
-        try:
-            stream.thread_type = "AUTO"
-        except Exception:
-            pass
-        for frame in container.decode(stream):
+        _configure_stream_threading(stream)
+        decoder = container.decode(stream)
+        for frame in decoder:
             try:
                 raw = frame.to_ndarray(format="bgr24")
             except Exception:
@@ -398,6 +421,16 @@ def _pyav_first_decoded_bgr(video_path: str) -> Optional[np.ndarray]:
     except Exception:
         return None
     finally:
+        # Explicitly close the decode generator *before* the container: if a
+        # `for frame in container.decode(stream)` loop exits early (e.g. via
+        # `return` on the first usable frame), the generator is left
+        # suspended and would otherwise only be finalized whenever the
+        # interpreter happens to garbage-collect it — which can be after
+        # container.close() has already torn down the codec context. Closing
+        # the generator first, while the container is still valid, makes
+        # teardown order deterministic.
+        if decoder is not None:
+            decoder.close()
         container.close()
     return None
 
@@ -405,13 +438,12 @@ def _pyav_first_decoded_bgr(video_path: str) -> Optional[np.ndarray]:
 def _pyav_first_substantive_bgr(video_path: str, max_frames: int = 360) -> Optional[np.ndarray]:
     assert av is not None
     container = av.open(video_path, metadata_errors="ignore")
+    decoder = None
     try:
         stream = container.streams.video[0]
-        try:
-            stream.thread_type = "AUTO"
-        except Exception:
-            pass
-        for i, frame in enumerate(container.decode(stream)):
+        _configure_stream_threading(stream)
+        decoder = container.decode(stream)
+        for i, frame in enumerate(decoder):
             if i >= max_frames:
                 break
             try:
@@ -424,6 +456,11 @@ def _pyav_first_substantive_bgr(video_path: str, max_frames: int = 360) -> Optio
     except Exception:
         return None
     finally:
+        # See matching comment in _pyav_first_decoded_bgr: close the
+        # possibly-still-suspended decode generator before the container so
+        # teardown order is deterministic rather than left to GC timing.
+        if decoder is not None:
+            decoder.close()
         container.close()
     return None
 
@@ -1086,14 +1123,12 @@ class FrameCache:
         lookahead_cap = 128
 
         container = av.open(video_path, metadata_errors="ignore")
+        decoder = None
         try:
             if not container.streams.video:
                 raise ValueError("no video stream")
             stream = container.streams.video[0]
-            try:
-                stream.thread_type = "AUTO"
-            except Exception:
-                pass
+            _configure_stream_threading(stream)
             decoder = container.decode(stream)
             while want and idx < scan_limit:
                 if idx not in want:
@@ -1161,6 +1196,12 @@ class FrameCache:
                 want.discard(idx)
                 idx += 1 + extra
         finally:
+            # See matching comment in _pyav_first_decoded_bgr: this loop can
+            # exit (via break/return above) before `decoder` is exhausted,
+            # leaving it suspended. Close it before the container so
+            # teardown order is deterministic rather than left to GC timing.
+            if decoder is not None:
+                decoder.close()
             container.close()
 
         if want and len(want) / len(targets) >= _SAMPLING_WARN_MISSING_RATIO:

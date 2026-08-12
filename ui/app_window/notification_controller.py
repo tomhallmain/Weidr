@@ -299,6 +299,8 @@ class NotificationController:
         severity: str = "normal",
         master: Optional[QWidget] = None,
         buttons: Optional[list[tuple[str, str]]] = None,
+        yes_text: Optional[str] = None,
+        no_text: Optional[str] = None,
     ) -> "bool | str":
         """
         Show a modal message box.
@@ -308,6 +310,10 @@ class NotificationController:
         the return value is the label of the clicked button, or ``False`` if a
         reject-role button was clicked — so callers can use ``if not result:``
         uniformly regardless of button mode.
+
+        *yes_text* and *no_text* relabel the Yes/No buttons for the askyesno
+        and askyesnocancel kinds (ignored otherwise, and ignored when
+        *buttons* is provided).
 
         Pported from App.alert.
         """
@@ -319,7 +325,7 @@ class NotificationController:
             from lib.custom_dialogs_qt import show_high_severity_dialog
             return show_high_severity_dialog(parent, title, message, buttons=buttons)
 
-        return qt_alert(parent, title, message, kind=kind)
+        return qt_alert(parent, title, message, kind=kind, yes_text=yes_text, no_text=no_text)
 
     # ------------------------------------------------------------------
     # Loading spinner

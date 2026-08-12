@@ -507,19 +507,19 @@ class FileOpsController:
             self._app.notification_ctrl.toast(_("No image files found to convert"))
             return
 
-        none_found = " " + _("(None found)") if existing_target_count == 0 else ""
+        none_found = " " + _("(none to skip)") if existing_target_count == 0 else ""
         choice = self._app.app_actions.alert(
             _("Convert Directory Images to JPG"),
             _(
                 "Confirm convert images in current directory scope.\n\n{0}\n\n"
-                "How should existing JPG files be handled?\n"
                 "- Existing JPG/JPEG files in scope: {1}\n"
                 "- Non-JPG files with existing JPG targets: {2}\n\n"
-                "Yes = overwrite existing JPG files (with no-EXIF conversion output)\n"
-                "No = skip conversion for files with target conflicts" + none_found + "\n"
-                "Cancel = cancel conversion"
-            ).format(base_dir, existing_jpg_count, existing_target_count),
+                "Overwrite existing JPG files (no-EXIF conversion output), or skip "
+                "conversion for files with target conflicts{3}?"
+            ).format(base_dir, existing_jpg_count, existing_target_count, none_found),
             kind="askyesnocancel",
+            yes_text=_("Overwrite existing JPG"),
+            no_text=_("Skip conflicts"),
         )
         if choice == QMessageBox.StandardButton.Cancel:
             return
@@ -620,18 +620,19 @@ class FileOpsController:
             return
             
         count_target_pngs = len([f for f in convert_candidates if os.path.exists(_target_png_path(f))])
-        none_found = " " + _("(None found)") if count_target_pngs == 0 else ""
+        none_found = " " + _("(none to skip)") if count_target_pngs == 0 else ""
         choice = self._app.app_actions.alert(
             _("Convert Directory SVG to PNG"),
             _(
                 "Convert SVGs in the current directory scope to PNG?\n\n"
                 "{0}\n\n"
                 "{1} SVG(s) already have a PNG at the matching output path.\n\n"
-                "Yes = convert all SVGs and overwrite any existing PNGs\n"
-                "No = skip conversion for SVGs with target conflicts" + none_found + "\n"
-                "Cancel = cancel"
-            ).format(base_dir, count_target_pngs),
+                "Convert all SVGs and overwrite any existing PNGs, or skip "
+                "conversion for SVGs with target conflicts{2}?"
+            ).format(base_dir, count_target_pngs, none_found),
             kind="askyesnocancel",
+            yes_text=_("Overwrite existing PNG"),
+            no_text=_("Skip conflicts"),
         )
         
         if choice == QMessageBox.StandardButton.Cancel:
@@ -697,9 +698,9 @@ class FileOpsController:
             _("Equivalent square side (pixels).\n"
               "Images are scaled so their total pixel count matches this value squared.\n"
               "Example: 320 → target area = 320×320 = 102 400 px"),
-            value=320,
-            min=1,
-            max=65535,
+            320,  # value
+            1,  # minValue
+            65535,  # maxValue
         )
         if not ok:
             return
@@ -1029,9 +1030,9 @@ class FileOpsController:
             yes_text=_("Keep beginning"),
             no_text=_("Keep end"),
         )
-        if choice is None:
+        if choice == QMessageBox.StandardButton.Cancel:
             return
-        side = VideoCutSide.KEEP_BEGINNING if choice else VideoCutSide.KEEP_END
+        side = VideoCutSide.KEEP_BEGINNING if choice == QMessageBox.StandardButton.Yes else VideoCutSide.KEEP_END
 
         if hasattr(self._app.media_frame, "pause_video_if_playing"):
             self._app.media_frame.pause_video_if_playing()
@@ -1050,6 +1051,87 @@ class FileOpsController:
                 _cutting[0] = False
 
         start_thread(_do_cut, use_asyncio=False)
+
+    def mute_current_video_audio_at_playback_position(self, event=None) -> None:
+        """
+        Silence the audio for a short window starting at the current VLC playback
+        position, writing a new sibling file. The window's duration defaults to
+        1 second but can be adjusted. Runs ffmpeg on a background thread so the
+        UI stays responsive.
+        """
+        from PySide6.QtWidgets import QInputDialog
+        from image.video_ops import VideoOps
+        from utils.media_utils import is_video_file
+
+        if self._app.is_compare_running():
+            self._app.app_actions.warn(compare_running_warn(_("mute video audio")))
+            return
+
+        filepath = self._nav.get_active_media_filepath()
+        if not filepath:
+            return
+        if not is_video_file(filepath):
+            self._app.app_actions.warn(_("Not a video file"))
+            return
+        if not VideoOps.find_ffmpeg_executable():
+            self._app.app_actions.warn(_("ffmpeg not found on PATH. Install ffmpeg to mute audio."))
+            return
+
+        pos_ms, dur_ms = self._app.media_frame.get_video_playback_ms()
+        if dur_ms <= 0:
+            self._app.app_actions.warn(_("Video duration is unknown. Seek to a position first."))
+            return
+        if pos_ms >= dur_ms:
+            self._app.app_actions.warn(_("Cannot mute at or past the end of the video."))
+            return
+
+        duration_ms, ok = QInputDialog.getInt(
+            self._app,
+            _("Mute Audio at Current Position"),
+            _("Duration to mute, in milliseconds (starting at the current position):"),
+            1000,  # value
+            1,  # minValue
+            60000,  # maxValue
+        )
+        if not ok:
+            return
+
+        start_ms = pos_ms
+        end_ms = start_ms + duration_ms
+
+        def _fmt(ms: int) -> str:
+            total_s, frac = divmod(ms, 1000)
+            m, s = divmod(total_s, 60)
+            return f"{m:02d}:{s:02d}.{frac:03d}"
+
+        planned_out = VideoOps.default_output_path_mute_audio(filepath, start_ms, end_ms)
+
+        proceed = self._app.notification_ctrl.alert(
+            _("Mute audio at current position"),
+            _(
+                "Silence audio from {0} to {1}\n\n"
+                "Output: {2}\n\n"
+                "Video is copied unchanged; only the audio track is re-encoded.\n"
+                "The original file is not modified."
+            ).format(_fmt(start_ms), _fmt(end_ms), planned_out),
+            kind="askokcancel",
+        )
+        if not proceed:
+            return
+
+        if hasattr(self._app.media_frame, "pause_video_if_playing"):
+            self._app.media_frame.pause_video_if_playing()
+
+        def _do_mute():
+            try:
+                out_path = VideoOps.mute_audio_range_ms(filepath, start_ms, end_ms)
+                self._app.notification_ctrl.toast(_("Muted audio saved: {0}").format(out_path))
+                self._app.refresh()
+            except Exception as e:
+                logger.warning("Mute audio failed: %s", e)
+                self._app.notification_ctrl.toast(_("Mute audio failed: {0}").format(e))
+
+        start_thread(_do_mute, use_asyncio=False)
 
     def copy_directory_videos_without_metadata(self, event=None) -> None:
         """

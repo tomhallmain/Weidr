@@ -60,6 +60,10 @@ class CompareColorHistogram(BaseCompare):
         self.threshold = float(args.threshold) if args.threshold is not None else 0.2
         self._file_histograms: np.ndarray = np.empty((0, _HIST_LEN), dtype=np.float64)
 
+    def _reset_run_accumulators(self) -> None:
+        super()._reset_run_accumulators()
+        self._file_histograms = self._file_histograms[:0]
+
     def print_settings(self) -> None:
         logger.info("|--------------------------------------------------------------------|")
         logger.info(" COMPARE COLOR HISTOGRAM SETTINGS:")
@@ -129,11 +133,13 @@ class CompareColorHistogram(BaseCompare):
         else:
             print("Gathering histogram data", end="", flush=True)
 
+        self._reset_run_accumulators()
+
         counter = 0
         for f in self.files:
             if self.is_cancelled():
                 self.raise_cancellation_exception()
-            if Utils.is_invalid_file(f, counter, self.is_run_search, self.args.file_filter):
+            if Utils.is_invalid_file(f, counter, self.search_media_path is not None, self.args.file_filter):
                 continue
             if counter > self.args.counter_limit:
                 break

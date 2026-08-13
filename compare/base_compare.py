@@ -250,7 +250,11 @@ class BaseCompare:
             self.files = apply_filter(self.files, data_filter)
             # The search file is a reference, not a candidate — keep it even if the
             # filter would exclude it (e.g. size filter, but reference is a diff size)
-            if self.is_run_search and self.search_media_path not in self.files:
+            if (
+                self.is_run_search
+                and self.search_media_path is not None
+                and self.search_media_path not in self.files
+            ):
                 logger.debug(
                     "Data filter excluded the search reference file — "
                     "re-adding it so search can still run"
@@ -266,7 +270,7 @@ class BaseCompare:
         self.max_files_processed_even = Utils.round_up(
             self.max_files_processed, 200)
 
-        if self.is_run_search:
+        if self.is_run_search and self.search_media_path is not None:
             if self.search_media_path in self.files:
                 self.files.remove(self.search_media_path)
             self.search_file_index = 0
@@ -284,6 +288,20 @@ class BaseCompare:
 
     def get_data(self):
         pass
+
+    def _reset_run_accumulators(self) -> None:
+        """
+        Clear this run's accumulated results before get_data() repopulates them.
+
+        get_files() always runs immediately before get_data() with a fresh
+        self.files, so each get_data() call must fully replace any results
+        accumulated by a prior get_data() call on this same instance (e.g.
+        switching from GROUP to SEARCH, or re-running with a changed
+        file_filter) -- otherwise stale entries from a previous, differently
+        filtered run never get dropped. Subclasses with their own
+        accumulators (e.g. _file_embeddings) must override and call super().
+        """
+        self.compare_data.files_found = []
 
     def _handle_progress(self, counter, total, gathering_data=True):
         if self.is_cancelled():

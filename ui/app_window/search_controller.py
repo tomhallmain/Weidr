@@ -296,16 +296,19 @@ class SearchController:
             # directory to key its own cache off of.
             args.base_dir = Utils.get_no_directory_compare_cache_dir()
 
-        # Apply all compare settings from CompareManager
-        self._cm.apply_settings_to_args(args)
-
-        # Settings still on the controller / sidebar
+        # Settings still on the controller / sidebar -- set before
+        # apply_settings_to_args() below, since it logs the final args
+        # (including file_filter) as part of applying its own settings.
         args.file_filter = self.get_file_filter()
         args.include_videos = config.enable_videos
         args.include_gifs = config.enable_gifs
         args.include_pdfs = config.enable_pdfs
         args.listener = ProgressListener(update_func=self.display_progress)
         args.app_actions = self._app.app_actions
+
+        # Apply all compare settings from CompareManager
+        self._cm.apply_settings_to_args(args)
+
         self._cm.run(args)
 
     def _validate_run(self) -> bool:

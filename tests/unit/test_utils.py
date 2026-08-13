@@ -178,14 +178,24 @@ class TestIsInvalidFile:
     def test_valid_path_no_pattern(self):
         assert Utils.is_invalid_file("/some/file.jpg", 1, False, None) is False
 
-    def test_run_search_counter_zero_is_valid(self):
+    def test_has_search_reference_counter_zero_is_valid(self):
+        # has_search_reference=True + counter=0 is the "protect the search
+        # reference file at index 0" exemption -- see BaseCompare.get_files().
         assert Utils.is_invalid_file("/some/file.jpg", 0, True, None) is False
 
     def test_file_filter_matches(self):
-        assert Utils.is_invalid_file("/some/cats/file.jpg", 1, False, "cats") is False
+        # Matching is against the basename, not the full path -- "cats" here
+        # is a directory name and must NOT be what makes this valid.
+        assert Utils.is_invalid_file("/some/dir/cats_file.jpg", 1, False, "cats") is False
 
     def test_file_filter_no_match(self):
-        assert Utils.is_invalid_file("/some/dogs/file.jpg", 1, False, "cats") is True
+        assert Utils.is_invalid_file("/some/dir/dogs_file.jpg", 1, False, "cats") is True
+
+    def test_file_filter_directory_name_match_is_not_enough(self):
+        # A term matching a directory component but not the basename must
+        # still be rejected -- this is what changed vs. the old full-path
+        # substring behavior.
+        assert Utils.is_invalid_file("/some/cats/file.jpg", 1, False, "cats") is True
 
 
 class TestGetValidFile:

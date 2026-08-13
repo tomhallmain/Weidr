@@ -182,6 +182,11 @@ class ComparePromptsExact(BaseCompare):
         self._file_pos_texts = []
         self._file_neg_texts = []
 
+    def _reset_run_accumulators(self) -> None:
+        super()._reset_run_accumulators()
+        self._file_pos_texts = []
+        self._file_neg_texts = []
+
     def set_base_dir(self, base_dir):
         '''
         Set the base directory and prepare cache file references.
@@ -266,13 +271,15 @@ class ComparePromptsExact(BaseCompare):
         else:
             print("Gathering prompt data", end="", flush=True)
 
+        self._reset_run_accumulators()
+
         counter = 0
 
         for f in self.files:
             if self.is_cancelled():
                 self.raise_cancellation_exception()
-            
-            if Utils.is_invalid_file(f, counter, self.is_run_search, self.args.file_filter):
+
+            if Utils.is_invalid_file(f, counter, self.search_media_path is not None, self.args.file_filter):
                 continue
 
             if counter > self.args.counter_limit:

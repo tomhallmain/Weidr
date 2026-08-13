@@ -161,13 +161,15 @@ class CompareModels(BaseCompare):
         else:
             print("Gathering model data", end="", flush=True)
 
+        self._reset_run_accumulators()
+
         counter = 0
 
         for f in self.files:
             if self.is_cancelled():
                 self.raise_cancellation_exception()
             
-            if Utils.is_invalid_file(f, counter, self.is_run_search, self.args.file_filter):
+            if Utils.is_invalid_file(f, counter, self.search_media_path is not None, self.args.file_filter):
                 continue
 
             if counter > self.args.counter_limit:

@@ -1,4 +1,5 @@
 from enum import Enum
+import fnmatch
 import hashlib
 import re
 import os
@@ -534,19 +535,40 @@ class Utils:
             return number - (number % to) + to
 
     @staticmethod
-    def is_invalid_file(file_path, counter, run_search, file_filter):
+    def is_invalid_file(file_path, counter, has_search_reference, file_filter):
+        '''
+        has_search_reference: True when index 0 of the candidate list is a
+        genuine search-reference file (media-path search) that must be kept
+        regardless of file_filter -- see the "search file is a reference,
+        not a candidate" insertion in BaseCompare.get_files(). Must be False
+        for text-only search (no search_media_path), where there is no
+        reference file and every candidate -- including index 0 -- has to
+        pass file_filter normally.
+        '''
         if file_path is None:
             return True
-        elif run_search and counter == 0:
+        elif has_search_reference and counter == 0:
             return False
         elif file_filter is not None:
+            # Glob-match terms against the basename, same as
+            # FileBrowser._gather_files's inclusion/exclusion matching --
+            # this filter shares one UI field (and one DSL) with the file
+            # browser's, so the two must interpret it identically. Mirrors
+            # its asymmetry too: a bare inclusion term (no '*') auto-gets a
+            # trailing '*' (prefix match), but a bare exclusion term does
+            # not -- exclusions need an explicit '*' from the user (e.g.
+            # "!*_edit*") to match anywhere but a literal full-name match.
             terms = [t.strip() for t in file_filter.split(";") if t.strip()]
             inclusions = [t for t in terms if not t.startswith("!")]
-            exclusions = [t[1:] for t in terms if t.startswith("!") and len(t) > 1]
-            if exclusions and any(term in file_path for term in exclusions):
+            exclusions = [t[1:].strip() for t in terms if t.startswith("!") and t[1:].strip()]
+            basename = os.path.basename(file_path)
+
+            if exclusions and any(fnmatch.fnmatch(basename, term) for term in exclusions):
                 return True
-            if inclusions and not any(term in file_path for term in inclusions):
-                return True
+            if inclusions:
+                patterns = [t if "*" in t else t + "*" for t in inclusions]
+                if not any(fnmatch.fnmatch(basename, p) for p in patterns):
+                    return True
             return False
         else:
             return False

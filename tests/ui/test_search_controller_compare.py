@@ -59,6 +59,34 @@ class TestSearchControllerCompare:
         assert run_calls[0].base_dir == media_dir
         qtbot.waitUntil(lambda: not win.search_ctrl.is_compare_running(), timeout=5000)
 
+    def test_sidebar_file_filter_reaches_compare_args(
+        self, window_with_dir, qtbot, bypass_password, immediate_compare_debounce, monkeypatch
+    ):
+        """Regression: the sidebar filter field must reach CompareArgs.file_filter
+        for a search the same way it does for a GROUP run -- this is the field
+        Utils.is_invalid_file actually reads during get_data(); a gap here (e.g.
+        it only being copied onto args after CompareManager already logged/used
+        the args) would silently detach the filter box from search results."""
+        win, _ = window_with_dir
+        immediate_compare_debounce(win.search_ctrl)
+        run_calls = []
+        monkeypatch.setattr(
+            win.search_ctrl._cm,
+            "run",
+            lambda args: run_calls.append(args),
+        )
+        monkeypatch.setattr(win.search_ctrl._cm, "validate_compare_mode", lambda *a, **k: None)
+        monkeypatch.setattr(win.media_navigator, "show_searched_media", lambda: None)
+        monkeypatch.setattr(win.media_frame, "setFocus", lambda: None)
+
+        win.sidebar_panel.file_filter_entry.setText("*_d.*")
+        win.sidebar_panel.search_text_box.setText("cat")
+        win.search_ctrl.set_search()
+
+        qtbot.waitUntil(lambda: len(run_calls) == 1, timeout=5000)
+        assert run_calls[0].file_filter == "*_d.*"
+        qtbot.waitUntil(lambda: not win.search_ctrl.is_compare_running(), timeout=5000)
+
     def test_is_compare_running_while_worker_active(
         self, window_with_dir, qtbot, bypass_password, monkeypatch
     ):

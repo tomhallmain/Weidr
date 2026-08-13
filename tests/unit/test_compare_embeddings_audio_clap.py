@@ -18,11 +18,12 @@ from compare.compare_args import CompareArgs
 from compare.compare_embeddings_audio_clap import CompareEmbeddingAudioClap, gather_audio_files
 from compare.compare_wrapper import CompareWrapper
 from utils.constants import CompareMode
+from utils.translations import _
 
 
 class TestCompareModeRegistration:
     def test_get_text(self):
-        assert CompareMode.AUDIO_CLAP_EMBEDDING.get_text() == "CLAP Audio Embedding"
+        assert CompareMode.AUDIO_CLAP_EMBEDDING.get_text() == _("CLAP Audio Embedding")
 
     def test_is_embedding(self):
         assert CompareMode.AUDIO_CLAP_EMBEDDING.is_embedding() is True

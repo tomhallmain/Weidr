@@ -182,34 +182,60 @@ class TestFileBrowserFilter:
 
 
 class TestIsInvalidFileFilter:
-    """Tests for the multi-pattern filter logic in Utils.is_invalid_file()."""
+    """Tests for the multi-pattern filter logic in Utils.is_invalid_file().
+
+    Matching is against the basename and uses the same glob semantics as
+    FileBrowser._gather_files (see TestFileBrowserFilter above), since both
+    read the same sidebar filter field and must agree on what it means.
+    Paths here put the matching keyword in a directory component too, to
+    confirm the directory name alone is never enough to match.
+    """
 
     def test_multi_inclusion_first_term_matches(self):
-        assert Utils.is_invalid_file("/some/cats/file.jpg", 1, False, "cats;vacation") is False
+        assert Utils.is_invalid_file("/some/cats/cats_file.jpg", 1, False, "cats;vacation") is False
 
     def test_multi_inclusion_second_term_matches(self):
-        assert Utils.is_invalid_file("/some/vacation/file.jpg", 1, False, "cats;vacation") is False
+        assert Utils.is_invalid_file("/some/vacation/vacation_file.jpg", 1, False, "cats;vacation") is False
 
     def test_multi_inclusion_no_term_matches(self):
-        assert Utils.is_invalid_file("/some/dogs/file.jpg", 1, False, "cats;vacation") is True
+        assert Utils.is_invalid_file("/some/dogs/dogs_file.jpg", 1, False, "cats;vacation") is True
 
-    def test_exclusion_only_path_not_excluded(self):
-        assert Utils.is_invalid_file("/some/cats/file.jpg", 1, False, "!_edit") is False
+    def test_bare_inclusion_term_is_prefix_only(self):
+        # Auto-star only appends a trailing '*' -- "cats" means "starts with
+        # cats", not "contains cats anywhere".
+        assert Utils.is_invalid_file("/some/dir/my_cats_file.jpg", 1, False, "cats") is True
 
-    def test_exclusion_only_path_is_excluded(self):
-        assert Utils.is_invalid_file("/some/cats_edit/file.jpg", 1, False, "!_edit") is True
+    def test_exclusion_bare_term_requires_exact_basename_match(self):
+        # Exclusions are NOT auto-starred (unlike inclusions) -- this matches
+        # FileBrowser's own tests, which always spell exclusions with
+        # explicit '*' (e.g. "!*zzz*"). A bare "!_edit" only excludes a file
+        # literally named "_edit", so it's effectively a no-op here.
+        assert Utils.is_invalid_file("/some/cats/cats_edit_file.jpg", 1, False, "!_edit") is False
+
+    def test_exclusion_with_wildcards_excludes_matching_basename(self):
+        assert Utils.is_invalid_file("/some/cats/cats_edit_file.jpg", 1, False, "!*_edit*") is True
+
+    def test_exclusion_with_wildcards_does_not_exclude_non_matching(self):
+        assert Utils.is_invalid_file("/some/cats/cats_file.jpg", 1, False, "!*_edit*") is False
 
     def test_inclusion_matches_exclusion_does_not(self):
-        assert Utils.is_invalid_file("/some/cats/file.jpg", 1, False, "cats;!_edit") is False
+        assert Utils.is_invalid_file("/some/cats/cats_file.jpg", 1, False, "cats;!*_edit*") is False
 
     def test_inclusion_matches_exclusion_also_matches(self):
-        assert Utils.is_invalid_file("/some/cats_edit/file.jpg", 1, False, "cats;!_edit") is True
+        assert Utils.is_invalid_file("/some/cats/cats_edit_file.jpg", 1, False, "cats;!*_edit*") is True
 
     def test_inclusion_does_not_match_with_exclusion(self):
-        assert Utils.is_invalid_file("/some/dogs/file.jpg", 1, False, "cats;!_edit") is True
+        assert Utils.is_invalid_file("/some/dogs/dogs_file.jpg", 1, False, "cats;!*_edit*") is True
 
     def test_bare_bang_acts_as_no_filter(self):
         assert Utils.is_invalid_file("/some/file.jpg", 1, False, "!") is False
+
+    def test_glob_wildcard_inclusion_matches_suffix_pattern(self):
+        # Regression case: a filter like "*_d.*" must be treated as a real
+        # glob pattern (matching a "_d" suffix before the extension), not a
+        # literal substring that can never appear in a real filename.
+        assert Utils.is_invalid_file("/some/dir/photo_d.png", 1, False, "*_d.*") is False
+        assert Utils.is_invalid_file("/some/dir/photo_x.png", 1, False, "*_d.*") is True
 
 
 class TestFileBrowserSort:

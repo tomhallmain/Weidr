@@ -18,6 +18,7 @@ from typing import Optional
 
 from compare.action_callbacks import ActionCallbacks
 from compare.debounced_generate_queue import DebouncedGenerateQueue
+from compare.pipeline_decision_record import build_decision_record
 from compare.pipeline_run_report import PipelineRunReport
 from compare.classifier_pipeline import (
     AlwaysCondition,
@@ -291,6 +292,28 @@ def run_pipeline(
     node_order = [n.name for n in pipeline.nodes]
     nodes_by_name = {n.name: n for n in pipeline.nodes}
 
+    def _finish(action: Optional[ClassifierActionType]) -> Optional[ClassifierActionType]:
+        """Capture the decision record, then hand the action back to the caller.
+
+        Every terminal path routes through here so a new outcome type cannot
+        silently skip recording.  The early returns above are deliberately not
+        routed through it: no node ran for those files, so there is no verdict
+        to record and a record would imply an evaluation that never happened.
+        """
+        if pipeline.record_node_verdicts and report is not None:
+            try:
+                report.add_decision(
+                    build_decision_record(
+                        pipeline.name, image_path, action, node_results, node_scores
+                    )
+                )
+            except Exception:
+                # Recording is an audit aid; never let it break the run.
+                logger.exception(
+                    "Pipeline %r: failed to record decision for %s", pipeline.name, image_path
+                )
+        return action
+
     # Suffix that seeds cover, derived from pipeline.seed_category + category_map.
     # Empty string means the seed-category guard is disabled for this run.
     seed_suffix = (
@@ -385,7 +408,7 @@ def run_pipeline(
             )
             if should_mark_done and base_stem:
                 processed_stems.add(base_stem)
-            return outcome.action_type
+            return _finish(outcome.action_type)
 
         if outcome.outcome_type == OutcomeType.EXECUTE_AND_CONTINUE:
             _dispatch_action(
@@ -408,7 +431,7 @@ def run_pipeline(
         if outcome.outcome_type == OutcomeType.ACCEPT:
             if should_mark_done and base_stem:
                 processed_stems.add(base_stem)
-            return None
+            return _finish(None)
 
         if outcome.outcome_type == OutcomeType.REJECT:
             _dispatch_action(
@@ -424,7 +447,7 @@ def run_pipeline(
             )
             if should_mark_done and base_stem:
                 processed_stems.add(base_stem)
-            return pipeline.default_reject_action
+            return _finish(pipeline.default_reject_action)
 
         if outcome.outcome_type == OutcomeType.GOTO:
             current_name = outcome.target_node
@@ -453,7 +476,9 @@ def run_pipeline(
         processed_stems.add(base_stem)
     # If no explicit default action was set but EXECUTE_AND_CONTINUE actions fired,
     # return the last such action so callers can account for the work done.
-    return pipeline.default_action if pipeline.default_action is not None else last_etc_action
+    return _finish(
+        pipeline.default_action if pipeline.default_action is not None else last_etc_action
+    )
 
 
 def run_single_node(

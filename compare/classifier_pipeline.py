@@ -96,6 +96,21 @@ class ClassifierPipeline:
     # fastest option for a large directory since it skips wrapping/sorting
     # entirely.
     run_sort_by: Optional[SortBy] = None
+    # When True (default), a batch run shares one processed-stem set across all
+    # files so each stem group is only evaluated once: derivatives of a stem
+    # already handled are skipped without evaluation, and stem groups whose seed
+    # cannot be located or is not filed are skipped instead of generating (see
+    # classifier_pipeline_runner._resolve_stem_group).  Turn off for a pipeline
+    # that must evaluate every file independently of its stem group.
+    # Sort order does not affect correctness here -- a derivative never marks a
+    # group done while its seed is still in the working directory -- but
+    # SortBy.RELATED_IMAGE ascending lets derivatives skip earlier.
+    dedupe_stem_groups: bool = True
+    # When True, each evaluated file adds a decision record (per-node matched
+    # flag and score, plus the action that fired) to the run's PipelineRunReport,
+    # which the run dump then persists.  Off by default: the records are one per
+    # file and are held in memory until the dump is written.
+    record_node_verdicts: bool = False
 
     def __post_init__(self):
         if self.nodes is None:
@@ -447,12 +462,51 @@ class ClassifierPipeline:
           values that are not present in category_map (only when category_map is non-empty).
         - ClassifierRankCondition nodes that have inherit_categories=True but the pipeline
           has no category_map to inherit from.
+        - dedupe_stem_groups without a seeds-first run order on a generating pipeline
+          (see _warn_dedupe_without_seed_first_sort).
         """
         known = set(self.category_map.values())
         warnings: list[str] = []
         for node in self.nodes:
             self._collect_suffix_warnings(node.condition, node.name, known, warnings)
+        self._warn_dedupe_without_seed_first_sort(warnings)
         return warnings
+
+    def _warn_dedupe_without_seed_first_sort(self, warnings: list) -> None:
+        """Warn when stem-group dedup is on but the run order does not put seeds first.
+
+        Dedup evaluates only the first file of each stem group, so which file
+        that is decides what the run does.  For a generating pipeline the
+        difference is concrete: reached seed-first, a stem group generates only
+        its missing categories; reached derivative-first, the derivative
+        generates every category it is not itself a variant of -- including a
+        duplicate of its own category, since should_run_generate_action only
+        counts files downstream of the file being evaluated and a derivative has
+        none.  The seed is still evaluated afterwards (a derivative does not mark
+        the group done while its seed is present), so those generations are
+        duplicates rather than replacements.
+
+        SortBy.RELATED_IMAGE ascending groups each stem's files together with the
+        seed first, which is why it is the order to pair with dedup.
+
+        Scoped to pipelines that can generate: that is where the ordering changes
+        which actions are dispatched, and warning on every saved pipeline for a
+        difference most of them cannot exhibit would be noise.
+        """
+        if not self.dedupe_stem_groups:
+            return
+        if self.run_sort_by is SortBy.RELATED_IMAGE:
+            return
+        if not self.has_generate_action():
+            return
+        warnings.append(
+            _("Stem-group dedup is on but the run sort order is not '{0}'. Whichever "
+              "file of a stem group is reached first is the only one evaluated, so a "
+              "derivative reached before its seed can generate duplicates. Set the run "
+              "sort order to '{0}', or turn off stem-group dedup.").format(
+                SortBy.RELATED_IMAGE.get_text()
+            )
+        )
 
     def _collect_suffix_warnings(
         self, condition, node_name: str, known_suffixes: set, warnings: list
@@ -573,6 +627,12 @@ class ClassifierPipeline:
             d["seed_category"] = self.seed_category
         if self.run_sort_by:
             d["run_sort_by"] = self.run_sort_by.get_text()
+        # Both written only when set away from their default, so a config saved
+        # before these fields existed round-trips unchanged.
+        if not self.dedupe_stem_groups:
+            d["dedupe_stem_groups"] = False
+        if self.record_node_verdicts:
+            d["record_node_verdicts"] = True
         return d
 
     @staticmethod
@@ -608,6 +668,8 @@ class ClassifierPipeline:
             seed_category=d.get("seed_category", ""),
             run_sort_by=_opt_sort_by(d.get("run_sort_by")),
             move_to_working_dir=d.get("move_to_working_dir", True),
+            dedupe_stem_groups=d.get("dedupe_stem_groups", True),
+            record_node_verdicts=d.get("record_node_verdicts", False),
         )
 
 
@@ -668,6 +730,8 @@ class PrevalidationPipeline(ClassifierPipeline):
             is_active=d.get("is_active", True),
             applies_to_media_types=d.get("applies_to_media_types"),
             category_map=raw_map,
+            dedupe_stem_groups=d.get("dedupe_stem_groups", True),
+            record_node_verdicts=d.get("record_node_verdicts", False),
         )
 
 
@@ -971,11 +1035,15 @@ class ClassifierPipelines:
         for a second, separate classifier evaluation. This is omitted here
         pending classifier validation.
 
-        processed_stems note
+        Stem-group dedup note
         ─────────────────────────────
-        Pass a shared set() as processed_stems to run_pipeline() to skip
-        derivative images whose stem group has already been evaluated.
-        Use RELATED_IMAGE ascending sort so seeds are evaluated first.
+        dedupe_stem_groups (on by default) makes a batch run evaluate each stem
+        group once, skipping derivatives of a group already handled.  This
+        pipeline sets run_sort_by=RELATED_IMAGE so seeds are reached before
+        their derivatives, which is what makes that skip a win: a derivative
+        reached first would generate every category it is not itself a variant
+        of -- including a duplicate of its own, since should_run_generate_action
+        only counts files downstream of the file being evaluated.
         """
         CATEGORY_MAP = {"Apple": "_apple", "Banana": "_banana", "Cherry": "_cherry"}
         ALL_SUFFIXES = list(CATEGORY_MAP.values())
@@ -1083,6 +1151,9 @@ class ClassifierPipelines:
             nodes=[node_guard, node_uniqueness, node_apple, node_banana, node_cherry],
             is_active=False,
             category_map=CATEGORY_MAP,
+            # Pairs with dedupe_stem_groups: seeds sort before their derivatives,
+            # so a stem group generates only its genuinely missing categories.
+            run_sort_by=SortBy.RELATED_IMAGE,
         )
 
     @staticmethod
@@ -1109,6 +1180,11 @@ class ClassifierPipelines:
         The pipeline is inactive by default. Set target directories, configure
         directories_to_search_for_related_images to include the target dirs,
         and attach a coherence classifier before activating.
+
+        run_sort_by is RELATED_IMAGE so seeds are reached before their
+        derivatives, which is what dedupe_stem_groups (on by default) needs to
+        skip a derivative rather than let it generate duplicates of categories
+        the seed already covered.
         """
         CATEGORY_MAP = {
             "Coherent":        "_coherent",
@@ -1202,6 +1278,9 @@ class ClassifierPipelines:
             is_active=False,
             category_map=CATEGORY_MAP,
             seed_category="Coherent",
+            # Pairs with dedupe_stem_groups: seeds sort before their derivatives,
+            # so a stem group generates only its genuinely missing categories.
+            run_sort_by=SortBy.RELATED_IMAGE,
         )
 
     @staticmethod

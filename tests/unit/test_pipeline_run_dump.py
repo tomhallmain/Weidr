@@ -49,7 +49,7 @@ def _fake_pipeline():
     return p
 
 
-def _call_write_dump(log_dir: Path, stats, all_generates=(), all_scrambles=()):
+def _call_write_dump(log_dir: Path, stats, all_generates=(), all_scrambles=(), report=None):
     """Call _write_pipeline_run_dump and return the parsed JSON.
 
     get_log_dir is already redirected to tmp_path/logs by the root conftest
@@ -60,7 +60,7 @@ def _call_write_dump(log_dir: Path, stats, all_generates=(), all_scrambles=()):
     ClassifierPipelinesTab._write_pipeline_run_dump(
         _fake_pipeline(),
         stats,
-        PipelineRunReport(),
+        report if report is not None else PipelineRunReport(),
         all_generates=all_generates,
         all_scrambles=all_scrambles,
     )
@@ -254,3 +254,50 @@ class TestBackwardCompatibility:
         data = json.loads(dumps[0].read_text(encoding="utf-8"))
         assert len(data["messages"]) == 1
         assert data["messages"][0]["detail"] == "detail text"
+
+
+# ---------------------------------------------------------------------------
+# decisions field
+# ---------------------------------------------------------------------------
+
+class TestDecisionsField:
+    """Per-file decision records ride along in the dump when the pipeline opts
+    into record_node_verdicts; the field is present but empty otherwise, so a
+    consumer never has to special-case its absence."""
+
+    def test_empty_when_no_records(self, tmp_path):
+        data = _call_write_dump(tmp_path / "logs", _make_stats())
+        assert data["decisions"] == []
+
+    def test_records_written_in_order(self, tmp_path):
+        report = PipelineRunReport()
+        for name in ("a", "b", "c"):
+            report.add_decision({"path": f"/a/{name}.jpg", "action": None})
+        data = _call_write_dump(tmp_path / "logs", _make_stats(), report=report)
+        assert [d["path"] for d in data["decisions"]] == [
+            "/a/a.jpg", "/a/b.jpg", "/a/c.jpg"
+        ]
+
+    def test_node_verdicts_survive_round_trip(self, tmp_path):
+        report = PipelineRunReport()
+        report.add_decision({
+            "version": 1,
+            "pipeline_name": "test_pipeline",
+            "path": "/a/img.jpg",
+            "action": "MOVE",
+            "node_verdicts": {
+                "gate": {"matched": True, "score": 0.91},
+                "group/child": {"matched": False, "score": None},
+            },
+        })
+        data = _call_write_dump(tmp_path / "logs", _make_stats(), report=report)
+        rec = data["decisions"][0]
+        assert rec["action"] == "MOVE"
+        assert rec["node_verdicts"]["gate"] == {"matched": True, "score": 0.91}
+        assert rec["node_verdicts"]["group/child"] == {"matched": False, "score": None}
+
+    def test_messages_field_unaffected_by_decisions(self, tmp_path):
+        report = PipelineRunReport()
+        report.add_decision({"path": "/a/img.jpg"})
+        data = _call_write_dump(tmp_path / "logs", _make_stats(), report=report)
+        assert data["messages"] == []

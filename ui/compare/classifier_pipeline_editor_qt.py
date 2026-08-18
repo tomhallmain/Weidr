@@ -2033,6 +2033,28 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._run_sort_by_combo.currentTextChanged.connect(self._on_field_changed)
         form.addRow(_("Run sort order:"), self._run_sort_by_combo)
 
+        self._dedupe_stem_groups_cb = QCheckBox(_("Evaluate each stem group once"))
+        self._dedupe_stem_groups_cb.setChecked(p.dedupe_stem_groups)
+        self._dedupe_stem_groups_cb.setToolTip(
+            _("In a batch run, skip a file whose stem group has already been "
+              "evaluated, and skip stem groups whose seed cannot be located or "
+              "is not filed. Turn off to evaluate every file independently. "
+              "Related Image sort order lets derivatives skip sooner, but is "
+              "not required for correctness.")
+        )
+        self._dedupe_stem_groups_cb.stateChanged.connect(self._on_field_changed)
+        form.addRow("", self._dedupe_stem_groups_cb)
+
+        self._record_node_verdicts_cb = QCheckBox(_("Record per-node decisions"))
+        self._record_node_verdicts_cb.setChecked(p.record_node_verdicts)
+        self._record_node_verdicts_cb.setToolTip(
+            _("Write each evaluated file's per-node match result and score into "
+              "the run dump, for auditing or threshold calibration. Adds one "
+              "record per file, held in memory until the run finishes.")
+        )
+        self._record_node_verdicts_cb.stateChanged.connect(self._on_field_changed)
+        form.addRow("", self._record_node_verdicts_cb)
+
         self._on_type_changed()
         return box
 
@@ -2930,6 +2952,8 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         final.category_map = self._category_map_editor.get_items()
         final.seed_category = self._seed_category_combo.currentData() or ""
         final.run_sort_by = self._run_sort_by_combo.currentData()
+        final.dedupe_stem_groups = self._dedupe_stem_groups_cb.isChecked()
+        final.record_node_verdicts = self._record_node_verdicts_cb.isChecked()
 
         errors = final.validate()
         if errors:

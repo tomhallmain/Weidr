@@ -49,6 +49,13 @@ class PipelineRunReport:
 
     def __init__(self) -> None:
         self._messages: list[PipelineMessage] = []
+        # Decision records are kept out of _messages deliberately: there is one
+        # per evaluated file, and every message added to _messages is rendered
+        # into format_completion_report() and echoed by format_seed_summary(),
+        # so routing them through that channel would bury the actual warnings
+        # under thousands of routine lines.  The completion report shows only a
+        # count; the full records go to the run dump.
+        self._decisions: list[dict] = []
         self._lock = Lock()
 
     @staticmethod
@@ -76,6 +83,19 @@ class PipelineRunReport:
         with self._lock:
             self._messages.append(PipelineMessage(severity, node, image_path, detail, data))
 
+    def add_decision(self, record: dict) -> None:
+        """Record one file's pipeline decision (see compare.pipeline_decision_record)."""
+        with self._lock:
+            self._decisions.append(record)
+
+    def decisions(self) -> list[dict]:
+        with self._lock:
+            return list(self._decisions)
+
+    def decision_count(self) -> int:
+        with self._lock:
+            return len(self._decisions)
+
     def messages(self) -> list[PipelineMessage]:
         with self._lock:
             return list(self._messages)
@@ -95,6 +115,7 @@ class PipelineRunReport:
     def clear(self) -> None:
         with self._lock:
             self._messages.clear()
+            self._decisions.clear()
 
     def format_seed_summary(
         self,
@@ -191,6 +212,13 @@ class PipelineRunReport:
                 )
             lines.append("")
             lines.append(gen_line)
+
+        decision_count = self.decision_count()
+        if decision_count:
+            lines.append("")
+            lines.append(
+                _("Decision records captured: {0}").format(decision_count)
+            )
 
         for severity in self.SEVERITIES:
             section = self._format_message_section(severity, self._severity_heading(severity))

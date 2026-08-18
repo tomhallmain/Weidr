@@ -1894,3 +1894,143 @@ class TestMoveToWorkingDir:
         d = {"name": "p", "nodes": []}
         p = ClassifierPipeline.from_dict(d)
         assert p.move_to_working_dir is True
+
+
+class TestDedupeStemGroups:
+    def test_default_true(self):
+        assert ClassifierPipeline(name="p").dedupe_stem_groups is True
+
+    def test_default_not_written_to_dict(self):
+        """Omitted at the default so a config saved before the field existed
+        re-saves byte-identically."""
+        assert "dedupe_stem_groups" not in ClassifierPipeline(name="p").to_dict()
+
+    def test_non_default_written_to_dict(self):
+        p = ClassifierPipeline(name="p", dedupe_stem_groups=False)
+        assert p.to_dict()["dedupe_stem_groups"] is False
+
+    def test_round_trip_false(self):
+        p = ClassifierPipeline(name="p", dedupe_stem_groups=False)
+        assert ClassifierPipeline.from_dict(p.to_dict()).dedupe_stem_groups is False
+
+    def test_round_trip_true(self):
+        p = ClassifierPipeline(name="p", dedupe_stem_groups=True)
+        assert ClassifierPipeline.from_dict(p.to_dict()).dedupe_stem_groups is True
+
+    def test_backward_compat_missing_key_defaults_true(self):
+        p = ClassifierPipeline.from_dict({"name": "p", "nodes": []})
+        assert p.dedupe_stem_groups is True
+
+    def test_prevalidation_pipeline_round_trip(self):
+        p = PrevalidationPipeline(name="p", profile_name="prof", dedupe_stem_groups=False)
+        assert PrevalidationPipeline.from_dict(p.to_dict()).dedupe_stem_groups is False
+
+
+class TestRecordNodeVerdicts:
+    def test_default_false(self):
+        assert ClassifierPipeline(name="p").record_node_verdicts is False
+
+    def test_default_not_written_to_dict(self):
+        assert "record_node_verdicts" not in ClassifierPipeline(name="p").to_dict()
+
+    def test_non_default_written_to_dict(self):
+        p = ClassifierPipeline(name="p", record_node_verdicts=True)
+        assert p.to_dict()["record_node_verdicts"] is True
+
+    def test_round_trip_true(self):
+        p = ClassifierPipeline(name="p", record_node_verdicts=True)
+        assert ClassifierPipeline.from_dict(p.to_dict()).record_node_verdicts is True
+
+    def test_backward_compat_missing_key_defaults_false(self):
+        p = ClassifierPipeline.from_dict({"name": "p", "nodes": []})
+        assert p.record_node_verdicts is False
+
+    def test_prevalidation_pipeline_round_trip(self):
+        p = PrevalidationPipeline(name="p", profile_name="prof", record_node_verdicts=True)
+        assert PrevalidationPipeline.from_dict(p.to_dict()).record_node_verdicts is True
+
+
+class TestDedupeSortOrderWarning:
+    """Dedup evaluates only the first file of each stem group, so on a
+    generating pipeline the run order decides what gets generated: a derivative
+    reached before its seed generates categories the seed would have covered,
+    including a duplicate of its own.  validate_warnings() flags that pairing."""
+
+    @staticmethod
+    def _generating_pipeline(**kwargs):
+        node = _make_node(
+            "gen",
+            RelatedImageCondition(edit_suffix="_apple"),
+            on_match=NodeOutcome(
+                OutcomeType.EXECUTE,
+                action_type=ClassifierActionType.GENERATE,
+                action_modifier="_apple",
+            ),
+        )
+        return ClassifierPipeline(name="p", nodes=[node], **kwargs)
+
+    def test_warns_when_dedupe_on_and_no_sort(self):
+        from utils.constants import SortBy
+        p = self._generating_pipeline(dedupe_stem_groups=True, run_sort_by=None)
+        warnings = p.validate_warnings()
+        assert len(warnings) == 1
+        assert SortBy.RELATED_IMAGE.get_text() in warnings[0]
+
+    def test_warns_when_dedupe_on_and_unrelated_sort(self):
+        from utils.constants import SortBy
+        p = self._generating_pipeline(dedupe_stem_groups=True, run_sort_by=SortBy.NAME)
+        assert len(p.validate_warnings()) == 1
+
+    def test_no_warning_with_related_image_sort(self):
+        from utils.constants import SortBy
+        p = self._generating_pipeline(
+            dedupe_stem_groups=True, run_sort_by=SortBy.RELATED_IMAGE
+        )
+        assert p.validate_warnings() == []
+
+    def test_no_warning_when_dedupe_off(self):
+        p = self._generating_pipeline(dedupe_stem_groups=False, run_sort_by=None)
+        assert p.validate_warnings() == []
+
+    def test_no_warning_for_non_generating_pipeline(self):
+        """Scoped to generating pipelines — the ordering difference is only
+        demonstrable there, and warning on every saved pipeline would be noise."""
+        node = _make_node("n", EmbeddingCondition(positives=["x"]))
+        p = ClassifierPipeline(name="p", nodes=[node], dedupe_stem_groups=True)
+        assert p.validate_warnings() == []
+
+    def test_warning_does_not_block_validate(self):
+        p = self._generating_pipeline(dedupe_stem_groups=True, run_sort_by=None)
+        assert p.validate_warnings() != []
+        assert p.validate() == []
+
+    def test_bundled_demos_pair_dedupe_with_seed_first_sort(self):
+        """Both generating demos set RELATED_IMAGE, as their docstrings have
+        always instructed.  Pinned explicitly so the pairing is not left to be
+        rediscovered via the warning the next time a demo is edited."""
+        from utils.constants import SortBy
+        for factory in (
+            ClassifierPipelines.build_category_fill_pipeline,
+            ClassifierPipelines.build_scramble_coherence_pipeline,
+        ):
+            p = factory()
+            assert p.dedupe_stem_groups is True
+            assert p.run_sort_by is SortBy.RELATED_IMAGE
+            assert p.validate_warnings() == []
+
+
+class TestNewFieldsPreserveStoredConfigs:
+    """Both new fields default to a value that leaves to_dict() unchanged, so a
+    pipeline stored before this feature round-trips through the new code with
+    the same serialized form it had before."""
+
+    def test_default_pipeline_dict_has_no_new_keys(self):
+        d = ClassifierPipeline(name="p", nodes=[]).to_dict()
+        assert "dedupe_stem_groups" not in d
+        assert "record_node_verdicts" not in d
+
+    def test_reserialize_is_stable(self):
+        original = {"name": "p", "description": "", "nodes": []}
+        once = ClassifierPipeline.from_dict(original).to_dict()
+        twice = ClassifierPipeline.from_dict(once).to_dict()
+        assert once == twice

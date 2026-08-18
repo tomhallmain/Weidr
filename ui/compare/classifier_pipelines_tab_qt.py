@@ -491,6 +491,10 @@ class ClassifierPipelinesTab(QWidget):
             errors = 0
             actions: dict[str, int] = {}
             files_by_directory: dict[str, int] = {}
+            # One set shared across every directory in the run, so a stem group
+            # spanning two scanned directories is still only evaluated once.
+            # None disables the stem-group gate entirely (every file evaluated).
+            processed_stems = set() if pipeline.dedupe_stem_groups else None
 
             for directory in directories:
                 files = pipeline.sort_files_for_run(list(gather_files(directory)))
@@ -504,6 +508,7 @@ class ClassifierPipelinesTab(QWidget):
                         result = run_pipeline(
                             pipeline, image_path, callbacks,
                             base_directory=directory, report=report,
+                            processed_stems=processed_stems,
                         )
                         total += 1
                         key = result.value if isinstance(result, ClassifierActionType) else "(no action)"
@@ -936,6 +941,10 @@ class ClassifierPipelinesTab(QWidget):
                     }
                     for m in report.messages()
                 ],
+                # Empty unless the pipeline sets record_node_verdicts; one entry
+                # per evaluated file, already JSON-ready (see
+                # compare.pipeline_decision_record).
+                "decisions": report.decisions(),
             }
             ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in pipeline.name)

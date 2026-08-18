@@ -867,3 +867,185 @@ class TestClassifierGateForCherry:
         assert "_banana" in modifiers
         assert "_cherry" in modifiers
         assert len(generated) == 3
+
+
+# ---------------------------------------------------------------------------
+# dedupe_stem_groups — before/after outcome equivalence
+# ---------------------------------------------------------------------------
+
+class TestDedupeStemGroupsOutcomeEquivalence:
+    """dedupe_stem_groups defaults to True, so it changes what an existing
+    pipeline does on its next run.  These tests pin exactly where the outcome
+    is identical (well-formed stem groups: same GENERATEs, less work) and where
+    it deliberately differs (malformed groups stop generating), so the boundary
+    is documented rather than discovered.
+
+    Dedup off is today's behaviour: run_pipeline is called without a shared
+    processed-stems set, so every file is evaluated on its own.
+    """
+
+    @staticmethod
+    def _run(layout, paths, dedupe: bool):
+        """Run the pipeline over *paths* the way a batch run would, returning
+        the GENERATE modifiers dispatched."""
+        working = layout[0]
+        p = _pipeline(layout)
+        p.dedupe_stem_groups = dedupe
+        stems = set() if dedupe else None
+        cb, generated = _callbacks()
+        for path in paths:
+            run_pipeline(p, str(path), cb, base_directory=str(working),
+                         processed_stems=stems)
+        return [m for _, m in generated]
+
+    # --- identical outcomes ------------------------------------------------
+
+    def test_type1_valid_seed_same_either_way(self, layout):
+        """Seed filed in sources/ → Type 1 valid → evaluated in both modes."""
+        working, _, _, _, sources = layout
+        seed = working / f"{STEM_A}.jpg"
+        seed.touch()
+        (sources / f"{STEM_A}.jpg").touch()
+
+        off = self._run(layout, [seed], dedupe=False)
+        clear_base_stem_dir_cache()
+        clear_generate_gate_cache()
+        on = self._run(layout, [seed], dedupe=True)
+        assert sorted(off) == sorted(on) == ["_apple", "_banana", "_cherry"]
+
+    # --- deliberate differences -------------------------------------------
+
+    def test_type1_derivative_dedup_suppresses_duplicate_generates(self, layout):
+        """Seed present in the working dir, reached before its derivative.
+
+        Dedup off evaluates both files.  The seed generates its two missing
+        categories, and the derivative then generates all three -- including
+        _apple, a duplicate of what the derivative already is.  That happens
+        because should_run_generate_action only counts files *downstream* of the
+        file being evaluated: the seed sees STEM_A_apple as its own downstream
+        _apple variant and skips that category, while the derivative has no
+        downstream files at all and so believes every category is missing.
+
+        Dedup on evaluates the seed, marks the stem group done, and skips the
+        derivative entirely -- leaving exactly the two generations that were
+        actually needed.
+        """
+        working, _, _, _, sources = layout
+        seed = working / f"{STEM_A}.jpg"
+        deriv = working / f"{STEM_A}_apple.jpg"
+        seed.touch()
+        deriv.touch()
+        (sources / f"{STEM_A}.jpg").touch()
+
+        off = self._run(layout, [seed, deriv], dedupe=False)
+        clear_base_stem_dir_cache()
+        clear_generate_gate_cache()
+        on = self._run(layout, [seed, deriv], dedupe=True)
+
+        assert sorted(off) == ["_apple", "_banana", "_banana", "_cherry", "_cherry"]
+        assert sorted(on) == ["_banana", "_cherry"]
+
+    def test_scan_order_changes_what_dedup_saves(self, layout):
+        """Dedup only pays off when seeds are reached before their derivatives.
+
+        A derivative does not mark its stem group done while its seed is present
+        in the working directory (_resolve_stem_group's Type 1 derivative case),
+        so reaching the derivative first means *both* files are evaluated and the
+        duplicate generations come back -- the same result as dedup off.  This is
+        what SortBy.RELATED_IMAGE ascending is for, and what
+        validate_warnings() flags on a generating pipeline that does not use it.
+        """
+        working, _, _, _, sources = layout
+        seed = working / f"{STEM_A}.jpg"
+        deriv = working / f"{STEM_A}_apple.jpg"
+        seed.touch()
+        deriv.touch()
+        (sources / f"{STEM_A}.jpg").touch()
+
+        seed_first = self._run(layout, [seed, deriv], dedupe=True)
+        clear_base_stem_dir_cache()
+        clear_generate_gate_cache()
+        deriv_first = self._run(layout, [deriv, seed], dedupe=True)
+
+        assert sorted(seed_first) == ["_banana", "_cherry"]
+        assert sorted(deriv_first) == [
+            "_apple", "_banana", "_banana", "_cherry", "_cherry"
+        ]
+
+    def test_dedup_is_never_worse_than_off(self, layout):
+        """Whatever the scan order, dedup on dispatches no more actions than
+        dedup off -- it either suppresses duplicates or matches the old result.
+        This is what makes defaulting it on safe."""
+        working, _, _, _, sources = layout
+        seed = working / f"{STEM_A}.jpg"
+        deriv = working / f"{STEM_A}_apple.jpg"
+        seed.touch()
+        deriv.touch()
+        (sources / f"{STEM_A}.jpg").touch()
+
+        for order in ([seed, deriv], [deriv, seed]):
+            clear_base_stem_dir_cache()
+            clear_generate_gate_cache()
+            off = self._run(layout, order, dedupe=False)
+            clear_base_stem_dir_cache()
+            clear_generate_gate_cache()
+            on = self._run(layout, order, dedupe=True)
+            assert len(on) <= len(off)
+
+    def test_malformed_c_generates_only_with_dedup_off(self, layout):
+        """Malformed C: the image is the seed but is not filed in any target
+        dir.  Dedup off evaluates it and generates; dedup on skips it.  This is
+        the behaviour change, and it is the point of the machinery — a stem
+        group whose seed is not filed should not spawn derivatives."""
+        working, *_ = layout
+        seed = working / f"{STEM_A}.jpg"
+        seed.touch()   # sources/ intentionally left empty
+
+        off = self._run(layout, [seed], dedupe=False)
+        clear_base_stem_dir_cache()
+        clear_generate_gate_cache()
+        on = self._run(layout, [seed], dedupe=True)
+        assert sorted(off) == ["_apple", "_banana", "_cherry"]
+        assert on == []
+
+    def test_malformed_a_generates_only_with_dedup_off(self, layout):
+        """Malformed A: a derivative whose seed is absent from the working dir
+        and which carries no related-image metadata, so the seed cannot be
+        identified.
+
+        _resolve_stem_group calls the runner's own module-level binding of
+        get_related_image_path, so that is what has to be patched — patching
+        files.related_image would leave the already-bound reference in place.
+        Returning (None, False) is the definition of "no metadata" here, and
+        pinning it keeps the test off the metadata extractor's behaviour for an
+        empty file.
+        """
+        working, *_ = layout
+        deriv = working / f"{STEM_A}_apple.jpg"
+        deriv.touch()
+
+        with patch("compare.classifier_pipeline_runner.get_related_image_path",
+                   return_value=(None, False)):
+            off = self._run(layout, [deriv], dedupe=False)
+            clear_base_stem_dir_cache()
+            clear_generate_gate_cache()
+            on = self._run(layout, [deriv], dedupe=True)
+        assert on == []
+        assert off != on
+
+    # --- scope limiter -----------------------------------------------------
+
+    def test_no_search_dirs_configured_is_equivalent(self, layout, monkeypatch):
+        """_resolve_stem_group returns early when
+        directories_to_search_for_related_images is empty, so none of the
+        validity checks run and dedup on/off agree for every case."""
+        working, *_ = layout
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", [])
+        seed = working / f"{STEM_A}.jpg"
+        seed.touch()
+
+        off = self._run(layout, [seed], dedupe=False)
+        clear_base_stem_dir_cache()
+        clear_generate_gate_cache()
+        on = self._run(layout, [seed], dedupe=True)
+        assert sorted(off) == sorted(on)

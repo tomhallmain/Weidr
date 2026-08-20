@@ -321,6 +321,22 @@ class WindowLauncher:
         except Exception as e:
             self._handle_error(e, "File Action Sets Window Error")
 
+    def open_file_interceptor_rules_window(self, event=None) -> None:
+        """Open the file handling interceptor rules window."""
+        try:
+            from ui.files.file_interceptor_rules_window_qt import FileInterceptorRulesWindow
+            FileInterceptorRulesWindow.show_window(self._app, self._app.app_actions)
+        except Exception as e:
+            self._handle_error(e, "File Interceptor Rules Window Error")
+
+    def open_auto_sort_confirmation_window(self, event=None) -> None:
+        """Open the auto-sort confirmation categories window."""
+        try:
+            from ui.files.auto_sort_confirmation_window_qt import AutoSortConfirmationWindow
+            AutoSortConfirmationWindow.show_window(self._app, self._app.app_actions)
+        except Exception as e:
+            self._handle_error(e, "Auto-Sort Confirmation Window Error")
+
     # ------------------------------------------------------------------
     # Auth / admin windows
     # ------------------------------------------------------------------

@@ -110,9 +110,9 @@ class KeyBindingManager:
         app = self._app
         from ui.files.marked_file_mover_qt import MarkedFiles, MarkedFileMover
         from ui.image.media_details import MediaDetails
+        from ui.image.auto_sort_open_gate import open_last_auto_sorted_media
         from ui.app_window.window_manager import WindowManager
         from utils.constants import ImageGenerationType, Mode
-        from files.file_action import FileAction
 
         # ==============================================================
         # Navigation (arrow keys, Home/End, PgUp/PgDown)
@@ -187,9 +187,7 @@ class KeyBindingManager:
         )
         self._bind(
             "Ctrl+Shift+K",
-            lambda: MediaDetails.open_temp_media_canvas(
-                app, FileAction.get_last_auto_file(), app.app_actions
-            ),
+            lambda: open_last_auto_sorted_media(app, app.app_actions),
         )
 
         # ==============================================================

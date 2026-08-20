@@ -3,6 +3,7 @@ import sys
 from typing import Tuple, Optional, Callable
 
 from files.file_action import FileAction
+from files.file_interceptor_rules_manager import FileInterceptorRulesManager
 from image.frame_cache import FrameCache
 from image.image_ops import ImageOps
 from utils.app_info_cache import app_info_cache
@@ -435,10 +436,26 @@ class MarkedFiles():
         for marked_file in files_to_move:
             if MarkedFiles.is_cancelled_action:
                 break
+            intercept = FileInterceptorRulesManager.apply(
+                marked_file, target_dir, is_moving, app_actions
+            )
+            if intercept.blocked:
+                exceptions[marked_file] = (
+                    intercept.block_message,
+                    os.path.join(target_dir, os.path.basename(marked_file)),
+                )
+                files_done += 1
+                if progress_callback is not None:
+                    progress_callback(files_done, total_files)
+                continue
             # Resolve source path for SVG: move/copy either the SVG or the generated PNG per config
             source_path = marked_file
             moved_svg_as_png = False
-            if config.enable_svgs and marked_file.lower().endswith(".svg"):
+            if intercept.transformed_source:
+                # An interceptor transform owns the payload; the SVG substitution
+                # below would otherwise replace it with the cached render.
+                source_path = intercept.transformed_source
+            elif config.enable_svgs and marked_file.lower().endswith(".svg"):
                 cached_png = FrameCache.get_cached_path(marked_file)
                 if cached_png and os.path.isfile(cached_png):
                     if config.marked_file_svg_move_type == "png":
@@ -464,6 +481,9 @@ class MarkedFiles():
             if success:
                 action.add_file(result)
                 MarkedFiles.previous_marks.append(marked_file)
+                FileInterceptorRulesManager.cleanup_after_move(
+                    intercept, marked_file, app_actions
+                )
                 if moved_svg_as_png and is_moving:
                     FrameCache.remove_from_cache(marked_file, delete_temp_file=False)
                     if app_actions:

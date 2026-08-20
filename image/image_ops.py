@@ -778,13 +778,22 @@ class ImageOps:
             return rotated
 
     @staticmethod
-    def enhance_image(image_path):
-        dirname = os.path.dirname(image_path)
-        filename_parts = os.path.splitext(os.path.basename(image_path))
-        new_filename = filename_parts[0] + "_b" + filename_parts[1]
-        new_file = os.path.join(dirname, new_filename)
-        if os.path.exists(new_file):
-            raise Exception("File already exists: " + new_filename) # TODO maybe remove this
+    def enhance_image(image_path, output_path=None):
+        """Brighten/contrast *image_path* into a new file.
+
+        Without an explicit output_path the result goes to the ``_b`` sibling
+        and an existing one is refused; a caller that passes output_path has
+        already chosen (and is responsible for) the destination.
+        """
+        if output_path is not None and str(output_path).strip() != "":
+            new_file = output_path
+        else:
+            dirname = os.path.dirname(image_path)
+            filename_parts = os.path.splitext(os.path.basename(image_path))
+            new_filename = filename_parts[0] + "_b" + filename_parts[1]
+            new_file = os.path.join(dirname, new_filename)
+            if os.path.exists(new_file):
+                raise Exception("File already exists: " + new_filename) # TODO maybe remove this
         try:
             with PIL.Image.open(image_path) as image:
                 brightness_enhancer = ImageEnhance.Brightness(image)

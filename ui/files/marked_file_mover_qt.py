@@ -356,6 +356,14 @@ class MarkedFileMover(SmartDialog):
         )
         bar.addWidget(diff_pdf_btn)
 
+        interceptor_btn = QPushButton(_("Interceptor rules"))
+        interceptor_btn.setFocusPolicy(Qt.NoFocus)
+        interceptor_btn.setToolTip(
+            _("Configure rules applied while moving or copying marked files")
+        )
+        interceptor_btn.clicked.connect(lambda _checked=False: self._open_interceptor_rules())
+        bar.addWidget(interceptor_btn)
+
         root.addLayout(bar)
 
         # -- scroll area for directory rows -------------------------------
@@ -485,6 +493,10 @@ class MarkedFileMover(SmartDialog):
         if target_dir not in self._filtered_target_dirs:
             return
         MarkedFileMover._session_filter_target_map[filter_key] = target_dir
+
+    def _open_interceptor_rules(self) -> None:
+        from ui.files.file_interceptor_rules_window_qt import FileInterceptorRulesWindow
+        FileInterceptorRulesWindow.show_window(self, self._app_actions)
 
     def _toggle_target_require_gui(self, target_dir: str) -> None:
         require_gui = not MarkedFiles.is_target_dir_require_gui(target_dir)

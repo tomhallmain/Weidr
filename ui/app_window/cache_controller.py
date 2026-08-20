@@ -51,10 +51,14 @@ class CacheController:
             from ui.files.go_to_file_qt import GoToFile
             from ui.files.target_directory_window_qt import TargetDirectoryWindow
             from compare.embedding_seed import EmbeddingSeed
+            from files.auto_sort_confirmation import AutoSortConfirmation
+            from files.file_interceptor_rules_manager import FileInterceptorRulesManager
 
             MarkedFiles.load_target_dirs()
             RecentDirectories.load_recent_directories()
             FileAction.load_actions()
+            FileInterceptorRulesManager.load_rules()
+            AutoSortConfirmation.load()
             FileActionSets.load()
             MediaDetails.load_image_generation_mode()
             ClassifierManagementWindow.set_prevalidations()
@@ -139,9 +143,14 @@ class CacheController:
                 except Exception as e:
                     logger.warning(f"Failed to store display position or virtual screen info: {e}")
 
+        from files.auto_sort_confirmation import AutoSortConfirmation
+        from files.file_interceptor_rules_manager import FileInterceptorRulesManager
+
         RecentDirectories.store_recent_directories()
         MarkedFiles.store_target_dirs()
         FileAction.store_actions()
+        FileInterceptorRulesManager.store_rules()
+        AutoSortConfirmation.save()
         FileActionSets.store()
         MediaDetails.store_image_generation_mode()
         ClassifierManagementWindow.store_prevalidations()

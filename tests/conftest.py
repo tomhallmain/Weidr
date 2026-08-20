@@ -141,6 +141,20 @@ def reset_app_globals():
         except Exception:
             pass
 
+        # FileInterceptorRulesManager — process-wide ordered rule list
+        try:
+            from files.file_interceptor_rules_manager import FileInterceptorRulesManager
+            FileInterceptorRulesManager.rules = []
+        except Exception:
+            pass
+
+        # AutoSortConfirmation — process-wide gated category set
+        try:
+            from files.auto_sort_confirmation import AutoSortConfirmation
+            AutoSortConfirmation.confirm_categories = set()
+        except Exception:
+            pass
+
         # ClassifierActionsManager
         try:
             from compare.classifier_actions_manager import ClassifierActionsManager

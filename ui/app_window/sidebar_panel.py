@@ -335,6 +335,24 @@ class SidebarPanel(QWidget):
             self.file_action_sets_btn,
             _("Configure and execute sets of file actions (copy/move) against the currently marked files."),
         )
+        self.interceptor_rules_btn = self._make_button(
+            _("Interceptor rules"),
+            lambda: self._app.window_launcher.open_file_interceptor_rules_window(),
+        )
+        create_tooltip(
+            self.interceptor_rules_btn,
+            _("Configure rules that block or transform marked files as they are "
+              "moved or copied to a target directory."),
+        )
+        self.auto_sort_confirm_btn = self._make_button(
+            _("Auto-sort confirmation"),
+            lambda: self._app.window_launcher.open_auto_sort_confirmation_window(),
+        )
+        create_tooltip(
+            self.auto_sort_confirm_btn,
+            _("Choose which automatically sorted categories ask for confirmation "
+              "before their media is viewed."),
+        )
         self.open_media_location_btn = self._make_button(
             _("Open media location"),
             lambda: self._app.file_ops_ctrl.open_media_location(),

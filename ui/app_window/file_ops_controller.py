@@ -768,7 +768,7 @@ class FileOpsController:
 
         for filepath in candidates:
             try:
-                _, was_scaled = ImageOps.scale_image_to_equivalent_pixels(
+                _unused, was_scaled = ImageOps.scale_image_to_equivalent_pixels(
                     filepath, target_side
                 )
                 if was_scaled:

@@ -341,6 +341,12 @@ class AppStyle:
                 border-bottom-left-radius: {radius}px;
                 border-bottom-right-radius: {radius}px;
             }}
+            /* When background_opacity < 1.0, contentArea's fill above is
+               transparent, so these two radii have nothing left to round --
+               SidebarPanel's square-cornered fallback fill can show a faint
+               seam at the bottom two corners against mainFrame's rounded
+               outline. A setMask()-based rounded clip on the affected
+               widget(s) would fix it; not done since the seam is minor. */
 
             QSplitter#contentSplitter {{
                 background-color: {behind_media_fill};

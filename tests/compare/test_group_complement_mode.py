@@ -245,6 +245,37 @@ class TestRemoveFromComplement:
         assert wrapper.match_index == 0
 
 
+class TestReenterComplementModeAfterDeletion:
+    """remove_from_complement() only trims files_matched; it never touches
+    compare_data.files_found itself -- that sync happens one call up, in
+    FileOpsController.delete_media's GROUP_COMPLEMENT branch, which calls
+    compare().remove_from_groups([filepath]) right before remove_from_complement().
+    This test simulates that combined effect and confirms re-entering complement
+    mode a second time (without an intervening full re-run) does not resurrect
+    a since-deleted file from a stale files_found."""
+
+    def test_deleted_file_does_not_reappear_on_second_entry(self):
+        files_found = ["/a.jpg", "/b.jpg", "/c.jpg", "/d.jpg"]
+        file_groups = {0: {"/a.jpg": 0.1}}
+        wrapper, app_actions = _wrapper_with_groups(files_found, file_groups)
+
+        wrapper.enter_complement_mode()
+        assert wrapper.files_matched == ["/b.jpg", "/c.jpg", "/d.jpg"]
+
+        # Simulate FileOpsController.delete_media's GROUP_COMPLEMENT branch:
+        # compare().remove_from_groups([filepath]) keeps files_found in sync,
+        # then remove_from_complement() trims the live files_matched.
+        wrapper._compare.compare_data.files_found.remove("/c.jpg")
+        wrapper.remove_from_complement("/c.jpg")
+        assert wrapper.files_matched == ["/b.jpg", "/d.jpg"]
+
+        wrapper.return_to_group_mode()
+        wrapper.enter_complement_mode()
+
+        assert wrapper.files_matched == ["/b.jpg", "/d.jpg"]
+        assert "/c.jpg" not in wrapper.files_matched
+
+
 class TestCompareManagerDelegation:
     """CompareManager.enter_complement_mode/return_to_group_mode/remove_from_complement
     must delegate to the primary wrapper, like every other wrapper method."""

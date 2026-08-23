@@ -428,17 +428,24 @@ class Config:
             return  # Already validated in this session
         
         if self.gimp_exe_loc and self.gimp_exe_loc.strip():
-            # Check if the configured GIMP path is valid
-            if self._is_valid_gimp_installation(self.gimp_exe_loc):
+            # Store the *resolved* executable path, not the configured name.  GIMP
+            # is launched with an argv list and no shell, so nothing looks the name
+            # up on PATH for us at spawn time.  Only the in-memory value changes --
+            # persist() rebuilds config.json from self.dict, so the user's own
+            # portable "gimp-3.0" stays in their config file.
+            resolved = self._resolve_gimp_executable(self.gimp_exe_loc)
+            if resolved and self._is_valid_gimp_installation(resolved):
+                self.gimp_exe_loc = resolved
                 logger.info(f"Using configured GIMP installation: {self.gimp_exe_loc}")
                 # Check if it's GIMP 3+ for GEGL support
                 self._check_gimp_version_for_gegl()
                 self._gimp_validated = True
                 return
-        
-        # If no valid GIMP found in config, try to auto-detect
-        detected_gimp = self._find_gimp_installation()
-        self.gimp_exe_loc = detected_gimp # Will be None if no valid GIMP installation is found
+
+        # If no valid GIMP found in config, try to auto-detect.
+        # _find_gimp_unix returns bare command names; resolve those the same way.
+        detected_gimp = self._resolve_gimp_executable(self._find_gimp_installation())
+        self.gimp_exe_loc = detected_gimp  # Will be None if no valid GIMP installation is found
         if detected_gimp:
             logger.info(f"Auto-detected GIMP installation: {self.gimp_exe_loc}")
             # Check if it's GIMP 3+ for GEGL support
@@ -451,19 +458,32 @@ class Config:
             self.gimp_gegl_enabled = False
             self._gimp_validated = True
 
+    @staticmethod
+    def _resolve_gimp_executable(gimp_path):
+        """Resolve a configured GIMP name or path to a real executable path.
+
+        Returns None when nothing matches.  A bare command name -- the "gimp-2.10"
+        default here, or the "gimp-3.0" in config_example.json -- must become a
+        concrete path before launch, because GIMP is spawned from an argv list with
+        no shell involved.  On POSIX execvp would still search PATH, but on Windows
+        CreateProcess appends ".exe" only when the name carries no extension, and
+        the ".0"/".10" of a GIMP version name reads as one: the bare name is looked
+        up verbatim, is not found, and the launch dies with WinError 2.
+        """
+        if not gimp_path:
+            return None
+        if os.path.isfile(gimp_path):
+            # abspath so a relative configured path survives a later cwd change.
+            return os.path.abspath(gimp_path)
+        return shutil.which(gimp_path)
+
     def _is_valid_gimp_installation(self, gimp_path):
         """Check if a GIMP installation is valid and executable."""
         try:
-            # Handle both full paths and executable names
-            if os.path.isfile(gimp_path):
-                # Full path provided
-                executable_path = gimp_path
-            else:
-                # Just executable name, check if it's in PATH
-                executable_path = shutil.which(gimp_path)
-                if not executable_path:
-                    return False
-            
+            executable_path = self._resolve_gimp_executable(gimp_path)
+            if not executable_path:
+                return False
+
             # Test if the executable can be run (version check)
             result = subprocess.run([executable_path, "--version"], 
                                   capture_output=True, text=True, timeout=10)
@@ -548,14 +568,10 @@ class Config:
     def _is_gimp_3_or_later(self, gimp_path):
         """Check if the GIMP installation is version 3.0 or later."""
         try:
-            # Handle both full paths and executable names
-            if os.path.isfile(gimp_path):
-                executable_path = gimp_path
-            else:
-                executable_path = shutil.which(gimp_path)
-                if not executable_path:
-                    return False
-            
+            executable_path = self._resolve_gimp_executable(gimp_path)
+            if not executable_path:
+                return False
+
             # Test if the executable can be run (version check)
             result = subprocess.run([executable_path, "--version"], 
                                   capture_output=True, text=True, timeout=10)

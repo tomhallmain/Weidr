@@ -11,6 +11,20 @@ Clone this repository and ensure Python 3 and the required packages are installe
 
 Run `app_qt.py` to start the PySide6 (Qt) UI. For more details, see [USAGE.md](https://www.github.com/tomhallmain/Weidr/blob/master/USAGE.md).
 
+### Driving the app without the UI
+
+The core packages (`compare/`, `files/`, `image/`) contain no Qt imports, so a script or automated agent can import them directly and run comparisons, browse and navigate a directory, mark/move/delete files, run directory-wide conversions, and build and run classifier pipelines — with no window open and no `QApplication`. `utils/headless_app_actions.py` supplies the Qt-free stand-in for the UI callbacks the core expects. This is a library-level capability, not a command endpoint.
+
+Start from `scripts/agent_headless_demo.py`, which is both the worked example and the reference:
+
+```bash
+python scripts/agent_headless_demo.py --api    # the calls, their arguments, and the traps
+python scripts/agent_headless_demo.py          # run every demo end to end
+python scripts/agent_headless_demo.py --list   # or pick one with --only NAME
+```
+
+It runs against a throwaway directory of generated images with the app cache redirected into it, so it never touches your media or saved pipelines. The `--api` output is written to be handed to an agent as its instructions.
+
 ---
 
 ## Media Browser
@@ -28,6 +42,7 @@ The UI can be used as a media file browser. The following features are available
     <li>Mark favorite media and access them quickly via the Favorites window</li>
     <li>Save reusable embedding vectors ("search seeds") from a supergroup or single file, independent of the source media, via the Embedding Seed Library</li>
     <li>Move, copy, and delete marked file groups without overwriting system clipboard</li>
+    <li>Intercept marked-file transfers with ordered rules that block a move or transform the file on its way out (first match wins)</li>
     <li>Revert and modify historical file action changes</li>
     <li>Quickly find directories via recent directory picker window</li>
     <li>Stores session info about seen directories (useful for directories with many media files)</li>
@@ -44,6 +59,8 @@ The UI can be used as a media file browser. The following features are available
     <li>Extract text using OCR from images</li>
     <li>Set custom title bar colors for specific directories</li>
     <li>In-window media playback controls (timeline and play/pause) for video and animated GIF files</li>
+    <li>Edit the current video into a new sibling file: strip audio, drop container metadata, cut at the playback position, or silence an audio range</li>
+    <li>Convert or resize a whole directory at once: images to JPG, SVG to PNG, scale to a target pixel area, or copy videos without metadata</li>
     <li>Apply custom aspect ratio settings to image display</li>
     <li>Capture screenshots from time-based media with a keyboard shortcut and configurable save directory</li>
     <li>Interactively crop images, animated GIFs, SVGs, PDFs, and videos</li>
@@ -83,6 +100,7 @@ Group large media sets by visual similarity using both embedding and color-compa
 - MetaCLIP: 1024D embeddings, Meta's improved CLIP training data curation on ViT-H/14
 - V-JEPA 2: 1024D embeddings, video-primary world model encoder - supports images, video, and GIF; media-to-media similarity only (no text search)
 - Face Embedding: 512D ArcFace identity embeddings via InsightFace `buffalo_l`; images with no detected face are skipped; media-to-media only (no text search) - requires `insightface` and `onnxruntime-gpu`
+- CLAP Audio Embedding: audio-domain embeddings for comparing and text-searching audio tracks, rather than the visual content of a file
 
 Each model offers different tradeoffs between accuracy, speed, and resource usage. The default CLIP model provides a good balance for most use cases.
 </details>
@@ -123,6 +141,7 @@ Prevalidation rules and classifier actions can be configured with:
 <li>Filename substring matching and related-file ("base stem") existence checks</li>
 <li>Dynamic media (video/GIF) sampling with pseudo-static detection to avoid redundant checks on near-identical frames</li>
 <li><strong>Lookaheads</strong>: named, reusable checks (embedding text or a reference to another prevalidation) that veto a rule's match when triggered, shareable across multiple rules</li>
+<li>Per-category confirmation for automatic sorts: nominate the destination categories that should prompt before a file auto-moved into them is displayed</li>
 </ul>
 </details>
 
@@ -134,6 +153,16 @@ Classifier models can be added manually or discovered through the in-app model m
 - [Coherence Detection](https://huggingface.co/reddesert/coherence_detection) - A PyTorch ResNet-34 model for classifying AI-generated images into coherent, incoherent, or semi-incoherent categories
 - [NSFW Detection](https://huggingface.co/reddesert/nsfw_detection) - A PyTorch ResNet-34 safetensors classifier model for filtering out some types of NSFW content
 - [Deep Image Orientation Detection](https://huggingface.co/DuarteBarbosa/deep-image-orientation-detection) - A PyTorch EfficientNetV2 model (4-way: 0°/90°/180°/270°) for detecting images that are sideways or upside-down, e.g. from a camera/scanner defaulting to one orientation
+
+---
+
+## Classifier Action Pipelines
+
+A classifier action pipeline is a saved, multi-step decision tree that works out what should happen to each file it is given: nodes test conditions in turn and the first conclusive one decides the outcome. It is the branching form of the rules described above, for sorting logic a single prevalidation rule's AND/OR combination can't express.
+
+Once built in the **Pipelines** tab, a pipeline can be run three ways: **Run Current** applies it to the displayed file only, **Run** applies it across every directory in the selected Directory Profile, and **Rerun Last** repeats a previous run. A pipeline scoped to a profile can also join the prevalidation pass, so it applies as you browse instead of on demand.
+
+A matching node can fire any of the standard actions — skip, hide, notify, blur, rotate, add mark, move, copy, delete — or scramble the image, or hand it to sd-runner for generation. Batch runs report what was evaluated and which actions fired, and write a JSON record of the run beside it; that record is what **Rerun Last** reads back, so a large sort can be reviewed before it is repeated.
 
 ---
 

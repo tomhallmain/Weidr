@@ -156,6 +156,88 @@ class MarkedFiles():
         MarkedFiles.delete_lock = delete_lock
 
     @staticmethod
+    def delete_file_static(
+        filepath: str,
+        app_actions,
+        toast: bool = True,
+        manual_delete: bool = True,
+        is_directory: bool = False,
+    ) -> bool:
+        """
+        Delete a file or directory from disk, respecting the trash-folder config,
+        and record the action in FileAction history. Qt-free: notifications go
+        through app_actions, so this is usable by the GUI (FileOpsController
+        delegates here) and by a headless agent alike -- one code path, not two.
+
+        Also invalidates any pending removal-undo snapshot via app_actions: a
+        delete can't be undone, so a stale snapshot could otherwise restore
+        group entries for a file that no longer exists. Headless with no
+        compare in progress, this is a no-op.
+
+        Returns True if the file ended up deleted (trashed or removed), False if
+        every attempt failed.
+        """
+        MarkedFiles.set_delete_lock()
+        app_actions.invalidate_removal_undo_snapshot()
+
+        if toast and manual_delete:
+            item_name = os.path.basename(filepath)
+            message = (
+                _("Removing directory: {0}") if is_directory else _("Removing file: {0}")
+            ).format(item_name)
+            app_actions.title_notify(message, action_type=ActionType.REMOVE_FILE)
+        else:
+            logger.info(f"Removing {'directory' if is_directory else 'file'}: {filepath}")
+
+        rest_path = None
+        if not is_directory and not config.delete_instantly and config.trash_folder is not None:
+            rest_path = os.path.join(config.trash_folder, os.path.basename(filepath))
+
+        try:
+            Utils.remove_path(
+                filepath,
+                delete_instantly=config.delete_instantly,
+                trash_folder=config.trash_folder,
+                is_directory=is_directory,
+            )
+            if not is_directory:
+                FileAction.add_delete_action(filepath, rest_path=rest_path, auto=not manual_delete)
+            return True
+        except Exception as e:
+            logger.error(e)
+            if config.delete_instantly:
+                app_actions.alert(_("Warning"), _("Failed to delete item: {0}").format(str(e)))
+                return False
+            if config.trash_folder is not None:
+                if is_directory:
+                    msg = _("Failed to move directory to {0}. Double check the trash folder is set properly in config.json.").format(config.trash_folder)
+                else:
+                    msg = _("Failed to send file to {0}. Double check the trash folder is set properly in config.json.").format(config.trash_folder)
+                app_actions.alert(_("Warning"), msg)
+                return False
+            if is_directory:
+                app_actions.alert(
+                    _("Warning"),
+                    _("Failed to move directory to the trash. Either pip install send2trash "
+                      "or set a specific trash folder in config.json."),
+                )
+                return False
+            app_actions.alert(
+                _("Warning"),
+                _("Failed to send file to the trash, so it will be deleted. Either pip install "
+                  "send2trash or set a specific trash folder in config.json."),
+            )
+            try:
+                Utils.remove_path(filepath, delete_instantly=True, trash_folder=None, is_directory=is_directory)
+                if not is_directory:
+                    FileAction.add_delete_action(filepath, rest_path=None, auto=not manual_delete)
+                return True
+            except Exception as e2:
+                logger.error(e2)
+                app_actions.alert(_("Warning"), _("Failed to delete item: {0}").format(filepath))
+                return False
+
+    @staticmethod
     def clear_file_marks(app_actions) -> None:
         if not MarkedFiles.guard_mark_mutation(app_actions, _("clear marks")):
             return
@@ -491,7 +573,7 @@ class MarkedFiles():
                     FrameCache.remove_from_cache(marked_file, delete_temp_file=False)
                     if app_actions:
                         try:
-                            app_actions.delete(marked_file, toast=False, manual_delete=False)
+                            MarkedFiles.delete_file_static(marked_file, app_actions, toast=False, manual_delete=False)
                         except Exception as e:
                             logger.warning(f"Failed to remove SVG after moving PNG: {marked_file} - {e}")
             else:
@@ -915,7 +997,7 @@ class MarkedFiles():
         try:
             if MarkedFiles._paths_match(current_media, marked_file):
                 app_actions.release_media_canvas()
-            app_actions.delete(marked_file)
+            MarkedFiles.delete_file_static(marked_file, app_actions)
             if marked_file in MarkedFiles.file_marks:
                 MarkedFiles.file_marks.remove(marked_file)
             app_actions.warn(_("Removed marked file from source: {0}").format(marked_file))

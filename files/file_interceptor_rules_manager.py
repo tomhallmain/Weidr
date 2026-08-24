@@ -240,7 +240,9 @@ class FileInterceptorRulesManager:
             logger.warning(f"Failed to evict render cache for {filepath}: {e}")
         try:
             if app_actions is not None:
-                app_actions.delete(filepath, toast=False, manual_delete=False)
+                from files.marked_files import MarkedFiles  # avoid import cycle at module load
+
+                MarkedFiles.delete_file_static(filepath, app_actions, toast=False, manual_delete=False)
             elif os.path.isfile(filepath):
                 os.remove(filepath)
             logger.info(

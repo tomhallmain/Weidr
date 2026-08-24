@@ -13,8 +13,9 @@ None. The set is listed in DOMAIN_ACTIONS below and doubles as the worklist for
 moving those calls off AppActions entirely.
 
 This module must not import PySide6, directly or transitively. AppActions
-itself is already safe to import here: its only non-stdlib import is
-ui.app_style, which is a pure constants module with no imports of its own.
+itself is safe to import here: it pulls in nothing from ui at module load.
+Its one ui import is lazy, inside related_images_signals(), and building
+headless actions seeds that slot up front so it is never reached.
 """
 
 from __future__ import annotations
@@ -82,6 +83,12 @@ NOOP_ACTIONS = (
     # on its own -- CompareManager.maybe_restore_removal_undo_snapshot() -- so a
     # caller that needs it does not go through here.
     "restore_compare_state_for_undone_move",
+    # Drops a pending removal-undo snapshot after a delete, so it cannot later
+    # restore group entries for a file that no longer exists. Reachable
+    # directly on its own -- CompareManager.invalidate_removal_undo_snapshot()
+    # -- for a headless caller that has a CompareManager and cares; a caller
+    # with no compare in progress has nothing to invalidate.
+    "invalidate_removal_undo_snapshot",
     # set_mode carries both display and state meaning; treated as display here
     # because nothing headless reads back a mode set this way. Revisit when the
     # domain calls move off AppActions.
@@ -116,6 +123,16 @@ NEUTRAL_RETURN_ACTIONS: Dict[str, Any] = {
 
 # Not presentation: these navigate, mutate, persist, or report real state.
 # Must be supplied by the caller.
+#
+# Only two are actually reachable from the Qt-free packages, and both are
+# cheap to answer:
+#   get_base_dir        -- compare/compare_wrapper.py, files/marked_files.py
+#   is_compare_running  -- files/marked_files.py
+# The rest are called only from ui/, routed through this facade so a UI
+# component can reach AppWindow without importing it. No headless code path
+# reaches those, so leaving them unsupplied costs nothing -- they are listed
+# here rather than as no-ops because a caller that does wire one deserves a
+# named failure instead of a silent nothing.
 DOMAIN_ACTIONS = (
     "get_active_media_filepath",
     "get_base_dir",

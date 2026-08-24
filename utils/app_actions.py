@@ -1,7 +1,6 @@
 from functools import cached_property
 from typing import Callable, Dict, Any, Optional
 
-from ui.app_style import AppStyle
 
 class AppActions:
     REQUIRED_ACTIONS = {
@@ -21,6 +20,7 @@ class AppActions:
         "refresh_masonry",
         "is_compare_running",
         "restore_compare_state_for_undone_move",
+        "invalidate_removal_undo_snapshot",
     }
     
     def __init__(self, actions: Dict[str, Callable[..., Any]], master: Optional[object] = None):
@@ -60,31 +60,29 @@ class AppActions:
 
     def warn(self, message: str, time_in_seconds: int = None) -> None:
         """
-        Show a warning toast with the warning background color.
-        This is a convenience method for displaying warning messages.
+        Show a warning toast.
+
+        The kind is named rather than a colour: choosing one is the display
+        layer's job, and naming it here would mean this module had to know
+        about styling.
         """
         # Import here to avoid circular dependency
         from utils.config import config
-        
+
         if time_in_seconds is None:
             time_in_seconds = config.toasts_persist_seconds
-        
-        # Call toast with the warning background color
-        return self.toast(message, time_in_seconds=time_in_seconds, bg_color=AppStyle.TOAST_COLOR_WARNING)
+
+        return self.toast(message, time_in_seconds=time_in_seconds, kind="warning")
 
     def success(self, message: str, time_in_seconds: int = None) -> None:
-        """
-        Show a success toast with the success background color.
-        This is a convenience method for displaying success messages.
-        """
+        """Show a success toast. See warn() on why a kind, not a colour."""
         # Import here to avoid circular dependency
         from utils.config import config
-        
+
         if time_in_seconds is None:
             time_in_seconds = config.toasts_persist_seconds
-        
-        # Call toast with the success background color
-        return self.toast(message, time_in_seconds=time_in_seconds, bg_color=AppStyle.TOAST_COLOR_SUCCESS)
+
+        return self.toast(message, time_in_seconds=time_in_seconds, kind="success")
 
     def get_master(self):
         return self._master

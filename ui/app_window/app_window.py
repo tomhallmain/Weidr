@@ -522,6 +522,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             "release_media_canvas": ts(self.release_media_canvas),
             "is_compare_running": self.is_compare_running,
             "restore_compare_state_for_undone_move": ts(self.restore_compare_state_for_undone_move),
+            "invalidate_removal_undo_snapshot": self.compare_manager.invalidate_removal_undo_snapshot,
             # Persistence
             "store_info_cache": self.cache_ctrl.store_info_cache,
             # Masonry grid

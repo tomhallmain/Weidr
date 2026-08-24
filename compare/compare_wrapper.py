@@ -429,8 +429,8 @@ class CompareWrapper:
 
         Presents a confirmation dialog showing the number of files that will be
         deleted.  On confirm, iterates every group, picks one survivor at random,
-        and deletes the rest via app_actions.delete.  Resets group state and
-        returns to browse mode when complete.
+        and deletes the rest via MarkedFiles.delete_file_static.  Resets group
+        state and returns to browse mode when complete.
         """
         import random
 
@@ -491,8 +491,8 @@ class CompareWrapper:
                         continue
                     try:
                         MarkedFiles.handle_file_removal(filepath)
-                        self._app_actions.delete(
-                            filepath, toast=False, manual_delete=False
+                        MarkedFiles.delete_file_static(
+                            filepath, self._app_actions, toast=False, manual_delete=False
                         )
                         deleted += 1
                     except Exception as exc:

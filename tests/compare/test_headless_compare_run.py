@@ -1,8 +1,11 @@
 """End-to-end proof that a compare runs with no Qt at all.
 
-This is the check the whole decoupling effort exists for: assemble the ports --
+This is the check the headless compare path exists for: assemble the ports --
 the Qt-free AppActions, the responsiveness stand-in, the threaded runner -- and
 drive a real comparison with no QApplication, no window and no display.
+Running a compare is one of several things a headless caller needs to do, not
+the only one -- `tests/unit/test_headless_file_marking.py` covers opening a
+directory and marking/moving/deleting files, none of which involves a compare.
 
 COLOR_MATCHING is used because it needs no ML model and is deterministic on the
 solid-colour fixture: five red, five blue and five green images whose LAB

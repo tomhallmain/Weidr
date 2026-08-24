@@ -224,6 +224,21 @@ class TestInterceptorRulesDuringTransfer:
         )
         return toasts
 
+    def _capture_deletes(self, monkeypatch) -> list:
+        """Record deleted paths instead of removing anything.
+
+        Interception deletes via MarkedFiles.delete_file_static(), the shared
+        implementation the GUI also uses, so patching the app's delete action
+        would capture nothing.
+        """
+        deleted: list = []
+        monkeypatch.setattr(
+            MarkedFiles,
+            "delete_file_static",
+            lambda filepath, app_actions, **kw: deleted.append(filepath) or True,
+        )
+        return deleted
+
     def test_block_rule_prevents_move_and_leaves_file_in_place(
         self, window_with_dir, qtbot, monkeypatch, isolated_marks, tmp_path
     ):
@@ -307,12 +322,7 @@ class TestInterceptorRulesDuringTransfer:
         assert media_path.lower().endswith(".png")
         self._capture_toasts(win, monkeypatch)
 
-        deleted: list = []
-        monkeypatch.setitem(
-            win.app_actions._actions,
-            "delete",
-            lambda path, *a, **kw: deleted.append(path),
-        )
+        deleted = self._capture_deletes(monkeypatch)
 
         FileInterceptorRulesManager.rules = [
             FileInterceptorRule(
@@ -330,7 +340,7 @@ class TestInterceptorRulesDuringTransfer:
 
         moved = [p.name for p in target.iterdir()]
         assert moved == [os.path.splitext(os.path.basename(media_path))[0] + ".jpg"]
-        # The untransformed original is handed to the app's delete action.
+        # The untransformed original is handed to the shared delete implementation.
         assert deleted == [media_path]
 
     def test_transform_rule_on_copy_never_deletes_the_original(
@@ -342,12 +352,7 @@ class TestInterceptorRulesDuringTransfer:
         media_path = win.file_browser.get_files()[0]
         self._capture_toasts(win, monkeypatch)
 
-        deleted: list = []
-        monkeypatch.setitem(
-            win.app_actions._actions,
-            "delete",
-            lambda path, *a, **kw: deleted.append(path),
-        )
+        deleted = self._capture_deletes(monkeypatch)
 
         FileInterceptorRulesManager.rules = [
             FileInterceptorRule(

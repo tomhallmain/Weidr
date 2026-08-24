@@ -9,7 +9,6 @@ supergroup navigation / label suffix.
 """
 from __future__ import annotations
 
-import os
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -21,6 +20,7 @@ from compare.compare_args import CompareArgs
 from compare.compare_embeddings_clip import CompareEmbeddingClip
 from compare.compare_result import CompareResult
 from compare.compare_wrapper import CompareWrapper
+from utils.config import config
 from utils.constants import CompareMode
 
 
@@ -373,11 +373,16 @@ class TestClearSupergroups:
 
 
 class TestRandomPurgeWipesSupergroups:
-    def test_supergroups_cleared_after_purge(self, tmp_path):
+    def test_supergroups_cleared_after_purge(self, tmp_path, monkeypatch):
         """No groups survive a random purge, so any existing supergroups
         (which reference group_index values that all just stopped existing)
         must be wiped, not left stale."""
         from PIL import Image
+
+        # The purge deletes via MarkedFiles.delete_file_static() -> real config,
+        # so pin delete_instantly rather than relying on send2trash or a trash
+        # folder being configured here.
+        monkeypatch.setattr(config, "delete_instantly", True)
 
         paths = [str(tmp_path / f"{i}.png") for i in range(4)]
         for p in paths:
@@ -385,7 +390,6 @@ class TestRandomPurgeWipesSupergroups:
 
         app_actions = MagicMock()
         app_actions.alert.return_value = True
-        app_actions.delete.side_effect = lambda path, **kw: os.remove(path)
 
         wrapper = CompareWrapper(master=None, compare_mode=CompareMode.CLIP_EMBEDDING, app_actions=app_actions)
         wrapper.file_groups = {0: {paths[0]: 0.0, paths[1]: 0.0}, 1: {paths[2]: 0.0, paths[3]: 0.0}}

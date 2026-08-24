@@ -15,6 +15,7 @@ from files.file_interceptor_rules_manager import (
     FileInterceptorRulesManager,
     InterceptResult,
 )
+from files.marked_files import MarkedFiles
 from utils.constants import CompareMediaType
 
 
@@ -27,17 +28,13 @@ def _clear_rules():
 
 
 class _RecordingActions:
-    """Minimal stand-in for AppActions capturing warn/delete calls."""
+    """Minimal stand-in for AppActions capturing warn calls."""
 
     def __init__(self):
         self.warnings = []
-        self.deleted = []
 
     def warn(self, message, time_in_seconds=None):
         self.warnings.append(message)
-
-    def delete(self, path, toast=True, manual_delete=True):
-        self.deleted.append(path)
 
 
 def _block_rule(**kwargs) -> FileInterceptorRule:
@@ -243,27 +240,43 @@ def test_apply_transform_noop_result_falls_back_to_untransformed():
 # ---------------------------------------------------------------------------
 # cleanup_after_move()
 # ---------------------------------------------------------------------------
+# It deletes via MarkedFiles.delete_file_static(), not app_actions.delete(), so
+# these capture that call instead of touching the filesystem. What
+# delete_file_static() itself does is covered in test_headless_file_marking.py.
 
-def test_cleanup_deletes_original_when_flagged():
+def _capture_deletes(monkeypatch):
+    deleted = []
+    monkeypatch.setattr(
+        MarkedFiles,
+        "delete_file_static",
+        lambda filepath, app_actions, **kw: deleted.append(filepath) or True,
+    )
+    return deleted
+
+
+def test_cleanup_deletes_original_when_flagged(monkeypatch):
+    deleted = _capture_deletes(monkeypatch)
     actions = _RecordingActions()
     result = InterceptResult(
         transformed_source="/s/a.jpg", delete_original=True, rule_name="jpg"
     )
     FileInterceptorRulesManager.cleanup_after_move(result, "/s/a.png", actions)
-    assert actions.deleted == ["/s/a.png"]
+    assert deleted == ["/s/a.png"]
 
 
-def test_cleanup_is_noop_without_delete_flag():
+def test_cleanup_is_noop_without_delete_flag(monkeypatch):
+    deleted = _capture_deletes(monkeypatch)
     actions = _RecordingActions()
     result = InterceptResult(transformed_source="/s/a.jpg", delete_original=False)
     FileInterceptorRulesManager.cleanup_after_move(result, "/s/a.png", actions)
-    assert actions.deleted == []
+    assert deleted == []
 
 
-def test_cleanup_is_noop_without_transform():
+def test_cleanup_is_noop_without_transform(monkeypatch):
+    deleted = _capture_deletes(monkeypatch)
     actions = _RecordingActions()
     FileInterceptorRulesManager.cleanup_after_move(InterceptResult(), "/s/a.png", actions)
-    assert actions.deleted == []
+    assert deleted == []
 
 
 # ---------------------------------------------------------------------------

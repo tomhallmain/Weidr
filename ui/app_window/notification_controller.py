@@ -90,21 +90,38 @@ class NotificationController:
     # ------------------------------------------------------------------
     # Toast
     # ------------------------------------------------------------------
+    # Semantic toast kinds -> the style constant that renders them. Callers name
+    # the meaning and this picks the colour, so nothing outside the UI layer has
+    # to know one. Resolved per call because AppStyle rebinds these on a theme
+    # change.
+    _TOAST_KIND_COLORS = {
+        "warning": "TOAST_COLOR_WARNING",
+        "success": "TOAST_COLOR_SUCCESS",
+    }
+
     def toast(
         self,
         message: str,
         time_in_seconds: int = config.toasts_persist_seconds,
         bg_color: Optional[str] = None,
+        kind: Optional[str] = None,
     ) -> None:
         """
         Show a transient toast notification. Thread-safe: if called from
         a background thread the signal is queued to the main thread.
+
+        *kind* ("warning" / "success") selects a colour without the caller
+        naming one; an explicit *bg_color* wins over it.
         """
         logger.info("Toast: " + message.replace("\n", " "))
         if not config.show_toasts:
             return
-        color = bg_color or AppStyle.BG_COLOR
-        self._signals.toast_requested.emit(message, time_in_seconds, color)
+        color = bg_color
+        if color is None and kind is not None:
+            attr = self._TOAST_KIND_COLORS.get(kind)
+            if attr is not None:
+                color = getattr(AppStyle, attr, None)
+        self._signals.toast_requested.emit(message, time_in_seconds, color or AppStyle.BG_COLOR)
 
     def _do_toast(self, message: str, time_in_seconds: int, bg_color: str) -> None:
         """

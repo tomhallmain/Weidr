@@ -8,10 +8,8 @@ for changes and refreshes the file list when needed.
 from __future__ import annotations
 
 import os
-import shutil
 import subprocess
 import sys
-import importlib
 from typing import TYPE_CHECKING, Optional
 
 from PySide6.QtCore import QTimer
@@ -185,78 +183,15 @@ class FileOpsController:
         is_directory: bool = False,
     ) -> None:
         """Execute a delete operation on the given file or directory."""
-        from files.file_action import FileAction
         from files.marked_files import MarkedFiles
 
-        MarkedFiles.set_delete_lock()  # Undo deleting action is not supported
-        # A delete can't be undone either, so a pending removal-undo snapshot
-        # could restore group entries for a file that no longer exists — drop it.
-        self._cm.invalidate_removal_undo_snapshot()
-
-        if toast and manual_delete:
-            item_name = os.path.basename(filepath)
-            if is_directory:
-                self._app.notification_ctrl.title_notify(
-                    _("Removing directory: {0}").format(item_name),
-                    action_type=ActionType.REMOVE_FILE,
-                )
-            else:
-                self._app.notification_ctrl.title_notify(
-                    _("Removing file: {0}").format(item_name),
-                    action_type=ActionType.REMOVE_FILE,
-                )
-        else:
-            logger.info(f"Removing {'directory' if is_directory else 'file'}: {filepath}")
-
-        rest_path = None
-        if (
-            not is_directory
-            and not config.delete_instantly
-            and config.trash_folder is not None
-        ):
-            rest_path = os.path.join(config.trash_folder, os.path.basename(filepath))
-
-        try:
-            Utils.remove_path(
-                filepath,
-                delete_instantly=config.delete_instantly,
-                trash_folder=config.trash_folder,
-                is_directory=is_directory,
-            )
-            if not is_directory:
-                FileAction.add_delete_action(filepath, rest_path=rest_path, auto=not manual_delete)
-        except Exception as e:
-            logger.error(e)
-            alert = self._app.notification_ctrl.alert
-            if config.delete_instantly:
-                alert(_("Warning"), _("Failed to delete item: {0}").format(str(e)))
-            elif config.trash_folder is not None:
-                if is_directory:
-                    msg = _("Failed to move directory to {0}. Double check the trash folder is set properly in config.json.").format(config.trash_folder)
-                else:
-                    msg = _("Failed to send file to {0}. Double check the trash folder is set properly in config.json.").format(config.trash_folder)
-                alert(_("Warning"), msg)
-            else:
-                if is_directory:
-                    alert(
-                        _("Warning"),
-                        _("Failed to move directory to the trash. Either pip install send2trash "
-                          "or set a specific trash folder in config.json."),
-                    )
-                    return
-                else:
-                    alert(
-                        _("Warning"),
-                        _("Failed to send file to the trash, so it will be deleted. Either pip install "
-                          "send2trash or set a specific trash folder in config.json."),
-                    )
-                try:
-                    Utils.remove_path(filepath, delete_instantly=True, trash_folder=None, is_directory=is_directory)
-                    if not is_directory:
-                        FileAction.add_delete_action(filepath, rest_path=None, auto=not manual_delete)
-                except Exception as e2:
-                    logger.error(e2)
-                    alert(_("Warning"), _("Failed to delete item: {0}").format(filepath))
+        MarkedFiles.delete_file_static(
+            filepath,
+            self._app.app_actions,
+            toast=toast,
+            manual_delete=manual_delete,
+            is_directory=is_directory,
+        )
 
     # Expose as the AppActions-compatible name
     handle_delete = _handle_delete
@@ -363,26 +298,14 @@ class FileOpsController:
 
     def _move_dir_contents_then_delete(self, base_dir: str, target_dir: str) -> None:
         """Move all contents of base_dir into target_dir, then delete base_dir."""
+        from files.directory_ops import move_directory_contents_then_delete
+
         item_name = os.path.basename(base_dir)
         self._app.notification_ctrl.title_notify(
             _("Moving directory contents: {0}").format(item_name),
             action_type=ActionType.REMOVE_FILE,
         )
-        logger.info(f"Moving contents of {base_dir} to {target_dir}")
-        for entry in os.listdir(base_dir):
-            src = os.path.join(base_dir, entry)
-            dst = os.path.join(target_dir, entry)
-            if os.path.exists(dst):
-                logger.warning(f"Skipping {src}: destination {dst} already exists")
-                continue
-            shutil.move(src, dst)
-        # Delete the now-empty directory (or whatever remains)
-        Utils.remove_path(
-            base_dir,
-            delete_instantly=config.delete_instantly,
-            trash_folder=config.trash_folder,
-            is_directory=True,
-        )
+        move_directory_contents_then_delete(base_dir, target_dir)
 
     # ==================================================================
     # Hide operations
@@ -433,8 +356,7 @@ class FileOpsController:
         """
         Convert all non-JPG images in the current file-browser scope to JPG.
         """
-        from image.frame_cache import FrameCache
-        from image.image_ops import ImageOps
+        from image import directory_ops
 
         if self._app.is_compare_running():
             self._app.app_actions.warn(compare_running_warn(_("convert files")))
@@ -458,56 +380,13 @@ class FileOpsController:
             self._app.notification_ctrl.toast(_("No files found to convert"))
             return
 
-        existing_jpg_count = 0
-        existing_target_count = 0
-        convert_candidates = []
-        image_files = []
-        jpg_extensions = frozenset([".jpg", ".jpeg"])
-        configured_image_extensions = frozenset(
-            e.lower() for e in getattr(config, "image_types", []) if isinstance(e, str)
-        )
-        # Include SVG explicitly for this conversion workflow, even if not in config.
-        convertible_image_extensions = configured_image_extensions | {".svg", ".gif"}
+        survey = directory_ops.survey_jpg_conversion(files)
 
-        def _is_non_animated_gif(filepath: str) -> bool:
-            # GIF is usually dynamic media; only allow conversion when effectively single-frame.
-            try:
-                pil_image_mod = importlib.import_module("PIL.Image")
-                Image = getattr(pil_image_mod, "Image", None)
-                if Image is None:
-                    return False
-                with Image.open(filepath) as im:
-                    frame_count = int(getattr(im, "n_frames", 1) or 1)
-                    return frame_count <= 1
-            except Exception:
-                # Be conservative on decode/read failures: treat as animated and skip.
-                logger.debug("Skipping GIF conversion (unable to inspect frames): %s", filepath)
-                return False
-
-        def _target_jpg_path(filepath: str) -> str:
-            source_ext = os.path.splitext(filepath)[1].lower()
-            target_ext = ".jpeg" if source_ext == ".jpeg" else ".jpg"
-            return os.path.splitext(filepath)[0] + target_ext
-        for filepath in files:
-            ext = os.path.splitext(filepath)[1].lower()
-            if ext not in convertible_image_extensions:
-                # Ignore non-image media by default for this action.
-                continue
-            if ext == ".gif" and not _is_non_animated_gif(filepath):
-                continue
-            image_files.append(filepath)
-            if ext in jpg_extensions:
-                existing_jpg_count += 1
-            else:
-                convert_candidates.append(filepath)
-                if os.path.exists(_target_jpg_path(filepath)):
-                    existing_target_count += 1
-
-        if len(image_files) == 0 and existing_jpg_count == 0:
+        if survey.has_nothing_to_do():
             self._app.notification_ctrl.toast(_("No image files found to convert"))
             return
 
-        none_found = " " + _("(none to skip)") if existing_target_count == 0 else ""
+        none_found = " " + _("(none to skip)") if survey.existing_target_count == 0 else ""
         choice = self._app.app_actions.alert(
             _("Convert Directory Images to JPG"),
             _(
@@ -516,72 +395,39 @@ class FileOpsController:
                 "- Non-JPG files with existing JPG targets: {2}\n\n"
                 "Overwrite existing JPG files (no-EXIF conversion output), or skip "
                 "conversion for files with target conflicts{3}?"
-            ).format(base_dir, existing_jpg_count, existing_target_count, none_found),
+            ).format(
+                base_dir, survey.existing_jpg_count, survey.existing_target_count, none_found
+            ),
             kind="askyesnocancel",
             yes_text=_("Overwrite existing JPG"),
             no_text=_("Skip conflicts"),
         )
         if choice == QMessageBox.StandardButton.Cancel:
             return
-        overwrite_existing = choice == QMessageBox.StandardButton.Yes
 
-        converted_count = 0
-        failed_count = 0
-        skipped_existing_count = 0
-        process_candidates = image_files if overwrite_existing else convert_candidates
-        for filepath in process_candidates:
-            try:
-                source_path = filepath
-                ext = os.path.splitext(filepath)[1].lower()
+        result = directory_ops.convert_files_to_jpg(
+            survey, overwrite_existing=choice == QMessageBox.StandardButton.Yes
+        )
 
-                if ext in jpg_extensions:
-                    # User selected option so we overwrite the existing JPG file
-                    # with a new one to strip EXIF.
-                    ImageOps.convert_to_jpg(filepath, output_path=filepath)
-                    converted_count += 1
-                    continue
-
-                output_path = _target_jpg_path(filepath)
-                if os.path.exists(output_path) and not overwrite_existing:
-                    skipped_existing_count += 1
-                    continue
-
-                # SVG conversion runs through FrameCache to rasterize first.
-                # Animated GIFs are filtered out earlier; other configured image
-                # formats convert directly via ImageOps.
-                if ext == ".svg":
-                    source_path = FrameCache.get_image_path(filepath)
-                    source_ext = os.path.splitext(source_path)[1].lower()
-                    if source_ext in jpg_extensions:
-                        shutil.copy2(source_path, output_path)
-                    else:
-                        ImageOps.convert_to_jpg(source_path, output_path=output_path)
-                else:
-                    ImageOps.convert_to_jpg(source_path, output_path=output_path)
-                converted_count += 1
-            except Exception as e:
-                failed_count += 1
-                logger.warning(f"Failed to convert to JPG: {filepath} - {e}")
-
-        if converted_count > 0:
+        if result.converted > 0:
             self._app.refresh()
 
-        if failed_count == 0 and skipped_existing_count == 0:
+        if result.failed == 0 and result.skipped_existing == 0:
             self._app.notification_ctrl.toast(
-                _("Converted {0} files to JPG").format(converted_count)
+                _("Converted {0} files to JPG").format(result.converted)
             )
         else:
             self._app.app_actions.warn(
                 _(
                     "Converted {0} files to JPG, {1} failed, {2} skipped existing"
-                ).format(converted_count, failed_count, skipped_existing_count)
+                ).format(result.converted, result.failed, result.skipped_existing)
             )
 
     def convert_directory_svg_to_png(self, event=None) -> None:
         """
         Convert all SVG files in the current file-browser scope to PNG.
         """
-        from image.frame_cache import FrameCache
+        from image import directory_ops
 
         if self._app.is_compare_running():
             self._app.app_actions.warn(compare_running_warn(_("convert files")))
@@ -592,7 +438,7 @@ class FileOpsController:
         if not base_dir or not os.path.isdir(base_dir):
             self._app.app_actions.warn(_("No valid base directory to convert"))
             return
-            
+
         # Force-refresh at the AppWindow layer
         self._app.app_actions.refresh(file_check=False)
         
@@ -606,20 +452,13 @@ class FileOpsController:
             self._app.notification_ctrl.toast(_("No files found to convert"))
             return
             
-        convert_candidates = []
-        
-        def _target_png_path(filepath: str) -> str:
-            return os.path.splitext(filepath)[0] + ".png"
-            
-        for filepath in files:
-            if os.path.splitext(filepath)[1].lower() == ".svg":
-                convert_candidates.append(filepath)
-                
-        if len(convert_candidates) == 0:
+        survey = directory_ops.survey_svg_conversion(files)
+
+        if survey.has_nothing_to_do():
             self._app.notification_ctrl.toast(_("No SVG files found to convert"))
             return
-            
-        count_target_pngs = len([f for f in convert_candidates if os.path.exists(_target_png_path(f))])
+
+        count_target_pngs = survey.existing_target_count
         none_found = " " + _("(none to skip)") if count_target_pngs == 0 else ""
         choice = self._app.app_actions.alert(
             _("Convert Directory SVG to PNG"),
@@ -638,50 +477,29 @@ class FileOpsController:
         if choice == QMessageBox.StandardButton.Cancel:
             return
             
-        overwrite_existing = choice == QMessageBox.StandardButton.Yes
-        
-        converted_count = 0
-        failed_count = 0
-        skipped_existing_count = 0
-        
-        for filepath in convert_candidates:
-            try:
-                target_path = _target_png_path(filepath)
-                
-                if os.path.exists(target_path) and not overwrite_existing:
-                    skipped_existing_count += 1
-                    continue
-                    
-                # Convert SVG to PNG using FrameCache
-                source_path = FrameCache.get_image_path(filepath)
-                
-                shutil.copy2(source_path, target_path)
-                converted_count += 1
-                
-            except Exception as e:
-                failed_count += 1
-                logger.warning(f"Failed to convert to PNG: {filepath} - {e}")
-        
-        if converted_count > 0:
+        result = directory_ops.convert_svgs_to_png(
+            survey, overwrite_existing=choice == QMessageBox.StandardButton.Yes
+        )
+
+        if result.converted > 0:
             self._app.refresh()
-            
-        if failed_count == 0 and skipped_existing_count == 0:
+
+        if result.failed == 0 and result.skipped_existing == 0:
             self._app.notification_ctrl.toast(
-                _("Converted {0} SVG files to PNG").format(converted_count)
+                _("Converted {0} SVG files to PNG").format(result.converted)
             )
         else:
             self._app.app_actions.warn(
                 _(
                     "Converted {0} files, {1} failed, {2} skipped existing"
-                ).format(converted_count, failed_count, skipped_existing_count)
+                ).format(result.converted, result.failed, result.skipped_existing)
             )
 
     def scale_directory_images(self, event=None) -> None:
         """Scale all images in the current directory scope to an equivalent pixel area."""
-        import math
-        from PIL import Image as PILImage
         from PySide6.QtWidgets import QInputDialog
-        from image.image_ops import ImageOps
+
+        from image import directory_ops
 
         if self._app.is_compare_running():
             self._app.app_actions.warn(compare_running_warn(_("scale images")))
@@ -714,34 +532,15 @@ class FileOpsController:
             self._app.notification_ctrl.toast(_("No files found"))
             return
 
-        scaleable_extensions = frozenset(
-            e.lower() for e in getattr(config, "image_types", []) if isinstance(e, str)
-        ) | {".gif"}
-
-        candidates = [
-            f for f in files
-            if os.path.splitext(f)[1].lower() in scaleable_extensions
-        ]
-        if not candidates:
+        survey = directory_ops.survey_image_scaling(files, target_side)
+        if survey.has_no_candidates():
             self._app.notification_ctrl.toast(_("No image files found to scale"))
             return
 
-        target_pixels = target_side * target_side
-        already_within = 0
-        for filepath in candidates:
-            try:
-                with PILImage.open(filepath) as img:
-                    w, h = img.size
-                    if w * h <= target_pixels:
-                        already_within += 1
-            except Exception:
-                pass
-
-        to_scale = len(candidates) - already_within
-        if to_scale == 0:
+        if survey.nothing_to_scale():
             self._app.notification_ctrl.toast(
                 _("{0} image(s) are already at or below {1}²={2} px — nothing to scale").format(
-                    len(candidates), target_side, target_pixels,
+                    len(survey.candidates), target_side, survey.target_pixels,
                 )
             )
             return
@@ -755,43 +554,28 @@ class FileOpsController:
                 "Already within limit: {4}\n"
                 "Will be scaled down: {5}\n\n"
                 "This modifies image files in place. Proceed?"
-            ).format(base_dir, target_side, target_pixels,
-                     len(candidates), already_within, to_scale),
+            ).format(base_dir, target_side, survey.target_pixels,
+                     len(survey.candidates), survey.already_within, survey.to_scale),
             kind="askokcancel",
         )
         if choice != QMessageBox.StandardButton.Ok:
             return
 
-        scaled_count = 0
-        skipped_count = 0
-        failed_count = 0
+        result = directory_ops.scale_images(survey)
 
-        for filepath in candidates:
-            try:
-                _unused, was_scaled = ImageOps.scale_image_to_equivalent_pixels(
-                    filepath, target_side
-                )
-                if was_scaled:
-                    scaled_count += 1
-                else:
-                    skipped_count += 1
-            except Exception as e:
-                failed_count += 1
-                logger.warning("Failed to scale image: %s — %s", filepath, e)
-
-        if scaled_count > 0:
+        if result.scaled > 0:
             self._app.refresh()
 
-        if failed_count == 0:
+        if result.failed == 0:
             self._app.notification_ctrl.toast(
                 _("Scaled {0} image(s) to ~{1}² px, {2} already within limit").format(
-                    scaled_count, target_side, skipped_count,
+                    result.scaled, target_side, result.skipped,
                 )
             )
         else:
             self._app.app_actions.warn(
                 _("Scaled {0} image(s) to ~{1}² px, {2} failed, {3} skipped").format(
-                    scaled_count, target_side, failed_count, skipped_count,
+                    result.scaled, target_side, result.failed, result.skipped,
                 )
             )
 
@@ -1138,8 +922,8 @@ class FileOpsController:
         For each video in the current file-browser scope, write a sibling copy with
         container metadata stripped (same behavior as single-file \"Save copy without metadata\").
         """
+        from image import directory_ops
         from image.video_ops import VideoOps
-        from utils.media_utils import is_video_file
 
         if self._app.is_compare_running():
             self._app.app_actions.warn(compare_running_warn(_("copy videos without metadata")))
@@ -1164,8 +948,8 @@ class FileOpsController:
             sort_by=SortBy.CREATION_TIME,
             sort=Sort.ASC,
         )
-        video_paths = [fp for fp in files if is_video_file(fp)]
-        if len(video_paths) == 0:
+        survey = directory_ops.survey_video_metadata_strip(files)
+        if survey.has_nothing_to_do():
             self._app.notification_ctrl.toast(_("No video files found in this directory scope"))
             return
 
@@ -1174,30 +958,22 @@ class FileOpsController:
             _(
                 "Create new files with container tags and chapters removed (stream copy) for each video.\n\n"
                 "Directory:\n{0}\n\nVideos to process: {1}"
-            ).format(base_dir, len(video_paths)),
+            ).format(base_dir, len(survey.videos)),
             kind="askyesno",
         ):
             return
 
-        ok = 0
-        failed = 0
-        for fp in video_paths:
-            try:
-                VideoOps.copy_video_without_metadata(fp)
-                ok += 1
-            except Exception as e:
-                failed += 1
-                logger.warning("Copy without metadata failed for %s: %s", fp, e)
+        result = directory_ops.strip_video_metadata(survey)
 
-        if ok > 0:
+        if result.written > 0:
             self._app.refresh()
-        if failed == 0:
+        if result.failed == 0:
             self._app.notification_ctrl.toast(
-                _("Wrote {0} video copy(ies) without metadata").format(ok)
+                _("Wrote {0} video copy(ies) without metadata").format(result.written)
             )
         else:
             self._app.app_actions.warn(
-                _("Finished: {0} succeeded, {1} failed").format(ok, failed)
+                _("Finished: {0} succeeded, {1} failed").format(result.written, result.failed)
             )
 
     def open_image_in_gimp(self, event=None) -> None:

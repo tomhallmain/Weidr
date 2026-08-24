@@ -104,13 +104,18 @@ class TestRandomPurge:
 class TestRandomPurgeQualityFilter:
     """CompareWrapper directly: the dimension gate must favour the qualifying image."""
 
-    def test_only_image_above_min_dimension_is_kept(self, tmp_path):
+    def test_only_image_above_min_dimension_is_kept(self, tmp_path, monkeypatch):
         """
         Group has three 48×48 images (below the 120px threshold) and one 200×200
         image (above it).  random_purge_groups() must always keep the large image
         regardless of random ordering.
         """
         from compare.compare_wrapper import CompareWrapper
+
+        # The purge deletes via MarkedFiles.delete_file_static() -> real config,
+        # so pin delete_instantly rather than relying on send2trash or a trash
+        # folder being configured here.
+        monkeypatch.setattr(config, "delete_instantly", True)
 
         # Create one large (qualifying) and three small (disqualified) images.
         large = str(tmp_path / "large.png")
@@ -121,13 +126,8 @@ class TestRandomPurgeQualityFilter:
 
         all_paths = [large] + smalls
 
-        deleted = []
-
         app_actions = MagicMock()
         app_actions.alert.return_value = True
-        app_actions.delete.side_effect = lambda path, **kw: (
-            deleted.append(path), os.remove(path)
-        )
 
         wrapper = CompareWrapper(master=None, compare_mode=None, app_actions=app_actions)
         wrapper.file_groups = {0: {p: 1.0 for p in all_paths}}

@@ -31,6 +31,23 @@ def _import_statements(path):
     return names
 
 
+def _module_level_import_statements(path):
+    """Like _import_statements, but only imports executed on module load.
+
+    An import inside a function is a deliberate deferral -- it costs nothing
+    until called -- so a layering check has to distinguish the two.
+    """
+    with open(path, encoding="utf-8") as fh:
+        tree = ast.parse(fh.read(), filename=path)
+    names = []
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            names.extend(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            names.append(node.module)
+    return names
+
+
 class TestNullResponsiveness:
     def test_yield_is_a_no_op(self):
         assert NullResponsiveness().yield_to_ui() is None
@@ -91,5 +108,56 @@ class TestQtFreedom:
             probe = fh.name
         try:
             assert not any(n.split(".")[0] == "PySide6" for n in _import_statements(probe))
+        finally:
+            os.unlink(probe)
+
+
+class TestLayeringDirection:
+    """utils/ must not reach up into ui/ at import time.
+
+    The dependency runs ui -> utils: AppActions exists so a UI component can
+    call back into AppWindow without importing it. An import the other way
+    inverts that, and drags the UI layer into every headless import of the
+    facade. warn()/success() used to do it for two toast colours; they name a
+    kind now and the display layer picks the colour.
+    """
+
+    def test_app_actions_has_no_module_level_ui_import(self):
+        path = os.path.join(_project_root(), "utils", "app_actions.py")
+        offenders = [
+            n for n in _module_level_import_statements(path)
+            if n.split(".")[0] == "ui"
+        ]
+        assert offenders == []
+
+    def test_the_lazy_ui_import_is_still_permitted(self):
+        # related_images_signals() imports a Qt bridge on demand. That is
+        # deliberate -- headless callers seed the slot so it is never reached --
+        # so the check must look at module level only, not every import node.
+        path = os.path.join(_project_root(), "utils", "app_actions.py")
+        assert any(
+            n.split(".")[0] == "ui" for n in _import_statements(path)
+        ), "expected the lazy ui import to still be present"
+
+    def test_the_check_would_catch_a_regression(self):
+        import tempfile
+        with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as fh:
+            fh.write("from ui.app_style import AppStyle\n")
+            probe = fh.name
+        try:
+            assert any(
+                n.split(".")[0] == "ui"
+                for n in _module_level_import_statements(probe)
+            )
+        finally:
+            os.unlink(probe)
+
+    def test_a_function_local_import_is_not_flagged(self):
+        import tempfile
+        with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as fh:
+            fh.write("def f():\n    from ui.app_style import AppStyle\n    return AppStyle\n")
+            probe = fh.name
+        try:
+            assert _module_level_import_statements(probe) == []
         finally:
             os.unlink(probe)

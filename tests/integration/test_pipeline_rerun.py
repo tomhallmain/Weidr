@@ -1,7 +1,7 @@
 """
 Integration tests for Phase 4 — "Rerun Last" pipeline logic.
 
-Tests exercise _find_latest_dump, the rerun worker, and idempotency without
+Tests exercise find_latest_dump, the rerun worker, and idempotency without
 needing a real Qt window or SD Runner process.
 """
 
@@ -45,27 +45,34 @@ def _write_dump(directory: Path, pipeline_name: str, ts: str, dump: dict) -> Pat
 
 
 # ---------------------------------------------------------------------------
-# _find_latest_dump
+# find_latest_dump
 # ---------------------------------------------------------------------------
 
 class TestFindLatestDump:
     def test_returns_none_when_no_dumps_exist(self, tmp_path, monkeypatch):
+        # DEAD BRANCH: the `if False` makes the first string unreachable, so
+        # this is just "utils.logging_setup.get_log_dir". That path is also
+        # stale -- the Qt tab module never defined get_log_dir, and
+        # find_latest_dump has since moved out of it entirely. The setattr is
+        # itself redundant with the patch() below, which is what the assertion
+        # actually relies on. Left in place rather than deleted -- removing it
+        # is a call for whoever owns these tests.
         monkeypatch.setattr(
             "ui.compare.classifier_pipelines_tab_qt.get_log_dir"
             if False else "utils.logging_setup.get_log_dir",
             lambda: tmp_path,
         )
-        from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+        from compare import classifier_pipeline_batch as pipeline_batch
         from compare.classifier_pipeline import ClassifierPipeline
         pipeline = ClassifierPipeline.__new__(ClassifierPipeline)
         pipeline.name = "MyPipeline"
 
         with patch("utils.logging_setup.get_log_dir", return_value=tmp_path):
-            result = ClassifierPipelinesTab._find_latest_dump(pipeline)
+            result = pipeline_batch.find_latest_dump(pipeline)
         assert result is None
 
     def test_returns_most_recent_dump(self, tmp_path):
-        from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+        from compare import classifier_pipeline_batch as pipeline_batch
         from compare.classifier_pipeline import ClassifierPipeline
         pipeline = ClassifierPipeline.__new__(ClassifierPipeline)
         pipeline.name = "MyPipeline"
@@ -76,13 +83,13 @@ class TestFindLatestDump:
         older = _write_dump(tmp_path, "MyPipeline", "2026-05-01_09-00-00", dump)
 
         with patch("utils.logging_setup.get_log_dir", return_value=tmp_path):
-            result = ClassifierPipelinesTab._find_latest_dump(pipeline)
+            result = pipeline_batch.find_latest_dump(pipeline)
         assert result is not None
         assert result != older
         assert "2026-06-24" in result.name
 
     def test_ignores_dumps_for_other_pipelines(self, tmp_path):
-        from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+        from compare import classifier_pipeline_batch as pipeline_batch
         from compare.classifier_pipeline import ClassifierPipeline
         pipeline = ClassifierPipeline.__new__(ClassifierPipeline)
         pipeline.name = "PipelineA"
@@ -90,7 +97,7 @@ class TestFindLatestDump:
         _write_dump(tmp_path, "PipelineB", "2026-06-24_14-32-11", _make_dump("PipelineB"))
 
         with patch("utils.logging_setup.get_log_dir", return_value=tmp_path):
-            result = ClassifierPipelinesTab._find_latest_dump(pipeline)
+            result = pipeline_batch.find_latest_dump(pipeline)
         assert result is None
 
 
@@ -100,7 +107,7 @@ class TestFindLatestDump:
 
 class TestRerunGenerates:
     def test_dispatches_generates_to_sd_runner(self, tmp_path):
-        from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+        from compare import classifier_pipeline_batch as pipeline_batch
 
         generates = [
             {"path": "/img_001.png", "modifier": None},
@@ -159,7 +166,7 @@ class TestRerunGenerates:
 
 class TestRerunScrambleIdempotency:
     def test_skips_scramble_when_output_exists(self, tmp_path):
-        from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+        from compare import classifier_pipeline_batch as pipeline_batch
 
         src = tmp_path / "img.png"
         src.write_bytes(b"")
@@ -168,19 +175,19 @@ class TestRerunScrambleIdempotency:
 
         mock_scramble = MagicMock()
         with patch("image.image_ops.ImageOps.scramble_image", mock_scramble):
-            ClassifierPipelinesTab._run_one_scramble(str(src), "_inco", skip_existing=True)
+            pipeline_batch.run_one_scramble(str(src), "_inco", skip_existing=True)
 
         mock_scramble.assert_not_called()
 
     def test_executes_scramble_when_output_absent(self, tmp_path):
-        from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+        from compare import classifier_pipeline_batch as pipeline_batch
 
         src = tmp_path / "img.png"
         src.write_bytes(b"")
 
         mock_scramble = MagicMock()
         with patch("image.image_ops.ImageOps.scramble_image", mock_scramble):
-            ClassifierPipelinesTab._run_one_scramble(str(src), "_inco", skip_existing=True)
+            pipeline_batch.run_one_scramble(str(src), "_inco", skip_existing=True)
 
         mock_scramble.assert_called_once()
 
@@ -191,13 +198,13 @@ class TestRerunScrambleIdempotency:
 
 class TestRerunDumpLoading:
     def test_find_returns_none_for_corrupt_dir(self, tmp_path):
-        from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+        from compare import classifier_pipeline_batch as pipeline_batch
         from compare.classifier_pipeline import ClassifierPipeline
         pipeline = ClassifierPipeline.__new__(ClassifierPipeline)
         pipeline.name = "P"
 
         with patch("utils.logging_setup.get_log_dir", side_effect=OSError("gone")):
-            result = ClassifierPipelinesTab._find_latest_dump(pipeline)
+            result = pipeline_batch.find_latest_dump(pipeline)
         assert result is None
 
     def test_dump_generates_and_scrambles_default_to_empty(self, tmp_path):

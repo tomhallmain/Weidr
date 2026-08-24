@@ -1,5 +1,5 @@
 """
-Unit tests for _write_pipeline_run_dump (Phase 1 — dump schema extension).
+Unit tests for write_pipeline_run_dump (Phase 1 — dump schema extension).
 
 Verifies that the new `generates`, `scrambles`, and `generation_type_value`
 fields are written correctly without touching Qt or the SD Runner.
@@ -50,14 +50,14 @@ def _fake_pipeline():
 
 
 def _call_write_dump(log_dir: Path, stats, all_generates=(), all_scrambles=(), report=None):
-    """Call _write_pipeline_run_dump and return the parsed JSON.
+    """Call write_pipeline_run_dump and return the parsed JSON.
 
     get_log_dir is already redirected to tmp_path/logs by the root conftest
     isolated_singletons fixture, so no patching is needed here.
     """
-    from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+    from compare import classifier_pipeline_batch as pipeline_batch
 
-    ClassifierPipelinesTab._write_pipeline_run_dump(
+    pipeline_batch.write_pipeline_run_dump(
         _fake_pipeline(),
         stats,
         report if report is not None else PipelineRunReport(),
@@ -241,12 +241,12 @@ class TestBackwardCompatibility:
         assert len(list((tmp_path / "logs").glob("pipeline_run_*.json"))) == 1
 
     def test_messages_field_still_present(self, tmp_path):
-        from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+        from compare import classifier_pipeline_batch as pipeline_batch
 
         report = PipelineRunReport()
         report.add("INFO", "node1", "/img.jpg", "detail text")
 
-        ClassifierPipelinesTab._write_pipeline_run_dump(
+        pipeline_batch.write_pipeline_run_dump(
             _fake_pipeline(), _make_stats(), report
         )
 

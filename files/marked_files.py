@@ -369,6 +369,7 @@ class MarkedFiles():
         get_base_dir_callback=None,
         get_target_dir_callback=None,
         progress_callback: Optional[Callable[[int, int], None]] = None,
+        get_current_base_dir=None,
     ) -> Tuple[bool, bool]:
         """
         Move or copy the marked files to the target directory.
@@ -406,6 +407,7 @@ class MarkedFiles():
                 is_moving=is_moving,
                 action=action,
                 action_part1=action_part1,
+                get_current_base_dir=get_current_base_dir,
             )
         finally:
             MarkedFiles.is_performing_action = False
@@ -424,6 +426,7 @@ class MarkedFiles():
         is_moving,
         action,
         action_part1,
+        get_current_base_dir=None,
     ) -> Tuple[bool, bool]:
         some_files_already_present = False
         if len(files_to_move) > 1:
@@ -513,8 +516,16 @@ class MarkedFiles():
                     # Release session lock before undo; outer finally has not run yet and
                     # undo_move_marks treats is_performing_action as "cancel in-flight".
                     MarkedFiles.is_performing_action = False
+                    # The directory to put the files back into is the one
+                    # currently being browsed -- not get_base_dir_callback,
+                    # which prompts the user for a directory and is only
+                    # reached when no directory is supplied at all.
+                    current_base_dir = (
+                        get_current_base_dir() if get_current_base_dir is not None
+                        else app_actions.get_base_dir()
+                    )
                     MarkedFiles.undo_move_marks(
-                        app_actions.get_base_dir(),
+                        current_base_dir,
                         app_actions,
                         get_base_dir_callback,
                         get_target_dir_callback,

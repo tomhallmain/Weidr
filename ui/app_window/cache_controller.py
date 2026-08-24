@@ -5,8 +5,7 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, Optional
 
-from PySide6.QtCore import QTimer
-
+from ui.app_window.qt_scheduler import QtScheduler
 from utils.app_info_cache import app_info_cache
 from utils.config import config
 from utils.logging_setup import get_logger
@@ -25,12 +24,14 @@ class CacheController:
     Also owns the periodic file-check and cache-store timers.
     """
 
-    def __init__(self, app_window: AppWindow, file_browser: FileBrowser):
+    def __init__(self, app_window: AppWindow, file_browser: FileBrowser, scheduler=None):
         self._app = app_window
         self._fb = file_browser
 
-        # Periodic timer (QTimer replaces start_thread + asyncio periodic)
-        self._store_cache_timer: Optional[QTimer] = None
+        # Fires the periodic store. Defaults to the Qt timer because this
+        # controller belongs to a window; injectable so the same periodic work
+        # can run without an event loop.
+        self._scheduler = scheduler if scheduler is not None else QtScheduler()
 
     # ------------------------------------------------------------------
     # Load
@@ -204,21 +205,16 @@ class CacheController:
 
         Replaces the async ``do_periodic_store_cache`` coroutine.
         """
-        interval_ms = int(self._app.store_cache_config.interval_seconds * 1000)
-        if interval_ms <= 0:
-            return
-
-        self._store_cache_timer = QTimer()
-        self._store_cache_timer.timeout.connect(self._on_periodic_store)
-        self._store_cache_timer.start(interval_ms)
+        self._scheduler.start(
+            self._app.store_cache_config.interval_seconds,
+            self._on_periodic_store,
+        )
 
     def stop_periodic_store(self) -> None:
-        if self._store_cache_timer is not None:
-            self._store_cache_timer.stop()
-            self._store_cache_timer = None
+        self._scheduler.stop()
 
     def _on_periodic_store(self) -> None:
-        """Called on the main thread by QTimer."""
+        """Called by the scheduler; on the GUI thread under the Qt one."""
         try:
             self.store_info_cache(store_window_state=True)
         except Exception as e:

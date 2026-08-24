@@ -51,23 +51,101 @@ class _CompareWorker(QThread):
 
     signals = _CompareWorkerSignals()
 
-    def __init__(self, exec_func: Callable, args: list[Any]):
+    def __init__(self, exec_func: Callable, args: list[Any], cancelled_exceptions=None):
         super().__init__()
         self._exec_func = exec_func
         self._args = args
         self.signals = _CompareWorkerSignals()
+        # None keeps the long-standing behaviour of treating a cancelled
+        # compare as a normal outcome. A caller running something else names
+        # its own cancellation types, or passes () for none.
+        self._cancelled_exceptions = cancelled_exceptions
 
     def run(self):
-        from compare.base_compare import CompareCancelled
+        cancelled = self._cancelled_exceptions
+        if cancelled is None:
+            from compare.base_compare import CompareCancelled
+            cancelled = (CompareCancelled,)
         try:
             self._exec_func(*self._args)
-        except CompareCancelled:
+        except cancelled:
             pass
         except Exception as e:
             traceback.print_exc()
             self.signals.error.emit(str(e))
         finally:
             self.signals.finished.emit()
+
+
+class QtTaskRunner:
+    """Execution strategy backed by a QThread, for use with an event loop.
+
+    Mirrors utils.background_runner.ThreadedTaskRunner so the two are
+    interchangeable. The difference that matters is delivery: here the
+    callbacks are Qt signal connections, so they run on the GUI thread no
+    matter which thread reported them -- which is exactly what the headless
+    strategy has no need of, and no way to provide.
+
+    Owns the worker's lifetime, including deleteLater(); the caller's
+    on_finished is left to deal only with its own concerns.
+    """
+
+    def __init__(self) -> None:
+        self._worker: Optional[_CompareWorker] = None
+        self._on_finished: Optional[Callable[[], None]] = None
+
+    def start(
+        self,
+        func: Callable,
+        args: list[Any] = (),
+        *,
+        on_finished: Optional[Callable[[], None]] = None,
+        on_error: Optional[Callable[[str], None]] = None,
+        on_progress: Optional[Callable[[str, int], None]] = None,
+        cancelled_exceptions: tuple = (),
+    ) -> None:
+        if self._worker is not None:
+            raise RuntimeError("A task is already running on this runner.")
+        worker = _CompareWorker(func, list(args), cancelled_exceptions)
+        if on_progress is not None:
+            worker.signals.progress.connect(on_progress)
+        if on_error is not None:
+            worker.signals.error.connect(on_error)
+        worker.signals.finished.connect(self._handle_finished)
+        self._on_finished = on_finished
+        self._worker = worker
+        worker.start()
+
+    def _handle_finished(self) -> None:
+        worker = self._worker
+        callback = self._on_finished
+        # Cleared before the callback so is_running() reports False for its
+        # duration, matching the threaded strategy.
+        self._worker = None
+        self._on_finished = None
+        if worker is not None:
+            worker.deleteLater()
+        if callback is not None:
+            callback()
+
+    def is_running(self) -> bool:
+        return self._worker is not None
+
+    def wait(self, timeout: Optional[float] = None) -> bool:
+        """Present for interface parity; a caller with an event loop does not block.
+
+        Waiting here would stall the GUI thread the finished signal has to be
+        delivered on, so this reports whether the task is already done instead
+        of blocking.
+        """
+        return self._worker is None
+
+    def report_progress(self, context: str, percent_complete: Optional[int] = None) -> None:
+        if self._worker is None:
+            return
+        self._worker.signals.progress.emit(
+            context, int(percent_complete) if percent_complete is not None else -1
+        )
 
 
 class SearchController:
@@ -83,18 +161,22 @@ class SearchController:
         file_browser: FileBrowser,
         compare_manager: CompareManager,
         sidebar_panel: SidebarPanel,
+        task_runner=None,
     ):
         self._app = app_window
         self._fb = file_browser
         self._cm = compare_manager
         self._sidebar = sidebar_panel
+        # Execution strategy for the compare run. Defaults to the QThread one
+        # because this controller only exists with an event loop; injectable so
+        # the same compare function can be driven without one.
+        self._runner = task_runner if task_runner is not None else QtTaskRunner()
         self._pending_compare: Optional[Callable] = None
         self._debouncer = QtDebouncer(
             parent=app_window,
             delay_seconds=0.3,
             callback=self._fire_pending_compare,
         )
-        self._worker: Optional[_CompareWorker] = None
         self._img_gen_workers: list[_CompareWorker] = []
 
     def _fire_pending_compare(self) -> None:
@@ -238,26 +320,27 @@ class SearchController:
         self._run_with_progress(self._run_compare, args=[compare_args])
 
     def _run_with_progress(self, exec_func: Callable, args: list[Any] = []) -> None:
-        """Run *exec_func* in a background thread while showing a progress bar."""
-        self._sidebar.start_progress_bar()
+        """Run *exec_func* in the background while showing a progress bar."""
+        from compare.base_compare import CompareCancelled
 
-        worker = _CompareWorker(exec_func, args)
-        worker.signals.finished.connect(self._on_worker_finished)
-        worker.signals.error.connect(self._on_worker_error)
-        worker.signals.progress.connect(self._on_progress)
-        self._worker = worker
-        worker.start()
+        self._sidebar.start_progress_bar()
+        self._runner.start(
+            exec_func,
+            args,
+            on_finished=self._on_worker_finished,
+            on_error=self._on_worker_error,
+            on_progress=self._on_progress,
+            cancelled_exceptions=(CompareCancelled,),
+        )
 
     def is_compare_running(self) -> bool:
         """Return True while a compare worker is active in the background."""
-        return self._worker is not None
+        return self._runner.is_running()
 
     def _on_worker_finished(self) -> None:
+        # Worker lifetime belongs to the runner; only the progress bar is this
+        # controller's to clean up.
         self._sidebar.stop_progress_bar()
-        worker = self._worker
-        self._worker = None
-        if worker is not None:
-            worker.deleteLater()
 
     def _on_worker_error(self, error_text: str) -> None:
         self._app.notification_ctrl.alert(_("Error running compare"), error_text, kind="error")
@@ -330,10 +413,8 @@ class SearchController:
 
         Emits the worker's progress signal so the update happens on the main thread.
         """
-        if self._worker is not None:
-            self._worker.signals.progress.emit(
-                context, int(percent_complete) if percent_complete is not None else -1
-            )
+        if self._runner.is_running():
+            self._runner.report_progress(context, percent_complete)
         else:
             # Fallback: called outside a worker (shouldn't happen normally)
             self._app.notification_ctrl.set_label_state(context)

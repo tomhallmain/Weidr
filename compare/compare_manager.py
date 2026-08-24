@@ -42,10 +42,17 @@ class CompareManager:
     and CompareWrapper.
     """
     
-    def __init__(self, master=None, app_actions=None):
+    def __init__(self, master=None, app_actions=None, get_base_dir=None,
+                 responsiveness=None):
         self._master = master
         self._app_actions = app_actions
-        
+        # Passed to every wrapper this manager creates. None leaves each
+        # wrapper resolving the directory through app_actions as before.
+        self._get_base_dir = get_base_dir
+        # Likewise: None leaves wrappers doing no UI yielding, so a window must
+        # supply the Qt implementation or its display will freeze during a purge.
+        self._responsiveness = responsiveness
+
         # Active compare mode configurations (keyed by instance_id)
         self._mode_configs: Dict[str, CompareConfig] = {}
         
@@ -292,7 +299,11 @@ class CompareManager:
     def _ensure_wrapper(self, instance_id: str, compare_mode: CompareMode) -> CompareWrapper:
         """Get or create a CompareWrapper for a specific instance."""
         if instance_id not in self._wrappers:
-            wrapper = CompareWrapper(self._master, compare_mode, self._app_actions)
+            wrapper = CompareWrapper(
+                self._master, compare_mode, self._app_actions,
+                get_base_dir=self._get_base_dir,
+                responsiveness=self._responsiveness,
+            )
             wrapper.prevalidations_running = self._prevalidations_running
             self._wrappers[instance_id] = wrapper
         return self._wrappers[instance_id]

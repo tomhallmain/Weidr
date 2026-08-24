@@ -32,6 +32,7 @@ from utils.config import config
 from utils.constants import Mode, CompareMode, Direction, ClassifierActionType, Sort
 from utils.logging_setup import get_logger
 from utils.translations import _
+from utils.ui_responsiveness import NullResponsiveness
 from utils.utils import Utils
 logger = get_logger("compare_wrapper")
 
@@ -75,11 +76,20 @@ class RemovalUndoSnapshot:
 
 
 class CompareWrapper:
-    def __init__(self, master, compare_mode, app_actions):
+    def __init__(self, master, compare_mode, app_actions, get_base_dir=None,
+                 responsiveness=None):
         self._master = master
         self._compare = None
         self.compare_mode = compare_mode
         self._app_actions = app_actions
+        # Supplies the working directory to prevalidation. Injectable so a
+        # caller with no window can provide it directly; falling back to
+        # app_actions keeps every existing caller unchanged.
+        self._get_base_dir_override = get_base_dir
+        # Keeps the display alive during long synchronous work. Defaults to
+        # doing nothing, so the window must supply the Qt implementation --
+        # this class cannot construct it without importing Qt.
+        self._responsiveness = responsiveness or NullResponsiveness()
 
         self.prevalidations_running = config.enable_prevalidations
         self.files_grouped = {}
@@ -97,6 +107,26 @@ class CompareWrapper:
         self.hidden_media = []
         self.label_suffix = ""  # appended to every group label (e.g. " (composite)")
         self._removal_undo_snapshot: Optional[RemovalUndoSnapshot] = None
+
+    def _request_repaint(self) -> None:
+        """Ask the owning window to repaint.
+
+        A caller with no window passes master=None, and then there is nothing
+        to repaint. This is a second route to the UI besides app_actions --
+        a direct window reference -- so it needs its own guard.
+        """
+        if self._master is not None:
+            self._master.update()
+
+    def get_base_dir(self):
+        """Working directory prevalidation should resolve relative paths against.
+
+        Resolved lazily so a wrapper built without app_actions (as several
+        tests do) only fails if something actually asks for the directory.
+        """
+        if self._get_base_dir_override is not None:
+            return self._get_base_dir_override()
+        return self._app_actions.get_base_dir()
 
     def clear_compare(self):
         self._compare = None
@@ -182,7 +212,7 @@ class CompareWrapper:
             if prev_media == start_media:
                 # We've gone through all media and they all need to be skipped (TODO: show an alert)
                 break
-        self._master.update()
+        self._request_repaint()
         self._app_actions.create_media(prev_media)
         return True
 
@@ -203,7 +233,7 @@ class CompareWrapper:
             if next_file == start_media:
                 # We've gone through all media and they all need to be skipped (TODO: show an alert)
                 break
-        self._master.update()
+        self._request_repaint()
         self._app_actions.create_media(next_file)
         return True
 
@@ -218,11 +248,10 @@ class CompareWrapper:
             else:
                 prevalidation_action = ClassifierActionsManager.prevalidate_media(
                     media_path,
-                    self._app_actions.get_base_dir,
+                    self.get_base_dir,
                     self._app_actions.prevalidation_callbacks_with_mark,
                 )
-                from PySide6.QtWidgets import QApplication
-                QApplication.processEvents()
+                self._responsiveness.yield_to_ui()
             if prevalidation_action is not None:
                 if prevalidation_action == ClassifierActionType.BLUR:
                     self._app_actions.request_media_blur(media_path)
@@ -238,9 +267,9 @@ class CompareWrapper:
 
     def _run_dynamic_prevalidation_with_spinner(self, media_path):
         """
-        Run prevalidation for dynamic media (video/GIF/PDF) on a worker QThread so
-        the main-thread event loop keeps processing — allowing the spinner badge
-        to animate during the (potentially expensive) frame-sampling loop.
+        Run prevalidation for dynamic media (video/GIF/PDF) off the calling
+        thread so the display keeps updating — allowing the spinner badge to
+        animate during the (potentially expensive) frame-sampling loop.
 
         `hide_current_media` is already wrapped with BlockingQueuedConnection via
         ts(), so it is safe to call from the worker thread while the main-thread
@@ -248,35 +277,29 @@ class CompareWrapper:
         thread-safe.  `add_mark_if_not_present` writes shared state and must run
         on the main thread; collected paths are applied after the thread joins.
         """
-        from PySide6.QtCore import QEventLoop, QThread
-
-        result = [None]
         deferred_marks = []
 
         def _collect_mark(path):
             deferred_marks.append(path)
 
         app_actions = self._app_actions
+        get_base_dir = self.get_base_dir
         callbacks = self._app_actions.make_prevalidation_callbacks(_collect_mark)
 
-        class _Worker(QThread):
-            def run(self_inner):
-                result[0] = ClassifierActionsManager.prevalidate_media(
+        app_actions.start_loading_spinner(force=True)
+        try:
+            result = self._responsiveness.run_off_thread(
+                lambda: ClassifierActionsManager.prevalidate_media(
                     media_path,
-                    app_actions.get_base_dir,
+                    get_base_dir,
                     callbacks,
                 )
-
-        loop = QEventLoop()
-        worker = _Worker()
-        worker.finished.connect(loop.quit)
-        app_actions.start_loading_spinner(force=True)
-        worker.start()
-        loop.exec()
-        app_actions.stop_loading_spinner()
+            )
+        finally:
+            app_actions.stop_loading_spinner()
         for path in deferred_marks:
             MarkedFiles.add_mark_if_not_present(path, app_actions=app_actions)
-        return result[0]
+        return result
 
     def _is_related_by_mode(self, media1: str, media2: str) -> bool:
         if self.compare_mode == CompareMode.COLOR_MATCHING:
@@ -410,7 +433,6 @@ class CompareWrapper:
         returns to browse mode when complete.
         """
         import random
-        from PySide6.QtWidgets import QApplication
 
         if not self.file_groups:
             self._app_actions.warn(_("No groups available to purge."))
@@ -484,7 +506,7 @@ class CompareWrapper:
                         current=group_num, total=group_count
                     )
                 )
-                QApplication.processEvents()
+                self._responsiveness.yield_to_ui()
         finally:
             self._app_actions.stop_loading_spinner()
             self._app_actions.stop_progress_bar()
@@ -551,7 +573,7 @@ class CompareWrapper:
         actual_group_index = self.actual_group_index()
         self._app_actions._set_label_state(group_number=self.current_group_index, size=len(self.files_matched),
                                             suffix=self.label_suffix + self._supergroup_label_suffix(actual_group_index))
-        self._master.update()
+        self._request_repaint()
         self._app_actions.create_media(self.current_match())
 
     def enter_complement_mode(self) -> None:
@@ -1030,7 +1052,7 @@ class CompareWrapper:
                     self.match_index -= 1
 
                 if show_next_media is not None:
-                    self._master.update()
+                    self._request_repaint()
                     self._app_actions.release_media_canvas()
                     media = self._get_prev_media() if show_next_media == Direction.BACKWARD else self.current_match()
                     self._app_actions.create_media(media)

@@ -45,6 +45,7 @@ from ui.app_window.masonry_browser import MasonryBrowser
 from ui.app_window.media_frame import MediaFrame
 from ui.app_window.media_navigator import MediaNavigator
 from ui.app_window.notification_controller import NotificationController
+from ui.app_window.qt_responsiveness import QtResponsiveness
 from ui.app_window.search_controller import SearchController
 from ui.app_window.sidebar_panel import SidebarPanel
 from ui.app_window.window_launcher import WindowLauncher
@@ -201,7 +202,11 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         self.file_browser = FileBrowser(
             recursive=config.browse_recursive, sort_by=config.sort_by
         )
-        self.compare_manager = CompareManager(master=self)
+        # Without the Qt responsiveness adapter the compare wrappers do no UI
+        # yielding, and long loops (e.g. random purge) would freeze the window.
+        self.compare_manager = CompareManager(
+            master=self, responsiveness=QtResponsiveness()
+        )
         self.file_check_config = FileCheckConfig(self.window_id)
         self.slideshow_config = SlideshowConfig(self.window_id)
         self.store_cache_config = StoreCacheConfig(self.window_id)

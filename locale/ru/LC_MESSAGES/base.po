@@ -2,9 +2,9 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: 1.0\n"
-"POT-Creation-Date: 2026-08-12 19:09-0400\n"
-"PO-Revision-Date: 2026-08-12 19:09-0400\n"
-"Last-Translator: Thomas Hall <tomhall.main@gmail.com>\n"
+"POT-Creation-Date: 2026-08-25 10:55-0400\n"
+"PO-Revision-Date: 2026-08-25 10:55-0400\n"
+"Last-Translator: Translator Name <translator@example.com>\n"
 "Language-Team: ru Team <<EMAIL>>\n"
 "Language: ru\n"
 "MIME-Version: 1.0\n"
@@ -12,23 +12,23 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: compare/base_compare.py:301
+#: compare/base_compare.py:319
 msgid "Image data collection"
 msgstr "Сбор данных изображений"
 
-#: compare/base_compare.py:302
+#: compare/base_compare.py:320
 msgid "Image comparison"
 msgstr "Сравнение изображений"
 
-#: compare/base_compare.py:338
+#: compare/base_compare.py:356
 msgid "Invalid Checkpoint Data - Confirm Restart"
 msgstr "Недействительные данные контрольной точки - Подтверждаем перезапуск"
 
-#: compare/base_compare.py:340
+#: compare/base_compare.py:358
 msgid "Invalid Checkpoint Data"
 msgstr "Недействительные данные контрольной точки"
 
-#: compare/base_compare.py:341
+#: compare/base_compare.py:359
 msgid ""
 "Checkpoint data contains invalid indices. Would you like to restart the "
 "comparison?"
@@ -36,7 +36,7 @@ msgstr ""
 "Данные контрольной точки содержат недопустимые индексы. Вы хотите "
 "перезапустить сравнение?"
 
-#: compare/base_compare.py:346
+#: compare/base_compare.py:364
 msgid "Restarting Comparison"
 msgstr "Восстановление сравнения"
 
@@ -85,22 +85,22 @@ msgid "Evaluating {0} files..."
 msgstr "Оценка {0} файлов..."
 
 #: compare/classifier_action.py:1271
-#: compare/classifier_pipeline_runner.py:1163 ui/image/media_details.py:1491
+#: compare/classifier_pipeline_runner.py:1188 ui/image/media_details.py:1491
 msgid " detected"
 msgstr " обнаруженный"
 
 #: compare/classifier_action.py:1273
-#: compare/classifier_pipeline_runner.py:1167
+#: compare/classifier_pipeline_runner.py:1192
 msgid " - skipped"
 msgstr " - пропущен"
 
 #: compare/classifier_action.py:1276
-#: compare/classifier_pipeline_runner.py:1175
+#: compare/classifier_pipeline_runner.py:1200
 msgid " - hidden"
 msgstr " - скрытый"
 
 #: compare/classifier_action.py:1281
-#: compare/classifier_pipeline_runner.py:1189
+#: compare/classifier_pipeline_runner.py:1214
 msgid " - marked"
 msgstr " - отмеченный"
 
@@ -130,22 +130,22 @@ msgid "Moving file: "
 msgstr "Перемещение файла: "
 
 #: compare/classifier_action.py:1401
-#: compare/classifier_pipeline_runner.py:1239
+#: compare/classifier_pipeline_runner.py:1264
 msgid "Deleting file: "
 msgstr "Удаление файла: "
 
 #: compare/classifier_action.py:1410
-#: compare/classifier_pipeline_runner.py:1253
+#: compare/classifier_pipeline_runner.py:1278
 msgid " - blurred"
 msgstr " - размыто"
 
 #: compare/classifier_action.py:1419
-#: compare/classifier_pipeline_runner.py:1261
+#: compare/classifier_pipeline_runner.py:1286
 msgid " - generating"
 msgstr " - Генерация"
 
 #: compare/classifier_action.py:1424
-#: compare/classifier_pipeline_runner.py:1273
+#: compare/classifier_pipeline_runner.py:1298
 msgid " - scrambling"
 msgstr " - скремблирование"
 
@@ -227,18 +227,22 @@ msgstr ""
 msgid "lookaheads: {0}"
 msgstr "просмотры вперед: {0}"
 
-#: compare/classifier_pipeline.py:63 compare/classifier_pipeline.py:122
-#: compare/classifier_pipeline.py:186 compare/classifier_pipeline.py:249
-#: compare/classifier_pipeline.py:277 compare/classifier_pipeline.py:323
-#: compare/classifier_pipeline.py:522
+#: compare/classifier_pipeline_conditions.py:60
+#: compare/classifier_pipeline_conditions.py:119
+#: compare/classifier_pipeline_conditions.py:183
+#: compare/classifier_pipeline_conditions.py:246
+#: compare/classifier_pipeline_conditions.py:274
+#: compare/classifier_pipeline_conditions.py:320
+#: compare/classifier_pipeline_conditions.py:519
 #: tests/ui/test_classifier_pipeline_editor_qt.py:1102
 #: ui/compare/classifier_pipeline_editor_qt.py:118
 #: ui/compare/classifier_pipeline_editor_qt.py:137
-#: ui/compare/classifier_pipeline_editor_qt.py:2221
+#: ui/compare/classifier_pipeline_editor_qt.py:2243
 msgid "(none)"
 msgstr "(нет)"
 
-#: compare/classifier_pipeline.py:64 compare/classifier_pipeline.py:1379
+#: compare/classifier_pipeline.py:556
+#: compare/classifier_pipeline_conditions.py:61
 #: tests/unit/test_classifier_pipeline.py:1163
 #: tests/unit/test_classifier_pipeline.py:1227
 #: tests/unit/test_classifier_pipelines_manager.py:99
@@ -246,197 +250,212 @@ msgstr "(нет)"
 msgid "Embedding"
 msgstr "Встраивание"
 
-#: compare/classifier_pipeline.py:120 compare/classifier_pipeline.py:184
+#: compare/classifier_pipeline_conditions.py:117
+#: compare/classifier_pipeline_conditions.py:181
 #: tests/unit/test_classifier_pipeline.py:1195
 #: tests/unit/test_classifier_pipeline.py:1702
 msgid "(pipeline categories)"
 msgstr "(категории конвейера)"
 
-#: compare/classifier_pipeline.py:124 compare/classifier_pipeline.py:188
+#: compare/classifier_pipeline_conditions.py:121
+#: compare/classifier_pipeline_conditions.py:185
 msgid "rank {0}"
 msgstr "ранг {0}"
 
-#: compare/classifier_pipeline.py:126 compare/classifier_pipeline.py:190
+#: compare/classifier_pipeline_conditions.py:123
+#: compare/classifier_pipeline_conditions.py:187
 msgid "rank {0}-{1}"
 msgstr "ранг {0}-{1}"
 
-#: compare/classifier_pipeline.py:128 compare/classifier_pipeline.py:192
+#: compare/classifier_pipeline_conditions.py:125
+#: compare/classifier_pipeline_conditions.py:189
 msgid "NOT "
 msgstr "НЕ "
 
-#: compare/classifier_pipeline.py:129 compare/classifier_pipeline.py:1380
+#: compare/classifier_pipeline.py:557
+#: compare/classifier_pipeline_conditions.py:126
 msgid "ClsRank"
 msgstr "ClsRank"
 
-#: compare/classifier_pipeline.py:193 compare/classifier_pipeline.py:1381
+#: compare/classifier_pipeline.py:558
+#: compare/classifier_pipeline_conditions.py:190
 msgid "AudioClsRank"
 msgstr "Ранг классификации аудио"
 
-#: compare/classifier_pipeline.py:219 compare/classifier_pipeline.py:1382
+#: compare/classifier_pipeline.py:559
+#: compare/classifier_pipeline_conditions.py:216
 #: ui/compare/classifier_pipeline_editor_qt.py:73
 msgid "Prototype"
 msgstr "Прототип"
 
-#: compare/classifier_pipeline.py:248
+#: compare/classifier_pipeline_conditions.py:245
 #: tests/unit/test_classifier_pipeline.py:1201
 msgid "Blacklist"
 msgstr "Черный список"
 
-#: compare/classifier_pipeline.py:250 utils/constants.py:54
+#: compare/classifier_pipeline_conditions.py:247 utils/constants.py:54
 #: utils/constants.py:85
 msgid "Prompts"
 msgstr "Подсказки"
 
-#: compare/classifier_pipeline.py:278
+#: compare/classifier_pipeline_conditions.py:275
 #: tests/unit/test_classifier_pipeline.py:1207
 msgid "case-sensitive"
 msgstr "с учетом регистра"
 
-#: compare/classifier_pipeline.py:278
+#: compare/classifier_pipeline_conditions.py:275
 #: tests/unit/test_classifier_pipeline.py:1208
 msgid "case-insensitive"
 msgstr "без учета регистра"
 
-#: compare/classifier_pipeline.py:279
+#: compare/classifier_pipeline_conditions.py:276
 msgid "FilenameContains"
 msgstr "ИмяФайлаСодержит"
 
-#: compare/classifier_pipeline.py:295
+#: compare/classifier_pipeline_conditions.py:292
 msgid "Always (no check)"
 msgstr "Всегда (без отметки)"
 
-#: compare/classifier_pipeline.py:324
+#: compare/classifier_pipeline_conditions.py:321
 msgid "MediaType"
 msgstr "MediaType"
 
-#: compare/classifier_pipeline.py:344
+#: compare/classifier_pipeline_conditions.py:341
 msgid "Lookahead: {0}"
 msgstr "Lookahead: {0}"
 
-#: compare/classifier_pipeline.py:367 compare/classifier_pipeline.py:639
+#: compare/classifier_pipeline_conditions.py:364
+#: compare/classifier_pipeline_conditions.py:636
 #: ui/compare/hf_model_manager_window_qt.py:936
 #: ui/compare/hf_model_manager_window_qt.py:1277
 msgid "yes"
 msgstr "да"
 
-#: compare/classifier_pipeline.py:367 compare/classifier_pipeline.py:639
+#: compare/classifier_pipeline_conditions.py:364
+#: compare/classifier_pipeline_conditions.py:636
 #: ui/compare/hf_model_manager_window_qt.py:936
 #: ui/compare/hf_model_manager_window_qt.py:1277
 msgid "no"
 msgstr "нет"
 
-#: compare/classifier_pipeline.py:368 compare/classifier_pipeline.py:1386
+#: compare/classifier_pipeline.py:563
+#: compare/classifier_pipeline_conditions.py:365
 msgid "NodeResult"
 msgstr "NodeResult"
 
-#: compare/classifier_pipeline.py:396 compare/classifier_pipeline.py:1387
+#: compare/classifier_pipeline.py:564
+#: compare/classifier_pipeline_conditions.py:393
 #: ui/compare/classifier_pipeline_editor_qt.py:82
 msgid "Composite"
 msgstr "Композит"
 
-#: compare/classifier_pipeline.py:450
+#: compare/classifier_pipeline_conditions.py:447
 msgid "working_dir, "
 msgstr "working_dir, "
 
-#: compare/classifier_pipeline.py:451 compare/classifier_pipeline.py:455
-#: compare/classifier_pipeline.py:457 compare/classifier_pipeline.py:459
-#: compare/classifier_pipeline.py:460
+#: compare/classifier_pipeline_conditions.py:448
+#: compare/classifier_pipeline_conditions.py:452
+#: compare/classifier_pipeline_conditions.py:454
+#: compare/classifier_pipeline_conditions.py:456
+#: compare/classifier_pipeline_conditions.py:457
 msgid "BaseStemMatch"
 msgstr "BaseStemMatch"
 
-#: compare/classifier_pipeline.py:452
+#: compare/classifier_pipeline_conditions.py:449
 #: tests/unit/test_classifier_pipeline.py:1221
 msgid "found"
 msgstr "найдено"
 
-#: compare/classifier_pipeline.py:452
+#: compare/classifier_pipeline_conditions.py:449
 #: tests/unit/test_classifier_pipeline.py:1222
 msgid "not found"
 msgstr "не найдено"
 
-#: compare/classifier_pipeline.py:530
+#: compare/classifier_pipeline_conditions.py:527
 msgid "UnknownSuffix"
 msgstr "UnknownSuffix"
 
-#: compare/classifier_pipeline.py:568
+#: compare/classifier_pipeline_conditions.py:565
 msgid "RelatedImage"
 msgstr "Связанное изображение"
 
-#: compare/classifier_pipeline.py:608
+#: compare/classifier_pipeline_conditions.py:605
 msgid " +{0}"
 msgstr " +{0}"
 
-#: compare/classifier_pipeline.py:609
+#: compare/classifier_pipeline_conditions.py:606
 msgid "Group({0}: {1}{2})"
 msgstr "Группа({0}: {1}{2})"
 
-#: compare/classifier_pipeline.py:640 compare/classifier_pipeline.py:1389
+#: compare/classifier_pipeline.py:566
+#: compare/classifier_pipeline_conditions.py:637
 msgid "GroupChild"
 msgstr "GroupChild"
 
-#: compare/classifier_pipeline.py:781
+#: compare/classifier_pipeline_nodes.py:161
 msgid "Continue"
 msgstr "Продолжить"
 
-#: compare/classifier_pipeline.py:782
+#: compare/classifier_pipeline_nodes.py:162
 msgid "Go to node"
 msgstr "Перейти к узлу"
 
-#: compare/classifier_pipeline.py:783
+#: compare/classifier_pipeline_nodes.py:163
 msgid "Execute action"
 msgstr "Выполнить действие"
 
-#: compare/classifier_pipeline.py:784
+#: compare/classifier_pipeline_nodes.py:164
 msgid "Execute and continue"
 msgstr "Выполнить и продолжить"
 
-#: compare/classifier_pipeline.py:785 lib/fill_preview_dialog_qt.py:124
+#: compare/classifier_pipeline_nodes.py:165 lib/fill_preview_dialog_qt.py:124
 msgid "Accept"
 msgstr "Принять"
 
-#: compare/classifier_pipeline.py:786
+#: compare/classifier_pipeline_nodes.py:166
 msgid "Reject"
 msgstr "Отклонить"
 
-#: compare/classifier_pipeline.py:851 compare/pipeline_run_report.py:237
-#: compare/pipeline_run_report.py:245
+#: compare/classifier_pipeline_nodes.py:231 compare/pipeline_run_report.py:265
+#: compare/pipeline_run_report.py:273
 msgid "(unknown)"
 msgstr "(неизвестно)"
 
-#: compare/classifier_pipeline.py:852 compare/classifier_pipeline.py:857
+#: compare/classifier_pipeline_nodes.py:232
+#: compare/classifier_pipeline_nodes.py:237
 msgid "{0}: {1}"
 msgstr "{0}: {1}"
 
-#: compare/classifier_pipeline.py:854
+#: compare/classifier_pipeline_nodes.py:234
 msgid " → {0}"
 msgstr " → {0}"
 
-#: compare/classifier_pipeline.py:921
+#: compare/classifier_pipeline_nodes.py:301
 #: tests/unit/test_classifier_pipeline.py:1233
 msgid "(no condition)"
 msgstr "(без условия)"
 
-#: compare/classifier_pipeline.py:946 compare/classifier_pipeline.py:1473
-#: compare/classifier_pipeline.py:1540
+#: compare/classifier_pipeline.py:69 compare/classifier_pipeline.py:656
+#: compare/classifier_pipeline.py:725
 #: ui/compare/classifier_pipeline_editor_qt.py:1881
 #: ui/compare/classifier_pipelines_tab_qt.py:89
 msgid "New Pipeline"
 msgstr "Новый конвейер"
 
-#: compare/classifier_pipeline.py:1047
+#: compare/classifier_pipeline.py:185
 msgid "Pipeline name is empty."
 msgstr "Имя конвейера пустое."
 
-#: compare/classifier_pipeline.py:1052
+#: compare/classifier_pipeline.py:190
 #: tests/unit/test_classifier_pipeline.py:1754
 msgid "seed_category '{0}' is set but category_map is empty."
 msgstr "seed_category '{0}' установлен, но category_map пуст."
 
-#: compare/classifier_pipeline.py:1058
+#: compare/classifier_pipeline.py:196
 msgid "seed_category '{0}' is not a key in category_map."
 msgstr "seed_category '{0}' не является ключом в category_map."
 
-#: compare/classifier_pipeline.py:1066
+#: compare/classifier_pipeline.py:204
 #: tests/unit/test_classifier_pipeline.py:1833
 #: tests/unit/test_classifier_pipeline.py:1842
 #: tests/unit/test_classifier_pipeline.py:1859
@@ -447,36 +466,36 @@ msgstr ""
 "Запись category_map '{0}': суффикс '{1}' состоит только из цифр и не может "
 "быть использован как суффикс."
 
-#: compare/classifier_pipeline.py:1075
+#: compare/classifier_pipeline.py:213
 #: tests/unit/test_classifier_pipeline.py:743
 msgid "A node has an empty name."
 msgstr "У узла пустое имя."
 
-#: compare/classifier_pipeline.py:1077
+#: compare/classifier_pipeline.py:215
 #: tests/unit/test_classifier_pipeline.py:603
 msgid "Duplicate node name: {0}."
 msgstr "Дублирующееся имя узла: {0}."
 
-#: compare/classifier_pipeline.py:1090
+#: compare/classifier_pipeline.py:228
 msgid "Node {0}: GOTO has no target."
 msgstr "Узел {0}: GOTO не имеет цели."
 
-#: compare/classifier_pipeline.py:1093
+#: compare/classifier_pipeline.py:231
 msgid "Node {0}: GOTO target {1} does not exist."
 msgstr "Узел {0}: цель GOTO {1} не существует."
 
-#: compare/classifier_pipeline.py:1101
+#: compare/classifier_pipeline.py:239
 #: tests/unit/test_classifier_pipeline.py:621
 msgid "Node {0}: GOTO target {1} must be a later node (cycle prevention)."
 msgstr ""
 "Узел {0}: цель GOTO {1} должен быть более поздним узлом (предотвращение "
 "циклов)."
 
-#: compare/classifier_pipeline.py:1107
+#: compare/classifier_pipeline.py:245
 msgid "Node {0}: {1} outcome has no action_type."
 msgstr "Узел {0}: результат {1} не имеет action_type."
 
-#: compare/classifier_pipeline.py:1123
+#: compare/classifier_pipeline.py:261
 msgid ""
 "Node {0}: RelatedImageCondition.edit_suffix ({1}) must match the GENERATE "
 "outcome's action_modifier ({2})."
@@ -484,11 +503,11 @@ msgstr ""
 "Node {0}: RelatedImageCondition.edit_suffix ({1}) должен соответствовать "
 "action_modifier ({2}) результата GENERATE."
 
-#: compare/classifier_pipeline.py:1136
+#: compare/classifier_pipeline.py:274
 msgid "Node {0}: NodeResultCondition has no node_name."
 msgstr "Узел {0}: NodeResultCondition не имеет node_name."
 
-#: compare/classifier_pipeline.py:1139
+#: compare/classifier_pipeline.py:277
 #: tests/unit/test_classifier_pipeline.py:639
 msgid ""
 "Node {0}: NodeResultCondition references {1} which is not a prior node."
@@ -496,48 +515,48 @@ msgstr ""
 "Узел {0}: NodeResultCondition ссылается на {1}, который не является "
 "предыдущим узлом."
 
-#: compare/classifier_pipeline.py:1147
+#: compare/classifier_pipeline.py:285
 msgid "Node {0}: ClassifierRankCondition has no classifier_name."
 msgstr "Узел {0}: ClassifierRankCondition не имеет classifier_name."
 
-#: compare/classifier_pipeline.py:1155
+#: compare/classifier_pipeline.py:293
 msgid "Node {0}: classifier {1} is not registered."
 msgstr "Узел {0}: классификатор {1} не зарегистрирован."
 
-#: compare/classifier_pipeline.py:1162 compare/classifier_pipeline.py:1184
+#: compare/classifier_pipeline.py:300 compare/classifier_pipeline.py:322
 msgid "Node {0}: min_rank must be ≥ 1."
 msgstr "Узел {0}: min_rank должен быть ≥ 1."
 
-#: compare/classifier_pipeline.py:1164 compare/classifier_pipeline.py:1186
+#: compare/classifier_pipeline.py:302 compare/classifier_pipeline.py:324
 msgid "Node {0}: max_rank must be ≥ min_rank."
 msgstr "Узел {0}: max_rank должен быть ≥ min_rank."
 
-#: compare/classifier_pipeline.py:1169
+#: compare/classifier_pipeline.py:307
 msgid "Node {0}: AudioClassifierRankCondition has no classifier_name."
 msgstr "Узел {0}: у AudioClassifierRankCondition нет classifier_name."
 
-#: compare/classifier_pipeline.py:1177
+#: compare/classifier_pipeline.py:315
 msgid "Node {0}: audio classifier {1} is not registered."
 msgstr "Узел {0}: аудиоклассификатор {1} не зарегистрирован."
 
-#: compare/classifier_pipeline.py:1191
+#: compare/classifier_pipeline.py:329
 msgid "Node {0}: FilenameContainsCondition has no patterns."
 msgstr "Узел {0}: FilenameContainsCondition не имеет шаблонов."
 
-#: compare/classifier_pipeline.py:1197
+#: compare/classifier_pipeline.py:335
 #: tests/unit/test_classifier_pipeline.py:1289
 msgid "Node {0}: MediaTypeCondition has no media_types."
 msgstr "Узел {0}: MediaTypeCondition не имеет media_types."
 
-#: compare/classifier_pipeline.py:1202
+#: compare/classifier_pipeline.py:340
 msgid "Node {0}: LookaheadCondition has no lookahead_name."
 msgstr "Узел {0}: LookaheadCondition не имеет lookahead_name."
 
-#: compare/classifier_pipeline.py:1208
+#: compare/classifier_pipeline.py:346
 msgid "Node {0}: lookahead {1} is not defined."
 msgstr "Узел {0}: опережающее чтение {1} не определено."
 
-#: compare/classifier_pipeline.py:1218
+#: compare/classifier_pipeline.py:356
 msgid ""
 "Node {0}: BaseStemMatchCondition.search_directory ({1}) is not a valid "
 "directory."
@@ -545,7 +564,7 @@ msgstr ""
 "Узел {0}: BaseStemMatchCondition.search_directory ({1}) не является "
 "допустимым каталогом."
 
-#: compare/classifier_pipeline.py:1226
+#: compare/classifier_pipeline.py:364
 msgid ""
 "Node {0}: UnknownSuffixCondition.search_directory ({1}) is not a valid "
 "directory."
@@ -553,11 +572,11 @@ msgstr ""
 "Узел {0}: UnknownSuffixCondition.search_directory ({1}) не является "
 "допустимым каталогом."
 
-#: compare/classifier_pipeline.py:1233
+#: compare/classifier_pipeline.py:371
 msgid "Node {0}: RelatedImageCondition has no edit_suffix."
 msgstr "Узел {0}: RelatedImageCondition не имеет edit_suffix."
 
-#: compare/classifier_pipeline.py:1236
+#: compare/classifier_pipeline.py:374
 msgid ""
 "Node {0}: RelatedImageCondition.search_directory ({1}) is not a valid "
 "directory."
@@ -565,49 +584,49 @@ msgstr ""
 "Узел {0}: RelatedImageCondition.search_directory ({1}) не является "
 "допустимым каталогом."
 
-#: compare/classifier_pipeline.py:1244
+#: compare/classifier_pipeline.py:382
 msgid "Node {0}: unknown composite operator {1}."
 msgstr "Узел {0}: неизвестный составной оператор {1}."
 
-#: compare/classifier_pipeline.py:1249
+#: compare/classifier_pipeline.py:387
 msgid "Node {0}: NOT requires exactly 1 sub-condition, got {1}."
 msgstr "Узел {0}: NOT требует ровно 1 подусловие, получено {1}."
 
-#: compare/classifier_pipeline.py:1253
+#: compare/classifier_pipeline.py:391
 msgid "Node {0}: XOR requires exactly 2 sub-conditions, got {1}."
 msgstr "Узел {0}: XOR требует ровно 2 подусловия, получено {1}."
 
-#: compare/classifier_pipeline.py:1262
+#: compare/classifier_pipeline.py:400
 msgid "Node {0}: {1} requires at least 1 sub-condition, got {2}."
 msgstr "Узел {0}: {1} требует как минимум 1 подусловие, получено {2}."
 
-#: compare/classifier_pipeline.py:1272
+#: compare/classifier_pipeline.py:410
 msgid "Node {0}: GroupCondition has unknown operator {1}."
 msgstr "Узел {0}: GroupCondition имеет неизвестный оператор {1}."
 
-#: compare/classifier_pipeline.py:1277
+#: compare/classifier_pipeline.py:415
 #: tests/unit/test_classifier_pipeline.py:922
 msgid "Node {0}: GroupCondition has no child nodes."
 msgstr "Узел {0}: GroupCondition не имеет дочерних узлов."
 
-#: compare/classifier_pipeline.py:1283
+#: compare/classifier_pipeline.py:421
 msgid "Node {0}: GroupCondition child has an empty name."
 msgstr "Узел {0}: потомок GroupCondition имеет пустое имя."
 
-#: compare/classifier_pipeline.py:1287
+#: compare/classifier_pipeline.py:425
 #: tests/unit/test_classifier_pipeline.py:938
 msgid "Node {0}: GroupCondition duplicate child name {1}."
 msgstr "Узел {0}: GroupCondition дублирующееся имя дочернего элемента {1}."
 
-#: compare/classifier_pipeline.py:1300
+#: compare/classifier_pipeline.py:438
 msgid "Node {0}: GroupChildResultCondition has no group_node_name."
 msgstr "Узел {0}: GroupChildResultCondition не имеет group_node_name."
 
-#: compare/classifier_pipeline.py:1304
+#: compare/classifier_pipeline.py:442
 msgid "Node {0}: GroupChildResultCondition has no child_node_name."
 msgstr "Узел {0}: GroupChildResultCondition не имеет child_node_name."
 
-#: compare/classifier_pipeline.py:1308
+#: compare/classifier_pipeline.py:446
 msgid ""
 "Node {0}: GroupChildResultCondition references group {1} which is not a "
 "prior node."
@@ -615,7 +634,7 @@ msgstr ""
 "Узел {0}: GroupChildResultCondition ссылается на группу {1}, которая не "
 "является предыдущим узлом."
 
-#: compare/classifier_pipeline.py:1340
+#: compare/classifier_pipeline.py:517
 msgid ""
 "Node {0}: ClassifierRankCondition has inherit_categories=True but the "
 "pipeline has no category map — condition will match nothing."
@@ -623,7 +642,7 @@ msgstr ""
 "Узел {0}: ClassifierRankCondition имеет inherit_categories=True, но в "
 "конвейере нет карты категорий — условие не будет соответствовать ничему."
 
-#: compare/classifier_pipeline.py:1345
+#: compare/classifier_pipeline.py:522
 msgid ""
 "Node {0}: AudioClassifierRankCondition has inherit_categories=True but the "
 "pipeline has no category map — condition will match nothing."
@@ -631,153 +650,153 @@ msgstr ""
 "Узел {0}: у AudioClassifierRankCondition установлен inherit_categories=True,"
 " но в конвейере отсутствует карта категорий — условие ни с чем не совпадёт."
 
-#: compare/classifier_pipeline.py:1352
+#: compare/classifier_pipeline.py:529
 msgid "Node {0}: suffix filter {1} is not in the pipeline's category map."
 msgstr ""
 "Узел {0}: суффиксный фильтр {1} отсутствует в карте категорий конвейера."
 
-#: compare/classifier_pipeline.py:1359
+#: compare/classifier_pipeline.py:536
 msgid "Node {0}: expected suffix {1} is not in the pipeline's category map."
 msgstr ""
 "Узел {0}: ожидаемый суффикс {1} отсутствует в карте категорий конвейера."
 
-#: compare/classifier_pipeline.py:1377
+#: compare/classifier_pipeline.py:554
 #: tests/unit/test_classifier_pipelines_manager.py:92
 msgid "(empty)"
 msgstr "(пусто)"
 
-#: compare/classifier_pipeline.py:1383
+#: compare/classifier_pipeline.py:560
 #: ui/compare/classifier_pipeline_editor_qt.py:74
 msgid "Prompt"
 msgstr "Промпт"
 
-#: compare/classifier_pipeline.py:1384
+#: compare/classifier_pipeline.py:561
 msgid "Always"
 msgstr "Всегда"
 
-#: compare/classifier_pipeline.py:1385
+#: compare/classifier_pipeline.py:562
 #: ui/compare/classifier_pipeline_editor_qt.py:79
 msgid "Lookahead"
 msgstr "Lookahead"
 
-#: compare/classifier_pipeline.py:1388
+#: compare/classifier_pipeline.py:565
 #: ui/compare/classifier_pipeline_editor_qt.py:83
 msgid "Group"
 msgstr "Группа"
 
-#: compare/classifier_pipeline.py:1397
+#: compare/classifier_pipeline.py:574
 msgid "Group ({0}, {1} children)"
 msgstr "Группа ({0}, {1} дочерних узлов)"
 
-#: compare/classifier_pipeline.py:1405 compare/classifier_pipeline.py:1423
+#: compare/classifier_pipeline.py:582 compare/classifier_pipeline.py:600
 msgid "(end) → {0}"
 msgstr "(конец) → {0}"
 
-#: compare/classifier_pipeline.py:1410
+#: compare/classifier_pipeline.py:587
 #: tests/unit/test_classifier_pipeline.py:1075
-#: ui/compare/classifier_pipeline_editor_qt.py:2710
+#: ui/compare/classifier_pipeline_editor_qt.py:2732
 msgid "(no nodes)"
 msgstr "(нет узлов)"
 
-#: compare/classifier_pipeline.py:1418
+#: compare/classifier_pipeline.py:595
 msgid "  ({0} of {1} children)"
 msgstr "  ({0} из {1} дочерних узлов)"
 
-#: compare/classifier_pipeline_runner.py:315
+#: compare/classifier_pipeline_runner.py:338
 msgid "Node {0} is disabled — skipped"
 msgstr "Узел {0} отключен — пропущен"
 
-#: compare/classifier_pipeline_runner.py:340
+#: compare/classifier_pipeline_runner.py:363
 msgid "Seed image is assigned to category '{0}'; GENERATE skipped."
 msgstr ""
 "Изображение-затравка назначено категории '{0}'; ГЕНЕРИРОВАНИЕ пропущено."
 
-#: compare/classifier_pipeline_runner.py:888
+#: compare/classifier_pipeline_runner.py:913
 msgid ""
 "Stem {0} matches {1} files (limit {2}) — base stem is not unique enough"
 msgstr ""
 "Основа {0} соответствует {1} файлам (лимит {2}) — базовая основа "
 "недостаточно уникальна"
 
-#: compare/classifier_pipeline_runner.py:901
+#: compare/classifier_pipeline_runner.py:926
 msgid "{0} files share base stem {1} in the search location"
 msgstr "{0} файлов имеют общее базовое имя {1} в месте поиска"
 
-#: compare/classifier_pipeline_runner.py:904
+#: compare/classifier_pipeline_runner.py:929
 msgid " (suffix filter: {0})"
 msgstr " (фильтр по суффиксам: {0})"
 
-#: compare/classifier_pipeline_runner.py:971
+#: compare/classifier_pipeline_runner.py:996
 msgid "Unrecognised suffix in stem group: {0}"
 msgstr "Нераспознанный суффикс в группе корня имени: {0}"
 
-#: compare/classifier_pipeline_runner.py:987
+#: compare/classifier_pipeline_runner.py:1012
 msgid " — classifier inconclusive"
 msgstr " — классификатор не смог дать однозначный результат"
 
-#: compare/classifier_pipeline_runner.py:993
+#: compare/classifier_pipeline_runner.py:1018
 msgid "Cannot determine category of {0}{1}"
 msgstr "Не удается определить категорию {0}{1}"
 
-#: compare/classifier_pipeline_runner.py:1030
+#: compare/classifier_pipeline_runner.py:1055
 msgid "{0} inferred as {1} (confidence {2}) — treated as resolved"
 msgstr "{0} определено как {1} (уверенность {2}) — обработано как разрешенное"
 
-#: compare/classifier_pipeline_runner.py:1224 files/marked_files.py:391
+#: compare/classifier_pipeline_runner.py:1249 files/marked_files.py:475
 msgid "Moving"
 msgstr "Перемещение"
 
-#: compare/classifier_pipeline_runner.py:1224 files/marked_files.py:391
+#: compare/classifier_pipeline_runner.py:1249 files/marked_files.py:475
 msgid "Copying"
 msgstr "Копирование"
 
-#: compare/compare_wrapper.py:140 compare/compare_wrapper.py:143
+#: compare/compare_wrapper.py:170 compare/compare_wrapper.py:173
 msgid "Invalid mode"
 msgstr "Недействительный режим"
 
-#: compare/compare_wrapper.py:173 compare/compare_wrapper.py:194
+#: compare/compare_wrapper.py:203 compare/compare_wrapper.py:224
 msgid "Search required"
 msgstr "Поиск требуется"
 
-#: compare/compare_wrapper.py:173 compare/compare_wrapper.py:194
+#: compare/compare_wrapper.py:203 compare/compare_wrapper.py:224
 msgid "No matches found. Search again to find potential matches."
 msgstr ""
 "Не найдено ни одного совпадения. Повторите поиск, чтобы найти потенциальные "
 "совпадения."
 
-#: compare/compare_wrapper.py:302
+#: compare/compare_wrapper.py:325
 msgid "Skipped {0} media."
 msgstr "Пропущено {0} медиа."
 
-#: compare/compare_wrapper.py:308
+#: compare/compare_wrapper.py:331
 msgid "No Unrelated Media"
 msgstr "Без посторонних медиафайлов"
 
-#: compare/compare_wrapper.py:308
+#: compare/compare_wrapper.py:331
 msgid "No unrelated media found."
 msgstr "Несвязанных медиафайлов не найдено."
 
-#: compare/compare_wrapper.py:387
+#: compare/compare_wrapper.py:410
 msgid "No Supergroups Found"
 msgstr "Супергруппы не найдены"
 
-#: compare/compare_wrapper.py:398
+#: compare/compare_wrapper.py:421
 msgid "Supergroup no longer available"
 msgstr "Супергруппа недоступна"
 
-#: compare/compare_wrapper.py:416
+#: compare/compare_wrapper.py:438
 msgid "No groups available to purge."
 msgstr "Нет доступных групп для очистки."
 
-#: compare/compare_wrapper.py:424
+#: compare/compare_wrapper.py:446
 msgid "All groups already have only one file."
 msgstr "Во всех группах уже есть только один файл."
 
-#: compare/compare_wrapper.py:428
+#: compare/compare_wrapper.py:450
 msgid "Random Purge"
 msgstr "Случайная очистка"
 
-#: compare/compare_wrapper.py:430
+#: compare/compare_wrapper.py:452
 msgid ""
 "This will permanently delete {delete_count} of {total_count} files across {group_count} groups, keeping one random file per group.\n"
 "\n"
@@ -787,59 +806,59 @@ msgstr ""
 "\n"
 "Это действие нельзя отменить. Продолжить?"
 
-#: compare/compare_wrapper.py:483
+#: compare/compare_wrapper.py:505
 msgid "Purging: group {current} / {total}"
 msgstr "Очистка: группа {current} / {total}"
 
-#: compare/compare_wrapper.py:510 compare/compare_wrapper.py:1009
+#: compare/compare_wrapper.py:532 compare/compare_wrapper.py:1031
 #: ui/app_window/sidebar_panel.py:81
 msgid "Set a directory to run comparison."
 msgstr "Задайте каталог для запуска сравнения."
 
-#: compare/compare_wrapper.py:515
+#: compare/compare_wrapper.py:537
 msgid "Random purge complete: {deleted} files deleted, {errors} error(s)."
 msgstr ""
 "Случайная очистка завершена: {deleted} файлов удалено, {errors} ошибок."
 
-#: compare/compare_wrapper.py:519
+#: compare/compare_wrapper.py:541
 msgid "Random purge complete: {deleted} files deleted across {groups} groups."
 msgstr ""
 "Случайная очистка завершена: удалено {deleted} файлов в {groups} группах."
 
-#: compare/compare_wrapper.py:538 compare/compare_wrapper.py:895
+#: compare/compare_wrapper.py:560 compare/compare_wrapper.py:917
 msgid "No Groups Found"
 msgstr "Группы не найдены"
 
-#: compare/compare_wrapper.py:571
+#: compare/compare_wrapper.py:593
 msgid "No Ungrouped Files"
 msgstr "Нет не сгруппированных файлов"
 
-#: compare/compare_wrapper.py:572
+#: compare/compare_wrapper.py:594
 msgid "Every scanned file was placed into a group."
 msgstr "Каждый отсканированный файл был помещён в группу."
 
-#: compare/compare_wrapper.py:590
+#: compare/compare_wrapper.py:612
 msgid "{0} ungrouped files"
 msgstr "{0} не сгруппированные файлы"
 
-#: compare/compare_wrapper.py:611
+#: compare/compare_wrapper.py:633
 msgid "No More Ungrouped Files"
 msgstr "Больше нет несгруппированных файлов"
 
-#: compare/compare_wrapper.py:612
+#: compare/compare_wrapper.py:634
 msgid "There are no more ungrouped files remaining."
 msgstr "Больше нет файлов без группы."
 
-#: compare/compare_wrapper.py:646
+#: compare/compare_wrapper.py:668
 #: tests/compare/test_direct_display_prevalidation.py:317
 msgid "All media in the group are skipped"
 msgstr "Все медиа в группе пропущены"
 
-#: compare/compare_wrapper.py:711
+#: compare/compare_wrapper.py:733
 msgid " | Supergroup {0}/{1}"
 msgstr " Супергруппа {0}/{1}"
 
-#: compare/compare_wrapper.py:779
+#: compare/compare_wrapper.py:801
 msgid ""
 "Gathering media data... setup may take a while depending on number of files "
 "involved."
@@ -847,11 +866,11 @@ msgstr ""
 "Сбор данных из медиафайлов... Настройка может занять некоторое время в "
 "зависимости от количества файлов."
 
-#: compare/compare_wrapper.py:800
+#: compare/compare_wrapper.py:822
 msgid "Confirm group run"
 msgstr "Подтвердить групповой забег"
 
-#: compare/compare_wrapper.py:801
+#: compare/compare_wrapper.py:823
 msgid ""
 "Search mode detected, please confirm switch to group mode before run. Group "
 "mode will take longer as all media in the base directory are compared."
@@ -860,65 +879,65 @@ msgstr ""
 "режим. Работа в групповом режиме займет больше времени, так как будет "
 "производиться сравнение всех медиафайлов в базовом каталоге."
 
-#: compare/compare_wrapper.py:808
+#: compare/compare_wrapper.py:830
 msgid "Gathering media data for comparison"
 msgstr "Извлекаем данные с медиа для сравнения"
 
-#: compare/compare_wrapper.py:858
+#: compare/compare_wrapper.py:880
 msgid "Searching media..."
 msgstr "Поиск медиа..."
 
-#: compare/compare_wrapper.py:864
+#: compare/compare_wrapper.py:886
 msgid "Set a directory and search file or search text."
 msgstr "Установите каталог и файл поиска или текст поиска."
 
-#: compare/compare_wrapper.py:865
+#: compare/compare_wrapper.py:887
 msgid "No Match Found"
 msgstr "Совпадений не найдено"
 
-#: compare/compare_wrapper.py:865
+#: compare/compare_wrapper.py:887
 msgid "None of the files match the search filters with current settings."
 msgstr ""
 "Ни один из файлов не соответствует фильтрам поиска с текущими настройками."
 
-#: compare/compare_wrapper.py:880
+#: compare/compare_wrapper.py:902
 msgid "{0} possibly related media found."
 msgstr "{0} потенциально связанных медиа найдено."
 
-#: compare/compare_wrapper.py:889
+#: compare/compare_wrapper.py:911
 msgid "Running media comparisons..."
 msgstr "Выполняется сравнение медиафайлов..."
 
-#: compare/compare_wrapper.py:894 compare/compare_wrapper.py:914
+#: compare/compare_wrapper.py:916 compare/compare_wrapper.py:936
 msgid "Set a directory and search file."
 msgstr "Установите каталог и файл поиска."
 
-#: compare/compare_wrapper.py:895
+#: compare/compare_wrapper.py:917
 msgid "None of the files can be grouped with current settings."
 msgstr "Ни один из файлов не может быть сгруппирован с текущими настройками."
 
-#: compare/compare_wrapper.py:915
+#: compare/compare_wrapper.py:937
 msgid "No Duplicates Found"
 msgstr "Дубликаты не найдены"
 
-#: compare/compare_wrapper.py:915
+#: compare/compare_wrapper.py:937
 msgid ""
 "None of the files appear to be duplicates based on the current settings."
 msgstr "Ни один из файлов не является дубликатом на основе текущих настроек."
 
-#: compare/compare_wrapper.py:943
+#: compare/compare_wrapper.py:965
 msgid "Stranded Group Members Found"
 msgstr "Найдены члены застрявших групп"
 
-#: compare/compare_wrapper.py:943
+#: compare/compare_wrapper.py:965
 msgid "Some group members were left stranded by the grouping process."
 msgstr "Некоторые элементы группы остались вне группировки."
 
-#: compare/compare_wrapper.py:999
+#: compare/compare_wrapper.py:1021
 msgid "No More Groups"
 msgstr "Больше никаких групп"
 
-#: compare/compare_wrapper.py:1000
+#: compare/compare_wrapper.py:1022
 msgid ""
 "There are no more media groups remaining for this directory and current "
 "filter settings."
@@ -965,88 +984,88 @@ msgstr "Обработка партии {0}/{1} ({2} изображения)..."
 msgid "Found {0} images that meet the threshold..."
 msgstr "Найдено {0} изображений, соответствующих порогу..."
 
-#: compare/pipeline_run_report.py:61
+#: compare/pipeline_run_report.py:68
 #: tests/unit/test_classifier_pipeline_runner.py:1529
 msgid "Warnings"
 msgstr "Предупреждения"
 
-#: compare/pipeline_run_report.py:62
+#: compare/pipeline_run_report.py:69
 #: tests/unit/test_classifier_pipeline_runner.py:1530
 msgid "Notable events"
 msgstr "Заметные события"
 
-#: compare/pipeline_run_report.py:63
+#: compare/pipeline_run_report.py:70
 msgid "Information"
 msgstr "Сведения"
 
-#: compare/pipeline_run_report.py:114
-#: ui/compare/classifier_pipelines_tab_qt.py:658
+#: compare/pipeline_run_report.py:135
+#: ui/compare/classifier_pipelines_tab_qt.py:577
 msgid "(no action)"
 msgstr "(нет действия)"
 
-#: compare/pipeline_run_report.py:134
+#: compare/pipeline_run_report.py:155
 msgid "Pipeline {0} — run complete"
 msgstr "Конвейер {0} — выполнение завершено"
 
-#: compare/pipeline_run_report.py:139
+#: compare/pipeline_run_report.py:160
 msgid "Profile: {0}"
 msgstr "Профиль: {0}"
 
-#: compare/pipeline_run_report.py:143
+#: compare/pipeline_run_report.py:164
 msgid "{0} → {1}"
 msgstr "{0} → {1}"
 
-#: compare/pipeline_run_report.py:146
+#: compare/pipeline_run_report.py:167
 msgid "Categories: {0}"
 msgstr "Категории: {0}"
 
-#: compare/pipeline_run_report.py:149
+#: compare/pipeline_run_report.py:170
 msgid "Directories scanned:"
 msgstr "Просканированные каталоги:"
 
-#: compare/pipeline_run_report.py:153
+#: compare/pipeline_run_report.py:174
 msgid "  {0}  ({1} {2})"
 msgstr "  {0} ({1} {2})"
 
-#: compare/pipeline_run_report.py:156
+#: compare/pipeline_run_report.py:177
 msgid "file(s)"
 msgstr "файл(ы)"
 
-#: compare/pipeline_run_report.py:162
+#: compare/pipeline_run_report.py:183
 msgid "Files evaluated: {0}"
 msgstr "Проверенные файлы: {0}"
 
-#: compare/pipeline_run_report.py:166
+#: compare/pipeline_run_report.py:187
 msgid "Errors during evaluation: {0}"
 msgstr "Ошибки при оценке: {0}"
 
-#: compare/pipeline_run_report.py:170
+#: compare/pipeline_run_report.py:191
 msgid "Actions taken:"
 msgstr "Предпринятые действия:"
 
-#: compare/pipeline_run_report.py:178
+#: compare/pipeline_run_report.py:199
 msgid "  {0}× {1}"
 msgstr "  {0}× {1}"
 
-#: compare/pipeline_run_report.py:186
+#: compare/pipeline_run_report.py:207
 msgid "Generations queued: {0} ({1})"
 msgstr "Поколения в очереди: {0} ({1})"
 
-#: compare/pipeline_run_report.py:189
+#: compare/pipeline_run_report.py:210
 msgid "Generations queued: {0}"
 msgstr "Поколений в очереди: {0}"
 
-#: compare/pipeline_run_report.py:230
+#: compare/pipeline_run_report.py:258
 #: tests/unit/test_classifier_pipeline_runner.py:1579
 msgid "  {0} ({1} file(s))"
 msgstr "  {0} ({1} файл(ов))"
 
-#: compare/pipeline_run_report.py:235
+#: compare/pipeline_run_report.py:263
 #: tests/unit/test_classifier_pipeline_runner.py:1550
 msgid "  [{0}] — {1} files"
 msgstr "  [{0}] — {1} файл(ов)"
 
-#: compare/pipeline_run_report.py:266
+#: compare/pipeline_run_report.py:294
 msgid "      · … and {0} more"
 msgstr "      · … и еще {0}"
 
@@ -1125,12 +1144,12 @@ msgstr "Файл обновлен: {0}"
 #: extensions/gimp/gimp_wrapper.py:706 extensions/gimp/gimp_wrapper.py:735
 #: files/pdf_creator.py:135 files/pdf_creator.py:139 files/pdf_creator.py:142
 #: files/pdf_creator.py:230 files/pdf_creator.py:248 files/pdf_creator.py:280
-#: ui/app_window/notification_controller.py:360
+#: ui/app_window/notification_controller.py:377
 #: ui/auth/app_startup_auth_qt.py:122 ui/auth/password_admin_window.py:128
 #: ui/auth/password_admin_window.py:535 ui/auth/password_dialog.py:306
 #: ui/compare/classifier_action_copy_window_qt.py:219
 #: ui/compare/classifier_action_copy_window_qt.py:228
-#: ui/files/marked_file_mover_qt.py:722 ui/files/marked_file_mover_qt.py:864
+#: ui/files/marked_file_mover_qt.py:734 ui/files/marked_file_mover_qt.py:876
 msgid "Error"
 msgstr "Ошибка"
 
@@ -1208,71 +1227,71 @@ msgstr ""
 "Загрузка каталога... {0} файлов доступны в данный момент (сканировано {1} "
 "папок; количества файлов неизвестно)"
 
-#: files/file_browser.py:1139 ui/app_window/file_ops_controller.py:714
+#: files/file_browser.py:1139 ui/app_window/file_ops_controller.py:532
 msgid "No files found"
 msgstr "Файлы не найдены"
 
-#: files/marked_files.py:60
+#: files/marked_files.py:61
 msgid "change marks"
 msgstr "изменить метки"
 
-#: files/marked_files.py:146 ui/image/temp_media_window.py:153
+#: files/marked_files.py:147 ui/image/temp_media_window.py:153
 msgid "add mark"
 msgstr "добавить метку"
 
-#: files/marked_files.py:159
+#: files/marked_files.py:242
 msgid "clear marks"
 msgstr "очистить метки"
 
-#: files/marked_files.py:162 files/marked_files.py:777
+#: files/marked_files.py:245 files/marked_files.py:890
 msgid "Marks cleared."
 msgstr "Отметины сняты."
 
-#: files/marked_files.py:180
+#: files/marked_files.py:263
 msgid "restore marks from previous"
 msgstr "восстановить метки из предыдущих"
 
-#: files/marked_files.py:187
+#: files/marked_files.py:270
 msgid "Set current marks from previous."
 msgstr "Установите текущие отметки от предыдущих."
 
-#: files/marked_files.py:189
+#: files/marked_files.py:272
 msgid "Total set: {0}"
 msgstr "Всего в наборе: {0}"
 
-#: files/marked_files.py:243
+#: files/marked_files.py:326
 msgid "NO_MARK_TARGET_SET"
 msgstr ""
 "Постоянная цель метки не установлена!\n"
 "Установите с помощью Ctrl+T в окне «Метки»."
 
-#: files/marked_files.py:260
+#: files/marked_files.py:343
 msgid "NO_HOTKEY_ACTION_SET"
 msgstr ""
 "Для {0} не установлено действие горячей клавиши.\n"
 "Установите {1} в окне метки."
 
-#: files/marked_files.py:292
+#: files/marked_files.py:375
 msgid "moved"
 msgstr "перемещено"
 
-#: files/marked_files.py:292
+#: files/marked_files.py:375
 msgid "copied"
 msgstr "скопировано"
 
-#: files/marked_files.py:293
+#: files/marked_files.py:376
 msgid "move back"
 msgstr "переместить назад"
 
-#: files/marked_files.py:293
+#: files/marked_files.py:376
 msgid "delete"
 msgstr "удалить"
 
-#: files/marked_files.py:297
+#: files/marked_files.py:380
 msgid "Transfer Stopped"
 msgstr "Передача остановлена"
 
-#: files/marked_files.py:299
+#: files/marked_files.py:382
 msgid ""
 "Stopped after {0} file(s) were {1} to:\n"
 "{2}\n"
@@ -1286,124 +1305,124 @@ msgstr ""
 "ОК — оставить {0} {1} файл(ов) на месте; остальные остаются отмеченными для последующего запуска.\n"
 "Отмена — {3} все {0} файл(ов) обратно в исходное расположение."
 
-#: files/marked_files.py:345 files/marked_files.py:941
+#: files/marked_files.py:428 files/marked_files.py:1054
 #: ui/files/file_actions_window_qt.py:248
 #: ui/files/file_actions_window_qt.py:256
 msgid "Moved"
 msgstr "Перемещено"
 
-#: files/marked_files.py:345 files/marked_files.py:941
+#: files/marked_files.py:428 files/marked_files.py:1054
 #: ui/files/file_actions_window_qt.py:249
 #: ui/files/file_actions_window_qt.py:257
 msgid "Copied"
 msgstr "Скопировано"
 
-#: files/marked_files.py:348
+#: files/marked_files.py:431
 msgid "{0} {1} file(s) to {2}. {3} remain marked."
 msgstr "{0} {1} файл(ов) в {2}. {3} остаются отмеченными."
 
-#: files/marked_files.py:377
+#: files/marked_files.py:461
 msgid "move files"
 msgstr "переместить файлы"
 
-#: files/marked_files.py:383
+#: files/marked_files.py:467
 msgid "move or copy marked files"
 msgstr "Переместить или скопировать отмеченные файлы"
 
-#: files/marked_files.py:508
+#: files/marked_files.py:621
 msgid "Moved {0} files to {1}"
 msgstr ""
 "Переместите {0} файлов на\n"
 "{1}"
 
-#: files/marked_files.py:510
+#: files/marked_files.py:623
 msgid "Copied {0} files to {1}"
 msgstr ""
 "Скопируйте {0} файлов на\n"
 "{1}"
 
-#: files/marked_files.py:584
+#: files/marked_files.py:697
 msgid "Existing filenames match!"
 msgstr "Существующие имена файлов совпадают!"
 
-#: files/marked_files.py:586
+#: files/marked_files.py:699
 msgid "WARNING: Exact file match."
 msgstr "Предупреждение: точное совпадение файлов."
 
-#: files/marked_files.py:588
+#: files/marked_files.py:701
 msgid "INFO: Target files with different EXIF data replaced."
 msgstr "ИНФО: Заменены целевые файлы с различными данными EXIF."
 
-#: files/marked_files.py:590 files/marked_files.py:739
+#: files/marked_files.py:703 files/marked_files.py:852
 msgid "WARNING: Short filenames."
 msgstr "Предупреждение: короткие имена файлов."
 
-#: files/marked_files.py:637
+#: files/marked_files.py:750
 msgid "Moving back"
 msgstr "Вернуться назад"
 
-#: files/marked_files.py:637
+#: files/marked_files.py:750
 msgid "Removing"
 msgstr "Удаление"
 
-#: files/marked_files.py:638
+#: files/marked_files.py:751
 msgid "Moved back"
 msgstr "Вернуться назад"
 
-#: files/marked_files.py:638
+#: files/marked_files.py:751
 msgid "Removed"
 msgstr "Удаленный"
 
-#: files/marked_files.py:681
+#: files/marked_files.py:794
 msgid "Moved back {0} files from {1}"
 msgstr ""
 "Перенесите файлы из {0}\n"
 "{1}"
 
-#: files/marked_files.py:683
+#: files/marked_files.py:796
 msgid "Removed {0} files from {1}"
 msgstr ""
 "Удаленные файлы {0}\n"
 "{1}"
 
-#: files/marked_files.py:729
+#: files/marked_files.py:842
 msgid "Existing filenames found!"
 msgstr "Существующие имена файлов найдены!"
 
-#: files/marked_files.py:731
+#: files/marked_files.py:844
 msgid "WARNING: All file hashes match."
 msgstr "ВНИМАНИЕ: Все хэши файлов совпадают."
 
-#: files/marked_files.py:733
+#: files/marked_files.py:846
 msgid "WARNING: {0} of {1} file hashes match."
 msgstr "ВНИМАНИЕ: совпали {0} из {1} хэшей файлов."
 
-#: files/marked_files.py:735
+#: files/marked_files.py:848
 msgid "INFO: {0} files have identical content but different EXIF data."
 msgstr "ИНФО: {0} файлов имеют одинаковое содержимое, но разные данные EXIF."
 
-#: files/marked_files.py:737
+#: files/marked_files.py:850
 msgid "WARNING: All files are either identical or have matching content."
 msgstr ""
 "ВНИМАНИЕ: Все файлы либо идентичны, либо имеют совпадающее содержимое."
 
-#: files/marked_files.py:743
+#: files/marked_files.py:856
 msgid "No existing filenames found."
 msgstr "Существующих имен файлов не найдено."
 
-#: files/marked_files.py:759
+#: files/marked_files.py:872
 msgid "remove marks for directory"
 msgstr "удалить метки для каталога"
 
-#: files/marked_files.py:779
+#: files/marked_files.py:892
 msgid "Removed {0} marks"
 msgstr "Удалено меток: {0}"
 
-#: files/marked_files.py:811
+#: files/marked_files.py:924
 msgid "Delete Sources for Existing Files"
 msgstr "Удалить источники для существующих файлов"
 
-#: files/marked_files.py:813
+#: files/marked_files.py:926
 msgid ""
 "{0} files already exist in the target directory with identical content.\n"
 "\n"
@@ -1417,7 +1436,7 @@ msgstr ""
 "\n"
 "Удалить исходные файлы для всех {0}?"
 
-#: files/marked_files.py:854
+#: files/marked_files.py:967
 msgid ""
 "WARNING: You just copied this file to this directory, and now you're trying to move it here.\n"
 "\n"
@@ -1437,11 +1456,11 @@ msgstr ""
 "\n"
 "Хотите продолжить и удалить исходный файл?"
 
-#: files/marked_files.py:860
+#: files/marked_files.py:973
 msgid "Potential Mistake Detected"
 msgstr "Обнаружена потенциальная ошибка"
 
-#: files/marked_files.py:890
+#: files/marked_files.py:1003
 msgid "Removed marked file from source: {0}"
 msgstr "Удален помеченный файл из источника: {0}"
 
@@ -1551,10 +1570,10 @@ msgstr ""
 "файла.)"
 
 #: image/video_ops.py:687 image/video_ops.py:801
-#: ui/app_window/file_ops_controller.py:893
-#: ui/app_window/file_ops_controller.py:939
-#: ui/app_window/file_ops_controller.py:987
-#: ui/app_window/file_ops_controller.py:1074
+#: ui/app_window/file_ops_controller.py:677
+#: ui/app_window/file_ops_controller.py:723
+#: ui/app_window/file_ops_controller.py:771
+#: ui/app_window/file_ops_controller.py:858
 msgid "Not a video file"
 msgstr "Это не видеофайл"
 
@@ -1612,9 +1631,9 @@ msgstr "Видео"
 
 #: lib/custom_dialogs_qt.py:147 lib/fast_directory_picker_qt.py:329
 #: lib/fill_preview_dialog_qt.py:120 lib/qt_alert.py:32
-#: ui/app_window/file_ops_controller.py:309
-#: ui/app_window/file_ops_controller.py:1295
-#: ui/app_window/window_launcher.py:1127 ui/auth/app_startup_auth_qt.py:74
+#: ui/app_window/file_ops_controller.py:244
+#: ui/app_window/file_ops_controller.py:1071
+#: ui/app_window/window_launcher.py:1143 ui/auth/app_startup_auth_qt.py:74
 #: ui/auth/password_admin_window.py:81 ui/auth/password_dialog.py:198
 #: ui/auth/password_dialog.py:268 ui/auth/password_dialog.py:289
 #: ui/compare/add_instance_dialog_qt.py:127
@@ -1622,8 +1641,10 @@ msgstr "Видео"
 #: ui/compare/classifier_pipeline_editor_qt.py:1923
 #: ui/compare/compare_settings_window_qt.py:335
 #: ui/compare/hf_model_manager_window_qt.py:184
+#: ui/files/auto_sort_confirmation_window_qt.py:69
 #: ui/files/directory_notes_window_qt.py:376
 #: ui/files/file_action_sets_window_qt.py:93
+#: ui/files/file_interceptor_rules_window_qt.py:153
 #: ui/files/marked_file_mover_qt.py:78 ui/files/pdf_options_window_qt.py:138
 #: ui/files/type_configuration_window_qt.py:229
 #: ui/image/rerun_prompt_adjustment_window_qt.py:95 utils/constants.py:391
@@ -1634,6 +1655,7 @@ msgstr "Отмена"
 #: ui/auth/app_startup_auth_qt.py:77 ui/auth/password_dialog.py:201
 #: ui/compare/add_instance_dialog_qt.py:121
 #: ui/compare/hf_model_manager_window_qt.py:1275
+#: ui/files/file_interceptor_rules_window_qt.py:150
 msgid "OK"
 msgstr "OK"
 
@@ -1736,7 +1758,7 @@ msgid "No folders found (or folder is not currently accessible)."
 msgstr "Папки не найдены (или папка в настоящее время недоступна)"
 
 #: lib/fast_directory_picker_qt.py:530 ui/files/marked_file_mover_qt.py:135
-#: ui/files/marked_file_mover_qt.py:147 ui/files/marked_file_mover_qt.py:690
+#: ui/files/marked_file_mover_qt.py:147 ui/files/marked_file_mover_qt.py:702
 msgid "Current Base Directory"
 msgstr "Текущий базовый каталог"
 
@@ -1817,7 +1839,7 @@ msgid "(no later nodes)"
 msgstr "(без последующих узлов)"
 
 #: tests/ui/test_classifier_pipeline_editor_qt.py:1169
-#: ui/compare/classifier_pipeline_editor_qt.py:2699
+#: ui/compare/classifier_pipeline_editor_qt.py:2721
 msgid "(preview unavailable)"
 msgstr "(предпросмотр недоступен)"
 
@@ -1847,7 +1869,7 @@ msgstr "Последний запуск на: {profile} (теперь перек
 
 #: tests/ui/test_classifier_pipelines_tab_qt.py:863
 #: ui/compare/classifier_pipelines_tab_qt.py:435
-#: ui/compare/classifier_pipelines_tab_qt.py:602
+#: ui/compare/classifier_pipelines_tab_qt.py:521
 msgid "SD Runner Not Available"
 msgstr "SD Runner недоступен"
 
@@ -1875,13 +1897,13 @@ msgstr "Повторить редактирование изображения �
 
 #: tests/ui/test_context_menu_builder.py:70
 #: ui/app_window/context_menu_builder.py:251
-#: ui/app_window/file_ops_controller.py:901
+#: ui/app_window/file_ops_controller.py:685
 msgid "Save copy without audio"
 msgstr "Сохранить копию без звука"
 
 #: tests/ui/test_context_menu_builder.py:71
 #: ui/app_window/context_menu_builder.py:255
-#: ui/app_window/file_ops_controller.py:947
+#: ui/app_window/file_ops_controller.py:731
 msgid "Save copy without metadata"
 msgstr "Сохранить копию без метаданных"
 
@@ -2320,7 +2342,7 @@ msgstr "Создать GIF-интерполяцию из отмеченных ф
 msgid "File Operations"
 msgstr "Операции с файлами"
 
-#: ui/app_window/sidebar_panel.py:339 ui/help_and_config_qt.py:190
+#: ui/app_window/sidebar_panel.py:357 ui/help_and_config_qt.py:190
 msgid "Open media location"
 msgstr "Открыть местоположение мультимедиа"
 
@@ -2556,7 +2578,8 @@ msgstr "Перевернуть изображение вертикально"
 msgid "Copy Without EXIF"
 msgstr "Копирование без EXIF"
 
-#: ui/help_and_config_qt.py:284 ui/image/media_details.py:448
+#: files/file_interceptor_rule.py:85 ui/help_and_config_qt.py:284
+#: ui/image/media_details.py:448
 msgid "Convert to JPG"
 msgstr "Преобразование в JPG"
 
@@ -2897,44 +2920,44 @@ msgstr ""
 "\n"
 "Некоторые изменения (размер шрифта, размеры окон, время всплывающих уведомлений и т. д.) требуют перезапуска приложения для полного вступления в силу."
 
-#: ui/app_window/app_window.py:144 ui/app_window/app_window.py:212
-#: ui/app_window/app_window.py:913
+#: ui/app_window/app_window.py:145 ui/app_window/app_window.py:217
+#: ui/app_window/app_window.py:919
 msgid " Weidr - Media Handler "
 msgstr " Weidr - Обработчик медиа "
 
-#: ui/app_window/app_window.py:619
+#: ui/app_window/app_window.py:625
 msgid "Set Title Bar Color..."
 msgstr "Установить цвет заголовка..."
 
-#: ui/app_window/app_window.py:628
+#: ui/app_window/app_window.py:634
 msgid "Clear Title Bar Color"
 msgstr "Сбросить цвет заголовка"
 
-#: ui/app_window/app_window.py:641
+#: ui/app_window/app_window.py:647
 msgid "No directory loaded."
 msgstr "Нет загруженной директории."
 
-#: ui/app_window/app_window.py:648
+#: ui/app_window/app_window.py:654
 msgid "Choose Title Bar Color"
 msgstr "Выберите цвет заголовка"
 
-#: ui/app_window/app_window.py:656
+#: ui/app_window/app_window.py:662
 msgid "Title bar color set for this directory."
 msgstr "Цветовая схема заголовка окна для этого каталога."
 
-#: ui/app_window/app_window.py:671
+#: ui/app_window/app_window.py:677
 msgid "Title bar color cleared for this directory."
 msgstr "Цвет заголовочной панели сброшен для этой директории."
 
-#: ui/app_window/app_window.py:716 ui/app_window/sidebar_panel.py:105
+#: ui/app_window/app_window.py:722 ui/app_window/sidebar_panel.py:105
 msgid "Enter base directory..."
 msgstr "Введите основной каталог..."
 
-#: ui/app_window/app_window.py:721
+#: ui/app_window/app_window.py:727
 msgid "Set media comparison directory"
 msgstr "Установить медиа-директорию для сравнения"
 
-#: ui/app_window/app_window.py:744
+#: ui/app_window/app_window.py:750
 msgid ""
 "Path is not an existing directory:\n"
 "{0}"
@@ -2942,15 +2965,15 @@ msgstr ""
 "Путь не является существующим каталогом:\n"
 "{0}"
 
-#: ui/app_window/app_window.py:916
+#: ui/app_window/app_window.py:922
 msgid " [PV DISABLED]"
 msgstr " [PV ОТКЛЮЧЕНО]"
 
-#: ui/app_window/app_window.py:959
+#: ui/app_window/app_window.py:965
 msgid "Large Directory Detected: {0}"
 msgstr "Обнаружен большой каталог: {0}"
 
-#: ui/app_window/app_window.py:960
+#: ui/app_window/app_window.py:966
 msgid ""
 "A directory with a large number of files or a directory with a fair-sized "
 "number of files on external storage was detected, which may result in a slow"
@@ -2960,56 +2983,54 @@ msgstr ""
 "большим количеством файлов на внешнем носителе, что может привести к "
 "замедлению загрузки. Подтвердите, что вы хотите загрузить весь каталог."
 
-#: ui/app_window/app_window.py:998
+#: ui/app_window/app_window.py:1004
 msgid "Restored compare result state for {0} file(s) moved back"
 msgstr ""
 "Состояние результата сравнения восстановлено для {0} перемещённых файла(ов)"
 
-#: ui/app_window/app_window.py:1040
+#: ui/app_window/app_window.py:1046
 msgid "Browsing mode set."
 msgstr "Установлен режим просмотра."
 
-#: ui/app_window/app_window.py:1055 ui/app_window/window_launcher.py:958
+#: ui/app_window/app_window.py:1061 ui/app_window/window_launcher.py:974
 msgid "Many Files"
 msgstr "Много файлов"
 
-#: ui/app_window/app_window.py:1162 ui/app_window/file_ops_controller.py:232
-#: ui/app_window/file_ops_controller.py:238
-#: ui/app_window/file_ops_controller.py:242
-#: ui/app_window/file_ops_controller.py:249
-#: ui/app_window/file_ops_controller.py:259
-#: ui/app_window/search_controller.py:560
-#: ui/app_window/search_controller.py:619
-#: ui/app_window/search_controller.py:685
+#: files/marked_files.py:209 files/marked_files.py:216
+#: files/marked_files.py:220 files/marked_files.py:226
+#: files/marked_files.py:237 ui/app_window/app_window.py:1168
+#: ui/app_window/search_controller.py:644
+#: ui/app_window/search_controller.py:703
+#: ui/app_window/search_controller.py:769
 msgid "Warning"
 msgstr "Предупреждение"
 
-#: ui/app_window/app_window.py:1162
+#: ui/app_window/app_window.py:1168
 msgid "No files found in directory after refresh."
 msgstr "После обновления в каталоге не найдено ни одного файла."
 
-#: ui/app_window/app_window.py:1188
+#: ui/app_window/app_window.py:1194
 msgid "NEW_MEDIA_QUEUED"
 msgstr "{0} новый(ые) медиафайл(ы) в очереди"
 
-#: ui/app_window/app_window.py:1296
+#: ui/app_window/app_window.py:1302
 msgid "No cached image for this file."
 msgstr "Нет кэшированного изображения для этого файла."
 
-#: ui/app_window/app_window.py:1299
+#: ui/app_window/app_window.py:1305
 msgid "Could not read cached image."
 msgstr "Не удалось прочитать изображение из кэша."
 
-#: ui/app_window/app_window.py:1302
+#: ui/app_window/app_window.py:1308
 msgid "Clipboard unavailable."
 msgstr "Буфер обмена недоступен."
 
-#: ui/app_window/app_window.py:1321 ui/app_window/app_window.py:1335
-#: ui/app_window/app_window.py:1351
+#: ui/app_window/app_window.py:1327 ui/app_window/app_window.py:1341
+#: ui/app_window/app_window.py:1357
 msgid "Screenshot Failed"
 msgstr "Снимок экрана не удался"
 
-#: ui/app_window/app_window.py:1322
+#: ui/app_window/app_window.py:1328
 msgid ""
 "Unable to create screenshot directory:\n"
 "{0}\n"
@@ -3021,7 +3042,7 @@ msgstr ""
 "\n"
 "{1}"
 
-#: ui/app_window/app_window.py:1336
+#: ui/app_window/app_window.py:1342
 msgid ""
 "Unable to save screenshot.\n"
 "\n"
@@ -3031,7 +3052,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: ui/app_window/app_window.py:1342
+#: ui/app_window/app_window.py:1348
 msgid ""
 "Screenshot saved to:\n"
 "{0}"
@@ -3039,7 +3060,7 @@ msgstr ""
 "Снимок экрана сохранён в:\n"
 "{0}"
 
-#: ui/app_window/app_window.py:1352
+#: ui/app_window/app_window.py:1358
 msgid ""
 "Unable to copy image to clipboard.\n"
 "\n"
@@ -3049,34 +3070,34 @@ msgstr ""
 "\n"
 "{0}"
 
-#: ui/app_window/app_window.py:1356
+#: ui/app_window/app_window.py:1362
 msgid "Copied image to clipboard."
 msgstr "Изображение скопировано в буфер обмена."
 
-#: ui/app_window/app_window.py:1360
+#: ui/app_window/app_window.py:1366
 msgid ""
 "Screenshots are available for videos, animated GIFs, and PDF/SVG/HTML files."
 msgstr ""
 "Скриншоты доступны для видео, анимированных GIF-файлов и файлов "
 "PDF/SVG/HTML."
 
-#: ui/app_window/app_window.py:1418
+#: ui/app_window/app_window.py:1424
 msgid "Masonry view"
 msgstr "Вид «мозаика»"
 
-#: ui/app_window/app_window.py:1423
+#: ui/app_window/app_window.py:1429
 msgid "Full-window view"
 msgstr "Полноэкранный режим"
 
-#: ui/app_window/app_window.py:1483
+#: ui/app_window/app_window.py:1489
 msgid "Theme switched to {0}."
 msgstr "Тема переключается на {0}."
 
-#: ui/app_window/app_window.py:1632
+#: ui/app_window/app_window.py:1638
 msgid "Confirm Quit"
 msgstr "Подтвердите выход"
 
-#: ui/app_window/app_window.py:1632
+#: ui/app_window/app_window.py:1638
 msgid "Would you like to quit the application?"
 msgstr "Вы хотите выйти из приложения?"
 
@@ -3191,7 +3212,7 @@ msgid "Run Refacdir"
 msgstr "Запустить RefacDir"
 
 #: ui/app_window/context_menu_builder.py:301
-#: ui/app_window/file_ops_controller.py:307
+#: ui/app_window/file_ops_controller.py:242
 #: ui/compare/classifier_actions_tab_qt.py:216
 #: ui/compare/classifier_pipelines_tab_qt.py:248
 #: ui/compare/embedding_seed_library_window_qt.py:95
@@ -3386,44 +3407,43 @@ msgstr "Не удалось переименовать"
 msgid "Renamed to {0}"
 msgstr "Переименовано в {0}"
 
-#: ui/app_window/file_ops_controller.py:111
-#: ui/files/marked_file_mover_qt.py:606
+#: ui/app_window/file_ops_controller.py:109
+#: ui/files/marked_file_mover_qt.py:618
 msgid "delete files"
 msgstr "удалить файлы"
 
-#: ui/app_window/file_ops_controller.py:115
+#: ui/app_window/file_ops_controller.py:113
 msgid "DELETE_LOCK"
 msgstr ""
 "Удалить замок после слайд-шоу\n"
 "Переход предотвратил удаление"
 
-#: ui/app_window/file_ops_controller.py:149
+#: ui/app_window/file_ops_controller.py:147
 msgid "Invalid action, no files found to delete"
 msgstr "Недействительные действия, файлы не найдены для удаления"
 
-#: ui/app_window/file_ops_controller.py:155
+#: ui/app_window/file_ops_controller.py:153
 msgid "Invalid action, search media not found"
 msgstr "Недопустимое действие, поиск медиа не найден"
 
-#: ui/app_window/file_ops_controller.py:177
+#: ui/app_window/file_ops_controller.py:175
 msgid "Failed to delete current file, unable to get valid filepath"
 msgstr ""
 "Не удалось удалить текущий файл, не смог получить действительный путь файла"
 
-#: ui/app_window/file_ops_controller.py:200
+#: files/marked_files.py:186
 msgid "Removing directory: {0}"
 msgstr "Удаление каталога: {0}"
 
-#: ui/app_window/file_ops_controller.py:205
+#: files/marked_files.py:186
 msgid "Removing file: {0}"
 msgstr "Удаление файла: {0}"
 
-#: ui/app_window/file_ops_controller.py:232
-#: ui/app_window/file_ops_controller.py:259
+#: files/marked_files.py:209 files/marked_files.py:237
 msgid "Failed to delete item: {0}"
 msgstr "Не удалось удалить элемент: {0}"
 
-#: ui/app_window/file_ops_controller.py:235
+#: files/marked_files.py:213
 msgid ""
 "Failed to move directory to {0}. Double check the trash folder is set "
 "properly in config.json."
@@ -3431,7 +3451,7 @@ msgstr ""
 "Не удалось переместить каталог в {0}. Дважды проверьте, правильно ли "
 "настроена папка «Корзина» в файле config.json."
 
-#: ui/app_window/file_ops_controller.py:237
+#: files/marked_files.py:215
 msgid ""
 "Failed to send file to {0}. Double check the trash folder is set properly in"
 " config.json."
@@ -3439,7 +3459,7 @@ msgstr ""
 "Не удалось отправить файл в {0}. Дважды проверьте, правильно ли настроена "
 "папка «Корзина» в файле config.json."
 
-#: ui/app_window/file_ops_controller.py:243
+#: files/marked_files.py:221
 msgid ""
 "Failed to move directory to the trash. Either pip install send2trash or set "
 "a specific trash folder in config.json."
@@ -3447,7 +3467,7 @@ msgstr ""
 "Не удалось переместить каталог в корзину. Установите pip install send2trash "
 "или укажите конкретную папку корзины в config.json."
 
-#: ui/app_window/file_ops_controller.py:250
+#: files/marked_files.py:227
 msgid ""
 "Failed to send file to the trash, so it will be deleted. Either pip install "
 "send2trash or set a specific trash folder in config.json."
@@ -3456,56 +3476,56 @@ msgstr ""
 "установите pip send2trash, либо задайте конкретную папку для корзины в "
 "config.json."
 
-#: ui/app_window/file_ops_controller.py:277
+#: ui/app_window/file_ops_controller.py:212
 msgid "Invalid directory"
 msgstr "Недопустимый каталог"
 
-#: ui/app_window/file_ops_controller.py:277
+#: ui/app_window/file_ops_controller.py:212
 msgid "No valid base directory to delete"
 msgstr "Нет действительного базового каталога для удаления"
 
-#: ui/app_window/file_ops_controller.py:290
+#: ui/app_window/file_ops_controller.py:225
 msgid "Cannot Delete Directory"
 msgstr "Невозможно удалить каталог"
 
-#: ui/app_window/file_ops_controller.py:295
+#: ui/app_window/file_ops_controller.py:230
 msgid "Are you sure you want to delete the directory and all contents?"
 msgstr "Вы уверены, что хотите удалить каталог и все его содержимое?"
 
-#: ui/app_window/file_ops_controller.py:297
+#: ui/app_window/file_ops_controller.py:232
 msgid "Contents to be deleted:"
 msgstr "Содержание, подлежащее удалению:"
 
-#: ui/app_window/file_ops_controller.py:302
+#: ui/app_window/file_ops_controller.py:237
 msgid "Confirm Delete Directory"
 msgstr "Подтвердить удаление каталога"
 
-#: ui/app_window/file_ops_controller.py:308
-#: ui/app_window/file_ops_controller.py:315
+#: ui/app_window/file_ops_controller.py:243
+#: ui/app_window/file_ops_controller.py:250
 msgid "Move Files"
 msgstr "Переместить файлы"
 
-#: ui/app_window/file_ops_controller.py:322
+#: ui/app_window/file_ops_controller.py:257
 msgid "Select target directory for directory contents"
 msgstr "Выберите целевой каталог для содержимого каталога"
 
-#: ui/app_window/file_ops_controller.py:351
+#: ui/app_window/file_ops_controller.py:286
 msgid "Delete Directory Error"
 msgstr "Ошибка удаления каталога"
 
-#: ui/app_window/file_ops_controller.py:356
+#: ui/app_window/file_ops_controller.py:291
 msgid "Directory {0} contents moved to {1} and directory deleted."
 msgstr "Содержимое каталога {0} перенесено в {1}, а сам каталог удален."
 
-#: ui/app_window/file_ops_controller.py:361
+#: ui/app_window/file_ops_controller.py:296
 msgid "Directory {0} deleted."
 msgstr "Каталог {0} удален."
 
-#: ui/app_window/file_ops_controller.py:368
+#: ui/app_window/file_ops_controller.py:305
 msgid "Moving directory contents: {0}"
 msgstr "Перемещение содержимого директории: {0}"
 
-#: ui/app_window/file_ops_controller.py:396
+#: ui/app_window/file_ops_controller.py:319
 msgid ""
 "Hid current media.\n"
 "To unhide, press Shift+B."
@@ -3513,47 +3533,47 @@ msgstr ""
 "Скрыть текущие медиафайлы.\n"
 "Чтобы отобразить их, нажмите Shift+B."
 
-#: ui/app_window/file_ops_controller.py:402
+#: ui/app_window/file_ops_controller.py:325
 msgid "Cleared all hidden media."
 msgstr "Очищено все спрятанные файлы."
 
-#: ui/app_window/file_ops_controller.py:419 ui/image/temp_media_window.py:203
+#: ui/app_window/file_ops_controller.py:342 ui/image/temp_media_window.py:203
 msgid "Copied filepath to clipboard"
 msgstr "Копирование пути к файлу в буфер обмена"
 
-#: ui/app_window/file_ops_controller.py:430
+#: ui/app_window/file_ops_controller.py:353
 msgid "Copied filename to clipboard"
 msgstr "Имя файла скопировано в буфер обмена"
 
-#: ui/app_window/file_ops_controller.py:440
-#: ui/app_window/file_ops_controller.py:587
+#: ui/app_window/file_ops_controller.py:362
+#: ui/app_window/file_ops_controller.py:433
 msgid "convert files"
 msgstr "конвертировать файлы"
 
-#: ui/app_window/file_ops_controller.py:445
-#: ui/app_window/file_ops_controller.py:593
+#: ui/app_window/file_ops_controller.py:367
+#: ui/app_window/file_ops_controller.py:439
 msgid "No valid base directory to convert"
 msgstr "Нет действительной базовой директории для преобразования"
 
-#: ui/app_window/file_ops_controller.py:458
-#: ui/app_window/file_ops_controller.py:606
+#: ui/app_window/file_ops_controller.py:380
+#: ui/app_window/file_ops_controller.py:452
 msgid "No files found to convert"
 msgstr "Файлов для конвертации не найдено"
 
-#: ui/app_window/file_ops_controller.py:507
+#: ui/app_window/file_ops_controller.py:386
 msgid "No image files found to convert"
 msgstr "Не найдено изображений для конвертации"
 
-#: ui/app_window/file_ops_controller.py:510
-#: ui/app_window/file_ops_controller.py:623
+#: ui/app_window/file_ops_controller.py:389
+#: ui/app_window/file_ops_controller.py:462
 msgid "(none to skip)"
 msgstr "(пропускать не нужно)"
 
-#: ui/app_window/file_ops_controller.py:512
+#: ui/app_window/file_ops_controller.py:391
 msgid "Convert Directory Images to JPG"
 msgstr "Конвертировать изображения каталога в JPG"
 
-#: ui/app_window/file_ops_controller.py:514
+#: ui/app_window/file_ops_controller.py:393
 msgid ""
 "Confirm convert images in current directory scope.\n"
 "\n"
@@ -3573,33 +3593,33 @@ msgstr ""
 "\n"
 "Перезаписать существующие JPG‑файлы (без вывода EXIF‑конверсии) или пропустить конвертацию файлов с конфликтами целей{3}?"
 
-#: ui/app_window/file_ops_controller.py:521
+#: ui/app_window/file_ops_controller.py:402
 msgid "Overwrite existing JPG"
 msgstr "Перезаписать существующий JPG"
 
-#: ui/app_window/file_ops_controller.py:522
-#: ui/app_window/file_ops_controller.py:635
+#: ui/app_window/file_ops_controller.py:403
+#: ui/app_window/file_ops_controller.py:474
 msgid "Skip conflicts"
 msgstr "Пропустить конфликты"
 
-#: ui/app_window/file_ops_controller.py:571
+#: ui/app_window/file_ops_controller.py:417
 msgid "Converted {0} files to JPG"
 msgstr "Конвертировано {0} файлов в JPG"
 
-#: ui/app_window/file_ops_controller.py:576
+#: ui/app_window/file_ops_controller.py:422
 msgid "Converted {0} files to JPG, {1} failed, {2} skipped existing"
 msgstr ""
 "Конвертировано {0} файлов в JPG, {1} не удалось, {2} пропущено существующих"
 
-#: ui/app_window/file_ops_controller.py:619
+#: ui/app_window/file_ops_controller.py:458
 msgid "No SVG files found to convert"
 msgstr "Нет SVG-файлов для конвертации"
 
-#: ui/app_window/file_ops_controller.py:625
+#: ui/app_window/file_ops_controller.py:464
 msgid "Convert Directory SVG to PNG"
 msgstr "Конвертировать каталог SVG в PNG"
 
-#: ui/app_window/file_ops_controller.py:627
+#: ui/app_window/file_ops_controller.py:466
 msgid ""
 "Convert SVGs in the current directory scope to PNG?\n"
 "\n"
@@ -3617,32 +3637,32 @@ msgstr ""
 "\n"
 "Преобразовать все SVG и перезаписать существующие PNG, либо пропустить конвертацию SVG с конфликтами назначения{2}?"
 
-#: ui/app_window/file_ops_controller.py:634
+#: ui/app_window/file_ops_controller.py:473
 msgid "Overwrite existing PNG"
 msgstr "Перезаписать существующий PNG"
 
-#: ui/app_window/file_ops_controller.py:670
+#: ui/app_window/file_ops_controller.py:489
 msgid "Converted {0} SVG files to PNG"
 msgstr "Конвертировано {0} файлов SVG в PNG"
 
-#: ui/app_window/file_ops_controller.py:675
+#: ui/app_window/file_ops_controller.py:494
 msgid "Converted {0} files, {1} failed, {2} skipped existing"
 msgstr "Обработано {0} файлов, {1} не удалось, {2} пропущено существующих"
 
-#: ui/app_window/file_ops_controller.py:687
+#: ui/app_window/file_ops_controller.py:505
 msgid "scale images"
 msgstr "масштабировать изображения"
 
-#: ui/app_window/file_ops_controller.py:692
+#: ui/app_window/file_ops_controller.py:510
 msgid "No valid base directory to scale images"
 msgstr "Нет допустимого базового каталога для масштабирования изображений"
 
-#: ui/app_window/file_ops_controller.py:697
-#: ui/app_window/file_ops_controller.py:750
+#: ui/app_window/file_ops_controller.py:515
+#: ui/app_window/file_ops_controller.py:549
 msgid "Scale Directory Images"
 msgstr "Масштабировать изображения каталога"
 
-#: ui/app_window/file_ops_controller.py:698
+#: ui/app_window/file_ops_controller.py:516
 msgid ""
 "Equivalent square side (pixels).\n"
 "Images are scaled so their total pixel count matches this value squared.\n"
@@ -3652,17 +3672,17 @@ msgstr ""
 "Изображения масштабируются так, чтобы их общее количество пикселей соответствовало квадрату этого значения.\n"
 "Пример: 320 → целевая область = 320×320 = 102 400 px"
 
-#: ui/app_window/file_ops_controller.py:726
+#: ui/app_window/file_ops_controller.py:537
 msgid "No image files found to scale"
 msgstr "Файлы изображений для масштабирования не найдены"
 
-#: ui/app_window/file_ops_controller.py:743
+#: ui/app_window/file_ops_controller.py:542
 msgid "{0} image(s) are already at or below {1}²={2} px — nothing to scale"
 msgstr ""
 "{0} изображение(ий) уже имеет размер {1}²={2} px или меньше — "
 "масштабирование не требуется"
 
-#: ui/app_window/file_ops_controller.py:752
+#: ui/app_window/file_ops_controller.py:551
 msgid ""
 "Scale images in:\n"
 "{0}\n"
@@ -3686,44 +3706,44 @@ msgstr ""
 "\n"
 "Это изменяет файлы изображений на месте. Продолжить?"
 
-#: ui/app_window/file_ops_controller.py:787
+#: ui/app_window/file_ops_controller.py:571
 msgid "Scaled {0} image(s) to ~{1}² px, {2} already within limit"
 msgstr ""
 "{0} изображение(й) масштабировано до ~{1}² px, {2} уже в пределах лимита"
 
-#: ui/app_window/file_ops_controller.py:793
+#: ui/app_window/file_ops_controller.py:577
 msgid "Scaled {0} image(s) to ~{1}² px, {2} failed, {3} skipped"
 msgstr ""
 "{0} изображение(й) масштабировано до ~{1}² px, {2} не удалось, {3} пропущено"
 
-#: ui/app_window/file_ops_controller.py:815
+#: ui/app_window/file_ops_controller.py:599
 msgid "Invalid target filepath for replacement: "
 msgstr "Недействительный целевой файловый путь для замены: "
 
-#: ui/app_window/file_ops_controller.py:820
+#: ui/app_window/file_ops_controller.py:604
 msgid "Moved search media to "
 msgstr "Переместил поисковые ресурсы в: "
 
-#: ui/app_window/file_ops_controller.py:871
+#: ui/app_window/file_ops_controller.py:655
 msgid "Opening media file: {0}"
 msgstr "Открытие медиафайла: {0}"
 
-#: ui/app_window/file_ops_controller.py:875
+#: ui/app_window/file_ops_controller.py:659
 msgid "Failed to open current media file, unable to get valid filepath"
 msgstr ""
 "Не удалось открыть текущий медиафайл, невозможно получить действительный "
 "путь к файлу"
 
-#: ui/app_window/file_ops_controller.py:886
+#: ui/app_window/file_ops_controller.py:670
 msgid "strip audio"
 msgstr "удалить аудио"
 
-#: ui/app_window/file_ops_controller.py:896
+#: ui/app_window/file_ops_controller.py:680
 msgid "ffmpeg not found on PATH. Install ffmpeg to strip audio."
 msgstr ""
 "ffmpeg не найден в PATH. Установите ffmpeg, чтобы удалить аудиодорожку."
 
-#: ui/app_window/file_ops_controller.py:903
+#: ui/app_window/file_ops_controller.py:687
 msgid ""
 "Create a new file with all audio streams removed (stream copy, no re-encode). The original file will not be changed.\n"
 "\n"
@@ -3735,20 +3755,20 @@ msgstr ""
 "Результат:\n"
 "{0}"
 
-#: ui/app_window/file_ops_controller.py:922
+#: ui/app_window/file_ops_controller.py:706
 msgid "Saved copy without audio: {0}"
 msgstr "Сохраненная копия без аудио: {0}"
 
-#: ui/app_window/file_ops_controller.py:932
+#: ui/app_window/file_ops_controller.py:716
 msgid "copy video"
 msgstr "копировать видео"
 
+#: ui/app_window/file_ops_controller.py:726
 #: ui/app_window/file_ops_controller.py:942
-#: ui/app_window/file_ops_controller.py:1158
 msgid "ffmpeg not found on PATH."
 msgstr "ffmpeg не найден в PATH."
 
-#: ui/app_window/file_ops_controller.py:949
+#: ui/app_window/file_ops_controller.py:733
 msgid ""
 "Create a new file with container tags and chapters removed (stream copy, no re-encode). The original file will not be changed.\n"
 "\n"
@@ -3760,39 +3780,39 @@ msgstr ""
 "Результат:\n"
 "{0}"
 
-#: ui/app_window/file_ops_controller.py:968
+#: ui/app_window/file_ops_controller.py:752
 msgid "Saved copy without metadata: {0}"
 msgstr "Сохраненная копия без метаданных: {0}"
 
-#: ui/app_window/file_ops_controller.py:980
+#: ui/app_window/file_ops_controller.py:764
 msgid "cut video"
 msgstr "обрезать видео"
 
-#: ui/app_window/file_ops_controller.py:990
+#: ui/app_window/file_ops_controller.py:774
 msgid "ffmpeg not found on PATH. Install ffmpeg to cut video."
 msgstr "ffmpeg не найден в PATH. Установите ffmpeg для обрезки видео."
 
-#: ui/app_window/file_ops_controller.py:995
-#: ui/app_window/file_ops_controller.py:1082
+#: ui/app_window/file_ops_controller.py:779
+#: ui/app_window/file_ops_controller.py:866
 msgid "Video duration is unknown. Seek to a position first."
 msgstr "Длительность видео неизвестна. Сначала перейдите к позиции."
 
-#: ui/app_window/file_ops_controller.py:998
+#: ui/app_window/file_ops_controller.py:782
 msgid "Cannot cut at the very start. Seek to a later position."
 msgstr ""
 "Невозможно вырезать в самом начале. Перейдите к более поздней позиции."
 
-#: ui/app_window/file_ops_controller.py:1001
+#: ui/app_window/file_ops_controller.py:785
 msgid "Cannot cut at or past the end of the video."
 msgstr ""
 "Невозможно вырезать фрагмент, начинающийся с конца видео или идущий дальше "
 "него."
 
-#: ui/app_window/file_ops_controller.py:1015
+#: ui/app_window/file_ops_controller.py:799
 msgid "Cut video at current position"
 msgstr "Обрезать видео на текущей позиции"
 
-#: ui/app_window/file_ops_controller.py:1017
+#: ui/app_window/file_ops_controller.py:801
 msgid ""
 "Cut at {0} of {1}\n"
 "\n"
@@ -3816,49 +3836,49 @@ msgstr ""
 "Примечание: при копировании потока происходит привязка к ближайшему ключевому кадру.\n"
 "Исходный файл не изменяется."
 
-#: ui/app_window/file_ops_controller.py:1030
+#: ui/app_window/file_ops_controller.py:814
 msgid "Keep beginning"
 msgstr "Сохранять в начале"
 
-#: ui/app_window/file_ops_controller.py:1031
+#: ui/app_window/file_ops_controller.py:815
 msgid "Keep end"
 msgstr "Сохранить конец"
 
-#: ui/app_window/file_ops_controller.py:1045
+#: ui/app_window/file_ops_controller.py:829
 msgid "Cut video saved: {0}"
 msgstr "Обрезанное видео сохранено: {0}"
 
-#: ui/app_window/file_ops_controller.py:1049
+#: ui/app_window/file_ops_controller.py:833
 msgid "Cut video failed: {0}"
 msgstr "Не удалось обрезать видео: {0}"
 
-#: ui/app_window/file_ops_controller.py:1067
+#: ui/app_window/file_ops_controller.py:851
 msgid "mute video audio"
 msgstr "Отключить звук видео"
 
-#: ui/app_window/file_ops_controller.py:1077
+#: ui/app_window/file_ops_controller.py:861
 msgid "ffmpeg not found on PATH. Install ffmpeg to mute audio."
 msgstr "ffmpeg не найден в PATH. Установите ffmpeg, чтобы отключить звук."
 
-#: ui/app_window/file_ops_controller.py:1085
+#: ui/app_window/file_ops_controller.py:869
 msgid "Cannot mute at or past the end of the video."
 msgstr "Нельзя отключить звук в конце видео или после него."
 
-#: ui/app_window/file_ops_controller.py:1090
+#: ui/app_window/file_ops_controller.py:874
 msgid "Mute Audio at Current Position"
 msgstr "Отключить звук в текущей позиции"
 
-#: ui/app_window/file_ops_controller.py:1091
+#: ui/app_window/file_ops_controller.py:875
 msgid "Duration to mute, in milliseconds (starting at the current position):"
 msgstr ""
 "Продолжительность отключения звука в миллисекундах (начиная с текущей "
 "позиции):"
 
-#: ui/app_window/file_ops_controller.py:1110
+#: ui/app_window/file_ops_controller.py:894
 msgid "Mute audio at current position"
 msgstr "Отключить звук в текущей позиции"
 
-#: ui/app_window/file_ops_controller.py:1112
+#: ui/app_window/file_ops_controller.py:896
 msgid ""
 "Silence audio from {0} to {1}\n"
 "\n"
@@ -3874,35 +3894,35 @@ msgstr ""
 "Видео копируется без изменений; только аудиотрек перекодируется.\n"
 "Исходный файл не изменяется."
 
-#: ui/app_window/file_ops_controller.py:1128
+#: ui/app_window/file_ops_controller.py:912
 msgid "Muted audio saved: {0}"
 msgstr "Отключённый звук сохранён: {0}"
 
-#: ui/app_window/file_ops_controller.py:1132
+#: ui/app_window/file_ops_controller.py:916
 msgid "Mute audio failed: {0}"
 msgstr "Не удалось отключить звук: {0}"
 
-#: ui/app_window/file_ops_controller.py:1145
+#: ui/app_window/file_ops_controller.py:929
 msgid "copy videos without metadata"
 msgstr "копировать видео без метаданных"
 
-#: ui/app_window/file_ops_controller.py:1149
+#: ui/app_window/file_ops_controller.py:933
 msgid "Video support is disabled in configuration"
 msgstr "В настройках отключена поддержка видео"
 
-#: ui/app_window/file_ops_controller.py:1154
+#: ui/app_window/file_ops_controller.py:938
 msgid "No valid base directory"
 msgstr "Нет допустимого базового каталога"
 
-#: ui/app_window/file_ops_controller.py:1169
+#: ui/app_window/file_ops_controller.py:953
 msgid "No video files found in this directory scope"
 msgstr "В данном каталоге не найдено видеофайлов"
 
-#: ui/app_window/file_ops_controller.py:1173
+#: ui/app_window/file_ops_controller.py:957
 msgid "Save copies without metadata (videos in directory)"
 msgstr "Сохранить копии без метаданных (видео в директории)"
 
-#: ui/app_window/file_ops_controller.py:1175
+#: ui/app_window/file_ops_controller.py:959
 msgid ""
 "Create new files with container tags and chapters removed (stream copy) for each video.\n"
 "\n"
@@ -3918,15 +3938,15 @@ msgstr ""
 "\n"
 "Видео для обработки: {1}"
 
-#: ui/app_window/file_ops_controller.py:1196
+#: ui/app_window/file_ops_controller.py:972
 msgid "Wrote {0} video copy(ies) without metadata"
 msgstr "Записано {0} видеофайлов без метаданных"
 
-#: ui/app_window/file_ops_controller.py:1200
+#: ui/app_window/file_ops_controller.py:976
 msgid "Finished: {0} succeeded, {1} failed"
 msgstr "Завершено: {0} успешно, {1} неудачно"
 
-#: ui/app_window/file_ops_controller.py:1208
+#: ui/app_window/file_ops_controller.py:984
 msgid ""
 "GIMP integration is not configured. Please set 'gimp_exe_loc' in "
 "config.json."
@@ -3934,33 +3954,33 @@ msgstr ""
 "Интеграция с GIMP не настроена. Пожалуйста, установите „gimp_exe_loc“ в "
 "config.json."
 
-#: ui/app_window/file_ops_controller.py:1209
+#: ui/app_window/file_ops_controller.py:985
 msgid "GIMP Integration Error"
 msgstr "Ошибка интеграции GIMP"
 
-#: ui/app_window/file_ops_controller.py:1230
+#: ui/app_window/file_ops_controller.py:1006
 msgid "Failed to open current file in GIMP, unable to get valid filepath"
 msgstr ""
 "Не удалось открыть текущий файл в GIMP, не удалось получить действительный "
 "путь к файлу"
 
-#: ui/app_window/file_ops_controller.py:1244
+#: ui/app_window/file_ops_controller.py:1020
 msgid "run RefacDir"
 msgstr "запустить RefacDir"
 
-#: ui/app_window/file_ops_controller.py:1249
+#: ui/app_window/file_ops_controller.py:1025
 msgid "Running refacdir"
 msgstr "Запуск refacdir"
 
-#: ui/app_window/file_ops_controller.py:1261
+#: ui/app_window/file_ops_controller.py:1037
 msgid "randomize filenames"
 msgstr "случайные имена файлов"
 
-#: ui/app_window/file_ops_controller.py:1266
+#: ui/app_window/file_ops_controller.py:1042
 msgid "No valid base directory for randomize filenames"
 msgstr "Не указан допустимый базовый каталог для рандомизации имен файлов"
 
-#: ui/app_window/file_ops_controller.py:1272
+#: ui/app_window/file_ops_controller.py:1048
 msgid ""
 "Randomize filenames script not found:\n"
 "{0}"
@@ -3968,20 +3988,20 @@ msgstr ""
 "Скрипт для рандомизации имен файлов не найден:\n"
 "{0}"
 
-#: ui/app_window/file_ops_controller.py:1279
+#: ui/app_window/file_ops_controller.py:1055
 msgid "Dry run"
 msgstr "Пробный запуск"
 
-#: ui/app_window/file_ops_controller.py:1280
+#: ui/app_window/file_ops_controller.py:1056
 #: ui/files/file_action_sets_window_qt.py:212
 msgid "Execute"
 msgstr "Выполнить"
 
-#: ui/app_window/file_ops_controller.py:1282
+#: ui/app_window/file_ops_controller.py:1058
 msgid "Randomize Filenames"
 msgstr "Случайные названия файлов"
 
-#: ui/app_window/file_ops_controller.py:1284
+#: ui/app_window/file_ops_controller.py:1060
 msgid ""
 "Randomize media filenames under the entire base directory tree.\n"
 "\n"
@@ -4003,11 +4023,11 @@ msgstr ""
 "Пробный запуск — только планирование переименования; файлы не изменяются.\n"
 "Выполнить — применить переименования и обновить кэш сопоставлений (необратимый процесс)."
 
-#: ui/app_window/file_ops_controller.py:1303
+#: ui/app_window/file_ops_controller.py:1079
 msgid "Confirm Randomize Filenames — Execute"
 msgstr "Подтвердить рандомизацию имен файлов — Выполнить"
 
-#: ui/app_window/file_ops_controller.py:1305
+#: ui/app_window/file_ops_controller.py:1081
 msgid ""
 "This will rename media files on disk under:\n"
 "\n"
@@ -4027,15 +4047,15 @@ msgstr ""
 "\n"
 "Это действие нельзя отменить в программе Weidr. Продолжить?"
 
-#: ui/app_window/file_ops_controller.py:1338
+#: ui/app_window/file_ops_controller.py:1114
 msgid "Failed to start randomize filenames: {0}"
 msgstr "Не удалось запустить рандомизацию имен файлов: {0}"
 
-#: ui/app_window/file_ops_controller.py:1346
+#: ui/app_window/file_ops_controller.py:1122
 msgid "Randomizing filenames under {0} — see {1}"
 msgstr "Рандомизация имен файлов в {0} — см. {1}"
 
-#: ui/app_window/file_ops_controller.py:1350
+#: ui/app_window/file_ops_controller.py:1126
 msgid "Randomize filenames dry run started for {0} — see {1}"
 msgstr "Запущен пробный прогон рандомизации имен файлов для {0} — см. {1}"
 
@@ -4135,25 +4155,25 @@ msgstr "Слайдшоу началось"
 msgid "Slideshows ended"
 msgstr "Слайдшоу закончились"
 
-#: ui/app_window/notification_controller.py:384
+#: ui/app_window/notification_controller.py:401
 msgid "GROUP_DETAILS"
 msgstr ""
 "Группа {0} {1}\n"
 "Размер: {2}"
 
-#: ui/app_window/notification_controller.py:392
+#: ui/app_window/notification_controller.py:409
 msgid "No media files found"
 msgstr "Нет найденных файлов медиа"
 
-#: ui/app_window/notification_controller.py:394
+#: ui/app_window/notification_controller.py:411
 msgid "1 media file found"
 msgstr "Найден 1 медиафайл"
 
-#: ui/app_window/notification_controller.py:396
+#: ui/app_window/notification_controller.py:413
 msgid "{0} media files found"
 msgstr "{0} медиагалерея файлов найдено"
 
-#: ui/app_window/notification_controller.py:401
+#: ui/app_window/notification_controller.py:418
 msgid "(filtered)"
 msgstr "(фильтровано)"
 
@@ -4161,98 +4181,98 @@ msgstr "(фильтровано)"
 msgid "Page {0} / {1}"
 msgstr "Страница {0} / {1}"
 
-#: ui/app_window/search_controller.py:117
-#: ui/app_window/search_controller.py:143
+#: ui/app_window/search_controller.py:199
+#: ui/app_window/search_controller.py:225
 msgid "No media file selected."
 msgstr "Нет выбранного файловогоメディア."
 
-#: ui/app_window/search_controller.py:117
-#: ui/app_window/search_controller.py:143
+#: ui/app_window/search_controller.py:199
+#: ui/app_window/search_controller.py:225
 msgid "Invalid Setting"
 msgstr "Недействительная настройка"
 
-#: ui/app_window/search_controller.py:183
+#: ui/app_window/search_controller.py:265
 msgid ""
 "Compare mode must be set to an embedding mode to search text embeddings"
 msgstr ""
 "Режим сравнения должен быть настроен на режим встраивания для встраивания "
 "текста поиска"
 
-#: ui/app_window/search_controller.py:189
+#: ui/app_window/search_controller.py:271
 msgid "Select media file"
 msgstr "Выберите/mediaфайл"
 
-#: ui/app_window/search_controller.py:191
+#: ui/app_window/search_controller.py:273
 msgid "Media files"
 msgstr "Медиафайлы"
 
-#: ui/app_window/search_controller.py:263
+#: ui/app_window/search_controller.py:346
 msgid "Error running compare"
 msgstr "Сравнение ошибок"
 
-#: ui/app_window/search_controller.py:271
+#: ui/app_window/search_controller.py:354
 msgid "{0}: {1}% complete"
 msgstr "{0}: {1}% полный"
 
-#: ui/app_window/search_controller.py:316
+#: ui/app_window/search_controller.py:402
 msgid "Confirm comparison"
 msgstr "Подтверждает сравнение"
 
-#: ui/app_window/search_controller.py:317
+#: ui/app_window/search_controller.py:403
 msgid "No base directory has been set, will use current base directory of "
 msgstr ""
 "Базовый каталог не был задан, будет использоваться текущий базовый каталог "
 
-#: ui/app_window/search_controller.py:318
+#: ui/app_window/search_controller.py:404
 msgid "Are you sure you want to proceed?"
 msgstr "Вы уверены, что хотите продолжить?"
 
-#: ui/app_window/search_controller.py:417
-#: ui/app_window/search_controller.py:448
-#: ui/app_window/search_controller.py:685
+#: ui/app_window/search_controller.py:501
+#: ui/app_window/search_controller.py:532
+#: ui/app_window/search_controller.py:769
 msgid "Failed to get active media filepath"
 msgstr "Не удалось получить путь к активному медиафайлу"
 
-#: ui/app_window/search_controller.py:465
+#: ui/app_window/search_controller.py:549
 msgid "No Text Search Presets Found"
 msgstr "Предустановки текстового поиска не найдены"
 
-#: ui/app_window/search_controller.py:466
+#: ui/app_window/search_controller.py:550
 msgid ""
 "No text embedding search presets found. Set them in the config.json file."
 msgstr ""
 "Не найдено текстового встраивания предустановок поиска. Установите их в "
 "файле config.json."
 
-#: ui/app_window/search_controller.py:556
+#: ui/app_window/search_controller.py:640
 msgid "Running image gen: "
 msgstr "Запуск программы генерации образов: "
 
-#: ui/app_window/search_controller.py:560
-#: ui/app_window/search_controller.py:619
+#: ui/app_window/search_controller.py:644
+#: ui/app_window/search_controller.py:703
 msgid "Error running image generation:"
 msgstr "Ошибка генерации изображений:"
 
-#: ui/app_window/search_controller.py:578
+#: ui/app_window/search_controller.py:662
 msgid "Not a valid image edit — no related image reference or suffix found."
 msgstr ""
 "Недопустимое редактирование изображения — не найдена связанная ссылка на "
 "изображение или суффикс."
 
-#: ui/app_window/search_controller.py:614
+#: ui/app_window/search_controller.py:698
 msgid "Running image gen on directory: "
 msgstr "Запуск gen в каталоге: "
 
-#: ui/app_window/search_controller.py:662
+#: ui/app_window/search_controller.py:746
 msgid "Navigated to {0}"
 msgstr "Перешёл к {0}"
 
-#: ui/app_window/search_controller.py:663
-#: ui/app_window/search_controller.py:670
+#: ui/app_window/search_controller.py:747
+#: ui/app_window/search_controller.py:754
 msgid "Next downstream image"
 msgstr "Следующее нисходящее изображение"
 
-#: ui/app_window/search_controller.py:667
+#: ui/app_window/search_controller.py:751
 msgid "No downstream related image(s) found in {0}"
 msgstr "Не найдено ни одного изображения, связанного с течением, в {0}"
 
@@ -4479,39 +4499,39 @@ msgstr ""
 "Настройте и выполните наборы действий с файлами (копировать/переместить) для"
 " отмеченных файлов."
 
-#: ui/app_window/sidebar_panel.py:344
+#: ui/app_window/sidebar_panel.py:362
 msgid ""
 "Open the folder containing the current file in the system file manager."
 msgstr "Открыть папку, содержащую текущий файл, в системном менеджере файлов."
 
-#: ui/app_window/sidebar_panel.py:347
+#: ui/app_window/sidebar_panel.py:365
 msgid "Copy media path"
 msgstr "Скопировать путь медиа"
 
-#: ui/app_window/sidebar_panel.py:352
+#: ui/app_window/sidebar_panel.py:370
 msgid "Copy the full file path of the current media file to the clipboard."
 msgstr "Скопируйте полный путь файла текущего медиа-файла в буфер обмена."
 
-#: ui/app_window/sidebar_panel.py:355
+#: ui/app_window/sidebar_panel.py:373
 msgid "Copy media basename"
 msgstr "Скопируйте базовое имя файла"
 
-#: ui/app_window/sidebar_panel.py:360
+#: ui/app_window/sidebar_panel.py:378
 msgid ""
 "Copy the filename (without directory path) of the current file to the "
 "clipboard."
 msgstr ""
 "Копировать имя файла (без путевого имени) текущего файла в буфер обмена."
 
-#: ui/app_window/sidebar_panel.py:363
+#: ui/app_window/sidebar_panel.py:381
 msgid "---- DELETE ----"
 msgstr "---- УДАЛИТЬ ----"
 
-#: ui/app_window/sidebar_panel.py:368
+#: ui/app_window/sidebar_panel.py:386
 msgid "Permanently delete the current media file from disk."
 msgstr "Удалить навсегда текущий файл с диска."
 
-#: ui/app_window/sidebar_panel.py:562
+#: ui/app_window/sidebar_panel.py:580
 msgid "Ended slideshows"
 msgstr "Конец слайдшоу"
 
@@ -4532,7 +4552,7 @@ msgid "Video cropped"
 msgstr "Видео обрезано"
 
 #: ui/app_window/video_crop_overlay_qt.py:202
-#: ui/app_window/window_launcher.py:787
+#: ui/app_window/window_launcher.py:803
 msgid "Drag to select crop, Enter to confirm, Escape to cancel"
 msgstr ""
 "Перетащите для выбора обрезки, Enter для подтверждения, Escape для отмены"
@@ -4546,7 +4566,7 @@ msgid "Video box added"
 msgstr "Блок видео добавлен"
 
 #: ui/app_window/video_crop_overlay_qt.py:215
-#: ui/app_window/window_launcher.py:809
+#: ui/app_window/window_launcher.py:825
 msgid "Drag to select box location, Enter to confirm, Escape to cancel"
 msgstr ""
 "Перетащите, чтобы выбрать расположение рамки, Enter для подтверждения, "
@@ -4561,7 +4581,7 @@ msgid "Video background box added"
 msgstr "Добавлено поле фонового видео"
 
 #: ui/app_window/video_crop_overlay_qt.py:229
-#: ui/app_window/window_launcher.py:833
+#: ui/app_window/window_launcher.py:849
 msgid "Drag to select area to keep, Enter to confirm, Escape to cancel"
 msgstr ""
 "Перетащите, чтобы выбрать область для сохранения, Enter для подтверждения, "
@@ -4579,78 +4599,78 @@ msgstr "{0} ({1})"
 msgid "Please set a base directory first"
 msgstr "Сначала установите базовый каталог"
 
-#: ui/app_window/window_launcher.py:371
+#: ui/app_window/window_launcher.py:387
 msgid "(Open this media as part of a directory to see index details.)"
 msgstr ""
 "(Откройте этот медиафайл в папке, чтобы просмотреть сведения об индексе.)"
 
-#: ui/app_window/window_launcher.py:381
+#: ui/app_window/window_launcher.py:397
 msgid "{0} of {1} (Group {2} of {3})"
 msgstr "{0} из {1} (Группа {2} из {3})"
 
-#: ui/app_window/window_launcher.py:384
+#: ui/app_window/window_launcher.py:400
 msgid "{0} of {1} ({2})"
 msgstr "{0} из {1} ({2})"
 
-#: ui/app_window/window_launcher.py:387
+#: ui/app_window/window_launcher.py:403
 msgid "{0} of {1} (Ungrouped)"
 msgstr "{0} из {1} (Не сгруппировано)"
 
-#: ui/app_window/window_launcher.py:454
+#: ui/app_window/window_launcher.py:470
 msgid "Interactive crop not supported for this media type"
 msgstr "Интерактивная обрезка не поддерживается для этого типа медиа"
 
-#: ui/app_window/window_launcher.py:490
+#: ui/app_window/window_launcher.py:506
 msgid "Could not read GIF frame: "
 msgstr "Не удалось прочитать кадр GIF: "
 
-#: ui/app_window/window_launcher.py:783
+#: ui/app_window/window_launcher.py:799
 msgid "Crop selection too small"
 msgstr "Область обрезки слишком мала"
 
-#: ui/app_window/window_launcher.py:784 ui/app_window/window_launcher.py:860
+#: ui/app_window/window_launcher.py:800 ui/app_window/window_launcher.py:876
 msgid "Cropped"
 msgstr "Обрезанный"
 
-#: ui/app_window/window_launcher.py:785 ui/app_window/window_launcher.py:861
+#: ui/app_window/window_launcher.py:801 ui/app_window/window_launcher.py:877
 msgid "Crop failed"
 msgstr "Урожай не удался"
 
-#: ui/app_window/window_launcher.py:804
+#: ui/app_window/window_launcher.py:820
 msgid "Box selection too small"
 msgstr "Выбор рамки слишком мал"
 
-#: ui/app_window/window_launcher.py:805 ui/app_window/window_launcher.py:885
+#: ui/app_window/window_launcher.py:821 ui/app_window/window_launcher.py:901
 msgid "Box added"
 msgstr "Коробка добавлена"
 
-#: ui/app_window/window_launcher.py:806 ui/app_window/window_launcher.py:886
+#: ui/app_window/window_launcher.py:822 ui/app_window/window_launcher.py:902
 msgid "Box draw failed"
 msgstr "Не удалось нарисовать рамку"
 
-#: ui/app_window/window_launcher.py:827
+#: ui/app_window/window_launcher.py:843
 msgid "Selection too small"
 msgstr "Выбор слишком мал"
 
-#: ui/app_window/window_launcher.py:828 ui/app_window/window_launcher.py:911
+#: ui/app_window/window_launcher.py:844 ui/app_window/window_launcher.py:927
 msgid "Background box added"
 msgstr "Фоновое поле добавлено"
 
-#: ui/app_window/window_launcher.py:829 ui/app_window/window_launcher.py:912
+#: ui/app_window/window_launcher.py:845 ui/app_window/window_launcher.py:928
 msgid "Background box draw failed"
 msgstr "Не удалось нарисовать поле фона"
 
-#: ui/app_window/window_launcher.py:836
+#: ui/app_window/window_launcher.py:852
 msgid "Freeform selection is not supported for video"
 msgstr "Свободное выделение не поддерживается для видео"
 
-#: ui/app_window/window_launcher.py:859 ui/app_window/window_launcher.py:884
-#: ui/app_window/window_launcher.py:910
+#: ui/app_window/window_launcher.py:875 ui/app_window/window_launcher.py:900
+#: ui/app_window/window_launcher.py:926
 msgid "Need at least 3 points"
 msgstr "Требуется не менее 3 очков"
 
-#: ui/app_window/window_launcher.py:864 ui/app_window/window_launcher.py:890
-#: ui/app_window/window_launcher.py:916
+#: ui/app_window/window_launcher.py:880 ui/app_window/window_launcher.py:906
+#: ui/app_window/window_launcher.py:932
 msgid ""
 "Click or click-drag to add points, click near the start to close, Enter to "
 "confirm, Escape to cancel"
@@ -4658,15 +4678,15 @@ msgstr ""
 "Нажмите или перетащите, чтобы добавить точки, нажмите рядом с началом, чтобы"
 " закрыть, Enter для подтверждения, Escape для отмены"
 
-#: ui/app_window/window_launcher.py:941
+#: ui/app_window/window_launcher.py:957
 msgid "No media selected"
 msgstr "Нет выбранных медиа"
 
-#: ui/app_window/window_launcher.py:942
+#: ui/app_window/window_launcher.py:958
 msgid "No media file was selected for comparison"
 msgstr "Нет выбранного файла для сравнения"
 
-#: ui/app_window/window_launcher.py:959
+#: ui/app_window/window_launcher.py:975
 msgid ""
 "Are you sure you want to run all prevalidations on directory {0} ? This may "
 "take a while."
@@ -4674,15 +4694,15 @@ msgstr ""
 "Вы уверены, что хотите запустить все превалидации в каталоге {0}? Это может "
 "занять некоторое время."
 
-#: ui/app_window/window_launcher.py:968
+#: ui/app_window/window_launcher.py:984
 msgid "run prevalidations"
 msgstr "запустить предварительные проверки"
 
-#: ui/app_window/window_launcher.py:1012
+#: ui/app_window/window_launcher.py:1028
 msgid "Prevalidations: {0} / {1}"
 msgstr "Предварительные проверки: {0} / {1}"
 
-#: ui/app_window/window_launcher.py:1029
+#: ui/app_window/window_launcher.py:1045
 msgid ""
 "All prevalidations in this directory have finished.\n"
 "Files checked: {0} — outcomes: {1} — moves: {2} — copies: {3} — deletes: {4} — errors: {5}"
@@ -4690,44 +4710,45 @@ msgstr ""
 "Все предварительные проверки в этом каталоге завершены.\n"
 "Проверено файлов: {0} — результаты: {1} — перемещений: {2} — копий: {3} — удалений: {4} — ошибок: {5}"
 
-#: ui/app_window/window_launcher.py:1050
+#: ui/app_window/window_launcher.py:1066
 msgid "Prevalidations now running"
 msgstr "В настоящее время проводятся проверки"
 
-#: ui/app_window/window_launcher.py:1051
+#: ui/app_window/window_launcher.py:1067
 msgid "Prevalidations turned off"
 msgstr "Протесты отключились"
 
-#: ui/app_window/window_launcher.py:1061
+#: ui/app_window/window_launcher.py:1077
 msgid "Extra debug logging enabled"
 msgstr "Включена дополнительная отладочная регистрация"
 
-#: ui/app_window/window_launcher.py:1062
+#: ui/app_window/window_launcher.py:1078
 msgid "Extra debug logging disabled"
 msgstr "Дополнительная отладочная регистрация отключена"
 
-#: ui/app_window/window_launcher.py:1080
+#: ui/app_window/window_launcher.py:1096
 msgid "Removed from directory notes: {0}"
 msgstr "Удалено из заметок каталога: {0}"
 
-#: ui/app_window/window_launcher.py:1085
+#: ui/app_window/window_launcher.py:1101
 msgid "Added to directory notes: {0}"
 msgstr "Добавлено в примечания к каталогу: {0}"
 
-#: ui/app_window/window_launcher.py:1113
+#: ui/app_window/window_launcher.py:1129
 #: ui/files/directory_notes_window_qt.py:352
 msgid "Edit Note - {0}"
 msgstr "Примечание редактора — {0}"
 
-#: ui/app_window/window_launcher.py:1126
+#: ui/app_window/window_launcher.py:1142
 #: ui/compare/classifier_pipeline_editor_qt.py:1920
 #: ui/compare/hf_model_manager_window_qt.py:187
+#: ui/files/auto_sort_confirmation_window_qt.py:72
 #: ui/files/directory_notes_window_qt.py:375
 #: ui/files/file_action_sets_window_qt.py:97
 msgid "Save"
 msgstr "Сохранить"
 
-#: ui/app_window/window_launcher.py:1137
+#: ui/app_window/window_launcher.py:1153
 #: ui/files/directory_notes_window_qt.py:382
 msgid "Note saved for: {0}"
 msgstr "Заметка сохранена для: {0}"
@@ -5078,7 +5099,7 @@ msgstr "Новое название:"
 #: ui/files/file_action_sets_window_qt.py:346
 #: ui/files/file_action_sets_window_qt.py:370
 #: ui/files/file_actions_window_qt.py:106
-#: ui/files/file_actions_window_qt.py:400 ui/files/marked_file_mover_qt.py:403
+#: ui/files/file_actions_window_qt.py:400 ui/files/marked_file_mover_qt.py:411
 #: utils/constants.py:635
 msgid "Copy"
 msgstr "Копия"
@@ -5122,7 +5143,8 @@ msgstr "Активный"
 #: ui/compare/classifier_management_window_qt.py:101
 #: ui/compare/classifier_pipelines_tab_qt.py:171
 #: ui/compare/embedding_seed_edit_window_qt.py:93
-#: ui/compare/prevalidations_tab_qt.py:335 utils/constants.py:167
+#: ui/compare/prevalidations_tab_qt.py:335
+#: ui/files/file_interceptor_rules_window_qt.py:66 utils/constants.py:167
 #: utils/constants.py:183
 msgid "Name"
 msgstr "Имя"
@@ -5190,7 +5212,7 @@ msgstr "Запустить конвейер «{0}» для профиля «{1}�
 
 #: ui/compare/classifier_actions_tab_qt.py:403
 #: ui/compare/classifier_pipelines_tab_qt.py:394
-#: ui/compare/classifier_pipelines_tab_qt.py:583
+#: ui/compare/classifier_pipelines_tab_qt.py:502
 msgid "Run Pipeline"
 msgstr "Запустить конвейер"
 
@@ -5467,7 +5489,7 @@ msgstr "Ранг аудио‑классификатора"
 #: ui/compare/classifier_pipeline_editor_qt.py:200
 #: ui/compare/classifier_pipeline_editor_qt.py:275
 #: ui/compare/classifier_pipeline_editor_qt.py:1490
-#: ui/compare/classifier_pipeline_editor_qt.py:2060
+#: ui/compare/classifier_pipeline_editor_qt.py:2082
 #: ui/compare/directory_profile_window_qt.py:146
 msgid "Add"
 msgstr "Добавить"
@@ -5475,7 +5497,7 @@ msgstr "Добавить"
 #: ui/compare/classifier_pipeline_editor_qt.py:204
 #: ui/compare/classifier_pipeline_editor_qt.py:279
 #: ui/compare/classifier_pipeline_editor_qt.py:1491
-#: ui/compare/classifier_pipeline_editor_qt.py:2061
+#: ui/compare/classifier_pipeline_editor_qt.py:2083
 #: ui/compare/directory_profile_window_qt.py:154
 #: ui/compare/directory_profile_window_qt.py:418
 #: ui/files/directory_notes_window_qt.py:197
@@ -5992,12 +6014,12 @@ msgid "Child nodes:"
 msgstr "Дочерние узлы:"
 
 #: ui/compare/classifier_pipeline_editor_qt.py:1492
-#: ui/compare/classifier_pipeline_editor_qt.py:2062
+#: ui/compare/classifier_pipeline_editor_qt.py:2084
 msgid "↑"
 msgstr "↑"
 
 #: ui/compare/classifier_pipeline_editor_qt.py:1493
-#: ui/compare/classifier_pipeline_editor_qt.py:2063
+#: ui/compare/classifier_pipeline_editor_qt.py:2085
 #: ui/compare/classifier_pipelines_tab_qt.py:252
 msgid "↓"
 msgstr "↓"
@@ -6064,7 +6086,7 @@ msgstr ""
 "вывода по умолчанию."
 
 #: ui/compare/classifier_pipeline_editor_qt.py:1970
-#: ui/compare/classifier_pipeline_editor_qt.py:2912
+#: ui/compare/classifier_pipeline_editor_qt.py:2934
 #: ui/compare/classifier_pipelines_tab_qt.py:276
 msgid "(no profiles)"
 msgstr "(нет профилей)"
@@ -6130,16 +6152,16 @@ msgstr "Без сортировки (быстрее)"
 msgid "Run sort order:"
 msgstr "Порядок выполнения:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2045
+#: ui/compare/classifier_pipeline_editor_qt.py:2067
 #: ui/compare/classifier_pipelines_tab_qt.py:173
 msgid "Nodes"
 msgstr "Узлы"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2071
+#: ui/compare/classifier_pipeline_editor_qt.py:2093
 msgid "Group Selected →"
 msgstr "Выбранная группа →"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2073
+#: ui/compare/classifier_pipeline_editor_qt.py:2095
 msgid ""
 "Convert the selected nodes into children of a new Group node (select 2 or "
 "more with Ctrl+click)"
@@ -6147,14 +6169,14 @@ msgstr ""
 "Преобразуйте выбранные узлы в дочерние элементы нового узла Группы (выберите"
 " 2 или более с помощью Ctrl+клика)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2080
-#: ui/compare/classifier_pipeline_editor_qt.py:2470
-#: ui/compare/classifier_pipeline_editor_qt.py:2482
-#: ui/compare/classifier_pipeline_editor_qt.py:2526
+#: ui/compare/classifier_pipeline_editor_qt.py:2102
+#: ui/compare/classifier_pipeline_editor_qt.py:2492
+#: ui/compare/classifier_pipeline_editor_qt.py:2504
+#: ui/compare/classifier_pipeline_editor_qt.py:2548
 msgid "Fill from Map"
 msgstr "Заполнить с карты"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2082
+#: ui/compare/classifier_pipeline_editor_qt.py:2104
 msgid ""
 "Append one Generate node per category-map entry. Each node checks that no "
 "derivative exists yet and that the target directory lacks this stem, then "
@@ -6166,80 +6188,80 @@ msgstr ""
 "каталог не содержит этот ствол, затем генерирует с суффиксом категории. "
 "Установите целевой каталог для каждого узла после генерации."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2106
+#: ui/compare/classifier_pipeline_editor_qt.py:2128
 msgid "Node Editor"
 msgstr "Редактор узлов"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2112
+#: ui/compare/classifier_pipeline_editor_qt.py:2134
 msgid "unique node name"
 msgstr "Уникальное имя узла"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2114
+#: ui/compare/classifier_pipeline_editor_qt.py:2136
 msgid "Node name:"
 msgstr "Имя узла:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2119
+#: ui/compare/classifier_pipeline_editor_qt.py:2141
 msgid "Enabled:"
 msgstr "Включено:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2128
+#: ui/compare/classifier_pipeline_editor_qt.py:2150
 msgid "Condition type:"
 msgstr "Тип условия:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2169
+#: ui/compare/classifier_pipeline_editor_qt.py:2191
 msgid "On match:"
 msgstr "При совпадении:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2170
+#: ui/compare/classifier_pipeline_editor_qt.py:2192
 msgid "On no-match:"
 msgstr "При отсутствии совпадения:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2180
+#: ui/compare/classifier_pipeline_editor_qt.py:2202
 msgid "Flow Preview"
 msgstr "Предпросмотр потока"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2307
+#: ui/compare/classifier_pipeline_editor_qt.py:2329
 msgid "Toggle Enabled ({0} nodes)"
 msgstr "Переключить включено ({0} узлов)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2309
+#: ui/compare/classifier_pipeline_editor_qt.py:2331
 msgid "Disable Node"
 msgstr "Отключить узел"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2309
+#: ui/compare/classifier_pipeline_editor_qt.py:2331
 msgid "Enable Node"
 msgstr "Включить узел"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2313
+#: ui/compare/classifier_pipeline_editor_qt.py:2335
 msgid "Run Node on Current Media"
 msgstr "Запустить узел на текущем медиа"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2375
+#: ui/compare/classifier_pipeline_editor_qt.py:2397
 msgid "Run Node"
 msgstr "Запустить Node"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2375
-#: ui/compare/classifier_pipelines_tab_qt.py:583
+#: ui/compare/classifier_pipeline_editor_qt.py:2397
+#: ui/compare/classifier_pipelines_tab_qt.py:502
 msgid "No active media to run on."
 msgstr "Нет активных медиа для запуска."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2395
+#: ui/compare/classifier_pipeline_editor_qt.py:2417
 msgid "Node '{node}' on {file}: {result}{action}"
 msgstr "Узел «{node}» в {file}: {result}{action}"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2398
+#: ui/compare/classifier_pipeline_editor_qt.py:2420
 msgid "match"
 msgstr "соответствие"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2398
+#: ui/compare/classifier_pipeline_editor_qt.py:2420
 msgid "no match"
 msgstr "Нет совпадений"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2471
+#: ui/compare/classifier_pipeline_editor_qt.py:2493
 msgid "The category map is empty. Add categories before generating nodes."
 msgstr "Карта категорий пуста. Добавьте категории перед созданием узлов."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2483
+#: ui/compare/classifier_pipeline_editor_qt.py:2505
 msgid ""
 "The following categories already have a matching Generate node and will be skipped: {cats}.\n"
 "\n"
@@ -6249,7 +6271,7 @@ msgstr ""
 "\n"
 "Добавить узлы для оставшихся категорий?"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2527
+#: ui/compare/classifier_pipeline_editor_qt.py:2549
 msgid ""
 "{count} node(s) added. Set the target directory on each BaseStemMatch sub-"
 "condition to the per-category output folder."
@@ -6257,26 +6279,26 @@ msgstr ""
 "{count} узлов добавлено. Установите целевой каталог для каждого подусловия "
 "BaseStemMatch в папку вывода по категориям."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2877
-#: ui/compare/classifier_pipeline_editor_qt.py:2885
-#: ui/compare/classifier_pipeline_editor_qt.py:2894
+#: ui/compare/classifier_pipeline_editor_qt.py:2899
+#: ui/compare/classifier_pipeline_editor_qt.py:2907
+#: ui/compare/classifier_pipeline_editor_qt.py:2916
 msgid "Validation Error"
 msgstr "Ошибка проверки"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2877
+#: ui/compare/classifier_pipeline_editor_qt.py:2899
 msgid "Pipeline name is required."
 msgstr "Требуется имя конвейера."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2886
-#: ui/compare/classifier_pipeline_editor_qt.py:2895
+#: ui/compare/classifier_pipeline_editor_qt.py:2908
+#: ui/compare/classifier_pipeline_editor_qt.py:2917
 msgid "A pipeline named '{}' already exists."
 msgstr "Конвейер с именем '{}' уже существует."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2938
+#: ui/compare/classifier_pipeline_editor_qt.py:2962
 msgid "Validation Errors"
 msgstr "Ошибки проверки"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2948
+#: ui/compare/classifier_pipeline_editor_qt.py:2972
 msgid "Category Map Warnings"
 msgstr "Предупреждения карты категорий"
 
@@ -6333,9 +6355,9 @@ msgid "Run on the currently displayed media item only"
 msgstr "Запустить только для текущего отображаемого медиаэлемента"
 
 #: ui/compare/classifier_pipelines_tab_qt.py:232
-#: ui/compare/classifier_pipelines_tab_qt.py:803
-#: ui/compare/classifier_pipelines_tab_qt.py:812
-#: ui/compare/classifier_pipelines_tab_qt.py:831
+#: ui/compare/classifier_pipelines_tab_qt.py:602
+#: ui/compare/classifier_pipelines_tab_qt.py:611
+#: ui/compare/classifier_pipelines_tab_qt.py:630
 msgid "Rerun Last"
 msgstr "Повторить последнюю"
 
@@ -6347,6 +6369,7 @@ msgstr ""
 
 #: ui/compare/classifier_pipelines_tab_qt.py:240
 #: ui/compare/directory_profile_window_qt.py:150
+#: ui/files/file_interceptor_rules_window_qt.py:309
 msgid "Edit"
 msgstr "Редактировать"
 
@@ -6387,7 +6410,7 @@ msgid "Run Pipeline on Profile"
 msgstr "Запустить конвейер в профиле"
 
 #: ui/compare/classifier_pipelines_tab_qt.py:437
-#: ui/compare/classifier_pipelines_tab_qt.py:604
+#: ui/compare/classifier_pipelines_tab_qt.py:523
 msgid ""
 "This pipeline has GENERATE actions but the SD Runner is not reachable.\n"
 "\n"
@@ -6401,11 +6424,11 @@ msgstr ""
 "\n"
 "Все равно продолжить?"
 
-#: ui/compare/classifier_pipelines_tab_qt.py:565
+#: ui/compare/classifier_pipelines_tab_qt.py:484
 msgid "Disabled nodes (will be skipped): {nodes}"
 msgstr "Отключённые узлы (будут пропущены): {nodes}"
 
-#: ui/compare/classifier_pipelines_tab_qt.py:590
+#: ui/compare/classifier_pipelines_tab_qt.py:509
 msgid ""
 "Run pipeline '{name}' on the current media?{details}\n"
 "\n"
@@ -6417,23 +6440,23 @@ msgstr ""
 "Медиа:\n"
 "  {path}"
 
-#: ui/compare/classifier_pipelines_tab_qt.py:593
+#: ui/compare/classifier_pipelines_tab_qt.py:512
 msgid "Run Pipeline on Current Media"
 msgstr "Запустить конвейер на текущем медиа"
 
-#: ui/compare/classifier_pipelines_tab_qt.py:655
+#: ui/compare/classifier_pipelines_tab_qt.py:574
 msgid "Pipeline '{name}' on {file}: {action}"
 msgstr "Конвейер '{name}' на {file}: {action}"
 
-#: ui/compare/classifier_pipelines_tab_qt.py:661
+#: ui/compare/classifier_pipelines_tab_qt.py:580
 msgid "{n} generation request(s) queued"
 msgstr "{n} запрос(ов) на генерацию в очереди"
 
-#: ui/compare/classifier_pipelines_tab_qt.py:804
+#: ui/compare/classifier_pipelines_tab_qt.py:603
 msgid "No previous run dump found for '{name}'."
 msgstr "Дамп предыдущего запуска для '{name}' не найден."
 
-#: ui/compare/classifier_pipelines_tab_qt.py:813
+#: ui/compare/classifier_pipelines_tab_qt.py:612
 msgid ""
 "Could not load dump file:\n"
 "{err}"
@@ -6441,7 +6464,7 @@ msgstr ""
 "Не удалось загрузить файл дампа:\n"
 "{err}"
 
-#: ui/compare/classifier_pipelines_tab_qt.py:826
+#: ui/compare/classifier_pipelines_tab_qt.py:625
 msgid ""
 "Rerun last run of '{name}'?\n"
 "\n"
@@ -6455,7 +6478,7 @@ msgstr ""
 "Генерации для повторной отправки: {n_gen}\n"
 "Скрембли для повторного выполнения: {n_scr}"
 
-#: ui/compare/classifier_pipelines_tab_qt.py:880
+#: ui/compare/classifier_pipelines_tab_qt.py:679
 msgid ""
 "Rerun complete for '{name}'.\n"
 "Generates dispatched: {n_gen}  Scrambles executed: {n_scr}"
@@ -7976,7 +7999,7 @@ msgstr "Добавьте действия из «Горячие клавиши»
 #: ui/files/file_action_sets_window_qt.py:346
 #: ui/files/file_action_sets_window_qt.py:370
 #: ui/files/file_actions_window_qt.py:105
-#: ui/files/file_actions_window_qt.py:398 ui/files/marked_file_mover_qt.py:396
+#: ui/files/file_actions_window_qt.py:398 ui/files/marked_file_mover_qt.py:404
 #: utils/constants.py:633
 msgid "Move"
 msgstr "Двигаться"
@@ -8459,39 +8482,39 @@ msgstr "GIF интерполяции"
 msgid "Create PDF"
 msgstr "Создать PDF"
 
-#: ui/files/marked_file_mover_qt.py:413
+#: ui/files/marked_file_mover_qt.py:421
 msgid "Unlock"
 msgstr "Разблокировать"
 
-#: ui/files/marked_file_mover_qt.py:415
+#: ui/files/marked_file_mover_qt.py:423
 msgid "Lock"
 msgstr "Замок"
 
-#: ui/files/marked_file_mover_qt.py:419
+#: ui/files/marked_file_mover_qt.py:427
 msgid "Toggle GUI requirement for this target directory"
 msgstr "Переключить GUI-требование для этой целевой директории"
 
-#: ui/files/marked_file_mover_qt.py:428
+#: ui/files/marked_file_mover_qt.py:436
 msgid "Remove this target directory"
 msgstr "Удалить эту целевую директорию"
 
-#: ui/files/marked_file_mover_qt.py:494
+#: ui/files/marked_file_mover_qt.py:506
 msgid "locked"
 msgstr "заблокированный"
 
-#: ui/files/marked_file_mover_qt.py:494
+#: ui/files/marked_file_mover_qt.py:506
 msgid "unlocked"
 msgstr "разблокированный"
 
-#: ui/files/marked_file_mover_qt.py:496
+#: ui/files/marked_file_mover_qt.py:508
 msgid "Target directory {0}: {1}"
 msgstr "Целевая директория {0}: {1}"
 
-#: ui/files/marked_file_mover_qt.py:508
+#: ui/files/marked_file_mover_qt.py:520
 msgid "Target is locked"
 msgstr "Цель заблокирована"
 
-#: ui/files/marked_file_mover_qt.py:510
+#: ui/files/marked_file_mover_qt.py:522
 msgid ""
 "This target requires the GUI Marked File Mover window.\n"
 "\n"
@@ -8501,7 +8524,7 @@ msgstr ""
 "\n"
 "Откройте GUI переносчик (Ctrl+M), чтобы подтвердить этот цільовий об'єкт."
 
-#: ui/files/marked_file_mover_qt.py:581
+#: ui/files/marked_file_mover_qt.py:593
 msgid ""
 "You are about to move {0} marked files to:\n"
 "\n"
@@ -8515,7 +8538,7 @@ msgstr ""
 "\n"
 "Пожалуйста, подтвердите, что это назначение правильное."
 
-#: ui/files/marked_file_mover_qt.py:586
+#: ui/files/marked_file_mover_qt.py:598
 msgid ""
 "You are about to copy {0} marked files to:\n"
 "\n"
@@ -8529,43 +8552,43 @@ msgstr ""
 "\n"
 "Пожалуйста, подтвердите, что это правильное назначение."
 
-#: ui/files/marked_file_mover_qt.py:591
+#: ui/files/marked_file_mover_qt.py:603
 msgid "Confirm Large File Operation"
 msgstr "Подтвердить операцию с большим файлом"
 
-#: ui/files/marked_file_mover_qt.py:602
+#: ui/files/marked_file_mover_qt.py:614
 msgid "delete marked files"
 msgstr "удалить отмеченные файлы"
 
-#: ui/files/marked_file_mover_qt.py:610
+#: ui/files/marked_file_mover_qt.py:622
 msgid "Confirm Delete"
 msgstr "Подтвердить удаление"
 
-#: ui/files/marked_file_mover_qt.py:611
+#: ui/files/marked_file_mover_qt.py:623
 msgid "Deleting {0} marked files - Are you sure you want to proceed?"
 msgstr "Удаление {0} отмеченных файлов - Вы уверены, что хотите продолжить?"
 
-#: ui/files/marked_file_mover_qt.py:633
+#: ui/files/marked_file_mover_qt.py:645
 msgid "Deleting {0} files..."
 msgstr "Удаление {0} файлов..."
 
-#: ui/files/marked_file_mover_qt.py:657
+#: ui/files/marked_file_mover_qt.py:669
 msgid "Delete Failed"
 msgstr "Ошибка удаления"
 
-#: ui/files/marked_file_mover_qt.py:658
+#: ui/files/marked_file_mover_qt.py:670
 msgid "Failed to delete {0} files - check log for details."
 msgstr "Не удалось удалить {0} файлы - проверьте журнал для деталей."
 
-#: ui/files/marked_file_mover_qt.py:663
+#: ui/files/marked_file_mover_qt.py:675
 msgid "Deleted {0} marked files."
 msgstr "Удалено {0} отмеченных файлов."
 
-#: ui/files/marked_file_mover_qt.py:688
+#: ui/files/marked_file_mover_qt.py:700
 msgid "Select parent directory for target directories"
 msgstr "Выберите родительский каталог для целевых каталогов"
 
-#: ui/files/marked_file_mover_qt.py:730
+#: ui/files/marked_file_mover_qt.py:742
 msgid ""
 "WARNING: This action sets hotkey actions that will be used for future file "
 "operations. You may have accidentally triggered this shortcut due to a "
@@ -8576,15 +8599,15 @@ msgstr ""
 "активировали эту комбинацию клавиш из-за застрявшей клавиши Control. "
 "Подтвердите, что хотите продолжить."
 
-#: ui/files/marked_file_mover_qt.py:740 ui/files/marked_file_mover_qt.py:746
+#: ui/files/marked_file_mover_qt.py:752 ui/files/marked_file_mover_qt.py:758
 msgid "Recording next mark target and action."
 msgstr "Запись следующей цели и действия."
 
-#: ui/files/marked_file_mover_qt.py:790
+#: ui/files/marked_file_mover_qt.py:802
 msgid "Sorted directories by embedding comparison."
 msgstr "Сортированные каталоги путем встраивания сравнения."
 
-#: ui/files/marked_file_mover_qt.py:810
+#: ui/files/marked_file_mover_qt.py:822
 msgid ""
 "Exactly 2 marked files are required to create an interpolation GIF ({0} "
 "currently marked)."
@@ -8592,35 +8615,35 @@ msgstr ""
 "Требуется ровно 2 отмеченных файла для создания GIF-интерполяции (в "
 "настоящее время отмечено {0})."
 
-#: ui/files/marked_file_mover_qt.py:823
+#: ui/files/marked_file_mover_qt.py:835
 msgid "Interpolation GIF saved: {0}"
 msgstr "GIF интерполяции сохранен: {0}"
 
-#: ui/files/marked_file_mover_qt.py:828
+#: ui/files/marked_file_mover_qt.py:840
 msgid "Failed to create interpolation GIF: {0}"
 msgstr "Не удалось создать интерполяционный GIF: {0}"
 
-#: ui/files/marked_file_mover_qt.py:847
+#: ui/files/marked_file_mover_qt.py:859
 msgid "Save PDF as"
 msgstr "Сохранить PDF как"
 
-#: ui/files/marked_file_mover_qt.py:865
+#: ui/files/marked_file_mover_qt.py:877
 msgid "Failed to create PDF from marked files."
 msgstr "Не удалось создать PDF из отмеченных файлов."
 
-#: ui/files/marked_file_mover_qt.py:983
+#: ui/files/marked_file_mover_qt.py:995
 msgid "Found {0} downstream related images"
 msgstr "Найдено {0} ниже по потоку связанных изображений"
 
-#: ui/files/marked_file_mover_qt.py:988
+#: ui/files/marked_file_mover_qt.py:1000
 msgid "No downstream related images found"
 msgstr "Не найдено ни одного нисходящего изображения"
 
-#: ui/files/marked_file_mover_qt.py:1018
+#: ui/files/marked_file_mover_qt.py:1030
 msgid "Filter: {0}"
 msgstr "Фильтр: {0}"
 
-#: ui/files/marked_file_mover_qt.py:1213
+#: ui/files/marked_file_mover_qt.py:1225
 msgid "Cleared marked file"
 msgstr "Очищенный файл"
 
@@ -9278,7 +9301,8 @@ msgstr "Подсказки (точное совпадение)"
 msgid "Color Histogram"
 msgstr "Гистограмма цветов"
 
-#: utils/constants.py:59 utils/constants.py:95
+#: tests/unit/test_compare_embeddings_audio_clap.py:26 utils/constants.py:59
+#: utils/constants.py:95
 msgid "CLAP Audio Embedding"
 msgstr "CLAP Встраивание аудио"
 
@@ -9638,3 +9662,294 @@ msgstr "Shift"
 #: utils/translations.py:74
 msgid "Alt"
 msgstr "Alt"
+
+#: compare/classifier_pipeline.py:503
+msgid ""
+"Stem-group dedup is on but the run sort order is not '{0}'. Whichever file "
+"of a stem group is reached first is the only one evaluated, so a derivative "
+"reached before its seed can generate duplicates. Set the run sort order to "
+"'{0}', or turn off stem-group dedup."
+msgstr ""
+"Дедупликация stem‑group включена, но порядок сортировки выполнения не «{0}»."
+" Файл stem‑group, который будет достигнут первым, единственный, который "
+"оценивается, поэтому производное, достигнутое до своего исходного файла, "
+"может создавать дубликаты. Установите порядок сортировки выполнения в «{0}»,"
+" либо отключите дедупликацию stem‑group."
+
+#: compare/pipeline_run_report.py:220
+#: tests/unit/test_pipeline_decision_record.py:288
+#: tests/unit/test_pipeline_decision_record.py:294
+msgid "Decision records captured: {0}"
+msgstr "Зафиксированные записи решений: {0}"
+
+#: files/file_interceptor_rule.py:40
+msgid "Move only"
+msgstr "Только переместить"
+
+#: files/file_interceptor_rule.py:42
+msgid "Copy only"
+msgstr "Только копировать"
+
+#: files/file_interceptor_rule.py:43
+msgid "Move and copy"
+msgstr "Переместить и копировать"
+
+#: files/file_interceptor_rule.py:64
+msgid "Transform"
+msgstr "Трансформировать"
+
+#: files/file_interceptor_rule.py:65 files/file_interceptor_rule.py:183
+msgid "Block"
+msgstr "Заблокировать"
+
+#: files/file_interceptor_rule.py:84
+msgid "Improve image"
+msgstr "Улучшить изображение"
+
+#: files/file_interceptor_rule.py:109
+msgid "New Interceptor Rule"
+msgstr "Новое правило перехватчика"
+
+#: files/file_interceptor_rule.py:163
+msgid "into {0} (and subdirectories)"
+msgstr "в {0} (и подкаталоги)"
+
+#: files/file_interceptor_rule.py:165
+msgid "into {0}"
+msgstr "в {0}"
+
+#: files/file_interceptor_rule.py:169
+msgid "name contains {0}"
+msgstr "Имя содержит {0}"
+
+#: files/file_interceptor_rule.py:173
+msgid "type is {0}"
+msgstr "Тип {0}"
+
+#: files/file_interceptor_rule.py:177
+msgid "any file"
+msgstr "любой файл"
+
+#: files/file_interceptor_rule.py:181
+msgid ", removing the original"
+msgstr ", удаляя оригинал"
+
+#: files/file_interceptor_rules_manager.py:189
+msgid "Blocked by interceptor rule: {0}"
+msgstr "Заблокировано правилом перехватчика: {0}"
+
+#: files/file_interceptor_rules_manager.py:196
+msgid ""
+"{0}\n"
+"Blocked: {1}"
+msgstr ""
+"{0}\n"
+"Заблокировано: {1}"
+
+#: ui/app_window/sidebar_panel.py:339 ui/files/marked_file_mover_qt.py:359
+msgid "Interceptor rules"
+msgstr "Правила перехватчика"
+
+#: ui/app_window/sidebar_panel.py:344
+msgid ""
+"Configure rules that block or transform marked files as they are moved or "
+"copied to a target directory."
+msgstr ""
+"Настройте правила, которые блокируют или преобразуют отмеченные файлы при их"
+" перемещении или копировании в целевую папку."
+
+#: ui/app_window/sidebar_panel.py:348
+msgid "Auto-sort confirmation"
+msgstr "Подтверждение авто‑сортировки"
+
+#: ui/app_window/sidebar_panel.py:353
+msgid ""
+"Choose which automatically sorted categories ask for confirmation before "
+"their media is viewed."
+msgstr ""
+"Выберите, какие автоматически отсортированные категории запрашивают "
+"подтверждение перед просмотром их медиа."
+
+#: ui/compare/classifier_pipeline_editor_qt.py:2036
+msgid "Evaluate each stem group once"
+msgstr "Оценить каждую группу стеблей один раз"
+
+#: ui/compare/classifier_pipeline_editor_qt.py:2039
+msgid ""
+"In a batch run, skip a file whose stem group has already been evaluated, and"
+" skip stem groups whose seed cannot be located or is not filed. Turn off to "
+"evaluate every file independently. Related Image sort order lets derivatives"
+" skip sooner, but is not required for correctness."
+msgstr ""
+"При пакетном выполнении пропускайте файл, чья группа стебля уже оценена, и "
+"пропускайте группы стебля, у которых семя не найдено или не зафиксировано. "
+"Отключите, чтобы оценивать каждый файл независимо. Порядок сортировки "
+"связанных изображений позволяет производным объектам пропускаться раньше, но"
+" это не требуется для правильности."
+
+#: ui/compare/classifier_pipeline_editor_qt.py:2048
+msgid "Record per-node decisions"
+msgstr "Записать решения по узлам"
+
+#: ui/compare/classifier_pipeline_editor_qt.py:2051
+msgid ""
+"Write each evaluated file's per-node match result and score into the run "
+"dump, for auditing or threshold calibration. Adds one record per file, held "
+"in memory until the run finishes."
+msgstr ""
+"Записывает результат сопоставления по узлам и оценку каждого оцененного "
+"файла в дамп выполнения для аудита или калибровки порога. Добавляет одну "
+"запись на файл, хранящуюся в памяти до завершения выполнения."
+
+#: ui/files/auto_sort_confirmation_window_qt.py:34
+msgid "Auto-Sort Confirmation Categories"
+msgstr "Категории подтверждения автосортировки"
+
+#: ui/files/auto_sort_confirmation_window_qt.py:47
+msgid ""
+"When viewing the last automatically sorted media, ask for confirmation first if it was sorted into one of these categories.\n"
+"Categories are matched without regard to case."
+msgstr ""
+"При просмотре последнего автоматически отсортированного медиа запрашивайте подтверждение, если он был отнесён к одной из этих категорий.\n"
+"Сравнение категорий производится без учёта регистра."
+
+#: ui/files/auto_sort_confirmation_window_qt.py:56
+msgid "Categories (comma-separated):"
+msgstr "Категории (через запятую):"
+
+#: ui/files/auto_sort_confirmation_window_qt.py:105
+msgid "Confirmation set for {0} categories"
+msgstr "Подтверждение установлено для {0} категорий"
+
+#: ui/files/file_interceptor_rules_window_qt.py:57
+msgid "Edit Interceptor Rule"
+msgstr "Редактировать правило перехватчика"
+
+#: ui/files/file_interceptor_rules_window_qt.py:68
+msgid "Rule is active"
+msgstr "Правило активно"
+
+#: ui/files/file_interceptor_rules_window_qt.py:78
+msgid "Applies to"
+msgstr "Применяется к"
+
+#: ui/files/file_interceptor_rules_window_qt.py:82
+msgid "Comma-separated target directories. Leave empty to match any target."
+msgstr ""
+"Целевые каталоги, разделённые запятыми. Оставьте пустым, чтобы сопоставить "
+"любой объект."
+
+#: ui/files/file_interceptor_rules_window_qt.py:84
+msgid "Target directories"
+msgstr "Целевые каталоги"
+
+#: ui/files/file_interceptor_rules_window_qt.py:86
+msgid "Also match subdirectories"
+msgstr "Также учитывать подпапки"
+
+#: ui/files/file_interceptor_rules_window_qt.py:92
+msgid "Comma-separated substrings. Leave empty to match any filename."
+msgstr ""
+"Подстроки, разделённые запятыми. Оставьте пустым, чтобы совпадать с любым "
+"именем файла."
+
+#: ui/files/file_interceptor_rules_window_qt.py:94
+msgid "Filename contains"
+msgstr "Имя файла содержит"
+
+#: ui/files/file_interceptor_rules_window_qt.py:96
+msgid "Filename match is case-sensitive"
+msgstr "Совпадение имени файла чувствительно к регистру"
+
+#: ui/files/file_interceptor_rules_window_qt.py:101
+msgid "Leave all unchecked to match any media type."
+msgstr "Оставьте все флажки снятыми, чтобы соответствовать любому типу медиа."
+
+#: ui/files/file_interceptor_rules_window_qt.py:113
+msgid "Media types"
+msgstr "Типы медиа"
+
+#: ui/files/file_interceptor_rules_window_qt.py:122
+msgid "Behavior"
+msgstr "Поведение"
+
+#: ui/files/file_interceptor_rules_window_qt.py:126
+msgid "Shown when this rule blocks a transfer. Optional."
+msgstr "Отображается, когда это правило блокирует передачу. Необязательно."
+
+#: ui/files/file_interceptor_rules_window_qt.py:128
+msgid "Block message"
+msgstr "Заблокировать сообщение"
+
+#: ui/files/file_interceptor_rules_window_qt.py:137
+msgid "Transform operation"
+msgstr "Операция преобразования"
+
+#: ui/files/file_interceptor_rules_window_qt.py:140
+msgid "Remove the original after moving the transformed file"
+msgstr "Удалить оригинал после перемещения преобразованного файла"
+
+#: ui/files/file_interceptor_rules_window_qt.py:144
+msgid "Never applies to copy operations, only to moves."
+msgstr ""
+"Никогда не применяется к операциям копирования, только к перемещениям."
+
+#: ui/files/file_interceptor_rules_window_qt.py:200
+msgid "File Handling Interceptor Rules"
+msgstr "Правила перехватчика обработки файлов"
+
+#: ui/files/file_interceptor_rules_window_qt.py:214
+msgid ""
+"Rules are checked in order when marked files are moved or copied; the first "
+"matching rule applies."
+msgstr ""
+"Правила проверяются последовательно, когда отмеченные файлы перемещаются или"
+" копируются; применяется первое подходящее правило."
+
+#: ui/files/file_interceptor_rules_window_qt.py:223
+msgid "Add rule"
+msgstr "Добавить правило"
+
+#: ui/files/file_interceptor_rules_window_qt.py:280
+msgid "No interceptor rules configured."
+msgstr "Не настроены правила перехватчика."
+
+#: ui/files/file_interceptor_rules_window_qt.py:296
+msgid "Move this rule earlier in the evaluation order"
+msgstr "Переместить это правило выше в порядке оценки"
+
+#: ui/files/file_interceptor_rules_window_qt.py:304
+msgid "Move this rule later in the evaluation order"
+msgstr "Переместить это правило позже в порядке оценки"
+
+#: ui/files/file_interceptor_rules_window_qt.py:317
+msgid "Remove this rule"
+msgstr "Удалить это правило"
+
+#: ui/files/file_interceptor_rules_window_qt.py:349
+msgid "Added interceptor rule: {0}"
+msgstr "Добавлено правило перехвата: {0}"
+
+#: ui/files/file_interceptor_rules_window_qt.py:365
+msgid "Removed interceptor rule: {0}"
+msgstr "Правило перехватчика удалено: {0}"
+
+#: ui/files/marked_file_mover_qt.py:362
+msgid "Configure rules applied while moving or copying marked files"
+msgstr ""
+"Настроить правила, применяемые при перемещении или копировании помеченных "
+"файлов"
+
+#: ui/image/auto_sort_open_gate.py:40
+msgid "Confirm Auto-Sorted Category"
+msgstr "Подтвердить автоматически отсортированную категорию"
+
+#: ui/image/auto_sort_open_gate.py:42
+msgid ""
+"This file was automatically sorted into \"{0}\".\n"
+"\n"
+"View it now?"
+msgstr ""
+"Этот файл был автоматически отсортирован в «{0}».\n"
+"\n"
+"Открыть его сейчас?"

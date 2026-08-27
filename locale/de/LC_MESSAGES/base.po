@@ -2734,7 +2734,7 @@ msgstr "Max. Suchergebnisse"
 
 #: ui/help_and_config_qt.py:392
 msgid "Text Embedding Presets Exclusive Mode"
-msgstr "Text-Einbettung-Presets Exklusiver Modus"
+msgstr "Text-Einbettung-Voreinstellungs Exklusiver Modus"
 
 #: ui/help_and_config_qt.py:395
 msgid "Potential Duplicate Threshold (embedding)"
@@ -3187,11 +3187,11 @@ msgstr "Aktuelle Medien zu der negativen Suche hinzufügen"
 
 #: ui/app_window/context_menu_builder.py:222
 msgid "Save Supergroup as Embedding Seed…"
-msgstr "Supergruppe als Embedding‑Seed speichern…"
+msgstr "Supergruppe als Einbettungsaat speichern…"
 
 #: ui/app_window/context_menu_builder.py:227
 msgid "Add Current Media to Embedding Seed Library…"
-msgstr "Aktuelle Medien zur Embedding-Seed-Bibliothek hinzufügen…"
+msgstr "Aktuelle Medien zur Einbettung-Saat-Bibliothek hinzufügen…"
 
 #: ui/app_window/context_menu_builder.py:237
 msgid "Copy file path"
@@ -4031,7 +4031,7 @@ msgstr "Trockenlauf"
 #: ui/app_window/file_ops_controller.py:1056
 #: ui/files/file_action_sets_window_qt.py:212
 msgid "Execute"
-msgstr "führen aus"
+msgstr "Führen aus"
 
 #: ui/app_window/file_ops_controller.py:1058
 msgid "Randomize Filenames"
@@ -4204,7 +4204,7 @@ msgstr ""
 
 #: ui/app_window/notification_controller.py:409
 msgid "No media files found"
-msgstr "Keine Medien-dateien gefunden"
+msgstr "Keine Mediendateien gefunden"
 
 #: ui/app_window/notification_controller.py:411
 msgid "1 media file found"
@@ -4212,7 +4212,7 @@ msgstr "1 Mediapost wurde gefunden"
 
 #: ui/app_window/notification_controller.py:413
 msgid "{0} media files found"
-msgstr "{0} MedienDateien gefunden"
+msgstr "{0} Mediendateien gefunden"
 
 #: ui/app_window/notification_controller.py:418
 msgid "(filtered)"
@@ -4456,20 +4456,20 @@ msgstr "Modellmanager"
 #: ui/app_window/sidebar_panel.py:253
 msgid "Manage HuggingFace models used for media embeddings and comparison."
 msgstr ""
-"Verwalten Sie HuggingFace-Modelle, die für Medien-Embeddings und zum "
+"Verwalten Sie HuggingFace-Modelle, die für Medieneinbettungs und zum "
 "Vergleich verwendet werden."
 
 #: ui/app_window/sidebar_panel.py:256
 #: ui/compare/embedding_seed_library_window_qt.py:45
 #: ui/compare/embedding_seed_library_window_qt.py:56
 msgid "Embedding Seed Library"
-msgstr "Einbetten der Saatgutbibliothek"
+msgstr "Einbettung-Saat-Bibliothek"
 
 #: ui/app_window/sidebar_panel.py:261
 msgid ""
 "Browse and manage named embedding vectors saved as reusable search seeds."
 msgstr ""
-"Durchsuchen und verwalten Sie benannte Embedding‑Vektoren, die als "
+"Durchsuchen und verwalten Sie benannte Einbettungsvektoren, die als "
 "wiederverwendbare Such‑Seeds gespeichert sind."
 
 #: ui/app_window/sidebar_panel.py:266
@@ -6630,7 +6630,7 @@ msgstr "Auf Standard zurücksetzen"
 
 #: ui/compare/compare_settings_window_qt.py:342
 msgid "Reset to a single CLIP Embedding instance with no filters"
-msgstr "Zurücksetzen auf eine einzelne CLIP-Embedding-Instanz ohne Filter"
+msgstr "Zurücksetzen auf eine einzelne CLIP-Einbettungs-Instanz ohne Filter"
 
 #: ui/compare/compare_settings_window_qt.py:408
 msgid "Weight for this instance"
@@ -6658,7 +6658,7 @@ msgid ""
 "\n"
 "This will clear all current instances and filters."
 msgstr ""
-"Alle Vergleichseinstellungen auf eine einzelne CLIP-Embedding-Instanz ohne Filter zurücksetzen?\n"
+"Alle Vergleichseinstellungen auf eine einzelne CLIP-Einbettungs-Instanz ohne Filter zurücksetzen?\n"
 "\n"
 "Dadurch werden alle aktuellen Instanzen und Filter gelöscht."
 
@@ -6757,11 +6757,11 @@ msgstr "Verzeichnis"
 
 #: ui/compare/embedding_seed_edit_window_qt.py:72
 msgid "Edit Embedding Seed"
-msgstr "Einbettungs‑Seed bearbeiten"
+msgstr "Einbettungsaat bearbeiten"
 
 #: ui/compare/embedding_seed_edit_window_qt.py:72
 msgid "Save Embedding Seed"
-msgstr "Einbettungs-Seed speichern"
+msgstr "Einbettungsaat speichern"
 
 #: ui/compare/embedding_seed_edit_window_qt.py:101
 msgid "Tags (comma-separated)"
@@ -6776,12 +6776,12 @@ msgstr "Einbettungsarchitektur"
 #: ui/compare/embedding_seed_edit_window_qt.py:173
 #: ui/compare/embedding_seed_edit_window_qt.py:201
 msgid "An embedding seed with that name already exists."
-msgstr "Ein Embedding‑Seed mit diesem Namen existiert bereits."
+msgstr "Ein Einbettungsaat mit diesem Namen existiert bereits."
 
 #: ui/compare/embedding_seed_edit_window_qt.py:169
 #: ui/compare/embedding_seed_edit_window_qt.py:204
 msgid "Saved embedding seed: "
-msgstr "Gespeicherter Embedding-Seed: "
+msgstr "Gespeicherter Einbettungsaat: "
 
 #: ui/compare/embedding_seed_edit_window_qt.py:182
 msgid "Could not compute an embedding for this file."
@@ -6810,9 +6810,9 @@ msgid ""
 "\n"
 "Right-click any media and choose \"Add Current Media to Embedding Seed Library…\", or right-click while in Group mode and choose \"Save Supergroup as Embedding Seed…\" to capture the current supergroup's centroid."
 msgstr ""
-"Noch keine Embedding‑Samen.\n"
+"Noch keine Einbettungsaat.\n"
 "\n"
-"Rechtsklick auf ein beliebiges Medium und \"Aktuelles Medium zur Embedding‑Samen‑Bibliothek hinzufügen…\" auswählen, oder im Gruppen‑Modus Rechtsklick und \"Supergruppe als Embedding‑Samen speichern…\" wählen, um den Schwerpunkt der aktuellen Supergruppe zu erfassen."
+"Rechtsklick auf ein beliebiges Medium und \"Aktuelles Medium zur Einbettung‑Saat‑Bibliothek hinzufügen…\" auswählen, oder im Gruppen‑Modus Rechtsklick und \"Supergruppe als Embedding‑Saat speichern…\" wählen, um den Schwerpunkt der aktuellen Supergruppe zu erfassen."
 
 #: ui/compare/embedding_seed_library_window_qt.py:159
 msgid " (deprecated)"
@@ -6836,7 +6836,7 @@ msgstr ""
 
 #: ui/compare/embedding_seed_library_window_qt.py:241
 msgid "Deleted embedding seed: "
-msgstr "Gelöschter Embedding-Seed: "
+msgstr "Gelöschter Einbettungsaat: "
 
 #: ui/compare/filter_builder_panel_qt.py:43
 #: ui/compare/filter_builder_panel_qt.py:123
@@ -8041,7 +8041,7 @@ msgstr "Voreinstellung speichern"
 
 #: ui/files/file_action_sets_window_qt.py:60
 msgid "Preset name:"
-msgstr "Preset-Name:"
+msgstr "Voreinstellungsname:"
 
 #: ui/files/file_action_sets_window_qt.py:65
 msgid "Enter a name…"
@@ -8108,7 +8108,7 @@ msgstr "Keine aktuellen Dateiaktionen gefunden."
 
 #: ui/files/file_action_sets_window_qt.py:381
 msgid "No presets saved yet."
-msgstr "Noch keine Presets gespeichert."
+msgstr "Noch keine Voreinstellungen gespeichert."
 
 #: ui/files/file_action_sets_window_qt.py:443
 #: ui/files/file_action_sets_window_qt.py:486
@@ -8852,7 +8852,7 @@ msgid ""
 "compare"
 msgstr ""
 "Audiodateien (MP3, FLAC, usw.) - Durchsuchen und Wiedergabe; nicht verwendet"
-" in Embedding-Vergleich"
+" in Einbettungsvergleich"
 
 #: ui/files/type_configuration_window_qt.py:59
 msgid "PDF support requires pypdfium2 package"
@@ -9384,7 +9384,7 @@ msgstr "LAION-Einbettung"
 
 #: utils/constants.py:50 utils/constants.py:77
 msgid "EVA CLIP Embedding"
-msgstr "EVA CLIP Embedding"
+msgstr "EVA CLIP Einbettung"
 
 #: utils/constants.py:51 utils/constants.py:79
 msgid "MetaCLIP Embedding"
@@ -9392,11 +9392,11 @@ msgstr "MetaCLIP-Einbettung"
 
 #: utils/constants.py:52 utils/constants.py:81
 msgid "V-JEPA 2 Embedding"
-msgstr "V-JEPA 2 Embedding"
+msgstr "V-JEPA 2 Einbettung"
 
 #: utils/constants.py:53 utils/constants.py:83
 msgid "Face Embedding"
-msgstr "Face Embedding"
+msgstr "Face Einbettung"
 
 #: utils/constants.py:55 utils/constants.py:87
 msgid "Prompts (Exact Match)"

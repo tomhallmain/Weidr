@@ -7,11 +7,10 @@ that satisfies the action's full threshold condition, and seeks the media player
 to that position.
 
 Dynamic media (video, GIF, PDF) is sampled frame-by-frame. A still image is a
-single-slot scan with nothing to seek to; it is supported because the reported
-trigger detail — the classifier's ranked predictions — answers "what does the
-model actually see here?", which is the question a manual check is usually
-asking. For a still those predictions are reported whether or not the action
-triggered, since a surprising non-match is the common reason to look.
+single-slot scan with nothing to seek to; it is supported for the trigger
+detail it reports — the classifier's ranked predictions. For a still those are
+reported whether or not the action triggered, so a non-match still says what
+the model saw.
 
 The scan runs in a background QThread so the UI stays responsive.
 """
@@ -92,7 +91,7 @@ class SeekToTriggerWorker(QThread):
                 self.found.emit(result)
             elif not is_classifier_dynamic_media_path(self._media_path):
                 # One slot, and it didn't match. Report what the classifier saw
-                # anyway -- that is the whole point of running this on a still.
+                # anyway; for a still that is the useful part of the result.
                 self.not_found.emit(1, self._action.describe_image_prediction(self._media_path))
             else:
                 from image.frame_cache import FrameCache
@@ -453,9 +452,7 @@ class SeekToTriggerTab(QWidget):
                 "'{name}' did not trigger on the current media ({n} samples scanned)."
             ).format(name=action_name, n=planned_slots)
         self._set_status(msg)
-        # For a still the classifier's ranked output is reported either way --
-        # what the model saw is the answer being looked for, not just whether
-        # it crossed a threshold.
+        # Present for a still even though nothing triggered (see module docstring).
         detail_line = _format_trigger_detail(detail)
         self._set_detail(detail_line if detail_line else _NBSP)
         self._app_actions.toast(msg)
@@ -662,10 +659,9 @@ class SeekToTriggerTab(QWidget):
 def _dimensions_suffix(media_path: str) -> str:
     """ ' (WxH)' for a still, or '' when the size can't be read.
 
-    Reported because the classifier resizes to a fixed square before
-    inference: a file whose stored dimensions are transposed relative to its
-    real content is squashed differently than intended, which is invisible in
-    the rendered image but changes what the model is shown.
+    Worth surfacing next to the predictions: a classifier that resizes to a
+    fixed square sees a file with transposed dimensions squashed along the
+    wrong axis, which the rendered image does not show.
     """
     try:
         from utils.media_utils import get_image_dimensions

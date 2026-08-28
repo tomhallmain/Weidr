@@ -18,6 +18,56 @@ from utils.utils import Utils
 logger = get_logger("file_browser")
 
 
+def is_slow_file_count(
+    file_count: int,
+    directory: str,
+    threshold: int = 5000,
+    is_external: Optional[bool] = None,
+) -> bool:
+    """Whether *file_count* files in *directory* counts as a slow load.
+
+    The single definition of the size rule, applied both to an already-gathered
+    listing (is_slow_total_files) and to a directory not yet loaded (the restore
+    pre-flight). The two must not disagree: a directory cleared by one and
+    flagged by the other puts a modal back inside a window constructor.
+
+    is_external: pass a cached answer to skip re-stat'ing the path.
+    """
+    if is_external is None:
+        is_external = Utils.is_external_drive(directory)
+    factor = 5 if is_external else 1
+    return factor * file_count > threshold
+
+
+def count_matching_files(directory: str, recursive: bool = False) -> int:
+    """Count files under *directory* matching config.file_types.
+
+    Not _gather_files(): a size question needs no sorting, no SortableFile
+    construction, and no borrowing of a live FileBrowser's mutable state --
+    so callers avoid the snapshot/restore that borrowing requires.
+
+    Returns 0 for an unreadable directory, which is not one worth warning about.
+    """
+    allowed = tuple(ext.lower() for ext in config.file_types)
+    count = 0
+    try:
+        if recursive:
+            for _root, _dirs, files in os.walk(directory):
+                count += sum(1 for f in files if f.lower().endswith(allowed))
+        else:
+            with os.scandir(directory) as entries:
+                for entry in entries:
+                    try:
+                        if entry.is_file() and entry.name.lower().endswith(allowed):
+                            count += 1
+                    except OSError:
+                        continue
+    except OSError as e:
+        logger.debug("count_matching_files failed for %s: %s", directory, e)
+        return 0
+    return count
+
+
 class FileBrowser:
     have_confirmed_directories: List[str] = []
 
@@ -74,9 +124,13 @@ class FileBrowser:
         return len(self._files)
 
     def is_slow_total_files(self, threshold: int = 5000, use_sortable_files: bool = False) -> bool:
-        factor = 5 if self._is_external_drive_directory else 1
         file_count = len(self._files) if use_sortable_files else len(self.filepaths)
-        return factor * file_count > threshold
+        # Defers to the shared rule so this and the bulk pre-flight cannot
+        # drift apart, passing the cached drive flag rather than re-stat'ing.
+        return is_slow_file_count(
+            file_count, self.directory, threshold=threshold,
+            is_external=self._is_external_drive_directory,
+        )
 
     def has_confirmed_dir(self) -> bool:
         return self.directory in FileBrowser.have_confirmed_directories
@@ -799,8 +853,10 @@ class FileBrowser:
         # External drives are slower overall; keep incremental batches smaller
         # so files appear earlier while scanning.
         self._incremental_batch_size = 100 if self._is_external_drive_directory else 250
-        factor = 5 if self._is_external_drive_directory else 1
-        self._use_incremental_on_full_refresh = factor * len(probe_files) > threshold
+        self._use_incremental_on_full_refresh = is_slow_file_count(
+            len(probe_files), self.directory, threshold=threshold,
+            is_external=self._is_external_drive_directory,
+        )
 
     def _update_drive_characteristics(self) -> None:
         self._is_external_drive_directory = Utils.is_external_drive(self.directory)

@@ -967,10 +967,9 @@ class ClassifierAction:
     def describe_image_prediction(self, image_path: str) -> Optional["TriggerDetail"]:
         """Ranked classifier predictions for *image_path*, match or no match.
 
-        find_first_trigger_slot() only reports detail when something triggered,
-        which is useless for the case it is most often reached for: asking why
-        an image did NOT classify the way it was expected to. This runs the
-        classifier and reports what it actually saw, with no threshold applied.
+        find_first_trigger_slot() reports detail only when something triggered,
+        so it cannot answer why an image did NOT classify as expected. This
+        runs the classifier and reports what it saw, with no threshold applied.
 
         Returns None when this action has no image classifier to consult.
         """

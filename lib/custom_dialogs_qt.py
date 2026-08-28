@@ -9,10 +9,12 @@ by lib/qt_alert.py.
 from typing import Optional
 
 from PySide6.QtWidgets import (
+    QCheckBox,
     QDialog,
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -75,7 +77,8 @@ def show_high_severity_dialog(
     title: str,
     message: str,
     buttons: Optional[list[tuple[str, str]]] = None,
-) -> "bool | str":
+    items: Optional[list[tuple[str, bool]]] = None,
+) -> "bool | str | list[str]":
     """
     Show a custom dialog with red warning colours for high-severity operations.
 
@@ -91,12 +94,20 @@ def show_high_severity_dialog(
             cancellation regardless of button mode.  When *not* provided the
             legacy two-button behaviour is used and a plain ``bool`` is
             returned.
+        items: Optional list of (label, default_checked) pairs, rendered as a
+            scrollable column of checkboxes between the message and the
+            buttons.  Turns the dialog into a per-item confirmation: accepting
+            returns the checked labels rather than a bool.
 
     Returns:
-        * ``bool`` when *buttons* is ``None``: ``True`` for OK, ``False``
-          for Cancel.
-        * ``str`` (label) when *buttons* is provided and a non-reject button
-          was clicked.
+        * ``bool`` when *items* and *buttons* are both ``None``: ``True`` for
+          OK, ``False`` for Cancel.
+        * ``list[str]`` when *items* is provided: the checked labels, or ``[]``
+          when the dialog was accepted with nothing checked.  Cancelling
+          returns ``False``, so an empty selection ("proceed, but with none of
+          these") stays distinguishable from a refusal.
+        * ``str`` (label) when *buttons* is provided without *items* and a
+          non-reject button was clicked.
         * ``False`` when *buttons* is provided and a reject-role button was
           clicked.
     """
@@ -136,11 +147,56 @@ def show_high_severity_dialog(
     msg_label.setMaximumWidth(450)
     layout.addWidget(msg_label)
 
+    # Optional per-item checkbox column
+    checkboxes: list[QCheckBox] = []
+    if items:
+        item_host = QWidget()
+        item_layout = QVBoxLayout(item_host)
+        item_layout.setContentsMargins(0, 0, 0, 0)
+        item_layout.setSpacing(2)
+        for label, checked in items:
+            box = QCheckBox(label)
+            box.setChecked(bool(checked))
+            checkboxes.append(box)
+            item_layout.addWidget(box)
+        item_layout.addStretch()
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(item_host)
+        scroll.setFrameShape(QScrollArea.NoFrame)
+        # Bounded so a long list scrolls instead of growing the dialog past
+        # the screen -- the case this parameter exists for is "many items".
+        scroll.setMaximumHeight(240)
+        layout.addWidget(scroll, 1)
+
     layout.addStretch()
+
+    def _checked_labels() -> list:
+        return [box.text() for box in checkboxes if box.isChecked()]
 
     # Buttons
     btn_layout = QHBoxLayout()
     btn_layout.addStretch()
+
+    if items is not None and buttons is None:
+        # Per-item mode: accepting yields the selection, not a bool.
+        cancel_btn = QPushButton(_("Cancel"))
+        cancel_btn.setObjectName("cancel_btn")
+        cancel_btn.clicked.connect(dialog.reject)
+        cancel_btn.setFocus()
+        btn_layout.addWidget(cancel_btn)
+
+        ok_btn = QPushButton(_("OK"))
+        ok_btn.setObjectName("ok_btn")
+        ok_btn.clicked.connect(dialog.accept)
+        btn_layout.addWidget(ok_btn)
+
+        layout.addLayout(btn_layout)
+        dialog.adjustSize()
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return False
+        return _checked_labels()
 
     if buttons is None:
         # Legacy two-button mode: Cancel (focus) then OK

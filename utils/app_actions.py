@@ -118,9 +118,8 @@ class AppActions:
         """Report a related-image action outcome with structured payload data.
 
         The entry point every related-image action should use. *message* is a
-        one-line headline; everything else goes in *data* so the related
-        images window can render it, rather than being formatted into the
-        message text. Recognised keys (all optional, rendered when present):
+        one-line headline; detail goes in *data* for the window to render,
+        not formatted into the message. Keys (all optional):
 
           found          int   files produced or marked (0 is meaningful)
           outcome        str   why the action ended, when not a plain success:
@@ -138,11 +137,11 @@ class AppActions:
           cached         bool  result came from cache, not a fresh scan
           position/total int   place in a cycle the action steps through
 
-        The last three come from the `stats` out-param on the helpers in
-        files/related_image.py; pass `**stats` straight through.
+        The last three come from the `stats` out-param on the
+        files/related_image.py helpers; pass `**stats` straight through.
 
-        Fill the same keys on the empty and success branches of an action --
-        a zero breakdown is informative precisely when nothing was found.
+        Fill the same keys on an action's empty and success branches -- a zero
+        breakdown is informative precisely when nothing was found.
         """
         self.notify_related_images_result(message, action_label, data or None)
 

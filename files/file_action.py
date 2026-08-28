@@ -259,21 +259,19 @@ class FileAction():
 
     @staticmethod
     def add_image_op_action(op, source: str, new_files) -> None:
-        """Record a manual image-ops invocation (rotate/crop/enhance/etc.) in
-        the file action history, for display in the File Actions window and
-        get_action_statistics(). *op* must be named in _IMAGE_OP_NAMES so it
-        can round-trip through to_dict/from_dict. *new_files* is the output
-        path, or a list of them (smart crop can produce several per source).
+        """Record a manual image-ops invocation in the file action history.
 
-        Only call this for a user-initiated edit -- image ops run by the
-        classifier pipeline (rotate/blur/scramble triage actions) are
-        automated, not user-initiated file operations, and must not be
-        recorded here.
+        *op* must be named in _IMAGE_OP_NAMES so it round-trips through
+        to_dict/from_dict. *new_files* is one output path or a list (smart crop
+        can produce several).
 
-        An output path equal to *source* means the op declined to do anything
-        (ImageOps.convert_to_jpg returns its input for a JPG with no EXIF to
-        strip) and is dropped: undo deletes new_files, so recording it would
-        arm a delete of the user's original file.
+        Only for user-initiated edits: classifier-pipeline image ops are
+        automated triage, not user file operations, and must not be recorded.
+
+        An output equal to *source* means the op did nothing
+        (ImageOps.convert_to_jpg returns its input for a JPG with no EXIF) and
+        is dropped -- undo deletes new_files, so recording it would arm a
+        delete of the original.
         """
         if isinstance(new_files, str):
             new_files = [new_files]

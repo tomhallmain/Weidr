@@ -129,6 +129,12 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
     # ensures setWindowTitle always runs on the main / GUI thread.
     _sig_set_title = Signal(str)
 
+    # Restore pre-flight file counts by directory path. Process-wide: measured
+    # on the primary window, consumed by each secondary's deferred
+    # set_base_dir. Popped on use so a later load of the same directory
+    # measures it fresh instead of trusting a stale count.
+    _preflight_file_counts: dict = {}
+
     def __init__(
         self,
         base_dir: Optional[str] = None,
@@ -202,6 +208,9 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         self.file_browser = FileBrowser(
             recursive=config.browse_recursive, sort_by=config.sort_by
         )
+        # Secondary directories approved by _startup_load's pre-flight, handed
+        # to _restore_secondary_windows. None means no pre-flight ran.
+        self._pending_restore_dirs: Optional[list] = None
         # Without the Qt responsiveness adapter the compare wrappers do no UI
         # yielding, and long loops (e.g. random purge) would freeze the window.
         self.compare_manager = CompareManager(
@@ -376,8 +385,10 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             initial_base_dir = self.cache_ctrl.load_info_cache()
             if base_dir:
                 initial_base_dir = base_dir
-            if initial_base_dir:
-                QTimer.singleShot(0, lambda bd=initial_base_dir: self.set_base_dir(bd))
+            # Armed before set_base_dir so the one confirmation covers this
+            # window's own directory too, not just the secondaries restored
+            # later. Zero-timers fire in arm order, so this settles first.
+            QTimer.singleShot(0, lambda bd=initial_base_dir: self._startup_load(bd))
         elif base_dir:
             QTimer.singleShot(0, lambda bd=base_dir: self.set_base_dir(bd))
 
@@ -391,8 +402,10 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         self.file_ops_ctrl.start_file_check_timer()
         if not self.is_secondary():
             self.cache_ctrl.start_periodic_store()
-            # Re-open secondary windows that were open last session
-            QTimer.singleShot(100, self._restore_secondary_windows)
+            # The secondary-window restore is armed by _startup_load, not here:
+            # arming it now lets it fire while _startup_load is still blocked in
+            # its confirmation dialog (a modal pumps the event loop), before the
+            # decision it is supposed to consume exists.
 
         # Handle an initial explicit file list (browsing a user-defined list
         # of files instead of scanning a directory -- e.g. FileActionsWindow's
@@ -433,15 +446,123 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
 
         logger.info(f"AppWindow created (id={window_id})")
 
-    def _restore_secondary_windows(self) -> None:
-        """Re-open secondary windows that were open in the previous session."""
+    def _startup_load(self, initial_base_dir: Optional[str]) -> None:
+        """Confirm every large directory this session will open, then load ours.
+
+        This window's own directory and the secondaries restored afterwards are
+        one decision for the user, so they are pre-flighted together here
+        rather than each prompting when it happens to load.
+        """
         from utils.app_info_cache import app_info_cache
-        cached_dirs = app_info_cache.get_meta("secondary_base_dirs", default_val=[])
+
+        cached_dirs = list(app_info_cache.get_meta("secondary_base_dirs", default_val=[]))
+        candidates = list(cached_dirs)
+        if initial_base_dir and initial_base_dir not in candidates:
+            candidates.insert(0, initial_base_dir)
+
+        approved = set(self._confirm_large_directories_for_restore(candidates))
+        self._pending_restore_dirs = [d for d in cached_dirs if d in approved]
+
+        if initial_base_dir and initial_base_dir in approved:
+            self.set_base_dir(initial_base_dir)
+        elif initial_base_dir:
+            logger.info("Skipping load of declined large directory: %s", initial_base_dir)
+
+        # Armed only now that the decision exists. Arming it in __init__ let it
+        # fire inside the confirmation dialog above, finding no decision and
+        # raising a second dialog of its own.
+        QTimer.singleShot(100, self._restore_secondary_windows)
+
+    def _restore_secondary_windows(self) -> None:
+        """Re-open the secondary windows _startup_load approved."""
+        if self._pending_restore_dirs is None:
+            # Only reachable if this ran without _startup_load, which arms it.
+            # Deliberately does not pre-flight as a fallback: a confirmation
+            # raised from here is the second dialog this design exists to
+            # avoid, and it would list only the secondaries.
+            logger.warning("Secondary restore ran with no pre-flight decision; skipping")
+            return
+        cached_dirs = self._pending_restore_dirs
+        self._pending_restore_dirs = None
         # logger.info(f"Restoring {len(cached_dirs)} secondary window(s) from last session: {cached_dirs}")
         for _dir in cached_dirs:
             WindowManager.add_secondary_window(_dir)
         # Re-focus the primary after all secondaries have been opened
         QTimer.singleShot(50, self._refocus_primary)
+
+    def _confirm_large_directories_for_restore(self, cached_dirs: list) -> list:
+        """Settle every large-directory confirmation up front, in one dialog.
+        Returns the directories to actually restore.
+
+        Restoring N large directories otherwise raises N modal prompts from
+        deferred set_base_dir calls. Each pumps the Qt event loop, letting
+        timers armed by other windows (go_to_file, store_info_cache) fire
+        inside a half-finished __init__.
+
+        Deciding before any window exists makes that unreachable rather than
+        rarer: confirmed directories go into the process-wide
+        FileBrowser.have_confirmed_directories, so the per-window check
+        short-circuits and never reaches its prompt.
+        """
+        from files.file_browser import FileBrowser, count_matching_files, is_slow_file_count
+        from utils.app_info_cache import app_info_cache as base_cache
+
+        if not cached_dirs:
+            return cached_dirs
+
+        large: list[tuple[str, int]] = []
+        for directory in cached_dirs:
+            if directory in FileBrowser.have_confirmed_directories:
+                continue
+            # Retry, not a plain isdir: at startup a cold external drive reports
+            # as non-existent, dropping it from the pre-flight and leaving it to
+            # raise the per-window modal this exists to prevent. Probing the
+            # drive root here also wakes it, so set_base_dir's later retry
+            # succeeds first try.
+            if not Utils.isdir_with_retry(directory):
+                continue
+            recursive = base_cache.get(directory, "recursive", default_val=False)
+            count = count_matching_files(directory, recursive=recursive)
+            # Cached for every directory counted, not only the large ones: a
+            # small one would otherwise be gathered again by
+            # _check_large_directory_before_load purely to be re-measured.
+            AppWindow._preflight_file_counts[directory] = count
+            if is_slow_file_count(count, directory):
+                large.append((directory, count))
+
+        if not large:
+            return cached_dirs
+
+        labels = [
+            _("{dir}  —  {count} files").format(dir=directory, count=count)
+            for directory, count in large
+        ]
+        selected = self.notification_ctrl.alert(
+            _("Large Directories Detected"),
+            _("{n} directories from the last session have a large number of files, "
+              "or a fair-sized number on external storage, and will be slow to load. "
+              "Uncheck any you do not want to load now.").format(n=len(large)),
+            kind="askokcancel",
+            severity="high",
+            items=[(label, True) for label in labels],
+        )
+        if selected is False:
+            logger.info("User cancelled restoring %d large director(ies)", len(large))
+            confirmed: set = set()
+        else:
+            confirmed = {
+                directory for (directory, _count), label in zip(large, labels)
+                if label in selected
+            }
+
+        for directory in confirmed:
+            if directory not in FileBrowser.have_confirmed_directories:
+                FileBrowser.have_confirmed_directories.append(directory)
+
+        declined = {directory for directory, _count in large} - confirmed
+        if declined:
+            logger.info("Skipping restore of %d large director(ies)", len(declined))
+        return [d for d in cached_dirs if d not in declined]
 
     def _refocus_primary(self) -> None:
         """Raise and focus the primary window."""
@@ -929,6 +1050,21 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         """
         if self.file_browser.has_confirmed_dir() and self.file_browser.directory == base_dir:
             return False
+
+        if base_dir in FileBrowser.have_confirmed_directories:
+            # Already settled -- by the bulk pre-flight, or by a previous load.
+            # Returning here is also what keeps this method's modal unreachable
+            # during the restore loop; see _confirm_large_directories_for_restore.
+            return False
+
+        preflight_count = AppWindow._preflight_file_counts.pop(base_dir, None)
+        if preflight_count is not None:
+            # Measured moments ago by the pre-flight. Re-gathering here would be
+            # the second of three scans of the same directory (pre-flight, this
+            # check, then the real load) for no new information.
+            from files.file_browser import is_slow_file_count
+            if not is_slow_file_count(preflight_count, base_dir, threshold=threshold):
+                return False
 
         # Snapshot all mutable state that _gather_files touches
         original_directory = self.file_browser.directory

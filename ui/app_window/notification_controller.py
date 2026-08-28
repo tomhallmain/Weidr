@@ -318,7 +318,8 @@ class NotificationController:
         buttons: Optional[list[tuple[str, str]]] = None,
         yes_text: Optional[str] = None,
         no_text: Optional[str] = None,
-    ) -> "bool | str":
+        items: Optional[list[tuple[str, bool]]] = None,
+    ) -> "bool | str | list[str]":
         """
         Show a modal message box.
 
@@ -337,10 +338,14 @@ class NotificationController:
         logger.warning(f'Alert - Title: "{title}" Message: {message}')
         parent = master or self._app
 
-        # For dangerous operations with high severity, use a custom styled dialog
-        if severity == "high" and kind == "askokcancel":
+        # For dangerous operations with high severity, use a custom styled dialog.
+        # Only that dialog renders a per-item checkbox list, so *items* selects
+        # it regardless of severity rather than being silently dropped.
+        if (severity == "high" or items is not None) and kind == "askokcancel":
             from lib.custom_dialogs_qt import show_high_severity_dialog
-            return show_high_severity_dialog(parent, title, message, buttons=buttons)
+            return show_high_severity_dialog(
+                parent, title, message, buttons=buttons, items=items
+            )
 
         return qt_alert(parent, title, message, kind=kind, yes_text=yes_text, no_text=no_text)
 

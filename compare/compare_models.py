@@ -28,7 +28,18 @@ def extract_models_from_media(media_path: str) -> Tuple[List[str], List[str]]:
         return [], []
 
 
-def model_similarity(models1: List[str], loras1: List[str], 
+def _as_models_tuple(models_data) -> Tuple[List[str], List[str]]:
+    """Normalise one cached entry to a (models, loras) pair.
+
+    Tolerates missing or legacy-shaped cache values, which would otherwise
+    unpack incorrectly.
+    """
+    if isinstance(models_data, tuple) and len(models_data) == 2:
+        return models_data
+    return ([], [])
+
+
+def model_similarity(models1: List[str], loras1: List[str],
                      models2: List[str], loras2: List[str]) -> float:
     """
     Calculate similarity between two sets of models and loras.
@@ -75,9 +86,37 @@ class CompareModels(BaseCompare):
         self.settings_updated = False
         # Initialize compare_data for model comparison
         self.compare_data = CompareData(base_dir=self.base_dir, data_filename=CompareModels.CACHE_FILENAME)
+        # In-memory {path: (models, loras)} for this run. compare_data.save_data()
+        # frees file_data_dict once it has been persisted, so comparison and
+        # search must read models from here, not from the cache dict.
+        self._file_models: dict = {}
         # Set initial threshold from args
         if hasattr(args, 'threshold'):
             self.set_similarity_threshold(args.threshold)
+
+    def _reset_run_accumulators(self) -> None:
+        super()._reset_run_accumulators()
+        self._file_models = {}
+
+    def _populate_models_from_cache(self) -> None:
+        '''
+        Rebuild _file_models from cached compare_data, reloading the cache from
+        disk when it has already been freed. Used when a run reaches comparison
+        or search without having accumulated models itself.
+        '''
+        self._file_models = {}
+        if self.compare_data is None:
+            return
+        if getattr(self.compare_data, 'file_data_dict', None) is None:
+            self.compare_data.load_data(overwrite=False)
+        data = self.compare_data.file_data_dict or {}
+        for f in self.compare_data.files_found or []:
+            self._file_models[f] = _as_models_tuple(data.get(f))
+
+    def _ensure_file_models(self) -> None:
+        '''Populate _file_models from cache when it doesn't cover files_found.'''
+        if len(self._file_models) < len(self.compare_data.files_found or []):
+            self._populate_models_from_cache()
 
     def set_base_dir(self, base_dir):
         '''
@@ -176,8 +215,7 @@ class CompareModels(BaseCompare):
                 break
 
             if f in self.compare_data.file_data_dict:
-                models_data = self.compare_data.file_data_dict[f]
-                models, loras = models_data if isinstance(models_data, tuple) and len(models_data) == 2 else ([], [])
+                models, loras = _as_models_tuple(self.compare_data.file_data_dict[f])
             else:
                 models, loras = extract_models_from_media(f)
                 # Store as tuple (models, loras)
@@ -185,6 +223,7 @@ class CompareModels(BaseCompare):
                 self.compare_data.has_new_file_data = True
 
             counter += 1
+            self._file_models[f] = (models, loras)
             self.compare_data.files_found.append(f)
             self._handle_progress(counter, self.max_files_processed_even)
 
@@ -195,19 +234,19 @@ class CompareModels(BaseCompare):
         '''
         Search for media with similar models to the provided media file.
         '''
+        self._ensure_file_models()
         files_grouped = {}
         _files_found = list(self.compare_data.files_found)
 
         if self.verbose:
             logger.info("Identifying similar model files...")
-        
+
         # Get the search media's models
-        if search_path in self.compare_data.file_data_dict:
-            search_models_data = self.compare_data.file_data_dict[search_path]
-            search_models, search_loras = search_models_data if isinstance(search_models_data, tuple) and len(search_models_data) == 2 else ([], [])
+        if search_path in self._file_models:
+            search_models, search_loras = self._file_models[search_path]
         else:
             search_models, search_loras = extract_models_from_media(search_path)
-            self.compare_data.file_data_dict[search_path] = (search_models, search_loras)
+            self._file_models[search_path] = (search_models, search_loras)
 
         # Remove search file from comparison list
         if search_file_index < len(_files_found):
@@ -215,9 +254,8 @@ class CompareModels(BaseCompare):
 
         # Compare with all other files
         for i, file_path in enumerate(_files_found):
-            if file_path in self.compare_data.file_data_dict:
-                file_models_data = self.compare_data.file_data_dict[file_path]
-                file_models, file_loras = file_models_data if isinstance(file_models_data, tuple) and len(file_models_data) == 2 else ([], [])
+            if file_path in self._file_models:
+                file_models, file_loras = self._file_models[file_path]
             else:
                 continue  # Skip files without model data
             
@@ -272,11 +310,11 @@ class CompareModels(BaseCompare):
             search_for_no_models = True
 
         # Compute similarity against each file's stored models
+        self._ensure_file_models()
         temp_scores = {}
         for i, file_path in enumerate(self.compare_data.files_found):
-            if file_path in self.compare_data.file_data_dict:
-                file_models_data = self.compare_data.file_data_dict[file_path]
-                file_models, file_loras = file_models_data if isinstance(file_models_data, tuple) and len(file_models_data) == 2 else ([], [])
+            if file_path in self._file_models:
+                file_models, file_loras = self._file_models[file_path]
             else:
                 continue
             
@@ -327,6 +365,8 @@ class CompareModels(BaseCompare):
         if self.compare_result.is_complete:
             return (self.compare_result.files_grouped, self.compare_result.file_groups)
 
+        self._ensure_file_models()
+
         n_files_found_even = Utils.round_up(self.compare_data.n_files_found, 5)
         if self.compare_result.i > 1:
             self._handle_progress(self.compare_result.i, n_files_found_even, gathering_data=False)
@@ -352,10 +392,9 @@ class CompareModels(BaseCompare):
 
             # Get models for current file
             current_file = self.compare_data.files_found[i]
-            if current_file not in self.compare_data.file_data_dict:
+            if current_file not in self._file_models:
                 continue
-            current_models_data = self.compare_data.file_data_dict[current_file]
-            current_models, current_loras = current_models_data if isinstance(current_models_data, tuple) and len(current_models_data) == 2 else ([], [])
+            current_models, current_loras = self._file_models[current_file]
 
             # Compare with all other files
             for j in range(i + 1, self.compare_data.n_files_found):
@@ -363,10 +402,9 @@ class CompareModels(BaseCompare):
                     self.raise_cancellation_exception()
                 
                 compare_file = self.compare_data.files_found[j]
-                if compare_file not in self.compare_data.file_data_dict:
+                if compare_file not in self._file_models:
                     continue
-                compare_models_data = self.compare_data.file_data_dict[compare_file]
-                compare_models, compare_loras = compare_models_data if isinstance(compare_models_data, tuple) and len(compare_models_data) == 2 else ([], [])
+                compare_models, compare_loras = self._file_models[compare_file]
 
                 # Calculate model similarity only
                 similarity = model_similarity(
@@ -455,8 +493,10 @@ class CompareModels(BaseCompare):
         for f in removed_files:
             if f in self.compare_data.files_found:
                 self.compare_data.files_found.remove(f)
-            if f in self.compare_data.file_data_dict:
-                del self.compare_data.file_data_dict[f]
+            self._file_models.pop(f, None)
+            # file_data_dict is None once save_data() has persisted and freed it.
+            if self.compare_data.file_data_dict is not None:
+                self.compare_data.file_data_dict.pop(f, None)
 
     @staticmethod
     def is_related(media1, media2):

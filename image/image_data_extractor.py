@@ -326,8 +326,14 @@ class ImageDataExtractor:
                         loras.append(lora_name)
         elif software_type == SoftwareType.A1111:
             models, loras = [prompt["Model"]], prompt["Loras"]
+        elif software_type == SoftwareType.OTHER:
+            # Metadata was present but not in a parseable model-bearing form
+            # (e.g. a ComfyUI prompt key holding text that isn't valid JSON --
+            # see extract_prompt). No models to report, which is a normal
+            # outcome for such a file rather than an error.
+            return models, loras
         else:
-            raise Exception("Unhandled software type: " + software_type)
+            raise Exception(f"Unhandled software type: {software_type}")
 
         return (models, loras)
 

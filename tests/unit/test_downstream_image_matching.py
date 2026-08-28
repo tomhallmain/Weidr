@@ -465,6 +465,212 @@ class TestSameDirectoryPointerRescue:
 
 
 # ---------------------------------------------------------------------------
+# stats out-param — match provenance and cache/cycle reporting
+# ---------------------------------------------------------------------------
+
+class TestMatchProvenanceStats:
+    """The optional stats dict reports which rule claimed each result.
+
+    Two of the three mechanisms are heuristics, so the split is what lets a
+    caller show whether a result set rests on metadata or on name guessing.
+    """
+
+    def test_metadata_matches_counted_for_sources(self, tmp_path):
+        dir_x = tmp_path / "dir_x"
+        dir_y = tmp_path / "dir_y"
+        dir_x.mkdir(); dir_y.mkdir()
+
+        source = str(dir_x / "source.png")
+        _make_png(source)
+        _make_png(str(dir_y / "derived.png"), related_image=source)
+
+        stats: dict = {}
+        result = get_sources_with_downstream_in_dir([source], str(dir_y), stats=stats)
+        assert result == [source]
+        assert stats["by_mechanism"] == {"metadata": 1}
+
+    def test_basename_matches_counted_for_sources(self, tmp_path):
+        dir_x = tmp_path / "dir_x"
+        dir_y = tmp_path / "dir_y"
+        dir_x.mkdir(); dir_y.mkdir()
+
+        source = str(dir_x / "longname_source.png")
+        elsewhere = str(tmp_path / "longname_source.png")
+        _make_png(source)
+        _make_png(str(dir_y / "derived.png"), related_image=elsewhere)
+
+        stats: dict = {}
+        result = get_sources_with_downstream_in_dir([source], str(dir_y), stats=stats)
+        assert result == [source]
+        assert stats["by_mechanism"] == {"basename": 1}
+
+    def test_stem_matches_counted_for_sources(self, tmp_path):
+        dir_x = tmp_path / "dir_x"
+        dir_y = tmp_path / "dir_y"
+        dir_x.mkdir(); dir_y.mkdir()
+
+        source = str(dir_x / "portrait.png")
+        _make_png(source)
+        _make_png(str(dir_y / "portrait_edit.png"))  # no metadata
+
+        stats: dict = {}
+        result = get_sources_with_downstream_in_dir([source], str(dir_y), stats=stats)
+        assert result == [source]
+        assert stats["by_mechanism"] == {"stem": 1}
+
+    def test_mechanisms_partition_the_results(self, tmp_path):
+        """Counts sum to the result length: every hit is attributed exactly once."""
+        dir_x = tmp_path / "dir_x"
+        dir_y = tmp_path / "dir_y"
+        dir_x.mkdir(); dir_y.mkdir()
+
+        by_metadata = str(dir_x / "source.png")
+        by_stem = str(dir_x / "portrait.png")
+        unmatched = str(dir_x / "orphan.png")
+        for p in (by_metadata, by_stem, unmatched):
+            _make_png(p)
+        _make_png(str(dir_y / "derived.png"), related_image=by_metadata)
+        _make_png(str(dir_y / "portrait_edit.png"))
+
+        stats: dict = {}
+        result = get_sources_with_downstream_in_dir(
+            [by_metadata, by_stem, unmatched], str(dir_y), stats=stats
+        )
+        assert set(result) == {by_metadata, by_stem}
+        assert stats["by_mechanism"] == {"metadata": 1, "stem": 1}
+        assert sum(stats["by_mechanism"].values()) == len(result)
+
+    def test_zero_count_mechanisms_omitted(self, tmp_path):
+        dir_x = tmp_path / "dir_x"
+        dir_y = tmp_path / "dir_y"
+        dir_x.mkdir(); dir_y.mkdir()
+
+        source = str(dir_x / "source.png")
+        _make_png(source)
+        _make_png(str(dir_y / "derived.png"), related_image=source)
+
+        stats: dict = {}
+        get_sources_with_downstream_in_dir([source], str(dir_y), stats=stats)
+        assert "basename" not in stats["by_mechanism"]
+        assert "stem" not in stats["by_mechanism"]
+
+    def test_no_matches_reports_empty_mapping(self, tmp_path):
+        dir_x = tmp_path / "dir_x"
+        dir_y = tmp_path / "dir_y"
+        dir_x.mkdir(); dir_y.mkdir()
+
+        source = str(dir_x / "source.png")
+        _make_png(source)
+        _make_png(str(dir_y / "other.png"))
+
+        stats: dict = {}
+        result = get_sources_with_downstream_in_dir([source], str(dir_y), stats=stats)
+        assert result == []
+        assert stats["by_mechanism"] == {}
+
+    def test_downstream_files_report_mechanism(self, tmp_path):
+        dir_x = tmp_path / "dir_x"
+        dir_y = tmp_path / "dir_y"
+        dir_x.mkdir(); dir_y.mkdir()
+
+        source = str(dir_x / "portrait.png")
+        derived = str(dir_y / "portrait_edit.png")
+        _make_png(source)
+        _make_png(derived)  # no metadata — stem inference is the only link
+
+        stats: dict = {}
+        result = get_downstream_files_for_sources([source], str(dir_y), stats=stats)
+        assert result == [derived]
+        assert stats["by_mechanism"] == {"stem": 1}
+
+    def test_stats_is_optional(self, tmp_path):
+        """Omitting stats leaves both helpers behaving exactly as before."""
+        dir_x = tmp_path / "dir_x"
+        dir_y = tmp_path / "dir_y"
+        dir_x.mkdir(); dir_y.mkdir()
+
+        source = str(dir_x / "source.png")
+        derived = str(dir_y / "derived.png")
+        _make_png(source)
+        _make_png(derived, related_image=source)
+
+        assert get_sources_with_downstream_in_dir([source], str(dir_y)) == [source]
+        assert get_downstream_files_for_sources([source], str(dir_y)) == [derived]
+
+
+class TestDownstreamCacheAndCycleStats:
+    """cached / position / total, the state a caller can't otherwise see."""
+
+    def _app_actions(self):
+        from types import SimpleNamespace
+        return SimpleNamespace(toast=lambda msg, **kw: None)
+
+    @pytest.fixture(autouse=True)
+    def _isolate_downstream_globals(self, monkeypatch):
+        # Both are module-level state shared across calls; a stale index from
+        # another test would force an unwanted refresh and flip `cached`.
+        import files.related_image as ri
+        monkeypatch.setattr(ri, "_downstream_cache", {})
+        monkeypatch.setattr(ri, "_downstream_index", 0)
+
+    def test_fresh_scan_then_cached(self, tmp_path):
+        from files.related_image import get_downstream_related_images
+        source = str(tmp_path / "src.png")
+        _make_png(source)
+        _make_png(str(tmp_path / "derived.png"), related_image=source)
+
+        first: dict = {}
+        get_downstream_related_images(
+            source, str(tmp_path), self._app_actions(), quiet=True, stats=first)
+        assert first["cached"] is False
+
+        second: dict = {}
+        get_downstream_related_images(
+            source, str(tmp_path), self._app_actions(), quiet=True, stats=second)
+        assert second["cached"] is True
+
+    def test_force_refresh_is_never_cached(self, tmp_path):
+        from files.related_image import get_downstream_related_images
+        source = str(tmp_path / "src.png")
+        _make_png(source)
+        _make_png(str(tmp_path / "derived.png"), related_image=source)
+
+        for _unused in range(2):
+            stats: dict = {}
+            get_downstream_related_images(
+                source, str(tmp_path), self._app_actions(),
+                force_refresh=True, quiet=True, stats=stats)
+            assert stats["cached"] is False
+
+    def test_cycle_position_advances(self, tmp_path):
+        from files.related_image import next_downstream_related_image
+        source = str(tmp_path / "src.png")
+        _make_png(source)
+        _make_png(str(tmp_path / "derived_a.png"), related_image=source)
+        _make_png(str(tmp_path / "derived_b.png"), related_image=source)
+
+        first: dict = {}
+        assert next_downstream_related_image(
+            source, str(tmp_path), self._app_actions(), stats=first) is not None
+        assert (first["position"], first["total"]) == (1, 2)
+
+        second: dict = {}
+        assert next_downstream_related_image(
+            source, str(tmp_path), self._app_actions(), stats=second) is not None
+        assert (second["position"], second["total"]) == (2, 2)
+
+    def test_no_candidates_reports_no_position(self, tmp_path):
+        from files.related_image import next_downstream_related_image
+        source = str(tmp_path / "src.png")
+        _make_png(source)
+
+        stats: dict = {}
+        assert next_downstream_related_image(
+            source, str(tmp_path), self._app_actions(), stats=stats) is None
+        assert "position" not in stats
+
+
+# ---------------------------------------------------------------------------
 # get_downstream_related_images — quiet flag
 # ---------------------------------------------------------------------------
 

@@ -94,6 +94,64 @@ class TestRelatedImagesWindow:
         assert "downstream test result 123" in text
         assert "Test Action" in text
 
+    # The message and action_label an action reports are passed through the
+    # window verbatim, so these tests hand in obviously-synthetic text and
+    # assert on it literally. Only text the window itself generates from the
+    # payload (outcome labels, detail lines) goes through _().
+    def test_result_area_renders_payload_detail(self, window_with_dir, qtbot):
+        win, media_dir = window_with_dir
+        rw = _open_window(win, qtbot)
+        win.app_actions.report_related_images(
+            "detail payload result 456", action_label="Detail Test Action",
+            found=14, source="/x/IMG_2201.png",
+            found_by_dir={media_dir: 8}, skipped_dirs=["/x/big"],
+        )
+        text = rw._result_label.text()
+        rw.close()
+        # Detail comes from the payload, not from the message text.
+        assert "detail payload result 456" in text
+        assert "IMG_2201.png" in text
+        assert ": 8" in text
+        assert _("{0} large unconfirmed director(ies) skipped").format(1) in text
+
+    def test_result_area_renders_match_provenance(self, window_with_dir, qtbot):
+        win, media_dir = window_with_dir
+        rw = _open_window(win, qtbot)
+        win.app_actions.report_related_images(
+            "provenance result 321", action_label="Provenance Test Action",
+            found=4, base_dir=media_dir,
+            by_mechanism={"metadata": 3, "stem": 1}, cached=True,
+        )
+        text = rw._result_label.text()
+        rw.close()
+        # Heuristic matches are distinguished from metadata-backed ones.
+        assert _("metadata") in text and _("name prefix") in text
+        assert _("from a cached scan") in text
+
+    def test_result_area_renders_cycle_position(self, window_with_dir, qtbot):
+        win, media_dir = window_with_dir
+        rw = _open_window(win, qtbot)
+        win.app_actions.report_related_images(
+            "cycle result 654", action_label="Cycle Test Action",
+            found=1, base_dir=media_dir, position=3, total=7,
+        )
+        text = rw._result_label.text()
+        rw.close()
+        assert _("{0} of {1} in cycle").format(3, 7) in text
+
+    def test_result_area_labels_silent_outcome(self, window_with_dir, qtbot):
+        win, _media_dir = window_with_dir
+        rw = _open_window(win, qtbot)
+        win.app_actions.report_related_images(
+            "silent outcome result 789", action_label="Silent Test Action",
+            outcome="blocked",
+        )
+        text = rw._result_label.text()
+        rw.close()
+        # An action that ends without doing anything still leaves a line.
+        assert _("cancelled") in text
+        assert "Silent Test Action" in text
+
     def test_result_area_stops_after_close(self, window_with_dir, qtbot):
         win, _media_dir = window_with_dir
         rw = _open_window(win, qtbot)
@@ -180,6 +238,9 @@ class TestAllWindowsDownstreamSearch:
         expected_window_frag = _("{0} file marks set from {1} window(s)").format(3, 2)
         assert any(expected_window_frag in t for t in toasts)
         # The structured report reaches the listener with the payload data.
+        # The report message is a bare headline -- detail belongs in the
+        # payload, for the window to render; the toast, which has no
+        # structured rendering, still carries the detail as text.
         assert len(reports) == 1
         message, data = reports[0]
         assert expected_window_frag in message
@@ -188,10 +249,10 @@ class TestAllWindowsDownstreamSearch:
         # Per-directory breakdown: post-dedup contributions sum to the total
         # ("/x/b.png" counts for the first directory that yielded it).
         assert data["found_by_dir"] == {media_dir: 2, other_dir: 1}
-        assert ": 2" in message and ": 1" in message
+        assert any(": 2" in t and ": 1" in t for t in toasts)
         # The source image that started the search is reported.
         assert data["source"] == win.media_path
-        assert os.path.basename(win.media_path) in message
+        assert any(os.path.basename(win.media_path) in t for t in toasts)
 
     def test_oversized_window_skipped_not_fatal(
         self, window_with_dir, qtbot, tmp_path

@@ -716,12 +716,17 @@ class SearchController:
         from ui.image.media_details import MediaDetails
         from ui.app_window.window_manager import WindowManager
 
+        label = _("Next downstream image")
+
         if base_dir is None:
             window, dirs = WindowManager.get_other_window_or_self_dir(self._app)
             if window is None:
                 self._app.window_launcher.open_recent_directory_window(
                     extra_callback_args=(self.find_related_media_in_open_window, dirs)
                 )
+                self._app.app_actions.report_related_images(
+                    _("Waiting for a directory selection."), action_label=label,
+                    outcome="deferred")
                 return
             base_dir = dirs[0]
         else:
@@ -734,25 +739,31 @@ class SearchController:
         )
 
         if self._app.check_many_files(window, action="find related media"):
+            self._app.app_actions.report_related_images(
+                _("Cancelled: that directory has too many files."), action_label=label,
+                outcome="too_many_files", source=media_to_use, base_dir=base_dir)
             return
 
+        # Unlike the mark actions, this one doesn't force a refresh, so whether
+        # the candidate list came from cache is real information here.
+        stats: dict = {}
         next_related_image = next_downstream_related_image(
-            media_to_use, base_dir, self._app.app_actions
+            media_to_use, base_dir, self._app.app_actions, stats=stats
         )
         if next_related_image is not None:
             window.media_navigator.go_to_file(search_text=next_related_image)
             window.media_frame.setFocus()
-            self._app.app_actions.notify_related_images_result(
+            self._app.app_actions.report_related_images(
                 _("Navigated to {0}").format(os.path.basename(next_related_image)),
-                action_label=_("Next downstream image"),
-                data={"path": next_related_image, "base_dir": base_dir},
+                action_label=label, found=1, source=media_to_use,
+                base_dir=base_dir, files=[next_related_image], **stats,
             )
         else:
             message = _("No downstream related image(s) found in {0}").format(base_dir)
             self._app.notification_ctrl.toast(message)
-            self._app.app_actions.notify_related_images_result(
-                message, action_label=_("Next downstream image"),
-                data={"base_dir": base_dir},
+            self._app.app_actions.report_related_images(
+                message, action_label=label, found=0,
+                source=media_to_use, base_dir=base_dir, **stats,
             )
 
     # ==================================================================

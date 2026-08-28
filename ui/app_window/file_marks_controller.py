@@ -363,9 +363,12 @@ class FileMarksController:
     # ==================================================================
     def _notify_related_result(self, message: str, action_label: str, **data) -> None:
         """Surface a related-image action outcome to the related images
-        window's result area (no-op when it isn't open)."""
-        self._app.app_actions.notify_related_images_result(
-            message, action_label=action_label, data=data or None
+        window's result area (no-op when it isn't open).
+
+        See AppActions.report_related_images for the recognised data keys.
+        """
+        self._app.app_actions.report_related_images(
+            message, action_label=action_label, **data
         )
 
     @require_password(ProtectedActions.VIEW_MEDIA_DETAILS)
@@ -379,6 +382,8 @@ class FileMarksController:
         from ui.image.media_details import MediaDetails
         from ui.app_window.window_manager import WindowManager
 
+        label = _("Set marks from downstream images")
+
         if base_dir is None:
             window, dirs = WindowManager.get_other_window_or_self_dir(
                 self._app, allow_current_window=True
@@ -387,6 +392,8 @@ class FileMarksController:
                 self._app.window_launcher.open_recent_directory_window(
                     extra_callback_args=(self.set_marks_from_downstream_related_images, dirs)
                 )
+                self._notify_related_result(
+                    _("Waiting for a directory selection."), label, outcome="deferred")
                 return
             base_dir = dirs[0]
         else:
@@ -400,6 +407,9 @@ class FileMarksController:
             )
 
         if self._app.check_many_files(window, action="find related media"):
+            self._notify_related_result(
+                _("Cancelled: that directory has too many files."), label,
+                outcome="too_many_files", source=media_to_use, base_dir=base_dir)
             return
 
         downstream_related_images = get_downstream_related_images(
@@ -409,21 +419,24 @@ class FileMarksController:
             if not MarkedFiles.guard_mark_mutation(
                 self._app.app_actions, _("Set marks from related media")
             ):
+                self._notify_related_result(
+                    _("Cancelled: marks were not changed."), label,
+                    outcome="blocked", source=media_to_use, base_dir=base_dir)
                 return
             MarkedFiles.file_marks = downstream_related_images
             message = _("{0} file marks set").format(len(downstream_related_images))
             self._app.notification_ctrl.toast(message)
             self._notify_related_result(
-                message, _("Set marks from downstream images"),
-                found=len(downstream_related_images), base_dir=base_dir,
+                message, label,
+                found=len(downstream_related_images), source=media_to_use,
+                base_dir=base_dir, files=downstream_related_images,
             )
             window.file_marks_ctrl.go_to_mark()
             window.media_frame.setFocus()
         else:
             self._notify_related_result(
                 _("No downstream related images found in") + f"\n{base_dir}",
-                _("Set marks from downstream images"),
-                found=0, base_dir=base_dir,
+                label, found=0, source=media_to_use, base_dir=base_dir,
             )
 
     @require_password(ProtectedActions.VIEW_MEDIA_DETAILS)
@@ -438,13 +451,16 @@ class FileMarksController:
         """
         from ui.app_window.window_manager import WindowManager
 
+        label = _("Search all open windows")
         media_to_use = (
             self._app.media_path
             if len(MarkedFiles.file_marks) != 1
             else MarkedFiles.file_marks[0]
         )
         if not media_to_use:
-            self._app.notification_ctrl.toast(_("No active media to search from."))
+            message = _("No active media to search from.")
+            self._app.notification_ctrl.toast(message)
+            self._notify_related_result(message, label, outcome="no_media")
             return
 
         searched_dirs: list[str] = []
@@ -485,41 +501,48 @@ class FileMarksController:
             if downstream and first_owner_window is None:
                 first_owner_window = window
 
-        if not found:
-            message = _("No downstream related images found across {0} open window(s).").format(
-                len(searched_dirs))
-            message += "\n" + _("Source: {0}").format(os.path.basename(media_to_use))
+        # The headline goes to the report as-is; the detail lines are rebuilt
+        # there from the payload data, so they're only assembled here for the
+        # toast, which has no structured rendering of its own.
+        def _detail_lines() -> list:
+            lines = [_("Source: {0}").format(os.path.basename(media_to_use))]
+            lines.extend(
+                "  {0}: {1}".format(Utils.get_relative_dirpath(d, levels=2), count)
+                for d, count in found_by_dir.items()
+            )
             if skipped_dirs:
-                message += "\n" + _("Skipped {0} large unconfirmed director(ies).").format(
-                    len(skipped_dirs))
-            self._app.notification_ctrl.toast(message)
+                lines.append(_("Skipped {0} large unconfirmed director(ies).").format(
+                    len(skipped_dirs)))
+            return lines
+
+        if not found:
+            headline = _("No downstream related images found across {0} open window(s).").format(
+                len(searched_dirs))
+            self._app.notification_ctrl.toast("\n".join([headline] + _detail_lines()))
             self._notify_related_result(
-                message, _("Search all open windows"),
+                headline, label,
                 found=0, source=media_to_use,
                 searched_dirs=searched_dirs, skipped_dirs=skipped_dirs,
+                found_by_dir=found_by_dir,
             )
             return
 
         if not MarkedFiles.guard_mark_mutation(
             self._app.app_actions, _("Set marks from related media (all windows)")
         ):
+            self._notify_related_result(
+                _("Cancelled: marks were not changed."), label,
+                outcome="blocked", source=media_to_use, searched_dirs=searched_dirs)
             return
         MarkedFiles.file_marks = found
-        summary = _("{0} file marks set from {1} window(s)").format(
+        headline = _("{0} file marks set from {1} window(s)").format(
             len(found), len(searched_dirs))
-        summary += "\n" + _("Source: {0}").format(os.path.basename(media_to_use))
-        for directory, count in found_by_dir.items():
-            summary += "\n  {0}: {1}".format(
-                Utils.get_relative_dirpath(directory, levels=2), count)
-        if skipped_dirs:
-            summary += "\n" + _("Skipped {0} large unconfirmed director(ies).").format(
-                len(skipped_dirs))
-        self._app.notification_ctrl.toast(summary)
+        self._app.notification_ctrl.toast("\n".join([headline] + _detail_lines()))
         self._notify_related_result(
-            summary, _("Search all open windows"),
+            headline, label,
             found=len(found), source=media_to_use,
             searched_dirs=searched_dirs, skipped_dirs=skipped_dirs,
-            found_by_dir=found_by_dir,
+            found_by_dir=found_by_dir, files=found,
         )
         if first_owner_window is not None:
             first_owner_window.file_marks_ctrl.go_to_mark()
@@ -534,37 +557,48 @@ class FileMarksController:
         """Mark all files in the current dir that have a downstream image in base_dir."""
         from ui.image.media_details import MediaDetails
 
+        label = _("Mark sources with downstream")
+
         if base_dir is None:
             self._app.window_launcher.open_recent_directory_window(
                 extra_callback_args=(self.mark_sources_with_downstream_in_dir, [])
             )
+            self._notify_related_result(
+                _("Waiting for a directory selection."), label, outcome="deferred")
             return
 
         source_paths = self._fb.filepaths
         if not source_paths:
-            self._app.notification_ctrl.toast(_("No files in current directory."))
+            message = _("No files in current directory.")
+            self._app.notification_ctrl.toast(message)
+            self._notify_related_result(message, label, outcome="no_files")
             return
 
-        sources = get_sources_with_downstream_in_dir(source_paths, base_dir)
+        stats: dict = {}
+        sources = get_sources_with_downstream_in_dir(source_paths, base_dir, stats=stats)
 
         if not sources:
             message = _("No source files with downstream images found in\n{0}").format(base_dir)
             self._app.notification_ctrl.toast(message)
             self._notify_related_result(
-                message, _("Mark sources with downstream"), found=0, base_dir=base_dir)
+                message, label, found=0, base_dir=base_dir,
+                scanned=len(source_paths))
             return
 
         if not MarkedFiles.guard_mark_mutation(
             self._app.app_actions, _("Mark sources with downstream images")
         ):
+            self._notify_related_result(
+                _("Cancelled: marks were not changed."), label,
+                outcome="blocked", base_dir=base_dir)
             return
 
         MarkedFiles.file_marks = sources
         message = _("{0} source file(s) marked").format(len(sources))
         self._app.notification_ctrl.toast(message)
         self._notify_related_result(
-            message, _("Mark sources with downstream"),
-            found=len(sources), base_dir=base_dir)
+            message, label, found=len(sources), base_dir=base_dir,
+            scanned=len(source_paths), files=sources, **stats)
         self.go_to_mark()
         self._app.media_frame.setFocus()
 
@@ -578,37 +612,48 @@ class FileMarksController:
         from ui.image.media_details import MediaDetails
         from ui.app_window.window_manager import WindowManager
 
+        label = _("Mark downstream files")
+
         if base_dir is None:
             self._app.window_launcher.open_recent_directory_window(
                 extra_callback_args=(self.mark_downstream_files_in_dir, [])
             )
+            self._notify_related_result(
+                _("Waiting for a directory selection."), label, outcome="deferred")
             return
 
         source_paths = self._fb.filepaths
         if not source_paths:
-            self._app.notification_ctrl.toast(_("No files in current directory."))
+            message = _("No files in current directory.")
+            self._app.notification_ctrl.toast(message)
+            self._notify_related_result(message, label, outcome="no_files")
             return
 
-        downstream = get_downstream_files_for_sources(source_paths, base_dir)
+        stats: dict = {}
+        downstream = get_downstream_files_for_sources(source_paths, base_dir, stats=stats)
 
         if not downstream:
             message = _("No downstream files found in\n{0}").format(base_dir)
             self._app.notification_ctrl.toast(message)
             self._notify_related_result(
-                message, _("Mark downstream files"), found=0, base_dir=base_dir)
+                message, label, found=0, base_dir=base_dir,
+                scanned=len(source_paths))
             return
 
         if not MarkedFiles.guard_mark_mutation(
             self._app.app_actions, _("Mark downstream files")
         ):
+            self._notify_related_result(
+                _("Cancelled: marks were not changed."), label,
+                outcome="blocked", base_dir=base_dir)
             return
 
         MarkedFiles.file_marks = downstream
         message = _("{0} downstream file(s) marked").format(len(downstream))
         self._app.notification_ctrl.toast(message)
         self._notify_related_result(
-            message, _("Mark downstream files"),
-            found=len(downstream), base_dir=base_dir)
+            message, label, found=len(downstream), base_dir=base_dir,
+            scanned=len(source_paths), files=downstream, **stats)
         window = WindowManager.get_window(base_dir=base_dir)
         if window is not None:
             window.file_marks_ctrl.go_to_mark()
@@ -626,10 +671,13 @@ class FileMarksController:
         union is every file connected to at least one other file in the dir;
         the complement is what this marks.
         """
+        label = _("Mark files without related images")
         base_dir = self._app.get_base_dir()
         source_paths = self._fb.filepaths
         if not source_paths:
-            self._app.notification_ctrl.toast(_("No files in current directory."))
+            message = _("No files in current directory.")
+            self._app.notification_ctrl.toast(message)
+            self._notify_related_result(message, label, outcome="no_files")
             return
 
         related = set(get_sources_with_downstream_in_dir(source_paths, base_dir))
@@ -640,21 +688,24 @@ class FileMarksController:
             message = _("Every file in the current directory has a related image.")
             self._app.notification_ctrl.toast(message)
             self._notify_related_result(
-                message, _("Mark files without related images"),
-                found=0, base_dir=base_dir)
+                message, label, found=0, base_dir=base_dir,
+                scanned=len(source_paths))
             return
 
         if not MarkedFiles.guard_mark_mutation(
             self._app.app_actions, _("Mark files without related images")
         ):
+            self._notify_related_result(
+                _("Cancelled: marks were not changed."), label,
+                outcome="blocked", base_dir=base_dir)
             return
 
         MarkedFiles.file_marks = unrelated
         message = _("{0} file(s) without a related image marked").format(len(unrelated))
         self._app.notification_ctrl.toast(message)
         self._notify_related_result(
-            message, _("Mark files without related images"),
-            found=len(unrelated), base_dir=base_dir)
+            message, label, found=len(unrelated), base_dir=base_dir,
+            scanned=len(source_paths), files=unrelated)
         self.go_to_mark()
         self._app.media_frame.setFocus()
 

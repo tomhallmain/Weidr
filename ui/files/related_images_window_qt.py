@@ -18,6 +18,7 @@ action directly; that action remains available as a button here).
 
 from __future__ import annotations
 
+import os
 import time
 
 from PySide6.QtCore import Qt
@@ -27,6 +28,7 @@ from PySide6.QtWidgets import QGridLayout, QLabel, QPushButton, QVBoxLayout
 from lib.multi_display_qt import SmartDialog
 from ui.app_style import AppStyle
 from utils.translations import _, format_shortcut
+from utils.utils import Utils
 
 
 class RelatedImagesWindow(SmartDialog):
@@ -128,11 +130,105 @@ class RelatedImagesWindow(SmartDialog):
     # ------------------------------------------------------------------
     # Result reporting
     # ------------------------------------------------------------------
-    # TODO: only the all-windows search currently reports rich payload data
-    # (found_by_dir, source, skipped_dirs); the other related-image actions
-    # report message text with minimal data. Add richer report data from
-    # those methods and render the involved payloads here (e.g. expandable
-    # per-directory rows) instead of message text only.
+    _MAX_LISTED_FILES = 3
+
+    @staticmethod
+    def _outcome_label(outcome: str) -> str:
+        """Translated display text for an outcome token.
+
+        The tokens themselves are internal identifiers (see
+        AppActions.report_related_images), so they never reach the user
+        untranslated; an unrecognised one falls back to its own text rather
+        than being dropped.
+        """
+        return {
+            "blocked": _("cancelled"),
+            "deferred": _("waiting"),
+            "no_media": _("no media"),
+            "no_files": _("no files"),
+            "too_many_files": _("too many files"),
+        }.get(outcome, outcome)
+
+    @staticmethod
+    def _mechanism_label(mechanism: str) -> str:
+        """Translated display text for a match-mechanism token.
+
+        Internal identifiers, as with the outcome tokens -- an unrecognised
+        one falls back to its own text.
+        """
+        return {
+            "metadata": _("metadata"),
+            "basename": _("filename"),
+            "stem": _("name prefix"),
+        }.get(mechanism, mechanism)
+
+    @staticmethod
+    def _short_dir(directory: str) -> str:
+        return Utils.get_relative_dirpath(directory, levels=2)
+
+    @classmethod
+    def _format_detail(cls, data) -> list:
+        """Render the structured payload from AppActions.report_related_images
+        as indented detail lines under the headline.
+
+        Every key is optional; each block is skipped when its key is absent,
+        so an action reports only what it actually knows.
+        """
+        if not isinstance(data, dict):
+            return []
+        lines = []
+
+        source = data.get("source")
+        if source:
+            lines.append(_("source: {0}").format(os.path.basename(source)))
+
+        found_by_dir = data.get("found_by_dir")
+        searched_dirs = data.get("searched_dirs")
+        base_dir = data.get("base_dir")
+        if found_by_dir:
+            lines.append("   ".join(
+                f"{cls._short_dir(d)}: {n}" for d, n in found_by_dir.items()
+            ))
+        elif searched_dirs:
+            lines.append(_("searched {0} director(ies)").format(len(searched_dirs)))
+        elif base_dir:
+            lines.append(_("in {0}").format(cls._short_dir(base_dir)))
+
+        scanned = data.get("scanned")
+        found = data.get("found")
+        if scanned is not None:
+            if found is not None:
+                lines.append(_("{0} of {1} file(s) scanned").format(found, scanned))
+            else:
+                lines.append(_("{0} file(s) scanned").format(scanned))
+
+        position, total = data.get("position"), data.get("total")
+        if position is not None and total is not None:
+            lines.append(_("{0} of {1} in cycle").format(position, total))
+
+        by_mechanism = data.get("by_mechanism")
+        if by_mechanism:
+            lines.append(_("matched by: ") + ", ".join(
+                f"{cls._mechanism_label(k)} {n}" for k, n in by_mechanism.items()
+            ))
+
+        if data.get("cached"):
+            lines.append(_("from a cached scan"))
+
+        files = data.get("files")
+        if files:
+            shown = ", ".join(os.path.basename(f) for f in files[:cls._MAX_LISTED_FILES])
+            remaining = len(files) - cls._MAX_LISTED_FILES
+            if remaining > 0:
+                shown += _(", and {0} more").format(remaining)
+            lines.append(shown)
+
+        skipped_dirs = data.get("skipped_dirs")
+        if skipped_dirs:
+            lines.append(_("{0} large unconfirmed director(ies) skipped").format(
+                len(skipped_dirs)))
+
+        return lines
 
     def _on_result(self, message: str, action_label=None, data=None) -> None:
         """Append an action outcome to the rolling result area.
@@ -144,7 +240,13 @@ class RelatedImagesWindow(SmartDialog):
         connection when this window is destroyed.
         """
         stamp = time.strftime("%H:%M:%S")
-        line = f"[{stamp}]  {action_label}\n{message}" if action_label else f"[{stamp}]  {message}"
-        self._results.insert(0, line)
+        outcome = data.get("outcome") if isinstance(data, dict) else None
+        header = action_label
+        if outcome:
+            tag = f"({self._outcome_label(outcome)})"
+            header = f"{tag} {action_label}" if action_label else tag
+        parts = [f"[{stamp}]  {header}\n{message}" if header else f"[{stamp}]  {message}"]
+        parts.extend("    " + detail for detail in self._format_detail(data))
+        self._results.insert(0, "\n".join(parts))
         del self._results[self._MAX_RESULT_LINES:]
         self._result_label.setText("\n\n".join(self._results))

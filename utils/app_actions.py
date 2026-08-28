@@ -114,6 +114,38 @@ class AppActions:
         connected is a cheap no-op."""
         self.related_images_signals().result.emit(message, action_label, data)
 
+    def report_related_images(self, message, action_label=None, **data) -> None:
+        """Report a related-image action outcome with structured payload data.
+
+        The entry point every related-image action should use. *message* is a
+        one-line headline; everything else goes in *data* so the related
+        images window can render it, rather than being formatted into the
+        message text. Recognised keys (all optional, rendered when present):
+
+          found          int   files produced or marked (0 is meaningful)
+          outcome        str   why the action ended, when not a plain success:
+                               blocked / deferred / no_media / no_files /
+                               too_many_files
+          source         str   media path the action searched from
+          base_dir       str   single target directory
+          searched_dirs  list  multi-directory variant, instead of base_dir
+          skipped_dirs   list  directories skipped as oversized/unconfirmed
+          found_by_dir   dict  per-directory counts, post-deduplication
+          files          list  the affected paths
+          scanned        int   candidates examined, as a hit-rate denominator
+          by_mechanism   dict  which rule claimed each result: metadata /
+                               basename / stem (the latter two are heuristics)
+          cached         bool  result came from cache, not a fresh scan
+          position/total int   place in a cycle the action steps through
+
+        The last three come from the `stats` out-param on the helpers in
+        files/related_image.py; pass `**stats` straight through.
+
+        Fill the same keys on the empty and success branches of an action --
+        a zero breakdown is informative precisely when nothing was found.
+        """
+        self.notify_related_images_result(message, action_label, data or None)
+
     @cached_property
     def prevalidation_callbacks(self):
         return self._build_callbacks()

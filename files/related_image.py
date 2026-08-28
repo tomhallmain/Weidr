@@ -292,23 +292,32 @@ def get_downstream_related_images(
     app_actions,
     force_refresh: bool = False,
     quiet: bool = False,
+    stats: dict | None = None,
 ):
     # quiet: suppress the per-directory result toasts — used by callers that
     # search several directories in one pass and emit a single aggregate
     # summary themselves (e.g. the all-open-windows marks search).
+    # stats: when given, receives {"cached": bool} — whether the result came
+    # from the cache rather than a fresh scan. Only varies for callers that
+    # leave force_refresh False; it tells a user why a count looks stale.
     global _downstream_index, _downstream_cache
     key = image_path + "/" + other_base_dir
+    cached = False
     if force_refresh or key not in _downstream_cache:
         refresh_downstream_related_image_cache(key, image_path, other_base_dir)
         downstream = _downstream_cache[key]
         toast_text = _("{0} downstream image(s) found.").format(len(downstream))
     else:
         downstream = _downstream_cache[key]
+        cached = True
         toast_text = _("{0} (cached) downstream image(s) found.").format(len(downstream))
         if _downstream_index >= len(downstream):
             refresh_downstream_related_image_cache(key, image_path, other_base_dir)
             downstream = _downstream_cache[key]
+            cached = False
             toast_text = _("{0} downstream image(s) found.").format(len(downstream))
+    if stats is not None:
+        stats["cached"] = cached
     if len(downstream) == 0:
         if not quiet:
             app_actions.toast(_("No downstream related images found in") + f"\n{other_base_dir}")
@@ -319,24 +328,40 @@ def get_downstream_related_images(
 
 
 def next_downstream_related_image(
-    image_path: str, other_base_dir: str, app_actions
+    image_path: str, other_base_dir: str, app_actions, stats: dict | None = None
 ) -> str | None:
+    # stats: forwarded to get_downstream_related_images, then extended with
+    # this call's position in the candidate cycle ("position"/"total"), which
+    # is otherwise invisible to the caller advancing through them one at a time.
     global _downstream_index
-    downstream = get_downstream_related_images(image_path, other_base_dir, app_actions)
+    downstream = get_downstream_related_images(
+        image_path, other_base_dir, app_actions, stats=stats
+    )
     if downstream is None:
         return None
     if _downstream_index >= len(downstream):
         _downstream_index = 0
     path = downstream[_downstream_index]
     _downstream_index += 1
+    if stats is not None:
+        stats["position"] = _downstream_index
+        stats["total"] = len(downstream)
     return path
 
 
 def get_sources_with_downstream_in_dir(
     source_paths: list[str],
     other_base_dir: str,
+    stats: dict | None = None,
 ) -> list[str]:
-    """Return the subset of source_paths that have at least one downstream image in other_base_dir."""
+    """Return the subset of source_paths that have at least one downstream image in other_base_dir.
+
+    stats: when given, receives {"by_mechanism": {name: count}} counting which
+    rule claimed each result -- "metadata" (exact related-path match),
+    "basename" (loose name match) or "stem" (generator-suffix inference). The
+    latter two are heuristics, so reporting the split lets a user judge a
+    result set they would otherwise have to take on faith.
+    """
     from files.file_browser import FileBrowser
     browser = FileBrowser(directory=other_base_dir)
     browser._gather_files()
@@ -364,13 +389,22 @@ def get_sources_with_downstream_in_dir(
             basename_sources.add(b)
 
     results = []
+    counts = {"metadata": 0, "basename": 0, "stem": 0}
     for p in source_paths:
-        if p in exact_sources or os.path.basename(p) in basename_sources:
+        if p in exact_sources:
             results.append(p)
+            counts["metadata"] += 1
+            continue
+        if os.path.basename(p) in basename_sources:
+            results.append(p)
+            counts["basename"] += 1
             continue
         stem, ext = os.path.splitext(os.path.basename(p))
         if (stem, ext.lower()) in stem_prefixes:
             results.append(p)
+            counts["stem"] += 1
+    if stats is not None:
+        stats["by_mechanism"] = {k: v for k, v in counts.items() if v}
     return results
 
 
@@ -541,8 +575,13 @@ def get_image_edit_redo_params(
 def get_downstream_files_for_sources(
     source_paths: list[str],
     other_base_dir: str,
+    stats: dict | None = None,
 ) -> list[str]:
-    """Return files in other_base_dir that are downstream of any path in source_paths."""
+    """Return files in other_base_dir that are downstream of any path in source_paths.
+
+    stats: as in get_sources_with_downstream_in_dir -- receives
+    {"by_mechanism": {name: count}} for the rule that claimed each result.
+    """
     from files.file_browser import FileBrowser
     # Build lookup sets from dir X in one pass — O(|X|).
     source_path_set: set[str] = set(source_paths)
@@ -560,20 +599,26 @@ def get_downstream_files_for_sources(
     browser._gather_files()
 
     results = []
+    counts = {"metadata": 0, "basename": 0, "stem": 0}
     for candidate in browser.filepaths:
         related, _exact = get_related_image_path(candidate, check_extra_directories=None)
         if related is not None:
             if related in source_path_set:
                 results.append(candidate)
+                counts["metadata"] += 1
                 continue
             b = os.path.basename(related)
             if len(b) > 10 and b in source_basename_set:
                 results.append(candidate)
+                counts["basename"] += 1
                 continue
         stem, ext = os.path.splitext(os.path.basename(candidate))
         m = _VARIANT_SUFFIX_RE_STRICT.match(stem)
         if m and (m.group(1), ext.lower()) in source_stems:
             results.append(candidate)
+            counts["stem"] += 1
+    if stats is not None:
+        stats["by_mechanism"] = {k: v for k, v in counts.items() if v}
     return results
 
 

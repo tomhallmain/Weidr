@@ -1507,15 +1507,31 @@ class MediaDetails(SmartWindow):
     ) -> None:
         if master is None or image_path == "":
             raise Exception("No master or image path given")
+        label = _("View related image")
         related_image_path, found_on_disk = (
             MediaDetails.get_related_image_path(image_path, node_id)
         )
         if related_image_path is None or related_image_path == "":
-            app_actions.toast(_("(No related image found)"))
+            message = _("(No related image found)")
+            app_actions.toast(message)
+            app_actions.report_related_images(
+                message, action_label=label, found=0, source=image_path)
             return
         elif not found_on_disk:
-            app_actions.toast(_(" (Exact Match Not Found)"))
+            # The metadata names a source that couldn't be located anywhere --
+            # report the path it points at, since a stale pointer is the one
+            # outcome here the user can actually act on.
+            message = _(" (Exact Match Not Found)")
+            app_actions.toast(message)
+            app_actions.report_related_images(
+                _("Referenced related image was not found on disk."),
+                action_label=label, found=0, source=image_path,
+                files=[related_image_path])
             return
+        app_actions.report_related_images(
+            _("Showing {0}").format(os.path.basename(related_image_path)),
+            action_label=label, found=1, source=image_path,
+            files=[related_image_path])
         MediaDetails.open_temp_media_canvas(
             master=master,
             media_path=related_image_path,

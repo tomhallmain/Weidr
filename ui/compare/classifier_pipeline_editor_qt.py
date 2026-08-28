@@ -51,6 +51,7 @@ from compare.classifier_pipeline import (
     BaseStemMatchCondition,
     UnknownSuffixCondition,
     RelatedImageCondition,
+    VarianceFromOriginalCondition,
 )
 from files.directory_profile import DirectoryProfile
 from lib.multi_display_qt import SmartDialog
@@ -83,6 +84,7 @@ _CONDITION_ENTRIES = [
     ("group",               _("Group")),
     ("always",              _("No Check (Always)")),
     ("audio_classifier_rank", _("Audio Classifier Rank")),
+    ("variance_from_original", _("Variance From Original")),
 ]
 _CONDITION_TYPES   = [k for k, _ in _CONDITION_ENTRIES]
 _CONDITION_LABELS  = [v for _, v in _CONDITION_ENTRIES]
@@ -889,6 +891,93 @@ class _RelatedImagePanel(QWidget):
         )
 
 
+class _VarianceFromOriginalPanel(QWidget):
+    condition_type = "variance_from_original"
+
+    def __init__(self, on_changed: Callable = None, parent=None):
+        super().__init__(parent)
+        self._on_changed = on_changed or (lambda: None)
+        form = QFormLayout(self)
+        form.setContentsMargins(0, 4, 0, 4)
+        form.setSpacing(4)
+
+        self._min_similarity = QDoubleSpinBox()
+        self._min_similarity.setRange(0.0, 1.0)
+        self._min_similarity.setSingleStep(0.01)
+        self._min_similarity.setDecimals(3)
+        self._min_similarity.setValue(0.55)
+        self._min_similarity.valueChanged.connect(self._on_changed)
+        form.addRow(_("Min similarity:"), self._min_similarity)
+
+        self._max_similarity = QDoubleSpinBox()
+        self._max_similarity.setRange(0.0, 1.0)
+        self._max_similarity.setSingleStep(0.01)
+        self._max_similarity.setDecimals(3)
+        self._max_similarity.setValue(0.95)
+        self._max_similarity.valueChanged.connect(self._on_changed)
+        form.addRow(_("Max similarity:"), self._max_similarity)
+
+        self._compare_mode = QComboBox()
+        for mode_name in self._embedding_mode_names():
+            self._compare_mode.addItem(mode_name, mode_name)
+        self._compare_mode.currentIndexChanged.connect(self._on_changed)
+        form.addRow(_("Compare mode:"), self._compare_mode)
+
+        self._invert = QCheckBox(_("Fire inside the band instead of outside"))
+        self._invert.stateChanged.connect(self._on_changed)
+        form.addRow("", self._invert)
+
+        self._match_on_unresolved = QCheckBox(_("Match when the original can't be resolved"))
+        self._match_on_unresolved.stateChanged.connect(self._on_changed)
+        form.addRow("", self._match_on_unresolved)
+
+        note = _label(
+            _("Compares each image against the seed of its related-image group. "
+              "The band is the range of ACCEPTABLE similarity: the condition "
+              "fires for images outside it — too different to be the same "
+              "subject, or too similar to be a useful variation. Seed images "
+              "themselves never match. Run this after the generating pipeline, "
+              "not as part of it.")
+        )
+        note.setWordWrap(True)
+        form.addRow("", note)
+
+    @staticmethod
+    def _embedding_mode_names() -> list:
+        try:
+            from compare.embedding_capture import embedding_capture_modes
+            return [m.name for m in embedding_capture_modes()]
+        except Exception:
+            return ["CLIP_EMBEDDING"]
+
+    def _select_mode(self, mode_name: str) -> None:
+        idx = self._compare_mode.findData(mode_name)
+        self._compare_mode.setCurrentIndex(idx if idx >= 0 else 0)
+
+    def load(self, condition) -> None:
+        if isinstance(condition, VarianceFromOriginalCondition):
+            self._min_similarity.setValue(condition.min_similarity)
+            self._max_similarity.setValue(condition.max_similarity)
+            self._select_mode(condition.compare_mode)
+            self._invert.setChecked(condition.invert)
+            self._match_on_unresolved.setChecked(condition.match_on_unresolved)
+        else:
+            self._min_similarity.setValue(0.55)
+            self._max_similarity.setValue(0.95)
+            self._select_mode("CLIP_EMBEDDING")
+            self._invert.setChecked(False)
+            self._match_on_unresolved.setChecked(False)
+
+    def get_condition(self) -> VarianceFromOriginalCondition:
+        return VarianceFromOriginalCondition(
+            min_similarity=self._min_similarity.value(),
+            max_similarity=self._max_similarity.value(),
+            compare_mode=self._compare_mode.currentData() or "CLIP_EMBEDDING",
+            invert=self._invert.isChecked(),
+            match_on_unresolved=self._match_on_unresolved.isChecked(),
+        )
+
+
 class _BaseStemMatchPanel(QWidget):
     condition_type = "base_stem_match"
 
@@ -1296,6 +1385,7 @@ class _SubCondRow(QWidget):
             _NodeResultPanel(on_changed=self._on_changed),
             _AlwaysPanel(on_changed=self._on_changed),
             _AudioClassifierRankPanel(on_changed=self._on_changed),
+            _VarianceFromOriginalPanel(on_changed=self._on_changed),
         ]
         for p in self._panels:
             self._stack.addWidget(p)
@@ -1530,6 +1620,7 @@ class _GroupPanel(QWidget):
             _NodeResultPanel(on_changed=changed_cb),
             _AlwaysPanel(on_changed=changed_cb),
             _AudioClassifierRankPanel(on_changed=changed_cb),
+            _VarianceFromOriginalPanel(on_changed=changed_cb),
         ]
         self._child_stack = QStackedWidget()
         for p in self._child_panels:
@@ -2167,6 +2258,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._group_panel               = _GroupPanel(on_changed=changed_cb)
         self._always_panel              = _AlwaysPanel(on_changed=changed_cb)
         self._audio_classifier_rank_panel = _AudioClassifierRankPanel(on_changed=changed_cb)
+        self._variance_from_original_panel = _VarianceFromOriginalPanel(on_changed=changed_cb)
 
         self._cond_panels = [
             self._embedding_panel, self._classifier_rank_panel,
@@ -2180,6 +2272,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
             self._group_panel,
             self._always_panel,
             self._audio_classifier_rank_panel,
+            self._variance_from_original_panel,
         ]
 
         self._condition_stack = _AdaptiveStack()

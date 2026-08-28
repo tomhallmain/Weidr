@@ -40,6 +40,7 @@ from compare.classifier_pipeline import (
     BaseStemMatchCondition,
     UnknownSuffixCondition,
     RelatedImageCondition,
+    VarianceFromOriginalCondition,
 )
 
 
@@ -62,6 +63,12 @@ logger = get_logger("classifier_pipeline_runner")
 # ---------------------------------------------------------------------------
 _pos_prototype_cache: dict[str, object] = {}
 _neg_prototype_cache: dict[str, object] = {}
+
+# Seed embeddings for VarianceFromOriginalCondition, keyed by (seed path, mode
+# name); value is an embedding or None (computation failed). A stem group has
+# one seed and as many derivatives as there are categories, so without this the
+# same seed embedding is recomputed once per derivative.
+_seed_embedding_cache: dict[tuple, object] = {}
 
 
 def _load_prototype(directory: str, cache: dict) -> object:
@@ -266,9 +273,13 @@ def run_pipeline(
 
     base_stem: Optional[str] = extract_filename_base_stem(image_path)
     image_file_stem = os.path.splitext(os.path.basename(image_path))[0]
-    is_seed = assume_seed or (
+    # Kept separate from is_seed below: conditions asking "does this file have
+    # an original?" need the filename fact, not assume_seed's caller intent,
+    # which exists only to keep the seed-category GENERATE guard effective.
+    is_seed_by_name = (
         base_stem is not None and image_file_stem.lower() == base_stem.lower()
     )
+    is_seed = assume_seed or is_seed_by_name
     if config.debug:
         logger.debug("Pipeline %r: evaluating %s (base_stem=%r, is_seed=%s)", pipeline.name, image_path, base_stem, is_seed)
 
@@ -371,6 +382,7 @@ def run_pipeline(
                     node.condition, image_path, node_results, node_scores, base_directory,
                     node_name=node.name, report=report,
                     pipeline_categories=list(pipeline.category_map.values()),
+                    is_seed=is_seed_by_name,
                 )
             except Exception:
                 logger.exception(
@@ -508,10 +520,13 @@ def run_single_node(
     node_results: dict[str, bool] = {}
     node_scores: dict[str, object] = {}
     try:
+        base_stem = extract_filename_base_stem(image_path)
+        file_stem = os.path.splitext(os.path.basename(image_path))[0]
         matched, score = _evaluate_condition(
             node.condition, image_path, node_results, node_scores, base_directory,
             node_name=node.name,
             pipeline_categories=list(pipeline.category_map.values()),
+            is_seed=(base_stem is not None and file_stem.lower() == base_stem.lower()),
         )
     except Exception:
         logger.exception(
@@ -566,8 +581,15 @@ def _evaluate_condition(
     node_name: str = "",
     report: Optional[PipelineRunReport] = None,
     pipeline_categories: list = [],
+    is_seed: bool = False,
 ) -> tuple[bool, object]:
-    """Return (matched, score). Score is a raw float where available, else None."""
+    """Return (matched, score). Score is a raw float where available, else None.
+
+    *is_seed* is the filename-derived seed determination, deliberately not the
+    assume_seed-influenced one used for the seed-category GENERATE guard:
+    whether a file has an original is a fact about the file, not a caller's
+    intent about how to treat it.
+    """
 
     if isinstance(condition, AlwaysCondition):
         return True, None
@@ -622,13 +644,18 @@ def _evaluate_condition(
     if isinstance(condition, RelatedImageCondition):
         return _eval_related_image(condition, image_path, base_directory)
 
+    if isinstance(condition, VarianceFromOriginalCondition):
+        return _eval_variance_from_original(condition, image_path, is_seed)
+
     if isinstance(condition, CompositeCondition):
         return _eval_composite(condition, image_path, node_results, node_scores, base_directory,
-                               report=report, pipeline_categories=pipeline_categories)
+                               report=report, pipeline_categories=pipeline_categories,
+                               is_seed=is_seed)
 
     if isinstance(condition, GroupCondition):
         return _eval_group(condition, node_name, image_path, node_results, node_scores,
-                           base_directory, report=report, pipeline_categories=pipeline_categories)
+                           base_directory, report=report, pipeline_categories=pipeline_categories,
+                           is_seed=is_seed)
 
     if isinstance(condition, GroupChildResultCondition):
         key = f"{condition.group_node_name}/{condition.child_node_name}"
@@ -1092,6 +1119,86 @@ def _eval_related_image(
     return True, None
 
 
+def _resolve_embedding_mode(mode_name: str):
+    """CompareMode member for *mode_name*, or None when it isn't an embedding mode."""
+    from compare.embedding_capture import embedding_capture_modes
+
+    for mode in embedding_capture_modes():
+        if mode.name == mode_name:
+            return mode
+    return None
+
+
+def _seed_embedding(seed_path: str, mode) -> object:
+    key = (seed_path, mode.name)
+    if key not in _seed_embedding_cache:
+        from compare.embedding_capture import compute_media_embedding
+
+        _seed_embedding_cache[key] = compute_media_embedding(seed_path, mode)
+    return _seed_embedding_cache[key]
+
+
+def _cosine_similarity(first, second) -> Optional[float]:
+    """Cosine similarity of two embeddings, or None if they can't be compared."""
+    import numpy as np
+
+    a = np.asarray(first).ravel()
+    b = np.asarray(second).ravel()
+    if a.size == 0 or a.shape != b.shape:
+        return None
+    norm_a = float(np.linalg.norm(a))
+    norm_b = float(np.linalg.norm(b))
+    if norm_a == 0.0 or norm_b == 0.0:
+        return None
+    return float(np.dot(a, b) / (norm_a * norm_b))
+
+
+def _eval_variance_from_original(
+    condition: VarianceFromOriginalCondition,
+    image_path: str,
+    is_seed: bool,
+) -> tuple[bool, object]:
+    """Compare image_path against the seed of its related-image group.
+
+    Fires when similarity falls outside the configured band, or inside it when
+    inverted. Returns the similarity as the score so a run with
+    record_node_verdicts on reports the actual numbers -- the only practical
+    way to calibrate a band.
+    """
+    if is_seed:
+        return False, None   # the original has nothing to vary from
+
+    from files.related_image import get_image_edit_redo_params
+
+    related_path, _edit_suffix = get_image_edit_redo_params(image_path)
+    if related_path is None or not os.path.isfile(related_path):
+        return condition.match_on_unresolved, None
+
+    mode = _resolve_embedding_mode(condition.compare_mode)
+    if mode is None:
+        logger.warning(
+            "VarianceFromOriginal: %r is not an embedding capture mode", condition.compare_mode
+        )
+        return condition.match_on_unresolved, None
+
+    seed_embedding = _seed_embedding(related_path, mode)
+    if seed_embedding is None:
+        return condition.match_on_unresolved, None
+
+    from compare.embedding_capture import compute_media_embedding
+
+    image_embedding = compute_media_embedding(image_path, mode)
+    if image_embedding is None:
+        return condition.match_on_unresolved, None
+
+    similarity = _cosine_similarity(seed_embedding, image_embedding)
+    if similarity is None:
+        return condition.match_on_unresolved, None
+
+    in_band = condition.min_similarity <= similarity <= condition.max_similarity
+    return (in_band if condition.invert else not in_band), similarity
+
+
 def _eval_group(
     condition: GroupCondition,
     outer_node_name: str,
@@ -1102,6 +1209,7 @@ def _eval_group(
     *,
     report: Optional[PipelineRunReport] = None,
     pipeline_categories: list = [],
+    is_seed: bool = False,
 ) -> tuple[bool, object]:
     """Evaluate every child node and store results under '<outer>/<child>' keys."""
     for child in condition.nodes:
@@ -1110,6 +1218,7 @@ def _eval_group(
             child_result, child_score = _evaluate_condition(
                 child.condition, image_path, node_results, node_scores, base_directory,
                 node_name=key, report=report, pipeline_categories=pipeline_categories,
+                is_seed=is_seed,
             )
         except Exception:
             logger.exception(
@@ -1138,10 +1247,12 @@ def _eval_composite(
     *,
     report: Optional[PipelineRunReport] = None,
     pipeline_categories: list = [],
+    is_seed: bool = False,
 ) -> tuple[bool, object]:
     sub_results = [
         _evaluate_condition(sub, image_path, node_results, node_scores, base_directory,
-                            report=report, pipeline_categories=pipeline_categories)[0]
+                            report=report, pipeline_categories=pipeline_categories,
+                            is_seed=is_seed)[0]
         for sub in condition.sub_conditions
     ]
     op = condition.operator

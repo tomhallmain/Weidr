@@ -48,6 +48,7 @@ from compare.classifier_pipeline_conditions import (  # noqa: F401
     PromptCondition,
     PrototypeCondition,
     RelatedImageCondition,
+    VarianceFromOriginalCondition,
     UnknownSuffixCondition,
 )
 from compare.classifier_pipeline_nodes import (  # noqa: F401
@@ -323,6 +324,33 @@ class ClassifierPipeline:
             if condition.max_rank < condition.min_rank:
                 errors.append(_("Node {0}: max_rank must be ≥ min_rank.").format(node_name))
 
+        elif isinstance(condition, VarianceFromOriginalCondition):
+            if not (0.0 <= condition.min_similarity <= 1.0):
+                errors.append(
+                    _("Node {0}: min_similarity must be between 0 and 1.").format(node_name)
+                )
+            if not (0.0 <= condition.max_similarity <= 1.0):
+                errors.append(
+                    _("Node {0}: max_similarity must be between 0 and 1.").format(node_name)
+                )
+            elif condition.max_similarity < condition.min_similarity:
+                errors.append(
+                    _("Node {0}: max_similarity ({1}) must be ≥ min_similarity ({2}).").format(
+                        node_name, condition.max_similarity, condition.min_similarity
+                    )
+                )
+            try:
+                from compare.embedding_capture import embedding_capture_modes
+                mode_names = [m.name for m in embedding_capture_modes()]
+                if condition.compare_mode not in mode_names:
+                    errors.append(
+                        _("Node {0}: {1} is not an embedding compare mode.").format(
+                            node_name, condition.compare_mode
+                        )
+                    )
+            except Exception:
+                pass  # embedding modules not importable during unit tests — skip
+
         elif isinstance(condition, FilenameContainsCondition):
             if not condition.patterns:
                 errors.append(
@@ -535,6 +563,17 @@ class ClassifierPipeline:
                         warnings.append(
                             _("Node {0}: expected suffix {1} is not in the pipeline's category map.").format(node_name, sf)
                         )
+        elif isinstance(condition, VarianceFromOriginalCondition):
+            # A band this wide admits almost everything, so the node fires for
+            # almost nothing -- more often a misread of the semantics (it is a
+            # band of ACCEPTABLE similarity, not of rejected similarity) than
+            # a deliberate setting.
+            if condition.max_similarity - condition.min_similarity > 0.9:
+                warnings.append(
+                    _("Node {0}: similarity band {1}-{2} is very wide — the condition will rarely fire.").format(
+                        node_name, condition.min_similarity, condition.max_similarity
+                    )
+                )
         elif isinstance(condition, CompositeCondition):
             for sub in condition.sub_conditions:
                 self._collect_suffix_warnings(sub, node_name, known_suffixes, warnings)

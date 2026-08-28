@@ -566,6 +566,67 @@ class RelatedImageCondition:
 
 
 @dataclass
+class VarianceFromOriginalCondition:
+    """Similarity of a derivative image to the seed of its related-image group.
+
+    Fires when similarity falls OUTSIDE [min_similarity, max_similarity]. For
+    image edits used as comparative examples both ends are failures: too
+    similar means nothing was really varied, too different means it no longer
+    depicts the same subject.
+
+    Stored as similarity (higher = closer) rather than variance so it reads
+    the same direction as EmbeddingCondition and PrototypeCondition; the
+    variance framing lives in the display summary.
+
+    Seeds themselves never match -- they have no original to vary from.
+    """
+    condition_type: ClassVar[str] = "variance_from_original"
+
+    # Acceptable similarity band, inclusive on both ends.
+    min_similarity: float = 0.55
+    max_similarity: float = 0.95
+    # CompareMode name. Held as a str, not the enum: this module must not
+    # import from other compare/ modules, so the runner resolves it.
+    compare_mode: str = "CLIP_EMBEDDING"
+    # Fire for images INSIDE the band instead of outside it, so one band can
+    # serve both "mark the rejects" and "collect the good examples".
+    invert: bool = False
+    # Result when the original can't be resolved or an embedding can't be
+    # computed. False by default: an unresolvable original is not evidence of
+    # bad variance, and True would match every unrelated file in the directory.
+    match_on_unresolved: bool = False
+
+    def to_dict(self) -> dict:
+        return {
+            "condition_type": self.condition_type,
+            "min_similarity": self.min_similarity,
+            "max_similarity": self.max_similarity,
+            "compare_mode": self.compare_mode,
+            "invert": self.invert,
+            "match_on_unresolved": self.match_on_unresolved,
+        }
+
+    def _band_parts(self) -> list:
+        parts = [f"{self.min_similarity}-{self.max_similarity}", self.compare_mode]
+        if self.invert:
+            parts.append("inside")
+        if self.match_on_unresolved:
+            parts.append("unresolved=match")
+        return parts
+
+    def summary(self) -> str:
+        return "VarianceFromOriginal(" + ", ".join(self._band_parts()) + ")"
+
+    def display_summary(self) -> str:
+        parts = [f"{self.min_similarity}-{self.max_similarity}", self.compare_mode]
+        if self.invert:
+            parts.append(_("inside band"))
+        if self.match_on_unresolved:
+            parts.append(_("unresolved matches"))
+        return _("VarianceFromOriginal") + "(" + ", ".join(parts) + ")"
+
+
+@dataclass
 class GroupCondition:
     """
     An ordered group of child PipelineNodes evaluated as a unit.
@@ -653,6 +714,7 @@ NodeCondition = (
     | BaseStemMatchCondition
     | UnknownSuffixCondition
     | RelatedImageCondition
+    | VarianceFromOriginalCondition
     | GroupCondition
     | GroupChildResultCondition
 )

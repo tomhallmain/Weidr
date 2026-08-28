@@ -501,13 +501,19 @@ def _file_lock() -> Iterator[None]:
                 import msvcrt
 
                 lock_f.seek(0)
-                msvcrt.locking(lock_f.fileno(), msvcrt.LK_UNLOCK, 1)
+                # LK_UNLCK, not LK_UNLOCK -- the latter does not exist, and
+                # naming it raised AttributeError out of this finally block,
+                # discarding the result of the with-body. That silently
+                # disabled all shared-state reads and writes on Windows.
+                msvcrt.locking(lock_f.fileno(), msvcrt.LK_UNLCK, 1)
             else:
                 import fcntl
 
                 fcntl.flock(lock_f.fileno(), fcntl.LOCK_UN)
-        except OSError:
-            pass
+        except Exception as e:
+            # Releasing is best-effort: closing the file drops the lock anyway,
+            # and a release failure must never invalidate a completed write.
+            logger.debug("sleep_prevention lock release failed: %s", e)
         lock_f.close()
 
 

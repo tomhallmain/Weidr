@@ -36,6 +36,7 @@ from compare.classifier_pipeline_conditions import (
     PrototypeCondition,
     RelatedImageCondition,
     UnknownSuffixCondition,
+    VarianceFromOriginalCondition,
 )
 from utils.constants import ClassifierActionType
 from utils.translations import _
@@ -129,6 +130,14 @@ def _condition_from_dict(d: dict):
             search_directory=d.get("search_directory", ""),
             count_threshold=d.get("count_threshold", 1),
             use_configured_search_directories=d.get("use_configured_search_directories", True),
+        )
+    if ct == "variance_from_original":
+        return VarianceFromOriginalCondition(
+            min_similarity=d.get("min_similarity", 0.55),
+            max_similarity=d.get("max_similarity", 0.95),
+            compare_mode=d.get("compare_mode", "CLIP_EMBEDDING"),
+            invert=d.get("invert", False),
+            match_on_unresolved=d.get("match_on_unresolved", False),
         )
     if ct == "group":
         return GroupCondition(

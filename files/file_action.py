@@ -15,6 +15,74 @@ def _delete_file_sentinel(path: str, *args, **kwargs) -> str:
     return path
 
 
+# Names of the manually-invoked image ops FileAction can record
+# (crop/rotate/enhance/scramble/flip/etc.). Classification goes through these
+# names rather than the registry below so that asking "is this an image op?"
+# -- done for every entry by action_kind(), get_action_statistics(), and
+# get_history_action() -- never has to import anything. Must stay in sync with
+# _image_op_registry()'s keys; it asserts that.
+_IMAGE_OP_NAMES = frozenset({
+    "rotate_image",
+    "enhance_image",
+    "flip_image",
+    "change_aspect_ratio",
+    "convert_to_jpg",
+    "scramble_image",
+    "semi_scramble_image",
+    "random_crop_and_upscale",
+    "randomly_modify_image",
+    "crop_image_to_rect",
+    "crop_image_to_polygon",
+    "draw_box_at_rect",
+    "draw_box_at_polygon",
+    "draw_background_box_at_rect",
+    "draw_background_box_at_polygon",
+    "smart_crop_multi_detect",
+    "copy_without_exif",
+})
+
+_image_op_registry_cache: Optional[dict] = None
+
+
+def _image_op_registry() -> dict:
+    """Lazily built name -> function map, for resolving a persisted action name
+    back to the function that produced it (from_dict, at startup).
+
+    Built lazily and only on that path: resolving it pulls in image/smart_crop
+    and therefore scipy and sklearn, which callers that only deal in
+    move/copy/delete should never pay for.
+    """
+    global _image_op_registry_cache
+    if _image_op_registry_cache is None:
+        from image.image_data_extractor import image_data_extractor
+        from image.image_ops import ImageOps
+        from image.smart_crop import Cropper
+        _image_op_registry_cache = {
+            "rotate_image": ImageOps.rotate_image,
+            "enhance_image": ImageOps.enhance_image,
+            "flip_image": ImageOps.flip_image,
+            "change_aspect_ratio": ImageOps.change_aspect_ratio,
+            "convert_to_jpg": ImageOps.convert_to_jpg,
+            "scramble_image": ImageOps.scramble_image,
+            "semi_scramble_image": ImageOps.semi_scramble_image,
+            "random_crop_and_upscale": ImageOps.random_crop_and_upscale,
+            "randomly_modify_image": ImageOps.randomly_modify_image,
+            "crop_image_to_rect": ImageOps.crop_image_to_rect,
+            "crop_image_to_polygon": ImageOps.crop_image_to_polygon,
+            "draw_box_at_rect": ImageOps.draw_box_at_rect,
+            "draw_box_at_polygon": ImageOps.draw_box_at_polygon,
+            "draw_background_box_at_rect": ImageOps.draw_background_box_at_rect,
+            "draw_background_box_at_polygon": ImageOps.draw_background_box_at_polygon,
+            "smart_crop_multi_detect": Cropper.smart_crop_multi_detect,
+            "copy_without_exif": image_data_extractor.copy_without_exif,
+        }
+        assert set(_image_op_registry_cache) == _IMAGE_OP_NAMES, (
+            "image op registry and _IMAGE_OP_NAMES disagree: "
+            f"{set(_image_op_registry_cache) ^ _IMAGE_OP_NAMES}"
+        )
+    return _image_op_registry_cache
+
+
 class FileAction():
     MAX_ACTIONS = config.file_actions_history_max
     MAX_ACTION_ROWS = config.file_actions_window_rows_max
@@ -74,22 +142,30 @@ class FileAction():
     @staticmethod
     def get_history_action(start_index=0, auto=False, include_deletes=False):
         # Get a previous action that is not equivalent to the permanent action if possible.
+        # Returns None when nothing qualifies -- callers feed the result straight
+        # into move_marks_to_dir_static as (target_dir, move_func), so handing
+        # back a non-returnable entry would run the wrong operation.
         action = None
         seen_actions = []
         for i in range(len(FileAction.action_history)):
-            action = FileAction.action_history[i]
+            candidate = FileAction.action_history[i]
             is_returnable_action = (
-                action != FileAction.permanent_action
-                and (auto is None or action.auto == auto)
-                and (include_deletes or not action.is_delete_action())
+                candidate != FileAction.permanent_action
+                and (auto is None or candidate.auto == auto)
+                and (include_deletes or not candidate.is_delete_action())
+                # Image-op actions have no move/copy destination directory
+                # (target is just the source's own directory) and don't accept
+                # a move_func signature, so they're never returnable here.
+                and not candidate.is_image_op_action()
             )
-            if not is_returnable_action or action in seen_actions:
+            if not is_returnable_action or candidate in seen_actions:
                 start_index += 1
-            seen_actions.append(action)
-#            logger.debug(f"i={i}, start_index={start_index}, action={action}")
+            seen_actions.append(candidate)
+#            logger.debug(f"i={i}, start_index={start_index}, candidate={candidate}")
             if i < start_index:
                 continue
             if is_returnable_action:
+                action = candidate
                 break
         return action
 
@@ -108,7 +184,9 @@ class FileAction():
         a file that was recently moved or copied out of a context was
         displayable there (manual moves) or already skipped once (auto moves).
 
-        - Delete actions are not under consideration.
+        - Delete actions are not under consideration. Neither are image ops:
+          an in-place edit output was never moved or copied into a context,
+          so it carries none of the history this exemption relies on.
         - Multi-file actions only check their first file (bounds the scan to
           one comparison per action regardless of transfer size).
         - Only the filename is compared, not the full path.
@@ -120,7 +198,7 @@ class FileAction():
         for action in FileAction.action_history[:max_actions]:
             if auto is not None and bool(action.auto) != auto:
                 continue
-            if action.is_delete_action():
+            if action.is_delete_action() or action.is_image_op_action():
                 continue
             if not action.new_files:
                 continue
@@ -180,6 +258,38 @@ class FileAction():
         FileAction.update_history(new_action)
 
     @staticmethod
+    def add_image_op_action(op, source: str, new_files) -> None:
+        """Record a manual image-ops invocation (rotate/crop/enhance/etc.) in
+        the file action history, for display in the File Actions window and
+        get_action_statistics(). *op* must be named in _IMAGE_OP_NAMES so it
+        can round-trip through to_dict/from_dict. *new_files* is the output
+        path, or a list of them (smart crop can produce several per source).
+
+        Only call this for a user-initiated edit -- image ops run by the
+        classifier pipeline (rotate/blur/scramble triage actions) are
+        automated, not user-initiated file operations, and must not be
+        recorded here.
+
+        An output path equal to *source* means the op declined to do anything
+        (ImageOps.convert_to_jpg returns its input for a JPG with no EXIF to
+        strip) and is dropped: undo deletes new_files, so recording it would
+        arm a delete of the user's original file.
+        """
+        if isinstance(new_files, str):
+            new_files = [new_files]
+        source_key = os.path.normcase(os.path.abspath(source))
+        new_files = [
+            f for f in new_files
+            if f and os.path.exists(f)
+            and os.path.normcase(os.path.abspath(f)) != source_key
+        ]
+        if not new_files:
+            return
+        target = os.path.dirname(os.path.abspath(source))
+        new_action = FileAction(op, target, [source], new_files, auto=False)
+        FileAction.update_history(new_action)
+
+    @staticmethod
     def get_action_statistics(today_only=False, kind: 'FileActionKind | None' = None, auto: 'bool | None' = False):
         """
         Calculate statistics from the action history.
@@ -200,10 +310,12 @@ class FileAction():
 
             target_dir = action.target
             if target_dir not in stats:
-                stats[target_dir] = {"moved": 0, "copied": 0, "deleted": 0}
+                stats[target_dir] = {"moved": 0, "copied": 0, "deleted": 0, "image_ops": 0}
 
             if action.is_delete_action():
                 stats[target_dir]["deleted"] += len(action.original_marks)
+            elif action.is_image_op_action():
+                stats[target_dir]["image_ops"] += len(action.new_files)
             elif action.is_move_action():
                 stats[target_dir]["moved"] += len(action.new_files)
             else:
@@ -215,6 +327,7 @@ class FileAction():
                 stats[target_dir]["moved"]
                 + stats[target_dir]["copied"]
                 + stats[target_dir]["deleted"]
+                + stats[target_dir]["image_ops"]
             )
         
         return stats
@@ -241,9 +354,14 @@ class FileAction():
     def is_delete_action(self) -> bool:
         return self.action is _delete_file_sentinel
 
+    def is_image_op_action(self) -> bool:
+        return getattr(self.action, "__name__", None) in _IMAGE_OP_NAMES
+
     def action_kind(self) -> FileActionKind:
         if self.is_delete_action():
             return FileActionKind.DELETE
+        if self.is_image_op_action():
+            return FileActionKind.IMAGE_OP
         if self.is_move_action():
             return FileActionKind.MOVE
         return FileActionKind.COPY
@@ -338,6 +456,8 @@ class FileAction():
             return Utils.copy_file
         elif action_text == "delete_file":
             return _delete_file_sentinel
+        elif action_text in _IMAGE_OP_NAMES:
+            return _image_op_registry().get(action_text)
         else:
             return None
 
@@ -349,8 +469,8 @@ class FileAction():
             return "copy_file"
         elif action_func is _delete_file_sentinel:
             return "delete_file"
-        else:
-            return None
+        name = getattr(action_func, "__name__", None)
+        return name if name in _IMAGE_OP_NAMES else None
 
     @staticmethod
     def _is_matching_action_in_list(action_list, action):

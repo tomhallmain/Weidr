@@ -355,7 +355,10 @@ class FileActionSetsWindow(SmartWindow):
         seen: set = set()
         unique: list = []
         for action in history:
-            if action.is_delete_action():
+            # Only move/copy actions have the (source, target_dir, overwrite_existing)
+            # shape a hotkey/preset action can replay -- deletes have no target
+            # directory, and image ops have no matching move_func signature.
+            if action.is_delete_action() or action.is_image_op_action():
                 continue
             key = (FileAction.convert_action_to_text(action.action), action.target)
             if key not in seen:

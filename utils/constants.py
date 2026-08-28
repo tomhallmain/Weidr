@@ -520,6 +520,7 @@ class FileActionKind(Enum):
     MOVE = "move"
     COPY = "copy"
     DELETE = "delete"
+    IMAGE_OP = "image_op"
 
 
 class ActionType(Enum):

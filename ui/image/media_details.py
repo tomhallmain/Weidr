@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
 )
 
+from files.file_action import FileAction
 from files.related_image import (
     DEFAULT_NODE_ID,
     get_related_image_path,
@@ -958,6 +959,8 @@ class MediaDetails(SmartWindow):
         *,
         mark: bool = False,
         close: bool = True,
+        op=None,
+        source_path: Optional[str] = None,
     ) -> None:
         """Common post-processing for image manipulation actions.
 
@@ -972,12 +975,22 @@ class MediaDetails(SmartWindow):
             temp image canvas.
         close : bool
             If *True*, close this MediaDetails window before refreshing.
+        op : the image_ops function that produced new_filepath, or None to
+            skip recording this invocation in the file actions store. Pass
+            this for every manually-triggered edit; never for a pipeline-
+            driven one (there are none in this class, but keep it that way).
+        source_path : the file *op* was run against, for the recorded
+            action. Required whenever *op* is given -- it must be captured
+            before the op runs, and this window may already be closed by the
+            time we get here, so it can't be re-derived.
         """
         if close:
             self.close_windows()
         self._app_actions.refresh()
         self._app_actions.success(success_msg)
         if new_filepath and os.path.exists(new_filepath):
+            if op is not None and source_path is not None:
+                FileAction.add_image_op_action(op, source_path, new_filepath)
             if mark:
                 self._app_actions.open_move_marks_window(
                     filepath=new_filepath, open_gui=False
@@ -992,15 +1005,22 @@ class MediaDetails(SmartWindow):
     # ── Image manipulation actions ────────────────────────────────
 
     def rotate_image(self, right: bool = False) -> None:
-        new_filepath = ImageOps.rotate_image(self._editable_image_path(), right)
+        source_path = self._editable_image_path()
+        new_filepath = ImageOps.rotate_image(source_path, right)
         msg = (
             _("Rotated image right") if right else _("Rotated image left")
         )
-        self._handle_action_result(new_filepath, msg)
+        self._handle_action_result(
+            new_filepath, msg, op=ImageOps.rotate_image, source_path=source_path
+        )
 
     def crop_image(self, event=None) -> None:
-        saved_files = Cropper.smart_crop_multi_detect(self._editable_image_path(), "")
+        source_path = self._editable_image_path()
+        saved_files = Cropper.smart_crop_multi_detect(source_path, "")
         if len(saved_files) > 0:
+            FileAction.add_image_op_action(
+                Cropper.smart_crop_multi_detect, source_path, saved_files
+            )
             self.close_windows()
             self._app_actions.refresh()
             self._app_actions.success(_("Cropped image"))
@@ -1013,12 +1033,19 @@ class MediaDetails(SmartWindow):
             self._app_actions.toast(_("No crops found"))
 
     def enhance_image(self) -> None:
-        new_filepath = ImageOps.enhance_image(self._editable_image_path())
-        self._handle_action_result(new_filepath, _("Enhanced image"))
+        source_path = self._editable_image_path()
+        new_filepath = ImageOps.enhance_image(source_path)
+        self._handle_action_result(
+            new_filepath, _("Enhanced image"), op=ImageOps.enhance_image, source_path=source_path
+        )
 
     def random_crop(self) -> None:
-        new_filepath = ImageOps.random_crop_and_upscale(self._editable_image_path())
-        self._handle_action_result(new_filepath, _("Randomly cropped image"))
+        source_path = self._editable_image_path()
+        new_filepath = ImageOps.random_crop_and_upscale(source_path)
+        self._handle_action_result(
+            new_filepath, _("Randomly cropped image"),
+            op=ImageOps.random_crop_and_upscale, source_path=source_path,
+        )
 
     def random_modification(self) -> None:
         MediaDetails.randomly_modify_image(
@@ -1032,6 +1059,9 @@ class MediaDetails(SmartWindow):
         new_filepath = ImageOps.randomly_modify_image(image_path)
         app_actions.refresh()
         if os.path.exists(new_filepath):
+            FileAction.add_image_op_action(
+                ImageOps.randomly_modify_image, image_path, new_filepath
+            )
             app_actions.success(_("Randomly modified image"))
             if master is not None:
                 MediaDetails.open_temp_media_canvas(
@@ -1043,14 +1073,19 @@ class MediaDetails(SmartWindow):
             app_actions.toast(_("No new image created"))
 
     def scramble_image(self) -> None:
-        new_filepath = ImageOps.scramble_image(self._editable_image_path())
-        self._handle_action_result(new_filepath, _("Scrambled image"))
+        source_path = self._editable_image_path()
+        new_filepath = ImageOps.scramble_image(source_path)
+        self._handle_action_result(
+            new_filepath, _("Scrambled image"), op=ImageOps.scramble_image, source_path=source_path
+        )
 
     def _scramble_image_and_mark(self) -> None:
-        new_filepath = ImageOps.scramble_image(self._editable_image_path())
+        source_path = self._editable_image_path()
+        new_filepath = ImageOps.scramble_image(source_path)
         self.close_windows()
         self._app_actions.refresh()
         if new_filepath and os.path.exists(new_filepath):
+            FileAction.add_image_op_action(ImageOps.scramble_image, source_path, new_filepath)
             self._app_actions.toast(_("Scrambled image"))
             self._app_actions.open_move_marks_window(
                 filepath=new_filepath, open_gui=False
@@ -1059,8 +1094,12 @@ class MediaDetails(SmartWindow):
             self._app_actions.toast(_("No new image created"))
 
     def semi_scramble_image(self) -> None:
-        new_filepath = ImageOps.semi_scramble_image(self._editable_image_path())
-        self._handle_action_result(new_filepath, _("Semi-scrambled image"))
+        source_path = self._editable_image_path()
+        new_filepath = ImageOps.semi_scramble_image(source_path)
+        self._handle_action_result(
+            new_filepath, _("Semi-scrambled image"),
+            op=ImageOps.semi_scramble_image, source_path=source_path,
+        )
 
     def flip_image(self, top_bottom: bool = False) -> None:
         if top_bottom:
@@ -1076,10 +1115,11 @@ class MediaDetails(SmartWindow):
                 kind="askokcancel",
             ):
                 return
-        new_filepath = ImageOps.flip_image(
-            self._editable_image_path(), top_bottom=top_bottom
+        source_path = self._editable_image_path()
+        new_filepath = ImageOps.flip_image(source_path, top_bottom=top_bottom)
+        self._handle_action_result(
+            new_filepath, _("Flipped image"), op=ImageOps.flip_image, source_path=source_path
         )
-        self._handle_action_result(new_filepath, _("Flipped image"))
 
     def _get_current_dimensions(self) -> tuple[int, int]:
         with Image.open(self._editable_image_path()) as image:
@@ -1115,14 +1155,17 @@ class MediaDetails(SmartWindow):
             self._app_actions.warn(_("Please enter a target ratio"))
             return False
         try:
+            source_path = self._editable_image_path()
             new_filepath = ImageOps.change_aspect_ratio(
-                self._editable_image_path(),
+                source_path,
                 ratio_text,
             )
             self._store_aspect_ratio_settings(ratio_text)
             self._handle_action_result(
                 new_filepath,
                 _("Changed image aspect ratio"),
+                op=ImageOps.change_aspect_ratio,
+                source_path=source_path,
             )
             return True
         except Exception as e:
@@ -1193,11 +1236,14 @@ class MediaDetails(SmartWindow):
 
     def copy_without_exif(self) -> None:
         try:
-            new_filepath = image_data_extractor.copy_without_exif(self._editable_image_path())
+            source_path = self._editable_image_path()
+            new_filepath = image_data_extractor.copy_without_exif(source_path)
             self._handle_action_result(
                 new_filepath,
                 _("Copied image without EXIF data"),
                 close=False,
+                op=image_data_extractor.copy_without_exif,
+                source_path=source_path,
             )
         except Exception as e:
             logger.error(f"Error copying image without EXIF: {e}")
@@ -1205,8 +1251,12 @@ class MediaDetails(SmartWindow):
 
     def convert_to_jpg(self) -> None:
         try:
-            new_filepath = ImageOps.convert_to_jpg(self._editable_image_path())
-            self._handle_action_result(new_filepath, _("Converted image to JPG"))
+            source_path = self._editable_image_path()
+            new_filepath = ImageOps.convert_to_jpg(source_path)
+            self._handle_action_result(
+                new_filepath, _("Converted image to JPG"),
+                op=ImageOps.convert_to_jpg, source_path=source_path,
+            )
         except Exception as e:
             logger.error(f"Error converting image to JPG: {e}")
             self._app_actions.warn(_("Error converting image to JPG"))
@@ -1214,13 +1264,20 @@ class MediaDetails(SmartWindow):
     # ── Mark-and-action variants ──────────────────────────────────
 
     def _rotate_image_and_mark(self, right: bool = False) -> None:
-        new_filepath = ImageOps.rotate_image(self._editable_image_path(), right)
+        source_path = self._editable_image_path()
+        new_filepath = ImageOps.rotate_image(source_path, right)
         msg = _("Rotated image right") if right else _("Rotated image left")
-        self._handle_action_result(new_filepath, msg, mark=True)
+        self._handle_action_result(
+            new_filepath, msg, mark=True, op=ImageOps.rotate_image, source_path=source_path
+        )
 
     def _crop_image_and_mark(self, event=None) -> None:
-        saved_files = Cropper.smart_crop_multi_detect(self._editable_image_path(), "")
+        source_path = self._editable_image_path()
+        saved_files = Cropper.smart_crop_multi_detect(source_path, "")
         if len(saved_files) > 0:
+            FileAction.add_image_op_action(
+                Cropper.smart_crop_multi_detect, source_path, saved_files
+            )
             self.close_windows()
             self._app_actions.refresh()
             self._app_actions.toast(_("Cropped image"))
@@ -1232,26 +1289,34 @@ class MediaDetails(SmartWindow):
 
     def _enhance_image_and_mark(self) -> None:
         """Enhance and mark.  Uses toast (not success) per original."""
-        new_filepath = ImageOps.enhance_image(self._editable_image_path())
+        source_path = self._editable_image_path()
+        new_filepath = ImageOps.enhance_image(source_path)
         self.close_windows()
         self._app_actions.refresh()
         self._app_actions.toast(_("Enhanced image"))
         if new_filepath and os.path.exists(new_filepath):
+            FileAction.add_image_op_action(ImageOps.enhance_image, source_path, new_filepath)
             self._app_actions.open_move_marks_window(
                 filepath=new_filepath, open_gui=False
             )
 
     def _random_crop_and_mark(self) -> None:
-        new_filepath = ImageOps.random_crop_and_upscale(self._editable_image_path())
+        source_path = self._editable_image_path()
+        new_filepath = ImageOps.random_crop_and_upscale(source_path)
         self._handle_action_result(
-            new_filepath, _("Randomly cropped image"), mark=True
+            new_filepath, _("Randomly cropped image"), mark=True,
+            op=ImageOps.random_crop_and_upscale, source_path=source_path,
         )
 
     def _random_modification_and_mark(self) -> None:
-        new_filepath = ImageOps.randomly_modify_image(self._editable_image_path())
+        source_path = self._editable_image_path()
+        new_filepath = ImageOps.randomly_modify_image(source_path)
         self.close_windows()
         self._app_actions.refresh()
         if new_filepath and os.path.exists(new_filepath):
+            FileAction.add_image_op_action(
+                ImageOps.randomly_modify_image, source_path, new_filepath
+            )
             self._app_actions.toast(_("Randomly modified image"))
             self._app_actions.open_move_marks_window(
                 filepath=new_filepath, open_gui=False
@@ -1260,17 +1325,24 @@ class MediaDetails(SmartWindow):
             self._app_actions.toast(_("No new image created"))
 
     def _flip_image_and_mark(self, top_bottom: bool = False) -> None:
-        new_filepath = ImageOps.flip_image(self._editable_image_path(), top_bottom=top_bottom)
-        self._handle_action_result(new_filepath, _("Flipped image"), mark=True)
+        source_path = self._editable_image_path()
+        new_filepath = ImageOps.flip_image(source_path, top_bottom=top_bottom)
+        self._handle_action_result(
+            new_filepath, _("Flipped image"), mark=True,
+            op=ImageOps.flip_image, source_path=source_path,
+        )
 
     def _copy_without_exif_and_mark(self) -> None:
         try:
-            new_filepath = image_data_extractor.copy_without_exif(self._editable_image_path())
+            source_path = self._editable_image_path()
+            new_filepath = image_data_extractor.copy_without_exif(source_path)
             self._handle_action_result(
                 new_filepath,
                 _("Copied image without EXIF data"),
                 mark=True,
                 close=False,
+                op=image_data_extractor.copy_without_exif,
+                source_path=source_path,
             )
         except Exception as e:
             logger.error(f"Error copying image without EXIF: {e}")
@@ -1278,8 +1350,12 @@ class MediaDetails(SmartWindow):
 
     def _convert_to_jpg_and_mark(self) -> None:
         try:
-            new_filepath = ImageOps.convert_to_jpg(self._editable_image_path())
-            self._handle_action_result(new_filepath, _("Converted image to JPG"), mark=True)
+            source_path = self._editable_image_path()
+            new_filepath = ImageOps.convert_to_jpg(source_path)
+            self._handle_action_result(
+                new_filepath, _("Converted image to JPG"), mark=True,
+                op=ImageOps.convert_to_jpg, source_path=source_path,
+            )
         except Exception as e:
             logger.error(f"Error converting image to JPG: {e}")
             self._app_actions.warn(_("Error converting image to JPG"))

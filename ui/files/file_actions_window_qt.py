@@ -105,6 +105,7 @@ class FileActionsWindow(SmartWindow):
             (_("Move"), FileActionKind.MOVE),
             (_("Copy"), FileActionKind.COPY),
             (_("Delete"), FileActionKind.DELETE),
+            (_("Image Op"), FileActionKind.IMAGE_OP),
         ]:
             self._type_combo.addItem(label, kind)
         self._type_combo.currentIndexChanged.connect(self._on_type_filter_changed)
@@ -207,6 +208,7 @@ class FileActionsWindow(SmartWindow):
                 FileActionKind.MOVE: _("moves"),
                 FileActionKind.COPY: _("copies"),
                 FileActionKind.DELETE: _("deletes"),
+                FileActionKind.IMAGE_OP: _("image ops"),
             }
             if self._action_type_filter is not None and not self._filter_text and not self._show_today_only:
                 msg = _("No {0} in history.").format(kind_labels[self._action_type_filter])
@@ -248,6 +250,7 @@ class FileActionsWindow(SmartWindow):
                 (_("Moved"), "moved"),
                 (_("Copied"), "copied"),
                 (_("Deleted"), "deleted"),
+                (_("Image Ops"), "image_ops"),
                 (_("Total"), "total"),
             ]
         else:
@@ -256,6 +259,7 @@ class FileActionsWindow(SmartWindow):
                     FileActionKind.MOVE: (_("Moved"), "moved"),
                     FileActionKind.COPY: (_("Copied"), "copied"),
                     FileActionKind.DELETE: (_("Deleted"), "deleted"),
+                    FileActionKind.IMAGE_OP: (_("Image Ops"), "image_ops"),
                 }[self._action_type_filter]
             ]
 
@@ -284,6 +288,7 @@ class FileActionsWindow(SmartWindow):
             FileActionKind.MOVE: _("Move Statistics"),
             FileActionKind.COPY: _("Copy Statistics"),
             FileActionKind.DELETE: _("Delete Statistics"),
+            FileActionKind.IMAGE_OP: _("Image Op Statistics"),
         }
         if self._show_today_only:
             title_text = _("Today's File Actions")
@@ -342,6 +347,32 @@ class FileActionsWindow(SmartWindow):
     # ------------------------------------------------------------------
     # Action history rows (paginated)
     # ------------------------------------------------------------------
+    @staticmethod
+    def _image_op_labels() -> dict:
+        """Display label per image-op action name (files/file_action.py's
+        _IMAGE_OP_NAMES), for the action-row type pill. Built per call so it
+        picks up the active locale rather than freezing it at import time.
+        """
+        return {
+            "rotate_image": _("Rotate"),
+            "enhance_image": _("Enhance"),
+            "flip_image": _("Flip"),
+            "change_aspect_ratio": _("Aspect Ratio"),
+            "convert_to_jpg": _("Convert to JPG"),
+            "scramble_image": _("Scramble"),
+            "semi_scramble_image": _("Semi-Scramble"),
+            "random_crop_and_upscale": _("Random Crop"),
+            "randomly_modify_image": _("Random Modification"),
+            "crop_image_to_rect": _("Crop"),
+            "crop_image_to_polygon": _("Crop (Freeform)"),
+            "draw_box_at_rect": _("Box"),
+            "draw_box_at_polygon": _("Box (Freeform)"),
+            "draw_background_box_at_rect": _("Background Box"),
+            "draw_background_box_at_polygon": _("Background Box (Freeform)"),
+            "smart_crop_multi_detect": _("Smart Crop"),
+            "copy_without_exif": _("Strip Metadata"),
+        }
+
     def _build_action_rows(self) -> None:
         visible = self._filtered_history[: self._visible_count]
         last_action: FileAction | None = None
@@ -394,6 +425,9 @@ class FileActionsWindow(SmartWindow):
 
                 if is_delete:
                     type_lbl = QLabel(_("Delete"))
+                elif action.is_image_op_action():
+                    op_name = FileAction.convert_action_to_text(action.action)
+                    type_lbl = QLabel(self._image_op_labels().get(op_name, op_name or _("Image Op")))
                 elif action.is_move_action():
                     type_lbl = QLabel(_("Move"))
                 else:
@@ -692,6 +726,7 @@ class FileActionsWindow(SmartWindow):
                 FileActionKind.MOVE: _("moves only"),
                 FileActionKind.COPY: _("copies only"),
                 FileActionKind.DELETE: _("deletes only"),
+                FileActionKind.IMAGE_OP: _("image ops only"),
             }
             parts.append(kind_labels[self._action_type_filter])
         if self._initiator_filter is not None:

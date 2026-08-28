@@ -529,10 +529,16 @@ class WindowLauncher:
         output_suffix: str,
         success_msg: str,
         failed_msg: str,
+        apply_fn=None,
     ) -> None:
         """Shared tail for crop/box/background-box/freeform actions on static media:
         fix up the SVG/PDF sibling extension if needed, then open the result or
         report failure. *new_path* is whatever apply_fn returned.
+
+        *apply_fn* is the image_ops function that produced *new_path* -- pass
+        it to record this manual edit in the file actions store. All callers
+        here are user-triggered interactive selections, so this is always
+        safe to record; never wire an automated/pipeline caller through here.
         """
         import os
         from utils.constants import MediaType
@@ -557,6 +563,12 @@ class WindowLauncher:
                 pass
 
         if new_path and os.path.exists(new_path):
+            if apply_fn is not None:
+                # Recorded against media_path, not source_path: for SVG/PDF the
+                # op ran on a rendered raster that the user never sees, and the
+                # history is more useful pointing at the file they acted on.
+                from files.file_action import FileAction
+                FileAction.add_image_op_action(apply_fn, media_path, new_path)
             self._app.app_actions.refresh()
             self._app.app_actions.success(success_msg)
             from ui.image.media_details import MediaDetails
@@ -693,7 +705,10 @@ class WindowLauncher:
                 new_path = apply_fn(source_path, left, upper, right, lower, fill_image=fill_image)
             else:
                 new_path = apply_fn(source_path, left, upper, right, lower)
-            self._finish_static_edit(new_path, media_path, media_type, output_suffix, success_msg, failed_msg)
+            self._finish_static_edit(
+                new_path, media_path, media_type, output_suffix, success_msg, failed_msg,
+                apply_fn=apply_fn,
+            )
 
         gv.crop_confirmed.connect(_on_confirmed)
         gv.crop_cancelled.connect(_on_cancelled)
@@ -777,7 +792,10 @@ class WindowLauncher:
                 new_path = apply_fn(source_path, points, fill_image=fill_image)
             else:
                 new_path = apply_fn(source_path, points)
-            self._finish_static_edit(new_path, media_path, media_type, output_suffix, success_msg, failed_msg)
+            self._finish_static_edit(
+                new_path, media_path, media_type, output_suffix, success_msg, failed_msg,
+                apply_fn=apply_fn,
+            )
 
         gv.polygon_confirmed.connect(_on_confirmed)
         gv.crop_cancelled.connect(_on_cancelled)

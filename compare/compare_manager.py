@@ -6,6 +6,7 @@ from enum import Enum
 from compare.compare_wrapper import CompareWrapper
 from compare.compare_args import CompareArgs
 from compare.base_compare import CompareCancelled
+from lib.sleep_prevention import WakeLevel, hold_wake
 from utils.config import config
 from utils.constants import CompareMode, Mode
 from utils.logging_setup import get_logger
@@ -835,6 +836,23 @@ class CompareManager:
     # ========== Main Execution ==========
     
     def run(self, args: CompareArgs = CompareArgs()):
+        """
+        Execute comparison, holding off system sleep for the duration.
+
+        A compare over a large directory runs for a long time -- the
+        data-gathering pass especially, which reads and embeds every file, and
+        which is measured in hours once a directory reaches six figures. An
+        unattended run suspended part-way through is the case this guards.
+
+        SYSTEM rather than FULL: there is nothing to watch, so the display is
+        left free to blank. The hold is reference counted process-wide, so
+        concurrent runs in other windows each keep it alive until the last one
+        finishes.
+        """
+        with hold_wake(WakeLevel.SYSTEM):
+            return self._run_impl(args)
+
+    def _run_impl(self, args: CompareArgs = CompareArgs()):
         """
         Execute comparison. For single-mode, delegates to wrapper.
         For composite mode, runs multiple comparisons and combines results.

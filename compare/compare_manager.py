@@ -5,6 +5,7 @@ from enum import Enum
 
 from compare.compare_wrapper import CompareWrapper
 from compare.compare_args import CompareArgs
+from compare.compare_models import CompareModels
 from compare.base_compare import CompareCancelled
 from lib.sleep_prevention import WakeLevel, hold_wake
 from utils.config import config
@@ -346,17 +347,20 @@ class CompareManager:
         Apply all compare settings from this manager to a CompareArgs object.
         Handles fallbacks to config defaults when settings are not explicitly set.
         """
-        # Apply threshold with fallback to config defaults
+        # Apply threshold with fallback to config defaults. Each branch is a
+        # different scale, so a value from one mode is meaningless in another:
+        # the embedding threshold (0.9) applied to MODELS rejected everything,
+        # since that mode's scores top out well below it.
+        primary_mode = self.compare_mode
         threshold = self.get_threshold()
-        if threshold is not None:
+        if threshold is not None and primary_mode != CompareMode.MODELS:
             args.threshold = threshold
+        elif primary_mode == CompareMode.COLOR_MATCHING:
+            args.threshold = config.color_diff_threshold
+        elif primary_mode == CompareMode.MODELS:
+            args.threshold = CompareModels.THRESHOLD_MATCH
         else:
-            # Fallback to config defaults based on primary mode
-            primary_mode = self.compare_mode
-            if primary_mode == CompareMode.COLOR_MATCHING:
-                args.threshold = config.color_diff_threshold
-            else:
-                args.threshold = config.embedding_similarity_threshold
+            args.threshold = config.embedding_similarity_threshold
         
         # Apply counter_limit with fallback to config default
         counter_limit = self.get_counter_limit()

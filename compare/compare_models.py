@@ -1,5 +1,5 @@
 import os
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from compare.base_compare import BaseCompare, gather_files
 from compare.compare_args import CompareArgs
@@ -39,40 +39,60 @@ def _as_models_tuple(models_data) -> Tuple[List[str], List[str]]:
     return ([], [])
 
 
+def _dimension_score(search_terms: List[str], candidate_names: List[str]) -> Optional[float]:
+    """Fraction of *search_terms* found among *candidate_names*.
+
+    Matching is a case-insensitive substring test, so a search for "realistic"
+    finds "realisticVisionV51_v51VAE" -- file-side names arrive with their
+    extension already stripped (see ImageDataExtractor.get_models), and a user
+    searching by text has no way to reproduce a full checkpoint stem exactly.
+
+    Returns None when the search does not constrain this dimension at all,
+    which the caller uses to leave it out of scoring entirely.
+    """
+    if not search_terms:
+        return None
+    if not candidate_names:
+        return 0.0
+    lowered = [name.lower() for name in candidate_names]
+    hits = sum(
+        1 for term in search_terms
+        if term and any(term.lower() in name for name in lowered)
+    )
+    return hits / len(search_terms)
+
+
 def model_similarity(models1: List[str], loras1: List[str],
                      models2: List[str], loras2: List[str]) -> float:
     """
     Calculate similarity between two sets of models and loras.
     Returns value between 0.0 and 1.0, where 1.0 is identical.
+
+    Scored per dimension, taking the best. A dimension is skipped when the
+    search does not constrain it or when nothing overlaps, so loras can only
+    raise a score, never lower one: an exact model match is a full match even
+    where the candidate's loras differ.
+
+    Scoring a non-overlapping dimension as zero -- as a fixed 0.7/0.3 blend
+    did -- capped a models-only search (any text search: those never carry
+    loras) at 0.7, below the threshold applied to this mode.
     """
-    if not models1 and not models2 and not loras1 and not loras2:
-        return 1.0  # Both have no models/loras
-    
+    if not models1 and not loras1 and not models2 and not loras2:
+        return 1.0  # Neither side has models/loras
+
     if not models1 and not loras1:
-        return 0.0  # First has no models/loras
+        return 0.0  # Nothing to search for
     if not models2 and not loras2:
-        return 0.0  # Second has no models/loras
-    
-    # Convert to sets for comparison
-    models1_set = set(models1)
-    models2_set = set(models2)
-    loras1_set = set(loras1)
-    loras2_set = set(loras2)
-    
-    # Calculate model overlap
-    model_intersection = len(models1_set & models2_set)
-    model_union = len(models1_set | models2_set)
-    model_sim = model_intersection / model_union if model_union > 0 else 0.0
-    
-    # Calculate lora overlap
-    lora_intersection = len(loras1_set & loras2_set)
-    lora_union = len(loras1_set | loras2_set)
-    lora_sim = lora_intersection / lora_union if lora_union > 0 else 0.0
-    
-    # Weight models more heavily than loras
-    combined_sim = (model_sim * 0.7) + (lora_sim * 0.3)
-    
-    return combined_sim
+        return 0.0  # Candidate has nothing to match
+
+    scores = [
+        score for score in (
+            _dimension_score(models1, models2),
+            _dimension_score(loras1, loras2),
+        )
+        if score  # drops None (unconstrained) and 0.0 (no overlap)
+    ]
+    return max(scores) if scores else 0.0
 
 
 class CompareModels(BaseCompare):

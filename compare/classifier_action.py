@@ -964,15 +964,43 @@ class ClassifierAction:
             return True
         return get_media_type_for_path(path) in self.applies_to_media_types
 
+    def describe_image_prediction(self, image_path: str) -> Optional["TriggerDetail"]:
+        """Ranked classifier predictions for *image_path*, match or no match.
+
+        find_first_trigger_slot() only reports detail when something triggered,
+        which is useless for the case it is most often reached for: asking why
+        an image did NOT classify the way it was expected to. This runs the
+        classifier and reports what it actually saw, with no threshold applied.
+
+        Returns None when this action has no image classifier to consult.
+        """
+        if not self.use_image_classifier:
+            return None
+        if self.image_classifier is None and self.image_classifier_name:
+            self.ensure_image_classifier_loaded(None)
+        if self.image_classifier is None:
+            return None
+        try:
+            predicted_category = self._classify_with_classifier(image_path)
+        except Exception:
+            logger.exception("describe_image_prediction failed for %s", image_path)
+            return None
+        return self._build_classifier_detail(image_path, predicted_category)
+
     def find_first_trigger_slot(
         self, media_path: str, start_slot: int = 0, sample_ratio: Optional[float] = None
     ) -> Optional["TriggerFrameResult"]:
-        """Scan sampled frames of a dynamic media file and return the position of the
+        """Scan sampled frames of a media file and return the position of the
         first matching frame, provided the action's positive-frame threshold is met.
+
+        A still image is treated as a single-slot scan: it either matches or it
+        does not, with no frame-ratio threshold to apply. There is nothing to
+        seek to, but the returned detail is what makes the manual check useful
+        on stills -- see describe_image_prediction() for the no-match case.
 
         Mirrors run_on_media_path() sampling and threshold logic but returns seek
         info instead of dispatching. Does not touch any prevalidation cache.
-        Returns None if the threshold is not met or the file is not dynamic media.
+        Returns None if the threshold is not met.
 
         start_slot: skip all slots before this index, enabling "next trigger" cycling.
             Call with start_slot = last_result.slot_index + 1 and wrap to 0 on None.
@@ -981,10 +1009,30 @@ class ClassifierAction:
             disables the configured max-samples cap, sampling up to every available
             frame. Use 1.0 for interactive seeks where precision matters more than speed.
         """
-        if not is_classifier_dynamic_media_path(media_path):
-            return None
         if not self.media_type_allowed(media_path):
             return None
+
+        if not is_classifier_dynamic_media_path(media_path):
+            # Still image: one slot, no threshold, nothing to seek to. start_slot
+            # past the only slot means the caller already cycled through it.
+            if start_slot > 0:
+                return None
+            detail_out: list = [None]
+            try:
+                is_match, _unused = self._evaluate_image_path_match_for_mode(
+                    media_path, _detail_out=detail_out
+                )
+            except Exception:
+                logger.exception("find_first_trigger_slot failed for still %s", media_path)
+                return None
+            if not is_match:
+                return None
+            return TriggerFrameResult(
+                slot_index=0,
+                total_planned_slots=1,
+                frame_path=media_path,
+                detail=detail_out[0],
+            )
 
         if sample_ratio is not None:
             # Interactive/manual seek: sample densely with no artificial frame-count cap.

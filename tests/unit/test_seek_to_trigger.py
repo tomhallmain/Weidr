@@ -55,23 +55,95 @@ def _mock_stream(planned_slots, frame_paths):
 
 
 # ---------------------------------------------------------------------------
-# find_first_trigger_slot — non-dynamic media
+# find_first_trigger_slot — still images (single-slot scan)
 # ---------------------------------------------------------------------------
 
-class TestFindFirstTriggerSlotNonDynamic:
-    def test_returns_none_for_static_image(self, tmp_path):
+class TestFindFirstTriggerSlotStillImage:
+    """A still is scanned as one slot: no frame-ratio threshold, nothing to
+    seek to, but the detail is what makes a manual check on a still useful."""
+
+    def _still(self, tmp_path):
         img = tmp_path / "photo.jpg"
         img.write_bytes(b"x")
-        ca = _action()
-        result = ca.find_first_trigger_slot(str(img))
-        assert result is None
+        return str(img)
 
-    def test_returns_none_for_txt_file(self, tmp_path):
+    def test_no_match_returns_none(self, tmp_path):
+        # _action() enables no validation types, so nothing can match.
+        assert _action().find_first_trigger_slot(self._still(tmp_path)) is None
+
+    def test_match_returns_a_single_slot_result(self, tmp_path):
+        path = self._still(tmp_path)
+        ca = _action()
+        detail = TriggerDetail(trigger_type="image_classifier", category="nsfw")
+
+        def _fake_eval(image_path, lookahead_eval_cache=None, _detail_out=None):
+            if _detail_out is not None:
+                _detail_out[0] = detail
+            return True, "nsfw"
+
+        with patch.object(ca, "_evaluate_image_path_match_for_mode", side_effect=_fake_eval):
+            result = ca.find_first_trigger_slot(path)
+
+        assert result is not None
+        assert result.slot_index == 0
+        assert result.total_planned_slots == 1
+        assert result.frame_path == path
+        assert result.detail is detail
+
+    def test_start_slot_past_the_only_slot_returns_none(self, tmp_path):
+        """Cycling: a still has one slot, so 'next trigger' has nowhere to go."""
+        ca = _action()
+        with patch.object(
+            ca, "_evaluate_image_path_match_for_mode", return_value=(True, None)
+        ):
+            assert ca.find_first_trigger_slot(self._still(tmp_path), start_slot=1) is None
+
+    def test_evaluation_failure_returns_none(self, tmp_path):
+        ca = _action()
+        with patch.object(
+            ca, "_evaluate_image_path_match_for_mode", side_effect=RuntimeError("boom")
+        ):
+            assert ca.find_first_trigger_slot(self._still(tmp_path)) is None
+
+    def test_non_image_file_is_still_scanned_not_short_circuited(self, tmp_path):
+        """The gate is media_type_allowed, not the dynamic-media check."""
         f = tmp_path / "notes.txt"
         f.write_bytes(b"hello")
         ca = _action()
-        result = ca.find_first_trigger_slot(str(f))
-        assert result is None
+        with patch.object(
+            ca, "_evaluate_image_path_match_for_mode", return_value=(False, None)
+        ) as evaluated:
+            assert ca.find_first_trigger_slot(str(f)) is None
+        assert evaluated.called
+
+
+class TestDescribeImagePrediction:
+    """Ranked predictions regardless of match — the no-match case is exactly
+    the one a manual check on a still is usually asking about."""
+
+    def test_returns_none_without_an_image_classifier(self, tmp_path):
+        ca = _action(use_image_classifier=False)
+        assert ca.describe_image_prediction(str(tmp_path / "x.jpg")) is None
+
+    def test_reports_predictions_when_nothing_matched(self, tmp_path):
+        ca = _action(use_image_classifier=True)
+        ca.image_classifier = object()  # non-None: skip the lazy load path
+        expected = TriggerDetail(
+            trigger_type="image_classifier",
+            category="safe",
+            top_predictions=[("safe", 0.92), ("nsfw", 0.08)],
+        )
+        with patch.object(ca, "_classify_with_classifier", return_value="safe"), \
+             patch.object(ca, "_build_classifier_detail", return_value=expected):
+            assert ca.describe_image_prediction(str(tmp_path / "x.jpg")) is expected
+
+    def test_classification_failure_returns_none(self, tmp_path):
+        ca = _action(use_image_classifier=True)
+        ca.image_classifier = object()
+        with patch.object(
+            ca, "_classify_with_classifier", side_effect=RuntimeError("boom")
+        ):
+            assert ca.describe_image_prediction(str(tmp_path / "x.jpg")) is None
 
 
 # ---------------------------------------------------------------------------

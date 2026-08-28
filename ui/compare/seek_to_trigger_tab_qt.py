@@ -1,10 +1,17 @@
 """
 Seek-to-Trigger tab for ClassifierManagementWindow.
 
-Given the currently displayed dynamic media file (video, GIF, or PDF) and a
-ClassifierAction (or Prevalidation), scans sampled frames using the action's own
-settings, finds the first frame that satisfies the action's full threshold
-condition, and seeks the media player to that position.
+Given the currently displayed media file and a ClassifierAction (or
+Prevalidation), scans it using the action's own settings, finds the first frame
+that satisfies the action's full threshold condition, and seeks the media player
+to that position.
+
+Dynamic media (video, GIF, PDF) is sampled frame-by-frame. A still image is a
+single-slot scan with nothing to seek to; it is supported because the reported
+trigger detail — the classifier's ranked predictions — answers "what does the
+model actually see here?", which is the question a manual check is usually
+asking. For a still those predictions are reported whether or not the action
+triggered, since a surprising non-match is the common reason to look.
 
 The scan runs in a background QThread so the UI stays responsive.
 """
@@ -48,8 +55,11 @@ _LAST_ACTION_CACHE_KEY = "seek_to_trigger_last_action"
 class SeekToTriggerWorker(QThread):
     """Background thread that runs ClassifierAction.find_first_trigger_slot()."""
 
-    found = Signal(object)   # TriggerFrameResult
-    not_found = Signal(int)  # planned_slots (so the UI can report how many were scanned)
+    found = Signal(object)        # TriggerFrameResult
+    # planned_slots (so the UI can report how many were scanned), plus a
+    # TriggerDetail or None. Stills carry the classifier's ranked predictions
+    # here so a non-matching image still says what the model actually saw.
+    not_found = Signal(int, object)
     error = Signal(str)
 
     def __init__(
@@ -80,11 +90,15 @@ class SeekToTriggerWorker(QThread):
                 )
             if result is not None:
                 self.found.emit(result)
+            elif not is_classifier_dynamic_media_path(self._media_path):
+                # One slot, and it didn't match. Report what the classifier saw
+                # anyway -- that is the whole point of running this on a still.
+                self.not_found.emit(1, self._action.describe_image_prediction(self._media_path))
             else:
                 from image.frame_cache import FrameCache
                 stats = FrameCache.get_dynamic_media_stats(self._media_path)
                 planned = getattr(stats, "total_items", 0) or 0
-                self.not_found.emit(planned)
+                self.not_found.emit(planned, None)
         except Exception as exc:
             logger.exception("SeekToTriggerWorker failed for %s", self._media_path)
             self.error.emit(str(exc))
@@ -100,7 +114,8 @@ class SeekToTriggerTab(QWidget):
 
     Two side-by-side list panels — Classifier Actions (left) and Prevalidations
     (right).  Select a row and click "Seek to trigger" to scan the current
-    dynamic media for that action's first trigger point.
+    media for that action's first trigger point. Stills are scannable too;
+    they report the trigger detail instead of seeking.
     """
 
     _DEFAULT_SAMPLE_PCT = 30
@@ -260,11 +275,13 @@ class SeekToTriggerTab(QWidget):
         """Update which media is active and rebuild the action lists."""
         path: Optional[str] = self._app_actions.get_active_media_filepath()
         self._active_media_path = path
-        self._rebuild_rows(bool(path and is_classifier_dynamic_media_path(path)))
+        self._rebuild_rows(bool(path and os.path.isfile(path)))
 
-    def _rebuild_rows(self, is_dynamic: bool) -> None:
+    def _rebuild_rows(self, is_runnable: bool) -> None:
+        """*is_runnable*: any existing media file. Stills are scannable too --
+        they have nothing to seek to, but the trigger detail is the point."""
         worker_running = self._worker is not None and self._worker.isRunning()
-        btn_enabled = is_dynamic and not worker_running
+        btn_enabled = is_runnable and not worker_running
 
         # Preserve (or default to 0) selection across rebuilds.
         ca_row = max(0, self._actions_list.currentRow())
@@ -311,8 +328,8 @@ class SeekToTriggerTab(QWidget):
     def _seek_to_trigger(self, classifier_action: ClassifierAction) -> None:
         media_path = self._app_actions.get_active_media_filepath()
         self._active_media_path = media_path
-        if not media_path or not is_classifier_dynamic_media_path(media_path):
-            self._set_status(_("No dynamic media is currently loaded."))
+        if not media_path or not os.path.isfile(media_path):
+            self._set_status(_("No media is currently loaded."))
             return
 
         if self._worker is not None and self._worker.isRunning():
@@ -334,7 +351,7 @@ class SeekToTriggerTab(QWidget):
             )
         )
         self._set_detail(_NBSP)
-        self._rebuild_rows(is_dynamic=True)
+        self._rebuild_rows(is_runnable=True)
 
         sample_ratio = (
             self._density_slider.value() / 100.0
@@ -349,7 +366,7 @@ class SeekToTriggerTab(QWidget):
             lambda r: self._on_found(r, media_path, classifier_action.name, nav_key, start_slot)
         )
         self._worker.not_found.connect(
-            lambda n: self._on_not_found(n, classifier_action.name)
+            lambda n, d: self._on_not_found(n, d, classifier_action.name, media_path)
         )
         self._worker.error.connect(self._on_error)
         self._worker.finished.connect(self._on_worker_finished)
@@ -360,7 +377,7 @@ class SeekToTriggerTab(QWidget):
             self._worker.deleteLater()
             self._worker = None
         path = self._app_actions.get_active_media_filepath()
-        self._rebuild_rows(is_dynamic=bool(path and is_classifier_dynamic_media_path(path)))
+        self._rebuild_rows(is_runnable=bool(path and os.path.isfile(path)))
 
     def _on_found(
         self, result: TriggerFrameResult, media_path: str, action_name: str,
@@ -368,6 +385,17 @@ class SeekToTriggerTab(QWidget):
     ) -> None:
         wrapped = start_slot > 0 and result.slot_index < start_slot
         SeekToTriggerTab._last_trigger_slot[nav_key] = result.slot_index
+
+        if not is_classifier_dynamic_media_path(media_path):
+            # Still image: it matched, and there is no position to seek to.
+            msg = _("'{name}' triggers on this image{dims}.").format(
+                name=action_name, dims=_dimensions_suffix(media_path)
+            )
+            self._set_status(msg)
+            detail_line = _format_trigger_detail(result.detail)
+            self._set_detail(detail_line if detail_line else _NBSP)
+            self._app_actions.toast(msg)
+            return
 
         from image.frame_cache import FrameCache
         pos = FrameCache.slot_index_to_seek_position(
@@ -412,12 +440,24 @@ class SeekToTriggerTab(QWidget):
         self._set_detail(detail_line if detail_line else _NBSP)
         notify(msg)
 
-    def _on_not_found(self, planned_slots: int, action_name: str) -> None:
-        msg = _(
-            "'{name}' did not trigger on the current media ({n} samples scanned)."
-        ).format(name=action_name, n=planned_slots)
+    def _on_not_found(
+        self, planned_slots: int, detail: Optional[TriggerDetail], action_name: str,
+        media_path: Optional[str] = None,
+    ) -> None:
+        if media_path and not is_classifier_dynamic_media_path(media_path):
+            msg = _("'{name}' did not trigger on this image{dims}.").format(
+                name=action_name, dims=_dimensions_suffix(media_path)
+            )
+        else:
+            msg = _(
+                "'{name}' did not trigger on the current media ({n} samples scanned)."
+            ).format(name=action_name, n=planned_slots)
         self._set_status(msg)
-        self._set_detail(_NBSP)
+        # For a still the classifier's ranked output is reported either way --
+        # what the model saw is the answer being looked for, not just whether
+        # it crossed a threshold.
+        detail_line = _format_trigger_detail(detail)
+        self._set_detail(detail_line if detail_line else _NBSP)
         self._app_actions.toast(msg)
 
     def _on_error(self, message: str) -> None:
@@ -524,8 +564,8 @@ class SeekToTriggerTab(QWidget):
         if not media_path:
             app_actions.toast(_("No media loaded."))
             return
-        if not is_classifier_dynamic_media_path(media_path):
-            app_actions.toast(_("Current media is not video, GIF, or PDF."))
+        if not os.path.isfile(media_path):
+            app_actions.toast(_("Current media file no longer exists."))
             return
 
         if getattr(cls, '_headless_worker', None) is not None:
@@ -550,6 +590,13 @@ class SeekToTriggerTab(QWidget):
             wrapped = start_slot > 0 and result.slot_index < start_slot
             notify = app_actions.warn if wrapped else app_actions.toast
             cls._last_trigger_slot[nav_key] = result.slot_index
+            if not is_classifier_dynamic_media_path(media_path):
+                msg = _("'{name}' triggers on this image{dims}.").format(
+                    name=action.name, dims=_dimensions_suffix(media_path)
+                )
+                detail_line = _format_trigger_detail(result.detail)
+                notify(f"{msg}  {detail_line}" if detail_line else msg)
+                return
             from image.frame_cache import FrameCache
             pos = FrameCache.slot_index_to_seek_position(
                 media_path, result.slot_index, result.total_planned_slots
@@ -583,7 +630,14 @@ class SeekToTriggerTab(QWidget):
                 )
             notify(msg)
 
-        def _on_not_found(n):
+        def _on_not_found(n, detail):
+            if not is_classifier_dynamic_media_path(media_path):
+                msg = _("'{name}' did not trigger on this image{dims}.").format(
+                    name=action.name, dims=_dimensions_suffix(media_path)
+                )
+                detail_line = _format_trigger_detail(detail)
+                app_actions.toast(f"{msg}  {detail_line}" if detail_line else msg)
+                return
             app_actions.toast(
                 _("'{name}' did not trigger on the current media ({n} samples scanned).").format(
                     name=action.name, n=n
@@ -604,6 +658,30 @@ class SeekToTriggerTab(QWidget):
 # ---------------------------------------------------------------------------
 # Formatting helpers
 # ---------------------------------------------------------------------------
+
+def _dimensions_suffix(media_path: str) -> str:
+    """ ' (WxH)' for a still, or '' when the size can't be read.
+
+    Reported because the classifier resizes to a fixed square before
+    inference: a file whose stored dimensions are transposed relative to its
+    real content is squashed differently than intended, which is invisible in
+    the rendered image but changes what the model is shown.
+    """
+    try:
+        from utils.media_utils import get_image_dimensions
+        dimensions = get_image_dimensions(media_path)
+    except Exception:
+        return ""
+    if not dimensions:
+        return ""
+    try:
+        width, height = dimensions
+    except (TypeError, ValueError):
+        return ""
+    if not width or not height:
+        return ""
+    return f" ({width}x{height})"
+
 
 def _format_trigger_detail(detail: Optional[TriggerDetail]) -> str:
     """Format a TriggerDetail into a human-readable line for the detail label."""

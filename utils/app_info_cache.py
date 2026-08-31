@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import sys
+import tempfile
 import threading
 from typing import Any, Dict, List
 
@@ -247,6 +248,39 @@ class AppInfoCache(InflationMonitor):
         with self._lock:
             return self._has_changes
 
+    def _encrypt_to_path_atomically(self, cache_data, destination) -> None:
+        """Encrypt *cache_data* to *destination* via a temp file and one rename.
+
+        Writing straight to the destination truncates it first, so a crash or
+        power loss part-way through leaves an unreadable cache. Building the new
+        file alongside it and renaming means the destination is only ever the
+        old complete file or the new complete file.
+
+        The temp file is created in the destination's own directory so the
+        rename stays on one filesystem, which is what makes it atomic.
+        """
+        destination_dir = os.path.dirname(destination) or "."
+        os.makedirs(destination_dir, exist_ok=True)
+        fd, temp_path = tempfile.mkstemp(
+            prefix=".app_info_cache_", suffix=".tmp", dir=destination_dir
+        )
+        os.close(fd)
+        try:
+            encrypt_data_to_file(
+                cache_data,
+                AppInfo.SERVICE_NAME,
+                AppInfo.APP_IDENTIFIER,
+                temp_path
+            )
+            os.replace(temp_path, destination)
+        except Exception:
+            try:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+            except Exception:
+                pass
+            raise
+
     def store(self):
         """Persist cache to encrypted file. Returns True on success, False if encrypted store failed but JSON fallback succeeded. Raises on encoding or JSON fallback failure."""
         with self._lock:
@@ -259,12 +293,7 @@ class AppInfoCache(InflationMonitor):
                 raise Exception(f"Error compiling application cache: {e}")
 
             try:
-                encrypt_data_to_file(
-                    cache_data,
-                    AppInfo.SERVICE_NAME,
-                    AppInfo.APP_IDENTIFIER,
-                    self._cache_loc
-                )
+                self._encrypt_to_path_atomically(cache_data, self._cache_loc)
                 self._has_changes = False
                 return True  # Encryption successful
             except Exception as e:

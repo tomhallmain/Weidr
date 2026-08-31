@@ -2,8 +2,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: 1.0\n"
-"POT-Creation-Date: 2026-08-25 10:55-0400\n"
-"PO-Revision-Date: 2026-08-25 10:55-0400\n"
+"POT-Creation-Date: 2026-08-31 19:22-0400\n"
+"PO-Revision-Date: 2026-08-31 19:22-0400\n"
 "Last-Translator: Translator Name <translator@example.com>\n"
 "Language-Team: ko Team <<EMAIL>>\n"
 "Language: ko\n"
@@ -82,144 +82,450 @@ msgstr "알 수 없는 에러"
 msgid "Evaluating {0} files..."
 msgstr "평가 중인 {0} 파일..."
 
-#: compare/classifier_action.py:1271
-#: compare/classifier_pipeline_runner.py:1188 ui/image/media_details.py:1491
+#: compare/classifier_action.py:1318
+#: compare/classifier_pipeline_runner.py:1299 ui/image/media_details.py:1583
 msgid " detected"
 msgstr " 감지됨"
 
-#: compare/classifier_action.py:1273
-#: compare/classifier_pipeline_runner.py:1192
+#: compare/classifier_action.py:1320
+#: compare/classifier_pipeline_runner.py:1303
 msgid " - skipped"
 msgstr " - 건너뛰기"
 
-#: compare/classifier_action.py:1276
-#: compare/classifier_pipeline_runner.py:1200
+#: compare/classifier_action.py:1323
+#: compare/classifier_pipeline_runner.py:1311
 msgid " - hidden"
 msgstr " - 숨겨진"
 
-#: compare/classifier_action.py:1281
-#: compare/classifier_pipeline_runner.py:1214
+#: compare/classifier_action.py:1328
+#: compare/classifier_pipeline_runner.py:1325
 msgid " - marked"
 msgstr " - 표시"
 
-#: compare/classifier_action.py:1285
+#: compare/classifier_action.py:1332
 msgid " - could not determine rotation angle, skipped"
 msgstr " - 회전 각도를 파악할 수 없어 건너뛰었습니다"
 
-#: compare/classifier_action.py:1288
+#: compare/classifier_action.py:1335
 msgid " - already correctly oriented"
 msgstr " - 이미 올바르게 배치되었습니다"
 
-#: compare/classifier_action.py:1294 compare/classifier_action.py:1298
-#: compare/classifier_action.py:1302
+#: compare/classifier_action.py:1341 compare/classifier_action.py:1345
+#: compare/classifier_action.py:1349
 msgid " - rotating {0} degrees (new file)"
 msgstr " - {0}도 회전 (새 파일)"
 
-#: compare/classifier_action.py:1316
+#: compare/classifier_action.py:1363
 msgid " - rotation not supported for this file type, skipped"
 msgstr " - 이 파일 형식에서는 회전이 지원되지 않으며 건너뛰었습니다"
 
-#: compare/classifier_action.py:1321
+#: compare/classifier_action.py:1368
 msgid " - rotating {0} degrees, saving rendered preview: {1}"
 msgstr " - {0}도 회전, 렌더링된 미리보기 저장 중: {1}"
 
-#: compare/classifier_action.py:1355
+#: compare/classifier_action.py:1402
 msgid "Moving file: "
 msgstr "파일 이동: "
 
-#: compare/classifier_action.py:1401
-#: compare/classifier_pipeline_runner.py:1264
+#: compare/classifier_action.py:1448
+#: compare/classifier_pipeline_runner.py:1375
 msgid "Deleting file: "
 msgstr "파일 삭제: "
 
-#: compare/classifier_action.py:1410
-#: compare/classifier_pipeline_runner.py:1278
+#: compare/classifier_action.py:1457
+#: compare/classifier_pipeline_runner.py:1389
 msgid " - blurred"
 msgstr " - 흐림"
 
-#: compare/classifier_action.py:1419
-#: compare/classifier_pipeline_runner.py:1286
+#: compare/classifier_action.py:1466
+#: compare/classifier_pipeline_runner.py:1397
 msgid " - generating"
 msgstr " - 생성 중"
 
-#: compare/classifier_action.py:1424
-#: compare/classifier_pipeline_runner.py:1298
+#: compare/classifier_action.py:1471
+#: compare/classifier_pipeline_runner.py:1409
 msgid " - scrambling"
 msgstr " - 스크램블링"
 
-#: compare/classifier_action.py:1524
+#: compare/classifier_action.py:1571
 msgid "Action modifier is not a valid directory: "
 msgstr "작업 수정자가 유효한 디렉터리가 아닙니다 : "
 
-#: compare/classifier_action.py:1526
+#: compare/classifier_action.py:1573
 msgid "Invalid classifier action {0}, may cause errors or be unable to run!"
 msgstr "잘못된 분류기 작업 {0}, 오류가 발생하거나 실행되지 않을 수 있습니다!"
 
-#: compare/classifier_action.py:1728
+#: compare/classifier_action.py:1775
 msgid "embedding"
 msgstr "임베딩"
 
-#: compare/classifier_action.py:1731
+#: compare/classifier_action.py:1778
 msgid "audio classifier {0}"
 msgstr "오디오 분류기 {0}"
 
-#: compare/classifier_action.py:1733
+#: compare/classifier_action.py:1780
 msgid "classifier {0}"
 msgstr "분류기 {0}"
 
-#: compare/classifier_action.py:1735
+#: compare/classifier_action.py:1782
 msgid "prompts"
 msgstr "프롬프트"
 
-#: compare/classifier_action.py:1737
+#: compare/classifier_action.py:1784
 msgid "prototype"
 msgstr "프로토타입"
 
-#: compare/classifier_action.py:1739
+#: compare/classifier_action.py:1786
 msgid "pseudo-static dynamic media"
 msgstr "의사 정적 동적 미디어"
 
-#: compare/classifier_action.py:1747
+#: compare/classifier_action.py:1794
 msgid "categories: {0}"
 msgstr "카테고리: {0}"
 
-#: compare/classifier_action.py:1751
+#: compare/classifier_action.py:1798
 msgid "{0} positives, {1} negatives"
 msgstr "{0} 포지티브, {1} 네거티브"
 
-#: compare/classifier_action.py:1755
+#: compare/classifier_action.py:1802
 msgid " using {0} ({1})"
 msgstr " {0} ({1})"
 
-#: compare/classifier_action.py:1757
+#: compare/classifier_action.py:1804
 msgid " using {0}"
 msgstr " {0}"
 
-#: compare/classifier_action.py:1759
+#: compare/classifier_action.py:1806
 msgid " ({0} positives, {1} negatives)"
 msgstr " ({0} 포지티브, {1} 네거티브)"
 
-#: compare/classifier_action.py:1762
+#: compare/classifier_action.py:1809
 #: tests/ui/test_classifier_pipeline_editor_qt.py:1172
 #: tests/ui/test_classifier_pipeline_editor_qt.py:1194
 msgid "disabled"
 msgstr "비활성화됨"
 
-#: compare/classifier_action.py:1764
+#: compare/classifier_action.py:1811
 msgid "cannot run"
 msgstr "실행할 수 없습니다"
 
-#: compare/classifier_action.py:1865
+#: compare/classifier_action.py:1912
 msgid "Profile directory is not a valid directory: "
 msgstr "프로필 디렉터리가 유효한 디렉터리가 아닙니다: "
 
-#: compare/classifier_action.py:1867
+#: compare/classifier_action.py:1914
 msgid "Invalid prevalidation {0}, may cause errors or be unable to run!"
 msgstr "잘못된 사전 검증 {0}은(는) 오류를 일으키거나 실행할 수 없습니다!"
 
-#: compare/classifier_action.py:1964
+#: compare/classifier_action.py:2011
 msgid "lookaheads: {0}"
 msgstr "앞을 내다보기: {0}"
+
+#: compare/classifier_pipeline.py:70 compare/classifier_pipeline.py:695
+#: compare/classifier_pipeline.py:764
+#: ui/compare/classifier_pipeline_editor_qt.py:1972
+#: ui/compare/classifier_pipelines_tab_qt.py:89
+msgid "New Pipeline"
+msgstr "새 파이프라인"
+
+#: compare/classifier_pipeline.py:186
+msgid "Pipeline name is empty."
+msgstr "파이프라인 이름이 비어 있습니다."
+
+#: compare/classifier_pipeline.py:191
+#: tests/unit/test_classifier_pipeline.py:1754
+msgid "seed_category '{0}' is set but category_map is empty."
+msgstr "seed_category '{0}'이(가) 설정되었지만 category_map이 비어 있습니다."
+
+#: compare/classifier_pipeline.py:197
+msgid "seed_category '{0}' is not a key in category_map."
+msgstr "seed_category '{0}'은(는) category_map의 키가 아닙니다."
+
+#: compare/classifier_pipeline.py:205
+#: tests/unit/test_classifier_pipeline.py:1833
+#: tests/unit/test_classifier_pipeline.py:1842
+#: tests/unit/test_classifier_pipeline.py:1859
+msgid ""
+"category_map entry '{0}': suffix '{1}' is purely numeric and cannot be used "
+"as a suffix."
+msgstr "category_map 항목 '{0}': 접미사 '{1}'은(는) 숫자로만 구성되어 있으므로 접미사로 사용할 수 없습니다."
+
+#: compare/classifier_pipeline.py:214
+#: tests/unit/test_classifier_pipeline.py:743
+msgid "A node has an empty name."
+msgstr "노드에 빈 이름이 있습니다."
+
+#: compare/classifier_pipeline.py:216
+#: tests/unit/test_classifier_pipeline.py:603
+msgid "Duplicate node name: {0}."
+msgstr "중복된 노드 이름: {0}."
+
+#: compare/classifier_pipeline.py:229
+msgid "Node {0}: GOTO has no target."
+msgstr "노드 {0}: GOTO에 대상이 없습니다."
+
+#: compare/classifier_pipeline.py:232
+msgid "Node {0}: GOTO target {1} does not exist."
+msgstr "노드 {0}: GOTO 대상 {1}이(가) 존재하지 않습니다."
+
+#: compare/classifier_pipeline.py:240
+#: tests/unit/test_classifier_pipeline.py:621
+msgid "Node {0}: GOTO target {1} must be a later node (cycle prevention)."
+msgstr "노드 {0}: GOTO 대상 {1}은(는) 이후 노드여야 합니다(순환 방지)."
+
+#: compare/classifier_pipeline.py:246
+msgid "Node {0}: {1} outcome has no action_type."
+msgstr "노드 {0}: {1} 결과에 action_type이 없습니다."
+
+#: compare/classifier_pipeline.py:262
+msgid ""
+"Node {0}: RelatedImageCondition.edit_suffix ({1}) must match the GENERATE "
+"outcome's action_modifier ({2})."
+msgstr ""
+"Node {0}: RelatedImageCondition.edit_suffix ({1})은(는) GENERATE 결과의 "
+"action_modifier ({2})와 일치해야 합니다."
+
+#: compare/classifier_pipeline.py:275
+msgid "Node {0}: NodeResultCondition has no node_name."
+msgstr "노드 {0}: NodeResultCondition에 node_name이 없습니다."
+
+#: compare/classifier_pipeline.py:278
+#: tests/unit/test_classifier_pipeline.py:639
+msgid ""
+"Node {0}: NodeResultCondition references {1} which is not a prior node."
+msgstr "노드 {0}: NodeResultCondition이(가) 이전 노드가 아닌 {1}을(를) 참조합니다."
+
+#: compare/classifier_pipeline.py:286
+msgid "Node {0}: ClassifierRankCondition has no classifier_name."
+msgstr "노드 {0}: ClassifierRankCondition에 classifier_name이 없습니다."
+
+#: compare/classifier_pipeline.py:294
+msgid "Node {0}: classifier {1} is not registered."
+msgstr "노드 {0}: 분류기 {1}이(가) 등록되지 않았습니다."
+
+#: compare/classifier_pipeline.py:301 compare/classifier_pipeline.py:323
+msgid "Node {0}: min_rank must be ≥ 1."
+msgstr "노드 {0}: min_rank은(는) ≥ 1이어야 합니다."
+
+#: compare/classifier_pipeline.py:303 compare/classifier_pipeline.py:325
+msgid "Node {0}: max_rank must be ≥ min_rank."
+msgstr "노드 {0}: max_rank은(는) min_rank 이상이어야 합니다."
+
+#: compare/classifier_pipeline.py:308
+msgid "Node {0}: AudioClassifierRankCondition has no classifier_name."
+msgstr "노드 {0}: AudioClassifierRankCondition에 classifier_name이 없습니다."
+
+#: compare/classifier_pipeline.py:316
+msgid "Node {0}: audio classifier {1} is not registered."
+msgstr "노드 {0}: 오디오 분류기 {1}가 등록되지 않았습니다."
+
+#: compare/classifier_pipeline.py:357
+msgid "Node {0}: FilenameContainsCondition has no patterns."
+msgstr "노드 {0}: FilenameContainsCondition에 패턴이 없습니다."
+
+#: compare/classifier_pipeline.py:363
+#: tests/unit/test_classifier_pipeline.py:1289
+msgid "Node {0}: MediaTypeCondition has no media_types."
+msgstr "노드 {0}: MediaTypeCondition에 media_types가 없습니다."
+
+#: compare/classifier_pipeline.py:368
+msgid "Node {0}: LookaheadCondition has no lookahead_name."
+msgstr "노드 {0}: LookaheadCondition에 lookahead_name이 없습니다."
+
+#: compare/classifier_pipeline.py:374
+msgid "Node {0}: lookahead {1} is not defined."
+msgstr "노드 {0}: 룩어헤드 {1}이(가) 정의되지 않았습니다."
+
+#: compare/classifier_pipeline.py:384
+msgid ""
+"Node {0}: BaseStemMatchCondition.search_directory ({1}) is not a valid "
+"directory."
+msgstr ""
+"노드 {0}: BaseStemMatchCondition.search_directory ({1})이(가) 유효한 디렉터리가 아닙니다."
+
+#: compare/classifier_pipeline.py:392
+msgid ""
+"Node {0}: UnknownSuffixCondition.search_directory ({1}) is not a valid "
+"directory."
+msgstr ""
+"노드 {0}: UnknownSuffixCondition.search_directory ({1})이(가) 유효한 디렉터리가 아닙니다."
+
+#: compare/classifier_pipeline.py:399
+msgid "Node {0}: RelatedImageCondition has no edit_suffix."
+msgstr "노드 {0}: RelatedImageCondition에 edit_suffix가 없습니다."
+
+#: compare/classifier_pipeline.py:402
+msgid ""
+"Node {0}: RelatedImageCondition.search_directory ({1}) is not a valid "
+"directory."
+msgstr ""
+"노드 {0}: RelatedImageCondition.search_directory ({1})이(가) 유효한 디렉터리가 아닙니다."
+
+#: compare/classifier_pipeline.py:410
+msgid "Node {0}: unknown composite operator {1}."
+msgstr "노드 {0}: 알 수 없는 복합 연산자 {1}."
+
+#: compare/classifier_pipeline.py:415
+msgid "Node {0}: NOT requires exactly 1 sub-condition, got {1}."
+msgstr "노드 {0}: NOT는 정확히 1개의 하위 조건이 필요하지만 {1}개를 받았습니다."
+
+#: compare/classifier_pipeline.py:419
+msgid "Node {0}: XOR requires exactly 2 sub-conditions, got {1}."
+msgstr "노드 {0}: XOR에는 정확히 2개의 하위 조건이 필요하지만 {1}개가 제공되었습니다."
+
+#: compare/classifier_pipeline.py:428
+msgid "Node {0}: {1} requires at least 1 sub-condition, got {2}."
+msgstr "노드 {0}: {1}은(는) 최소 1개의 하위 조건이 필요합니다. 받은 값은 {2}입니다."
+
+#: compare/classifier_pipeline.py:438
+msgid "Node {0}: GroupCondition has unknown operator {1}."
+msgstr "노드 {0}: GroupCondition에 알 수 없는 연산자 {1}이(가) 있습니다."
+
+#: compare/classifier_pipeline.py:443
+#: tests/unit/test_classifier_pipeline.py:922
+msgid "Node {0}: GroupCondition has no child nodes."
+msgstr "노드 {0}: GroupCondition에 자식 노드가 없습니다."
+
+#: compare/classifier_pipeline.py:449
+msgid "Node {0}: GroupCondition child has an empty name."
+msgstr "노드 {0}: GroupCondition 자식의 이름이 비어 있습니다."
+
+#: compare/classifier_pipeline.py:453
+#: tests/unit/test_classifier_pipeline.py:938
+msgid "Node {0}: GroupCondition duplicate child name {1}."
+msgstr "노드 {0}: GroupCondition 중복된 자식 이름 {1}."
+
+#: compare/classifier_pipeline.py:466
+msgid "Node {0}: GroupChildResultCondition has no group_node_name."
+msgstr "노드 {0}: GroupChildResultCondition에 group_node_name이 없습니다."
+
+#: compare/classifier_pipeline.py:470
+msgid "Node {0}: GroupChildResultCondition has no child_node_name."
+msgstr "노드 {0}: GroupChildResultCondition에 child_node_name이 없습니다."
+
+#: compare/classifier_pipeline.py:474
+msgid ""
+"Node {0}: GroupChildResultCondition references group {1} which is not a "
+"prior node."
+msgstr "노드 {0}: GroupChildResultCondition이(가) 이전 노드가 아닌 그룹 {1}을(를) 참조합니다."
+
+#: compare/classifier_pipeline.py:531
+msgid ""
+"Stem-group dedup is on but the run sort order is not '{0}'. Whichever file "
+"of a stem group is reached first is the only one evaluated, so a derivative "
+"reached before its seed can generate duplicates. Set the run sort order to "
+"'{0}', or turn off stem-group dedup."
+msgstr ""
+"Stem-group 중복제거가 켜져 있지만 실행 정렬 순서가 '{0}'이 아닙니다. Stem-group의 파일 중 먼저 도달한 파일만 "
+"평가되므로 시드보다 먼저 도달한 파생 파일이 중복을 생성할 수 있습니다. 실행 정렬 순서를 '{0}'으로 설정하거나 Stem-group "
+"중복제거를 끄세요."
+
+#: compare/classifier_pipeline.py:545
+msgid ""
+"Node {0}: ClassifierRankCondition has inherit_categories=True but the "
+"pipeline has no category map — condition will match nothing."
+msgstr ""
+"노드 {0}: ClassifierRankCondition에 inherit_categories=True가 있지만 파이프라인에 카테고리 맵이"
+" 없습니다 — 조건은 아무것도 일치하지 않습니다."
+
+#: compare/classifier_pipeline.py:550
+msgid ""
+"Node {0}: AudioClassifierRankCondition has inherit_categories=True but the "
+"pipeline has no category map — condition will match nothing."
+msgstr ""
+"노드 {0}: AudioClassifierRankCondition에 inherit_categories=True가 설정되어 있지만 "
+"파이프라인에 카테고리 매핑이 없습니다 — 조건이 아무것도 일치하지 않습니다."
+
+#: compare/classifier_pipeline.py:557
+msgid "Node {0}: suffix filter {1} is not in the pipeline's category map."
+msgstr "노드 {0}: 접미사 필터 {1}이(가) 파이프라인의 범주 맵에 없습니다."
+
+#: compare/classifier_pipeline.py:564
+msgid "Node {0}: expected suffix {1} is not in the pipeline's category map."
+msgstr "노드 {0}: 예상되는 접미사 {1}이(가) 파이프라인의 범주 맵에 없습니다."
+
+#: compare/classifier_pipeline.py:593
+#: tests/unit/test_classifier_pipelines_manager.py:92
+msgid "(empty)"
+msgstr "(비어 있음)"
+
+#: compare/classifier_pipeline.py:595
+#: compare/classifier_pipeline_conditions.py:61
+#: tests/unit/test_classifier_pipeline.py:1163
+#: tests/unit/test_classifier_pipeline.py:1227
+#: tests/unit/test_classifier_pipelines_manager.py:99
+#: ui/compare/classifier_pipeline_editor_qt.py:72
+msgid "Embedding"
+msgstr "임베딩"
+
+#: compare/classifier_pipeline.py:596
+#: compare/classifier_pipeline_conditions.py:126
+msgid "ClsRank"
+msgstr "ClsRank"
+
+#: compare/classifier_pipeline.py:597
+#: compare/classifier_pipeline_conditions.py:190
+msgid "AudioClsRank"
+msgstr "오디오 분류 순위"
+
+#: compare/classifier_pipeline.py:598
+#: compare/classifier_pipeline_conditions.py:216
+#: ui/compare/classifier_pipeline_editor_qt.py:74
+msgid "Prototype"
+msgstr "프로토타입"
+
+#: compare/classifier_pipeline.py:599
+#: ui/compare/classifier_pipeline_editor_qt.py:75
+msgid "Prompt"
+msgstr "프롬프트"
+
+#: compare/classifier_pipeline.py:600
+msgid "Always"
+msgstr "항상"
+
+#: compare/classifier_pipeline.py:601
+#: ui/compare/classifier_pipeline_editor_qt.py:80
+msgid "Lookahead"
+msgstr "Lookahead"
+
+#: compare/classifier_pipeline.py:602
+#: compare/classifier_pipeline_conditions.py:365
+msgid "NodeResult"
+msgstr "NodeResult"
+
+#: compare/classifier_pipeline.py:603
+#: compare/classifier_pipeline_conditions.py:393
+#: ui/compare/classifier_pipeline_editor_qt.py:83
+msgid "Composite"
+msgstr "합성"
+
+#: compare/classifier_pipeline.py:604
+#: ui/compare/classifier_pipeline_editor_qt.py:84
+msgid "Group"
+msgstr "그룹"
+
+#: compare/classifier_pipeline.py:605
+#: compare/classifier_pipeline_conditions.py:698
+msgid "GroupChild"
+msgstr "GroupChild"
+
+#: compare/classifier_pipeline.py:613
+msgid "Group ({0}, {1} children)"
+msgstr "그룹 ({0}, {1}개 하위 항목)"
+
+#: compare/classifier_pipeline.py:621 compare/classifier_pipeline.py:639
+msgid "(end) → {0}"
+msgstr "(끝) → {0}"
+
+#: compare/classifier_pipeline.py:626
+#: tests/unit/test_classifier_pipeline.py:1075
+#: ui/compare/classifier_pipeline_editor_qt.py:2825
+msgid "(no nodes)"
+msgstr "(노드 없음)"
+
+#: compare/classifier_pipeline.py:634
+msgid "  ({0} of {1} children)"
+msgstr "  ({1}개 하위 항목 중 {0})"
 
 #: compare/classifier_pipeline_conditions.py:60
 #: compare/classifier_pipeline_conditions.py:119
@@ -229,20 +535,11 @@ msgstr "앞을 내다보기: {0}"
 #: compare/classifier_pipeline_conditions.py:320
 #: compare/classifier_pipeline_conditions.py:519
 #: tests/ui/test_classifier_pipeline_editor_qt.py:1102
-#: ui/compare/classifier_pipeline_editor_qt.py:118
-#: ui/compare/classifier_pipeline_editor_qt.py:137
-#: ui/compare/classifier_pipeline_editor_qt.py:2243
+#: ui/compare/classifier_pipeline_editor_qt.py:120
+#: ui/compare/classifier_pipeline_editor_qt.py:139
+#: ui/compare/classifier_pipeline_editor_qt.py:2336
 msgid "(none)"
 msgstr "(없음)"
-
-#: compare/classifier_pipeline.py:556
-#: compare/classifier_pipeline_conditions.py:61
-#: tests/unit/test_classifier_pipeline.py:1163
-#: tests/unit/test_classifier_pipeline.py:1227
-#: tests/unit/test_classifier_pipelines_manager.py:99
-#: ui/compare/classifier_pipeline_editor_qt.py:71
-msgid "Embedding"
-msgstr "임베딩"
 
 #: compare/classifier_pipeline_conditions.py:117
 #: compare/classifier_pipeline_conditions.py:181
@@ -265,22 +562,6 @@ msgstr "순위 {0}-{1}"
 #: compare/classifier_pipeline_conditions.py:189
 msgid "NOT "
 msgstr "아니오 "
-
-#: compare/classifier_pipeline.py:557
-#: compare/classifier_pipeline_conditions.py:126
-msgid "ClsRank"
-msgstr "ClsRank"
-
-#: compare/classifier_pipeline.py:558
-#: compare/classifier_pipeline_conditions.py:190
-msgid "AudioClsRank"
-msgstr "오디오 분류 순위"
-
-#: compare/classifier_pipeline.py:559
-#: compare/classifier_pipeline_conditions.py:216
-#: ui/compare/classifier_pipeline_editor_qt.py:73
-msgid "Prototype"
-msgstr "프로토타입"
 
 #: compare/classifier_pipeline_conditions.py:245
 #: tests/unit/test_classifier_pipeline.py:1201
@@ -319,29 +600,18 @@ msgid "Lookahead: {0}"
 msgstr "Lookahead: {0}"
 
 #: compare/classifier_pipeline_conditions.py:364
-#: compare/classifier_pipeline_conditions.py:636
+#: compare/classifier_pipeline_conditions.py:697
 #: ui/compare/hf_model_manager_window_qt.py:936
 #: ui/compare/hf_model_manager_window_qt.py:1277
 msgid "yes"
 msgstr "예"
 
 #: compare/classifier_pipeline_conditions.py:364
-#: compare/classifier_pipeline_conditions.py:636
+#: compare/classifier_pipeline_conditions.py:697
 #: ui/compare/hf_model_manager_window_qt.py:936
 #: ui/compare/hf_model_manager_window_qt.py:1277
 msgid "no"
 msgstr "아니요"
-
-#: compare/classifier_pipeline.py:563
-#: compare/classifier_pipeline_conditions.py:365
-msgid "NodeResult"
-msgstr "NodeResult"
-
-#: compare/classifier_pipeline.py:564
-#: compare/classifier_pipeline_conditions.py:393
-#: ui/compare/classifier_pipeline_editor_qt.py:82
-msgid "Composite"
-msgstr "합성"
 
 #: compare/classifier_pipeline_conditions.py:447
 msgid "working_dir, "
@@ -373,358 +643,99 @@ msgstr "UnknownSuffix"
 msgid "RelatedImage"
 msgstr "관련 이미지"
 
-#: compare/classifier_pipeline_conditions.py:605
+#: compare/classifier_pipeline_conditions.py:666
 msgid " +{0}"
 msgstr " +{0}"
 
-#: compare/classifier_pipeline_conditions.py:606
+#: compare/classifier_pipeline_conditions.py:667
 msgid "Group({0}: {1}{2})"
 msgstr "그룹({0}: {1}{2})"
 
-#: compare/classifier_pipeline.py:566
-#: compare/classifier_pipeline_conditions.py:637
-msgid "GroupChild"
-msgstr "GroupChild"
-
-#: compare/classifier_pipeline_nodes.py:161
+#: compare/classifier_pipeline_nodes.py:170
 msgid "Continue"
 msgstr "계속"
 
-#: compare/classifier_pipeline_nodes.py:162
+#: compare/classifier_pipeline_nodes.py:171
 msgid "Go to node"
 msgstr "노드로 이동"
 
-#: compare/classifier_pipeline_nodes.py:163
+#: compare/classifier_pipeline_nodes.py:172
 msgid "Execute action"
 msgstr "작업 실행"
 
-#: compare/classifier_pipeline_nodes.py:164
+#: compare/classifier_pipeline_nodes.py:173
 msgid "Execute and continue"
 msgstr "실행 후 계속"
 
-#: compare/classifier_pipeline_nodes.py:165 lib/fill_preview_dialog_qt.py:124
+#: compare/classifier_pipeline_nodes.py:174 lib/fill_preview_dialog_qt.py:124
 msgid "Accept"
 msgstr "수락"
 
-#: compare/classifier_pipeline_nodes.py:166
+#: compare/classifier_pipeline_nodes.py:175
 msgid "Reject"
 msgstr "거부"
 
-#: compare/classifier_pipeline_nodes.py:231 compare/pipeline_run_report.py:265
+#: compare/classifier_pipeline_nodes.py:240 compare/pipeline_run_report.py:265
 #: compare/pipeline_run_report.py:273
 msgid "(unknown)"
 msgstr "(알 수 없음)"
 
-#: compare/classifier_pipeline_nodes.py:232
-#: compare/classifier_pipeline_nodes.py:237
+#: compare/classifier_pipeline_nodes.py:241
+#: compare/classifier_pipeline_nodes.py:246
 msgid "{0}: {1}"
 msgstr "{0}: {1}"
 
-#: compare/classifier_pipeline_nodes.py:234
+#: compare/classifier_pipeline_nodes.py:243
 msgid " → {0}"
 msgstr " → {0}"
 
-#: compare/classifier_pipeline_nodes.py:301
+#: compare/classifier_pipeline_nodes.py:310
 #: tests/unit/test_classifier_pipeline.py:1233
 msgid "(no condition)"
 msgstr "(조건 없음)"
 
-#: compare/classifier_pipeline.py:69 compare/classifier_pipeline.py:656
-#: compare/classifier_pipeline.py:725
-#: ui/compare/classifier_pipeline_editor_qt.py:1881
-#: ui/compare/classifier_pipelines_tab_qt.py:89
-msgid "New Pipeline"
-msgstr "새 파이프라인"
-
-#: compare/classifier_pipeline.py:185
-msgid "Pipeline name is empty."
-msgstr "파이프라인 이름이 비어 있습니다."
-
-#: compare/classifier_pipeline.py:190
-#: tests/unit/test_classifier_pipeline.py:1754
-msgid "seed_category '{0}' is set but category_map is empty."
-msgstr "seed_category '{0}'이(가) 설정되었지만 category_map이 비어 있습니다."
-
-#: compare/classifier_pipeline.py:196
-msgid "seed_category '{0}' is not a key in category_map."
-msgstr "seed_category '{0}'은(는) category_map의 키가 아닙니다."
-
-#: compare/classifier_pipeline.py:204
-#: tests/unit/test_classifier_pipeline.py:1833
-#: tests/unit/test_classifier_pipeline.py:1842
-#: tests/unit/test_classifier_pipeline.py:1859
-msgid ""
-"category_map entry '{0}': suffix '{1}' is purely numeric and cannot be used "
-"as a suffix."
-msgstr "category_map 항목 '{0}': 접미사 '{1}'은(는) 숫자로만 구성되어 있으므로 접미사로 사용할 수 없습니다."
-
-#: compare/classifier_pipeline.py:213
-#: tests/unit/test_classifier_pipeline.py:743
-msgid "A node has an empty name."
-msgstr "노드에 빈 이름이 있습니다."
-
-#: compare/classifier_pipeline.py:215
-#: tests/unit/test_classifier_pipeline.py:603
-msgid "Duplicate node name: {0}."
-msgstr "중복된 노드 이름: {0}."
-
-#: compare/classifier_pipeline.py:228
-msgid "Node {0}: GOTO has no target."
-msgstr "노드 {0}: GOTO에 대상이 없습니다."
-
-#: compare/classifier_pipeline.py:231
-msgid "Node {0}: GOTO target {1} does not exist."
-msgstr "노드 {0}: GOTO 대상 {1}이(가) 존재하지 않습니다."
-
-#: compare/classifier_pipeline.py:239
-#: tests/unit/test_classifier_pipeline.py:621
-msgid "Node {0}: GOTO target {1} must be a later node (cycle prevention)."
-msgstr "노드 {0}: GOTO 대상 {1}은(는) 이후 노드여야 합니다(순환 방지)."
-
-#: compare/classifier_pipeline.py:245
-msgid "Node {0}: {1} outcome has no action_type."
-msgstr "노드 {0}: {1} 결과에 action_type이 없습니다."
-
-#: compare/classifier_pipeline.py:261
-msgid ""
-"Node {0}: RelatedImageCondition.edit_suffix ({1}) must match the GENERATE "
-"outcome's action_modifier ({2})."
-msgstr ""
-"Node {0}: RelatedImageCondition.edit_suffix ({1})은(는) GENERATE 결과의 "
-"action_modifier ({2})와 일치해야 합니다."
-
-#: compare/classifier_pipeline.py:274
-msgid "Node {0}: NodeResultCondition has no node_name."
-msgstr "노드 {0}: NodeResultCondition에 node_name이 없습니다."
-
-#: compare/classifier_pipeline.py:277
-#: tests/unit/test_classifier_pipeline.py:639
-msgid ""
-"Node {0}: NodeResultCondition references {1} which is not a prior node."
-msgstr "노드 {0}: NodeResultCondition이(가) 이전 노드가 아닌 {1}을(를) 참조합니다."
-
-#: compare/classifier_pipeline.py:285
-msgid "Node {0}: ClassifierRankCondition has no classifier_name."
-msgstr "노드 {0}: ClassifierRankCondition에 classifier_name이 없습니다."
-
-#: compare/classifier_pipeline.py:293
-msgid "Node {0}: classifier {1} is not registered."
-msgstr "노드 {0}: 분류기 {1}이(가) 등록되지 않았습니다."
-
-#: compare/classifier_pipeline.py:300 compare/classifier_pipeline.py:322
-msgid "Node {0}: min_rank must be ≥ 1."
-msgstr "노드 {0}: min_rank은(는) ≥ 1이어야 합니다."
-
-#: compare/classifier_pipeline.py:302 compare/classifier_pipeline.py:324
-msgid "Node {0}: max_rank must be ≥ min_rank."
-msgstr "노드 {0}: max_rank은(는) min_rank 이상이어야 합니다."
-
-#: compare/classifier_pipeline.py:307
-msgid "Node {0}: AudioClassifierRankCondition has no classifier_name."
-msgstr "노드 {0}: AudioClassifierRankCondition에 classifier_name이 없습니다."
-
-#: compare/classifier_pipeline.py:315
-msgid "Node {0}: audio classifier {1} is not registered."
-msgstr "노드 {0}: 오디오 분류기 {1}가 등록되지 않았습니다."
-
-#: compare/classifier_pipeline.py:329
-msgid "Node {0}: FilenameContainsCondition has no patterns."
-msgstr "노드 {0}: FilenameContainsCondition에 패턴이 없습니다."
-
-#: compare/classifier_pipeline.py:335
-#: tests/unit/test_classifier_pipeline.py:1289
-msgid "Node {0}: MediaTypeCondition has no media_types."
-msgstr "노드 {0}: MediaTypeCondition에 media_types가 없습니다."
-
-#: compare/classifier_pipeline.py:340
-msgid "Node {0}: LookaheadCondition has no lookahead_name."
-msgstr "노드 {0}: LookaheadCondition에 lookahead_name이 없습니다."
-
-#: compare/classifier_pipeline.py:346
-msgid "Node {0}: lookahead {1} is not defined."
-msgstr "노드 {0}: 룩어헤드 {1}이(가) 정의되지 않았습니다."
-
-#: compare/classifier_pipeline.py:356
-msgid ""
-"Node {0}: BaseStemMatchCondition.search_directory ({1}) is not a valid "
-"directory."
-msgstr ""
-"노드 {0}: BaseStemMatchCondition.search_directory ({1})이(가) 유효한 디렉터리가 아닙니다."
-
-#: compare/classifier_pipeline.py:364
-msgid ""
-"Node {0}: UnknownSuffixCondition.search_directory ({1}) is not a valid "
-"directory."
-msgstr ""
-"노드 {0}: UnknownSuffixCondition.search_directory ({1})이(가) 유효한 디렉터리가 아닙니다."
-
-#: compare/classifier_pipeline.py:371
-msgid "Node {0}: RelatedImageCondition has no edit_suffix."
-msgstr "노드 {0}: RelatedImageCondition에 edit_suffix가 없습니다."
-
-#: compare/classifier_pipeline.py:374
-msgid ""
-"Node {0}: RelatedImageCondition.search_directory ({1}) is not a valid "
-"directory."
-msgstr ""
-"노드 {0}: RelatedImageCondition.search_directory ({1})이(가) 유효한 디렉터리가 아닙니다."
-
-#: compare/classifier_pipeline.py:382
-msgid "Node {0}: unknown composite operator {1}."
-msgstr "노드 {0}: 알 수 없는 복합 연산자 {1}."
-
-#: compare/classifier_pipeline.py:387
-msgid "Node {0}: NOT requires exactly 1 sub-condition, got {1}."
-msgstr "노드 {0}: NOT는 정확히 1개의 하위 조건이 필요하지만 {1}개를 받았습니다."
-
-#: compare/classifier_pipeline.py:391
-msgid "Node {0}: XOR requires exactly 2 sub-conditions, got {1}."
-msgstr "노드 {0}: XOR에는 정확히 2개의 하위 조건이 필요하지만 {1}개가 제공되었습니다."
-
-#: compare/classifier_pipeline.py:400
-msgid "Node {0}: {1} requires at least 1 sub-condition, got {2}."
-msgstr "노드 {0}: {1}은(는) 최소 1개의 하위 조건이 필요합니다. 받은 값은 {2}입니다."
-
-#: compare/classifier_pipeline.py:410
-msgid "Node {0}: GroupCondition has unknown operator {1}."
-msgstr "노드 {0}: GroupCondition에 알 수 없는 연산자 {1}이(가) 있습니다."
-
-#: compare/classifier_pipeline.py:415
-#: tests/unit/test_classifier_pipeline.py:922
-msgid "Node {0}: GroupCondition has no child nodes."
-msgstr "노드 {0}: GroupCondition에 자식 노드가 없습니다."
-
-#: compare/classifier_pipeline.py:421
-msgid "Node {0}: GroupCondition child has an empty name."
-msgstr "노드 {0}: GroupCondition 자식의 이름이 비어 있습니다."
-
-#: compare/classifier_pipeline.py:425
-#: tests/unit/test_classifier_pipeline.py:938
-msgid "Node {0}: GroupCondition duplicate child name {1}."
-msgstr "노드 {0}: GroupCondition 중복된 자식 이름 {1}."
-
-#: compare/classifier_pipeline.py:438
-msgid "Node {0}: GroupChildResultCondition has no group_node_name."
-msgstr "노드 {0}: GroupChildResultCondition에 group_node_name이 없습니다."
-
-#: compare/classifier_pipeline.py:442
-msgid "Node {0}: GroupChildResultCondition has no child_node_name."
-msgstr "노드 {0}: GroupChildResultCondition에 child_node_name이 없습니다."
-
-#: compare/classifier_pipeline.py:446
-msgid ""
-"Node {0}: GroupChildResultCondition references group {1} which is not a "
-"prior node."
-msgstr "노드 {0}: GroupChildResultCondition이(가) 이전 노드가 아닌 그룹 {1}을(를) 참조합니다."
-
-#: compare/classifier_pipeline.py:517
-msgid ""
-"Node {0}: ClassifierRankCondition has inherit_categories=True but the "
-"pipeline has no category map — condition will match nothing."
-msgstr ""
-"노드 {0}: ClassifierRankCondition에 inherit_categories=True가 있지만 파이프라인에 카테고리 맵이"
-" 없습니다 — 조건은 아무것도 일치하지 않습니다."
-
-#: compare/classifier_pipeline.py:522
-msgid ""
-"Node {0}: AudioClassifierRankCondition has inherit_categories=True but the "
-"pipeline has no category map — condition will match nothing."
-msgstr ""
-"노드 {0}: AudioClassifierRankCondition에 inherit_categories=True가 설정되어 있지만 "
-"파이프라인에 카테고리 매핑이 없습니다 — 조건이 아무것도 일치하지 않습니다."
-
-#: compare/classifier_pipeline.py:529
-msgid "Node {0}: suffix filter {1} is not in the pipeline's category map."
-msgstr "노드 {0}: 접미사 필터 {1}이(가) 파이프라인의 범주 맵에 없습니다."
-
-#: compare/classifier_pipeline.py:536
-msgid "Node {0}: expected suffix {1} is not in the pipeline's category map."
-msgstr "노드 {0}: 예상되는 접미사 {1}이(가) 파이프라인의 범주 맵에 없습니다."
-
-#: compare/classifier_pipeline.py:554
-#: tests/unit/test_classifier_pipelines_manager.py:92
-msgid "(empty)"
-msgstr "(비어 있음)"
-
-#: compare/classifier_pipeline.py:560
-#: ui/compare/classifier_pipeline_editor_qt.py:74
-msgid "Prompt"
-msgstr "프롬프트"
-
-#: compare/classifier_pipeline.py:561
-msgid "Always"
-msgstr "항상"
-
-#: compare/classifier_pipeline.py:562
-#: ui/compare/classifier_pipeline_editor_qt.py:79
-msgid "Lookahead"
-msgstr "Lookahead"
-
-#: compare/classifier_pipeline.py:565
-#: ui/compare/classifier_pipeline_editor_qt.py:83
-msgid "Group"
-msgstr "그룹"
-
-#: compare/classifier_pipeline.py:574
-msgid "Group ({0}, {1} children)"
-msgstr "그룹 ({0}, {1}개 하위 항목)"
-
-#: compare/classifier_pipeline.py:582 compare/classifier_pipeline.py:600
-msgid "(end) → {0}"
-msgstr "(끝) → {0}"
-
-#: compare/classifier_pipeline.py:587
-#: tests/unit/test_classifier_pipeline.py:1075
-#: ui/compare/classifier_pipeline_editor_qt.py:2732
-msgid "(no nodes)"
-msgstr "(노드 없음)"
-
-#: compare/classifier_pipeline.py:595
-msgid "  ({0} of {1} children)"
-msgstr "  ({1}개 하위 항목 중 {0})"
-
-#: compare/classifier_pipeline_runner.py:338
+#: compare/classifier_pipeline_runner.py:349
 msgid "Node {0} is disabled — skipped"
 msgstr "노드 {0}이(가) 비활성화됨 — 건너뜀"
 
-#: compare/classifier_pipeline_runner.py:363
+#: compare/classifier_pipeline_runner.py:374
 msgid "Seed image is assigned to category '{0}'; GENERATE skipped."
 msgstr "시드 이미지가 카테고리 '{0}'에 할당되었습니다. GENERATE이(가) 건너뛰었습니다."
 
-#: compare/classifier_pipeline_runner.py:913
+#: compare/classifier_pipeline_runner.py:940
 msgid ""
 "Stem {0} matches {1} files (limit {2}) — base stem is not unique enough"
 msgstr "어간 {0}이(가) {1}개의 파일과 일치합니다 (제한 {2}) — 기본 어간이 고유하지 않습니다"
 
-#: compare/classifier_pipeline_runner.py:926
+#: compare/classifier_pipeline_runner.py:953
 msgid "{0} files share base stem {1} in the search location"
 msgstr "검색 위치에서 {0}개 파일이 기본 스템 {1}을(를) 공유합니다"
 
-#: compare/classifier_pipeline_runner.py:929
+#: compare/classifier_pipeline_runner.py:956
 msgid " (suffix filter: {0})"
 msgstr " (접미사 필터: {0})"
 
-#: compare/classifier_pipeline_runner.py:996
+#: compare/classifier_pipeline_runner.py:1023
 msgid "Unrecognised suffix in stem group: {0}"
 msgstr "스템 그룹에서 인식되지 않는 접미사: {0}"
 
-#: compare/classifier_pipeline_runner.py:1012
+#: compare/classifier_pipeline_runner.py:1039
 msgid " — classifier inconclusive"
 msgstr " — 분류기가 확정되지 않음"
 
-#: compare/classifier_pipeline_runner.py:1018
+#: compare/classifier_pipeline_runner.py:1045
 msgid "Cannot determine category of {0}{1}"
 msgstr "{0}{1}의 카테고리를 확인할 수 없습니다"
 
-#: compare/classifier_pipeline_runner.py:1055
+#: compare/classifier_pipeline_runner.py:1082
 msgid "{0} inferred as {1} (confidence {2}) — treated as resolved"
 msgstr "{0}이(가) {1}(으)로 유추됨(신뢰도 {2}) — 해결된 것으로 처리됨"
 
-#: compare/classifier_pipeline_runner.py:1249 files/marked_files.py:475
+#: compare/classifier_pipeline_runner.py:1360 files/marked_files.py:475
 msgid "Moving"
 msgstr "이동 중"
 
-#: compare/classifier_pipeline_runner.py:1249 files/marked_files.py:475
+#: compare/classifier_pipeline_runner.py:1360 files/marked_files.py:475
 msgid "Copying"
 msgstr "복사 중"
 
@@ -1024,6 +1035,12 @@ msgstr "대기 중인 생성: {0} ({1})"
 msgid "Generations queued: {0}"
 msgstr "대기열에 있는 생성: {0}"
 
+#: compare/pipeline_run_report.py:220
+#: tests/unit/test_pipeline_decision_record.py:288
+#: tests/unit/test_pipeline_decision_record.py:294
+msgid "Decision records captured: {0}"
+msgstr "캡처된 결정 레코드: {0}"
+
 #: compare/pipeline_run_report.py:258
 #: tests/unit/test_classifier_pipeline_runner.py:1579
 msgid "  {0} ({1} file(s))"
@@ -1038,7 +1055,7 @@ msgstr "  [{0}] — {1} 파일"
 msgid "      · … and {0} more"
 msgstr "      · … 그 외 {0}개"
 
-#: extensions/sd_runner_client.py:104
+#: extensions/sd_runner_client.py:147
 msgid "Image does not contain a prompt to redo!"
 msgstr "이미지에 다시 실행하라는 메시지가 표시되지 않습니다!"
 
@@ -1111,7 +1128,7 @@ msgstr "파일 업데이트됨: {0}"
 #: extensions/gimp/gimp_wrapper.py:706 extensions/gimp/gimp_wrapper.py:735
 #: files/pdf_creator.py:135 files/pdf_creator.py:139 files/pdf_creator.py:142
 #: files/pdf_creator.py:230 files/pdf_creator.py:248 files/pdf_creator.py:280
-#: ui/app_window/notification_controller.py:377
+#: ui/app_window/notification_controller.py:382
 #: ui/auth/app_startup_auth_qt.py:122 ui/auth/password_admin_window.py:128
 #: ui/auth/password_admin_window.py:535 ui/auth/password_dialog.py:306
 #: ui/compare/classifier_action_copy_window_qt.py:219
@@ -1158,43 +1175,112 @@ msgstr "덮어쓰기 확인"
 msgid "File overwrite cancelled"
 msgstr "파일 덮어쓰기 취소됨"
 
-#: files/file_browser.py:228 files/file_browser.py:240
-#: files/file_browser.py:252 ui/app_window/media_navigator.py:144
+#: files/file_browser.py:282 files/file_browser.py:294
+#: files/file_browser.py:306 ui/app_window/media_navigator.py:144
 #: ui/app_window/media_navigator.py:192
 msgid " (try setting recursive to True)"
 msgstr " (재귀를 True로 설정해 보세요.)"
 
-#: files/file_browser.py:229 files/file_browser.py:241
-#: files/file_browser.py:253 files/file_browser.py:331
+#: files/file_browser.py:283 files/file_browser.py:295
+#: files/file_browser.py:307 files/file_browser.py:385
 #: ui/app_window/media_navigator.py:146 ui/app_window/media_navigator.py:194
 msgid "No files found for current browsing settings."
 msgstr "현재 브라우징 설정에 대한 파일을 찾을 수 없습니다."
 
-#: files/file_browser.py:317
+#: files/file_browser.py:371
 msgid "FILE_BROWSER_INDEX_DETAILS"
 msgstr "디렉터리에 있는 파일 {1}개 중 {0}개, {2}별로 정렬{3}"
 
-#: files/file_browser.py:335
+#: files/file_browser.py:389
 msgid "Index must be 1 or greater."
 msgstr "인덱스는 1 이상이어야 합니다."
 
-#: files/file_browser.py:339
+#: files/file_browser.py:393
 msgid "Index {0} is out of range. There are {1} files."
 msgstr "인덱스 {0}이 범위를 벗어났습니다. 파일이 {1}개 있습니다."
 
-#: files/file_browser.py:367
+#: files/file_browser.py:421
 msgid "Search text provided to file_browser.find() was invalid."
 msgstr "file_browser.find()에 제공된 검색 텍스트가 유효하지 않습니다."
 
-#: files/file_browser.py:781
+#: files/file_browser.py:835
 msgid ""
 "Loading directory... {0} files currently available (scanned {1} folders; "
 "total unknown)"
 msgstr "디렉터리 불러오 중... 현재 {0}개의 파일이 사용 가능합니다 (검색한 폴더 수: {1}; 전체는 알 수 없음)"
 
-#: files/file_browser.py:1139 ui/app_window/file_ops_controller.py:532
+#: files/file_browser.py:1195 ui/app_window/file_ops_controller.py:532
 msgid "No files found"
 msgstr "찾을 파일 없음"
+
+#: files/file_interceptor_rule.py:40
+msgid "Move only"
+msgstr "이동만"
+
+#: files/file_interceptor_rule.py:42
+msgid "Copy only"
+msgstr "복사만"
+
+#: files/file_interceptor_rule.py:43
+msgid "Move and copy"
+msgstr "이동 및 복사"
+
+#: files/file_interceptor_rule.py:64
+msgid "Transform"
+msgstr "변환"
+
+#: files/file_interceptor_rule.py:65 files/file_interceptor_rule.py:183
+msgid "Block"
+msgstr "차단"
+
+#: files/file_interceptor_rule.py:84
+msgid "Improve image"
+msgstr "이미지 개선"
+
+#: files/file_interceptor_rule.py:85 ui/files/file_actions_window_qt.py:361
+#: ui/help_and_config_qt.py:284 ui/image/media_details.py:449
+msgid "Convert to JPG"
+msgstr "JPG로 변환"
+
+#: files/file_interceptor_rule.py:109
+msgid "New Interceptor Rule"
+msgstr "새 인터셉터 규칙"
+
+#: files/file_interceptor_rule.py:163
+msgid "into {0} (and subdirectories)"
+msgstr "{0} 로 (하위 디렉터리 포함)"
+
+#: files/file_interceptor_rule.py:165
+msgid "into {0}"
+msgstr "{0}에"
+
+#: files/file_interceptor_rule.py:169
+msgid "name contains {0}"
+msgstr "이름에 {0}이 포함됩니다"
+
+#: files/file_interceptor_rule.py:173
+msgid "type is {0}"
+msgstr "유형은 {0}"
+
+#: files/file_interceptor_rule.py:177
+msgid "any file"
+msgstr "임의 파일"
+
+#: files/file_interceptor_rule.py:181
+msgid ", removing the original"
+msgstr ", 원본 삭제"
+
+#: files/file_interceptor_rules_manager.py:189
+msgid "Blocked by interceptor rule: {0}"
+msgstr "인터셉터 규칙에 의해 차단됨: {0}"
+
+#: files/file_interceptor_rules_manager.py:196
+msgid ""
+"{0}\n"
+"Blocked: {1}"
+msgstr ""
+"{0}\n"
+"차단됨: {1}"
 
 #: files/marked_files.py:61
 msgid "change marks"
@@ -1203,6 +1289,59 @@ msgstr "마크 변경"
 #: files/marked_files.py:147 ui/image/temp_media_window.py:153
 msgid "add mark"
 msgstr "마크 추가"
+
+#: files/marked_files.py:186
+msgid "Removing directory: {0}"
+msgstr "디렉토리 제거: {0}"
+
+#: files/marked_files.py:186
+msgid "Removing file: {0}"
+msgstr "파일을 제거 중입니다: {0}"
+
+#: files/marked_files.py:209 files/marked_files.py:216
+#: files/marked_files.py:220 files/marked_files.py:226
+#: files/marked_files.py:237 ui/app_window/app_window.py:1304
+#: ui/app_window/search_controller.py:644
+#: ui/app_window/search_controller.py:703
+#: ui/app_window/search_controller.py:780
+msgid "Warning"
+msgstr "경고"
+
+#: files/marked_files.py:209 files/marked_files.py:237
+msgid "Failed to delete item: {0}"
+msgstr "항목을 삭제하지 못했습니다: {0}"
+
+#: files/marked_files.py:213
+msgid ""
+"Failed to move directory to {0}. Double check the trash folder is set "
+"properly in config.json."
+msgstr ""
+"{0}로 디렉토리를 이동하는 데 실패했습니다. config.json 파일에서 휴지통 폴더가 제대로 설정되어 있는지 다시 한 번 "
+"확인하세요."
+
+#: files/marked_files.py:215
+msgid ""
+"Failed to send file to {0}. Double check the trash folder is set properly in"
+" config.json."
+msgstr ""
+"{0}로 파일을 전송하는 데 실패했습니다. config.json 파일에서 휴지통 폴더가 제대로 설정되어 있는지 다시 한 번 확인해 "
+"주세요."
+
+#: files/marked_files.py:221
+msgid ""
+"Failed to move directory to the trash. Either pip install send2trash or set "
+"a specific trash folder in config.json."
+msgstr ""
+"디렉토리를 휴지통으로 이동하는 데 실패했습니다. pip install send2trash를 실행하거나 config.json에서 특정 "
+"휴지통 폴더를 설정하세요."
+
+#: files/marked_files.py:227
+msgid ""
+"Failed to send file to the trash, so it will be deleted. Either pip install "
+"send2trash or set a specific trash folder in config.json."
+msgstr ""
+"파일을 휴지통으로 보내지 못했으므로 삭제됩니다. pip에서 send2trash를 설치하거나 config.json에서 특정 휴지통 폴더를 "
+"설정하세요."
 
 #: files/marked_files.py:242
 msgid "clear marks"
@@ -1271,14 +1410,14 @@ msgstr ""
 "취소 — {0}개의 모든 파일을 원래 위치로 {3}."
 
 #: files/marked_files.py:428 files/marked_files.py:1054
-#: ui/files/file_actions_window_qt.py:248
-#: ui/files/file_actions_window_qt.py:256
+#: ui/files/file_actions_window_qt.py:250
+#: ui/files/file_actions_window_qt.py:259
 msgid "Moved"
 msgstr "이동됨"
 
 #: files/marked_files.py:428 files/marked_files.py:1054
-#: ui/files/file_actions_window_qt.py:249
-#: ui/files/file_actions_window_qt.py:257
+#: ui/files/file_actions_window_qt.py:251
+#: ui/files/file_actions_window_qt.py:260
 msgid "Copied"
 msgstr "복사됨"
 
@@ -1505,27 +1644,27 @@ msgid "Suffix must not be purely numeric."
 msgstr "접미사는 숫자로만 구성되어서는 안 됩니다."
 
 #: files/related_image.py:259 tests/unit/test_downstream_image_matching.py:425
-#: ui/image/media_details.py:1441
+#: ui/image/media_details.py:1524
 msgid " (Exact Match Not Found)"
 msgstr " (정확한 일치 항목 없음)"
 
-#: files/related_image.py:261 ui/image/media_details.py:1438
+#: files/related_image.py:261 ui/image/media_details.py:1515
 msgid "(No related image found)"
 msgstr "(찾은 관련 이미지 없음)"
 
-#: files/related_image.py:304 files/related_image.py:311
+#: files/related_image.py:309 files/related_image.py:318
 msgid "{0} downstream image(s) found."
 msgstr "{0} 다운스트림 이미지(s)가 있습니다."
 
-#: files/related_image.py:307
+#: files/related_image.py:313
 msgid "{0} (cached) downstream image(s) found."
 msgstr "{0} (캐시됨) 다운스트림 이미지를 찾았습니다."
 
-#: files/related_image.py:314 ui/app_window/file_marks_controller.py:424
+#: files/related_image.py:323 ui/app_window/file_marks_controller.py:438
 msgid "No downstream related images found in"
 msgstr "다음 위치에서 관련 이미지를 찾을 수 없습니다:"
 
-#: image/image_data_extractor.py:491
+#: image/image_data_extractor.py:497
 msgid "(Unable to parse image prompt information for this file.)"
 msgstr "(이 파일의 이미지 프롬프트 정보를 분석할 수 없습니다.)"
 
@@ -1583,21 +1722,21 @@ msgstr "ffmpeg가 오디오를 음소거하는 중에 타임아웃되었습니�
 msgid "Video ({0})"
 msgstr "비디오 ({0})"
 
-#: image/video_ops.py:1013 ui/image/media_details.py:615
+#: image/video_ops.py:1013 ui/image/media_details.py:616
 #: utils/constants.py:447
 msgid "Video"
 msgstr "비디오"
 
-#: lib/custom_dialogs_qt.py:147 lib/fast_directory_picker_qt.py:329
-#: lib/fill_preview_dialog_qt.py:120 lib/qt_alert.py:32
-#: ui/app_window/file_ops_controller.py:244
+#: lib/custom_dialogs_qt.py:184 lib/custom_dialogs_qt.py:203
+#: lib/fast_directory_picker_qt.py:329 lib/fill_preview_dialog_qt.py:120
+#: lib/qt_alert.py:32 ui/app_window/file_ops_controller.py:244
 #: ui/app_window/file_ops_controller.py:1071
-#: ui/app_window/window_launcher.py:1143 ui/auth/app_startup_auth_qt.py:74
+#: ui/app_window/window_launcher.py:1161 ui/auth/app_startup_auth_qt.py:74
 #: ui/auth/password_admin_window.py:81 ui/auth/password_dialog.py:198
 #: ui/auth/password_dialog.py:268 ui/auth/password_dialog.py:289
 #: ui/compare/add_instance_dialog_qt.py:127
 #: ui/compare/classifier_action_copy_window_qt.py:166
-#: ui/compare/classifier_pipeline_editor_qt.py:1923
+#: ui/compare/classifier_pipeline_editor_qt.py:2014
 #: ui/compare/compare_settings_window_qt.py:335
 #: ui/compare/hf_model_manager_window_qt.py:184
 #: ui/files/auto_sort_confirmation_window_qt.py:69
@@ -1610,9 +1749,9 @@ msgstr "비디오"
 msgid "Cancel"
 msgstr "취소"
 
-#: lib/custom_dialogs_qt.py:153 lib/qt_alert.py:31
-#: ui/auth/app_startup_auth_qt.py:77 ui/auth/password_dialog.py:201
-#: ui/compare/add_instance_dialog_qt.py:121
+#: lib/custom_dialogs_qt.py:190 lib/custom_dialogs_qt.py:209
+#: lib/qt_alert.py:31 ui/auth/app_startup_auth_qt.py:77
+#: ui/auth/password_dialog.py:201 ui/compare/add_instance_dialog_qt.py:121
 #: ui/compare/hf_model_manager_window_qt.py:1275
 #: ui/files/file_interceptor_rules_window_qt.py:150
 msgid "OK"
@@ -1645,7 +1784,7 @@ msgstr "RAM 디스크"
 #: lib/fast_directory_picker_qt.py:156
 #: tests/unit/test_embedding_seed_library_window.py:33
 #: ui/compare/embedding_seed_library_window_qt.py:33
-#: ui/image/media_details.py:713
+#: ui/image/media_details.py:714
 msgid "Unknown"
 msgstr "알 수 없음"
 
@@ -1680,7 +1819,7 @@ msgstr "새 폴더"
 
 #: lib/fast_directory_picker_qt.py:310
 #: ui/compare/hf_model_manager_window_qt.py:711
-#: ui/compare/seek_to_trigger_tab_qt.py:133
+#: ui/compare/seek_to_trigger_tab_qt.py:147
 msgid "Refresh"
 msgstr "리프레시"
 
@@ -1753,7 +1892,7 @@ msgstr "아니요"
 #: ui/app_window/sidebar_panel.py:239
 #: ui/compare/classifier_actions_tab_qt.py:102
 #: ui/compare/classifier_management_window_qt.py:730
-#: ui/compare/seek_to_trigger_tab_qt.py:224
+#: ui/compare/seek_to_trigger_tab_qt.py:238
 msgid "Classifier Actions"
 msgstr "분류기 동작"
 
@@ -1766,7 +1905,7 @@ msgstr "파이프라인"
 #: tests/ui/test_classifier_management_window_qt.py:61
 #: ui/compare/classifier_management_window_qt.py:732
 #: ui/compare/prevalidations_tab_qt.py:266
-#: ui/compare/seek_to_trigger_tab_qt.py:238
+#: ui/compare/seek_to_trigger_tab_qt.py:252
 msgid "Prevalidations"
 msgstr "사전 검증"
 
@@ -1788,29 +1927,29 @@ msgid "Directory Profiles"
 msgstr "디렉토리 프로필"
 
 #: tests/ui/test_classifier_pipeline_editor_qt.py:487
-#: ui/compare/classifier_pipeline_editor_qt.py:1144
+#: ui/compare/classifier_pipeline_editor_qt.py:1233
 msgid "(no prior nodes)"
 msgstr "(이전 노드 없음)"
 
 #: tests/ui/test_classifier_pipeline_editor_qt.py:793
-#: ui/compare/classifier_pipeline_editor_qt.py:1796
+#: ui/compare/classifier_pipeline_editor_qt.py:1887
 msgid "(no later nodes)"
 msgstr "(후속 노드 없음)"
 
 #: tests/ui/test_classifier_pipeline_editor_qt.py:1169
-#: ui/compare/classifier_pipeline_editor_qt.py:2721
+#: ui/compare/classifier_pipeline_editor_qt.py:2814
 msgid "(preview unavailable)"
 msgstr "(미리보기를 사용할 수 없음)"
 
 #: tests/ui/test_classifier_pipelines_tab_qt.py:148
-#: ui/compare/classifier_pipeline_editor_qt.py:1962
+#: ui/compare/classifier_pipeline_editor_qt.py:2053
 #: ui/compare/classifier_pipelines_tab_qt.py:196 ui/help_and_config_qt.py:200
-#: utils/constants.py:573
+#: utils/constants.py:574
 msgid "Prevalidation"
 msgstr "예초검증"
 
 #: tests/ui/test_classifier_pipelines_tab_qt.py:159
-#: ui/compare/classifier_pipeline_editor_qt.py:1962
+#: ui/compare/classifier_pipeline_editor_qt.py:2053
 #: ui/compare/classifier_pipelines_tab_qt.py:197 ui/help_and_config_qt.py:327
 msgid "General"
 msgstr "일반"
@@ -1839,8 +1978,8 @@ msgstr "GIMP에서 열기"
 
 #: tests/ui/test_context_menu_builder.py:67
 #: ui/app_window/context_menu_builder.py:121 ui/help_and_config_qt.py:287
-#: ui/image/media_details.py:480 ui/image/temp_media_window.py:244
-#: utils/constants.py:698
+#: ui/image/media_details.py:481 ui/image/temp_media_window.py:244
+#: utils/constants.py:699
 msgid "Run Image Generation"
 msgstr "이미지 생성 실행"
 
@@ -1911,109 +2050,112 @@ msgstr "대화형 배경 상자(자유형)…"
 msgid "Set Marked File as Related Image of Current"
 msgstr "표시된 파일을 현재 항목의 관련 이미지로 설정"
 
-#: tests/ui/test_media_details.py:295 ui/image/media_details.py:245
+#: tests/ui/test_media_details.py:295 ui/image/media_details.py:246
 msgid "Video details"
 msgstr "비디오 세부정보"
 
-#: tests/ui/test_media_details.py:298 ui/image/media_details.py:247
+#: tests/ui/test_media_details.py:298 ui/image/media_details.py:248
 msgid "Audio details"
 msgstr "오디오 세부 정보"
 
 #: tests/ui/test_media_details.py:301 tests/ui/test_media_details.py:318
-#: tests/ui/test_media_details.py:324 ui/image/media_details.py:154
-#: ui/image/media_details.py:249
+#: tests/ui/test_media_details.py:324 ui/image/media_details.py:155
+#: ui/image/media_details.py:250
 msgid "Image details"
 msgstr "이미지 세부 정보"
 
 #: tests/ui/test_media_details.py:314 tests/ui/test_media_details.py:327
-#: ui/app_window/sidebar_panel.py:315 ui/image/media_details.py:250
+#: ui/app_window/sidebar_panel.py:315 ui/image/media_details.py:251
 msgid "Media details"
 msgstr "미디어 상세 정보"
 
 #: tests/ui/test_media_details.py:371 ui/help_and_config_qt.py:276
-#: ui/image/media_details.py:423
+#: ui/image/media_details.py:424
 msgid "Rotate Image Left"
 msgstr "이미지를 왼쪽으로 회전"
 
 #: tests/ui/test_media_details.py:372 ui/help_and_config_qt.py:275
-#: ui/image/media_details.py:427
+#: ui/image/media_details.py:428
 msgid "Crop Image (Smart Detect)"
 msgstr "이미지 자르기 (스마트 감지)"
 
 #: tests/ui/test_related_images_window.py:74
-#: ui/files/related_images_window_qt.py:95
+#: ui/files/related_images_window_qt.py:97
 msgid "Search all open windows for downstream images"
 msgstr "열려 있는 모든 창에서 다운스트림 이미지를 검색"
 
 #: tests/ui/test_related_images_window.py:75
-#: ui/files/related_images_window_qt.py:93
+#: ui/files/related_images_window_qt.py:95
 msgid "Mark files without a related image in current directory"
 msgstr "현재 디렉터리에서 관련 이미지가 없는 파일 표시"
 
-#: tests/ui/test_related_images_window.py:180
-#: ui/app_window/file_marks_controller.py:508
+#: tests/ui/test_related_images_window.py:238
+#: ui/app_window/file_marks_controller.py:538
 msgid "{0} file marks set from {1} window(s)"
 msgstr "{0} 파일 마크가 {1} 창에서 설정되었습니다"
 
-#: tests/ui/test_related_images_window.py:233
-#: ui/app_window/file_marks_controller.py:493
-#: ui/app_window/file_marks_controller.py:515
+#: tests/ui/test_related_images_window.py:294
+#: ui/app_window/file_marks_controller.py:514
 msgid "Skipped {0} large unconfirmed director(ies)."
 msgstr "건너뛴 {0}개의 큰 확인되지 않은 감독."
 
-#: tests/ui/test_related_images_window.py:252
-#: ui/app_window/file_marks_controller.py:489
+#: tests/ui/test_related_images_window.py:313
+#: ui/app_window/file_marks_controller.py:519
 msgid "No downstream related images found across {0} open window(s)."
 msgstr "열린 {0}개의 창에서 하위 관련 이미지가 발견되지 않았습니다."
 
-#: tests/ui/test_related_images_window.py:318
-#: ui/app_window/file_marks_controller.py:640
+#: tests/ui/test_related_images_window.py:379
+#: ui/app_window/file_marks_controller.py:688
 msgid "Every file in the current directory has a related image."
 msgstr "현재 디렉터리의 모든 파일에는 관련 이미지가 있습니다."
 
-#: tests/ui/test_related_images_window.py:350
-#: ui/app_window/file_marks_controller.py:643
-#: ui/app_window/file_marks_controller.py:648
-#: ui/app_window/file_marks_controller.py:656
+#: tests/ui/test_related_images_window.py:411
+#: ui/app_window/file_marks_controller.py:674
+#: ui/app_window/file_marks_controller.py:696
 msgid "Mark files without related images"
 msgstr "관련 이미지가 없는 파일을 표시"
 
-#: tests/ui/test_related_images_window.py:364
-#: ui/app_window/file_marks_controller.py:545
-#: ui/app_window/file_marks_controller.py:589
-#: ui/app_window/file_marks_controller.py:632
+#: tests/ui/test_related_images_window.py:425
+#: ui/app_window/file_marks_controller.py:572
+#: ui/app_window/file_marks_controller.py:627
+#: ui/app_window/file_marks_controller.py:678
 msgid "No files in current directory."
 msgstr "현재 디렉터리에 파일이 없습니다."
 
 #: tests/ui/test_seek_to_trigger_integration.py:432
-#: tests/unit/test_seek_to_trigger.py:697
-#: tests/unit/test_seek_to_trigger.py:711
-#: ui/compare/seek_to_trigger_tab_qt.py:624
+#: tests/unit/test_seek_to_trigger.py:769
+#: tests/unit/test_seek_to_trigger.py:783
+#: ui/compare/seek_to_trigger_tab_qt.py:698
 msgid "Trigger: image classifier"
 msgstr "트리거: 이미지 분류기"
 
-#: tests/unit/test_seek_to_trigger.py:676
-#: ui/compare/seek_to_trigger_tab_qt.py:627
+#: tests/unit/test_compare_embeddings_audio_clap.py:26 utils/constants.py:59
+#: utils/constants.py:95
+msgid "CLAP Audio Embedding"
+msgstr "CLAP 오디오 임베딩"
+
+#: tests/unit/test_seek_to_trigger.py:748
+#: ui/compare/seek_to_trigger_tab_qt.py:701
 msgid "Trigger: text embedding"
 msgstr "트리거: 텍스트 임베딩"
 
-#: tests/unit/test_seek_to_trigger.py:681
-#: ui/compare/seek_to_trigger_tab_qt.py:628
+#: tests/unit/test_seek_to_trigger.py:753
+#: ui/compare/seek_to_trigger_tab_qt.py:702
 msgid "Trigger: prompt match"
 msgstr "트리거: 프롬프트 일치"
 
-#: tests/unit/test_seek_to_trigger.py:686
-#: ui/compare/seek_to_trigger_tab_qt.py:629
+#: tests/unit/test_seek_to_trigger.py:758
+#: ui/compare/seek_to_trigger_tab_qt.py:703
 msgid "Trigger: prototype"
 msgstr "트리거: 프로토타입"
 
-#: tests/unit/test_seek_to_trigger.py:691
-#: ui/compare/seek_to_trigger_tab_qt.py:630
+#: tests/unit/test_seek_to_trigger.py:763
+#: ui/compare/seek_to_trigger_tab_qt.py:704
 msgid "Trigger: filename match"
 msgstr "트리거: 파일 이름 일치"
 
-#: tests/unit/test_seek_to_trigger.py:849
-#: ui/compare/seek_to_trigger_tab_qt.py:508
+#: tests/unit/test_seek_to_trigger.py:921
+#: ui/compare/seek_to_trigger_tab_qt.py:545
 msgid ""
 "No previous seek-to-trigger action — use the Seek to Trigger tab first."
 msgstr "이전의 트리거로 이동 동작이 없습니다 — 먼저 '트리거로 이동' 탭을 사용하세요."
@@ -2083,7 +2225,7 @@ msgstr "이전/다음 그룹보기"
 msgid "Show previous/next supergroup"
 msgstr "이전/다음 수퍼그룹 표시"
 
-#: ui/files/file_actions_window_qt.py:441 ui/help_and_config_qt.py:112
+#: ui/files/file_actions_window_qt.py:475 ui/help_and_config_qt.py:112
 msgid "View"
 msgstr "보기"
 
@@ -2171,7 +2313,7 @@ msgstr "다음 텍스트 임베딩 검색 사전 설정 실행"
 msgid "Run last seek-to-trigger action"
 msgstr "마지막 트리거로 이동 작업 실행"
 
-#: ui/help_and_config_qt.py:146 ui/image/media_details.py:467
+#: ui/help_and_config_qt.py:146 ui/image/media_details.py:468
 msgid "Image Generation"
 msgstr "이미지 생성"
 
@@ -2233,7 +2375,7 @@ msgstr "이전 표시 목록에서 현재 표시 설정"
 msgid "Set marks from downstream related images"
 msgstr "관련 다운스트림 이미지에서 표시 설정"
 
-#: ui/files/related_images_window_qt.py:89 ui/help_and_config_qt.py:167
+#: ui/files/related_images_window_qt.py:91 ui/help_and_config_qt.py:167
 msgid "Mark sources with downstream files in current directory"
 msgstr "현재 디렉터리의 다운스트림 파일로 소스 표시"
 
@@ -2488,15 +2630,16 @@ msgstr "디렉터리에 있는 표시된 파일을 테스트합니다(변형 버
 msgid "Image Details Shortcuts"
 msgstr "이미지 세부 정보 바로가기"
 
-#: ui/help_and_config_qt.py:277 ui/image/media_details.py:424
+#: ui/help_and_config_qt.py:277 ui/image/media_details.py:425
 msgid "Rotate Image Right"
 msgstr "이미지를 오른쪽으로 회전"
 
-#: ui/help_and_config_qt.py:278 ui/image/media_details.py:428
+#: ui/help_and_config_qt.py:278 ui/image/media_details.py:429
 msgid "Enhance Image"
 msgstr "이미지 향상"
 
-#: ui/help_and_config_qt.py:279 ui/image/media_details.py:431
+#: ui/files/file_actions_window_qt.py:364 ui/help_and_config_qt.py:279
+#: ui/image/media_details.py:432
 msgid "Random Crop"
 msgstr "무작위 자르기"
 
@@ -2504,32 +2647,27 @@ msgstr "무작위 자르기"
 msgid "Randomly Modify Image"
 msgstr "이미지를 무작위로 수정하기"
 
-#: ui/help_and_config_qt.py:281 ui/image/media_details.py:439
+#: ui/help_and_config_qt.py:281 ui/image/media_details.py:440
 msgid "Flip Image Horizontally"
 msgstr "이미지를 수평으로 뒤집기"
 
-#: ui/help_and_config_qt.py:282 ui/image/media_details.py:440
+#: ui/help_and_config_qt.py:282 ui/image/media_details.py:441
 msgid "Flip Image Vertically"
 msgstr "이미지를 수직으로 뒤집기"
 
-#: ui/help_and_config_qt.py:283 ui/image/media_details.py:447
+#: ui/help_and_config_qt.py:283 ui/image/media_details.py:448
 msgid "Copy Without EXIF"
 msgstr "EXIF 없이 복사"
 
-#: files/file_interceptor_rule.py:85 ui/help_and_config_qt.py:284
-#: ui/image/media_details.py:448
-msgid "Convert to JPG"
-msgstr "JPG로 변환"
-
-#: ui/help_and_config_qt.py:285 ui/image/media_details.py:451
+#: ui/help_and_config_qt.py:285 ui/image/media_details.py:452
 msgid "Show Metadata"
 msgstr "메타데이터 표시"
 
-#: ui/help_and_config_qt.py:286 ui/image/media_details.py:461
+#: ui/help_and_config_qt.py:286 ui/image/media_details.py:462
 msgid "Open Related Image"
 msgstr "관련 이미지 열기"
 
-#: ui/help_and_config_qt.py:288 ui/image/media_details.py:484
+#: ui/help_and_config_qt.py:288 ui/image/media_details.py:485
 #: utils/constants.py:375
 msgid "Redo Prompt"
 msgstr "프롬프트 다시 실행"
@@ -2852,44 +2990,44 @@ msgstr ""
 "\n"
 "일부 변경 사항(글꼴 크기, 창 크기, 토스트 타이밍 등)은 완전히 적용되려면 애플리케이션을 다시 시작해야 합니다."
 
-#: ui/app_window/app_window.py:145 ui/app_window/app_window.py:217
-#: ui/app_window/app_window.py:919
+#: ui/app_window/app_window.py:151 ui/app_window/app_window.py:226
+#: ui/app_window/app_window.py:1040
 msgid " Weidr - Media Handler "
 msgstr " 웨이드알 - 미디어 핸들러 "
 
-#: ui/app_window/app_window.py:625
+#: ui/app_window/app_window.py:746
 msgid "Set Title Bar Color..."
 msgstr "제목 바 색상 설정..."
 
-#: ui/app_window/app_window.py:634
+#: ui/app_window/app_window.py:755
 msgid "Clear Title Bar Color"
 msgstr "clr 제목 바 컬러"
 
-#: ui/app_window/app_window.py:647
+#: ui/app_window/app_window.py:768
 msgid "No directory loaded."
 msgstr "디렉터리가 로드되지 않았습니다."
 
-#: ui/app_window/app_window.py:654
+#: ui/app_window/app_window.py:775
 msgid "Choose Title Bar Color"
 msgstr "제목 바 색상 선택"
 
-#: ui/app_window/app_window.py:662
+#: ui/app_window/app_window.py:783
 msgid "Title bar color set for this directory."
 msgstr "이 디렉토리를 위한 타이틀 바 색상 설정"
 
-#: ui/app_window/app_window.py:677
+#: ui/app_window/app_window.py:798
 msgid "Title bar color cleared for this directory."
 msgstr "이 디렉터리의 제목줄 색상이 지워졌습니다."
 
-#: ui/app_window/app_window.py:722 ui/app_window/sidebar_panel.py:105
+#: ui/app_window/app_window.py:843 ui/app_window/sidebar_panel.py:105
 msgid "Enter base directory..."
 msgstr "기본 디렉터리 입력..."
 
-#: ui/app_window/app_window.py:727
+#: ui/app_window/app_window.py:848
 msgid "Set media comparison directory"
 msgstr "미디어 비교 디렉터리를 설정하다"
 
-#: ui/app_window/app_window.py:750
+#: ui/app_window/app_window.py:871
 msgid ""
 "Path is not an existing directory:\n"
 "{0}"
@@ -2897,15 +3035,15 @@ msgstr ""
 "지정된 경로는 기존 디렉터리가 아닙니다:\n"
 "{0}"
 
-#: ui/app_window/app_window.py:922
+#: ui/app_window/app_window.py:1043
 msgid " [PV DISABLED]"
 msgstr " [PV 비활성화됨]"
 
-#: ui/app_window/app_window.py:965
+#: ui/app_window/app_window.py:1101
 msgid "Large Directory Detected: {0}"
 msgstr "대용량 디렉토리 감지: {0}"
 
-#: ui/app_window/app_window.py:966
+#: ui/app_window/app_window.py:1102
 msgid ""
 "A directory with a large number of files or a directory with a fair-sized "
 "number of files on external storage was detected, which may result in a slow"
@@ -2914,53 +3052,44 @@ msgstr ""
 "외부 저장 장치에 파일 수가 많은 디렉토리 또는 중간 규모의 파일 수를 가진 디렉토리가 감지되었습니다. 이 경우 로드 시간이 느려질 수 "
 "있습니다. 전체 디렉토리를 로드하시겠습니까?"
 
-#: ui/app_window/app_window.py:1004
+#: ui/app_window/app_window.py:1140
 msgid "Restored compare result state for {0} file(s) moved back"
 msgstr "돌려온 {0} 파일의 비교 결과 상태를 복원했습니다"
 
-#: ui/app_window/app_window.py:1046
+#: ui/app_window/app_window.py:1182
 msgid "Browsing mode set."
 msgstr "검색 모드 설정."
 
-#: ui/app_window/app_window.py:1061 ui/app_window/window_launcher.py:974
+#: ui/app_window/app_window.py:1197 ui/app_window/window_launcher.py:992
 msgid "Many Files"
 msgstr "많은 파일"
 
-#: files/marked_files.py:209 files/marked_files.py:216
-#: files/marked_files.py:220 files/marked_files.py:226
-#: files/marked_files.py:237 ui/app_window/app_window.py:1168
-#: ui/app_window/search_controller.py:644
-#: ui/app_window/search_controller.py:703
-#: ui/app_window/search_controller.py:769
-msgid "Warning"
-msgstr "경고"
-
-#: ui/app_window/app_window.py:1168
+#: ui/app_window/app_window.py:1304
 msgid "No files found in directory after refresh."
 msgstr "새로 고침 후 디렉토리에 파일을 찾을 수 없습니다."
 
-#: ui/app_window/app_window.py:1194
+#: ui/app_window/app_window.py:1330
 msgid "NEW_MEDIA_QUEUED"
 msgstr "{0}개의 새로운 미디어 파일이 대기열에 추가되었습니다"
 
-#: ui/app_window/app_window.py:1302
+#: ui/app_window/app_window.py:1438
 msgid "No cached image for this file."
 msgstr "이 파일에 대한 캐시된 이미지가 없습니다."
 
-#: ui/app_window/app_window.py:1305
+#: ui/app_window/app_window.py:1441
 msgid "Could not read cached image."
 msgstr "캐시된 이미지를 읽을 수 없습니다."
 
-#: ui/app_window/app_window.py:1308
+#: ui/app_window/app_window.py:1444
 msgid "Clipboard unavailable."
 msgstr "클립보드를 사용할 수 없습니다."
 
-#: ui/app_window/app_window.py:1327 ui/app_window/app_window.py:1341
-#: ui/app_window/app_window.py:1357
+#: ui/app_window/app_window.py:1463 ui/app_window/app_window.py:1477
+#: ui/app_window/app_window.py:1493
 msgid "Screenshot Failed"
 msgstr "스크린샷 실패했습니다"
 
-#: ui/app_window/app_window.py:1328
+#: ui/app_window/app_window.py:1464
 msgid ""
 "Unable to create screenshot directory:\n"
 "{0}\n"
@@ -2972,7 +3101,7 @@ msgstr ""
 "\n"
 "{1}"
 
-#: ui/app_window/app_window.py:1342
+#: ui/app_window/app_window.py:1478
 msgid ""
 "Unable to save screenshot.\n"
 "\n"
@@ -2982,7 +3111,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: ui/app_window/app_window.py:1348
+#: ui/app_window/app_window.py:1484
 msgid ""
 "Screenshot saved to:\n"
 "{0}"
@@ -2990,7 +3119,7 @@ msgstr ""
 "스크린샷이 저장되었습니다:\n"
 "{0}"
 
-#: ui/app_window/app_window.py:1358
+#: ui/app_window/app_window.py:1494
 msgid ""
 "Unable to copy image to clipboard.\n"
 "\n"
@@ -3000,36 +3129,36 @@ msgstr ""
 "\n"
 "{0}"
 
-#: ui/app_window/app_window.py:1362
+#: ui/app_window/app_window.py:1498
 msgid "Copied image to clipboard."
 msgstr "클립보드에 이미지를 복사했습니다."
 
-#: ui/app_window/app_window.py:1366
+#: ui/app_window/app_window.py:1502
 msgid ""
 "Screenshots are available for videos, animated GIFs, and PDF/SVG/HTML files."
 msgstr "비디오, 애니메이션 GIF 및 PDF/SVG/HTML 파일에 대한 스크린샷을 사용할 수 있습니다."
 
-#: ui/app_window/app_window.py:1424
+#: ui/app_window/app_window.py:1560
 msgid "Masonry view"
 msgstr "메이슨리 뷰"
 
-#: ui/app_window/app_window.py:1429
+#: ui/app_window/app_window.py:1565
 msgid "Full-window view"
 msgstr "전체 화면 보기"
 
-#: ui/app_window/app_window.py:1489
+#: ui/app_window/app_window.py:1625
 msgid "Theme switched to {0}."
 msgstr "테마는 {0}에 전환."
 
-#: ui/app_window/app_window.py:1638
+#: ui/app_window/app_window.py:1774
 msgid "Confirm Quit"
 msgstr "종료 확인"
 
-#: ui/app_window/app_window.py:1638
+#: ui/app_window/app_window.py:1774
 msgid "Would you like to quit the application?"
 msgstr "응용 프로그램을 종료하시겠습니까?"
 
-#: ui/app_window/context_menu_builder.py:60 utils/constants.py:692
+#: ui/app_window/context_menu_builder.py:60 utils/constants.py:693
 msgid "View Media Details"
 msgstr "미디어 세부 정보 보기"
 
@@ -3144,7 +3273,7 @@ msgstr "RefacDir 실행"
 #: ui/compare/embedding_seed_library_window_qt.py:95
 #: ui/compare/prevalidations_tab_qt.py:384
 #: ui/files/file_actions_window_qt.py:107
-#: ui/files/file_actions_window_qt.py:396 utils/constants.py:637
+#: ui/files/file_actions_window_qt.py:427 utils/constants.py:638
 msgid "Delete"
 msgstr "삭제"
 
@@ -3208,39 +3337,36 @@ msgstr ""
 "{0} 마크가 설정되었습니다(>={1} 예상).\n"
 "Shift+M을 사용하여 마크를 설정합니다."
 
-#: ui/app_window/file_marks_controller.py:410
+#: ui/app_window/file_marks_controller.py:420
 msgid "Set marks from related media"
 msgstr "관련 미디어에서 마크 설정"
 
-#: ui/app_window/file_marks_controller.py:414
+#: ui/app_window/file_marks_controller.py:427
 msgid "{0} file marks set"
 msgstr "{0} 파일 표시 세트"
 
-#: ui/app_window/file_marks_controller.py:417
-#: ui/app_window/file_marks_controller.py:425
-#: ui/files/related_images_window_qt.py:87
+#: ui/app_window/file_marks_controller.py:385
+#: ui/files/related_images_window_qt.py:89
 msgid "Set marks from downstream images"
 msgstr "하류 이미지에서 마크 설정"
 
-#: ui/app_window/file_marks_controller.py:447
+#: ui/app_window/file_marks_controller.py:461
 msgid "No active media to search from."
 msgstr "검색할 활성 미디어가 없습니다."
 
-#: ui/app_window/file_marks_controller.py:491
-#: ui/app_window/file_marks_controller.py:510
+#: ui/app_window/file_marks_controller.py:508
 msgid "Source: {0}"
 msgstr "출처: {0}"
 
-#: ui/app_window/file_marks_controller.py:497
-#: ui/app_window/file_marks_controller.py:519
+#: ui/app_window/file_marks_controller.py:454
 msgid "Search all open windows"
 msgstr "모든 열려 있는 창 검색"
 
-#: ui/app_window/file_marks_controller.py:504
+#: ui/app_window/file_marks_controller.py:531
 msgid "Set marks from related media (all windows)"
 msgstr "관련 미디어에서 표시 설정 (전체 창)"
 
-#: ui/app_window/file_marks_controller.py:551
+#: ui/app_window/file_marks_controller.py:581
 msgid ""
 "No source files with downstream images found in\n"
 "{0}"
@@ -3248,20 +3374,19 @@ msgstr ""
 "다운스트림 이미지가 있는 소스 파일을 찾을 수 없습니다.\n"
 "{0}"
 
-#: ui/app_window/file_marks_controller.py:554
-#: ui/app_window/file_marks_controller.py:566
+#: ui/app_window/file_marks_controller.py:560
 msgid "Mark sources with downstream"
 msgstr "다운스트림이 있는 소스를 표시"
 
-#: ui/app_window/file_marks_controller.py:558
+#: ui/app_window/file_marks_controller.py:589
 msgid "Mark sources with downstream images"
 msgstr "다운스트림 이미지가 있는 소스 표시"
 
-#: ui/app_window/file_marks_controller.py:563
+#: ui/app_window/file_marks_controller.py:597
 msgid "{0} source file(s) marked"
 msgstr "{0}개 소스 파일이 표시됨"
 
-#: ui/app_window/file_marks_controller.py:595
+#: ui/app_window/file_marks_controller.py:636
 msgid ""
 "No downstream files found in\n"
 "{0}"
@@ -3269,41 +3394,40 @@ msgstr ""
 "다운스트림 파일을 찾을 수 없습니다\n"
 "{0}"
 
-#: ui/app_window/file_marks_controller.py:598
-#: ui/app_window/file_marks_controller.py:602
-#: ui/app_window/file_marks_controller.py:610
+#: ui/app_window/file_marks_controller.py:615
+#: ui/app_window/file_marks_controller.py:644
 msgid "Mark downstream files"
 msgstr "다운스트림 파일 표시"
 
-#: ui/app_window/file_marks_controller.py:607
+#: ui/app_window/file_marks_controller.py:652
 msgid "{0} downstream file(s) marked"
 msgstr "{0}개의 다운스트림 파일이 표시됨"
 
-#: ui/app_window/file_marks_controller.py:653
+#: ui/app_window/file_marks_controller.py:704
 msgid "{0} file(s) without a related image marked"
 msgstr "{0}개 파일에 연관된 이미지가 표시되지 않음"
 
-#: ui/app_window/file_marks_controller.py:672
+#: ui/app_window/file_marks_controller.py:723
 msgid "Set related image"
 msgstr "관련 이미지 설정"
 
-#: ui/app_window/file_marks_controller.py:678
+#: ui/app_window/file_marks_controller.py:729
 msgid "Exactly one file must be marked for this operation."
 msgstr "이 작업에 대해 정확히 하나의 파일을 표시해야 합니다."
 
-#: ui/app_window/file_marks_controller.py:686
+#: ui/app_window/file_marks_controller.py:737
 msgid "No valid current media file."
 msgstr "유효한 현재 미디어 파일이 없습니다."
 
-#: ui/app_window/file_marks_controller.py:689
+#: ui/app_window/file_marks_controller.py:740
 msgid "Marked file no longer exists."
 msgstr "표시된 파일이 더 이상 존재하지 않습니다."
 
-#: ui/app_window/file_marks_controller.py:698
+#: ui/app_window/file_marks_controller.py:749
 msgid "Set as Related Image"
 msgstr "관련 이미지로 설정"
 
-#: ui/app_window/file_marks_controller.py:700
+#: ui/app_window/file_marks_controller.py:751
 msgid ""
 "Enter a suffix (1–8 alphanumeric characters, not purely numeric).\n"
 "The marked file will be renamed to:\n"
@@ -3313,23 +3437,23 @@ msgstr ""
 "표시된 파일은 다음과 같이 이름이 변경됩니다:\n"
 "{0}_<접미사>{1}"
 
-#: ui/app_window/file_marks_controller.py:712
+#: ui/app_window/file_marks_controller.py:763
 msgid "Invalid Suffix"
 msgstr "잘못된 접미사"
 
-#: ui/app_window/file_marks_controller.py:721
+#: ui/app_window/file_marks_controller.py:772
 msgid "File Already Exists"
 msgstr "파일이 이미 존재합니다"
 
-#: ui/app_window/file_marks_controller.py:722
+#: ui/app_window/file_marks_controller.py:773
 msgid "A file named {0} already exists in that directory."
 msgstr "해당 디렉터리에 {0}(이)라는 파일이 이미 있습니다."
 
-#: ui/app_window/file_marks_controller.py:732
+#: ui/app_window/file_marks_controller.py:783
 msgid "Rename Failed"
 msgstr "이름 바꾸기 실패"
 
-#: ui/app_window/file_marks_controller.py:737
+#: ui/app_window/file_marks_controller.py:788
 msgid "Renamed to {0}"
 msgstr "{0}(으)로 이름이 변경됨"
 
@@ -3355,50 +3479,6 @@ msgstr "잘못된 작업입니다, 검색 미디어가 없습니다"
 #: ui/app_window/file_ops_controller.py:175
 msgid "Failed to delete current file, unable to get valid filepath"
 msgstr "현재 파일을 삭제하지 못했습니다. 유효한 파일 경로를 가져올 수 없습니다."
-
-#: files/marked_files.py:186
-msgid "Removing directory: {0}"
-msgstr "디렉토리 제거: {0}"
-
-#: files/marked_files.py:186
-msgid "Removing file: {0}"
-msgstr "파일을 제거 중입니다: {0}"
-
-#: files/marked_files.py:209 files/marked_files.py:237
-msgid "Failed to delete item: {0}"
-msgstr "항목을 삭제하지 못했습니다: {0}"
-
-#: files/marked_files.py:213
-msgid ""
-"Failed to move directory to {0}. Double check the trash folder is set "
-"properly in config.json."
-msgstr ""
-"{0}로 디렉토리를 이동하는 데 실패했습니다. config.json 파일에서 휴지통 폴더가 제대로 설정되어 있는지 다시 한 번 "
-"확인하세요."
-
-#: files/marked_files.py:215
-msgid ""
-"Failed to send file to {0}. Double check the trash folder is set properly in"
-" config.json."
-msgstr ""
-"{0}로 파일을 전송하는 데 실패했습니다. config.json 파일에서 휴지통 폴더가 제대로 설정되어 있는지 다시 한 번 확인해 "
-"주세요."
-
-#: files/marked_files.py:221
-msgid ""
-"Failed to move directory to the trash. Either pip install send2trash or set "
-"a specific trash folder in config.json."
-msgstr ""
-"디렉토리를 휴지통으로 이동하는 데 실패했습니다. pip install send2trash를 실행하거나 config.json에서 특정 "
-"휴지통 폴더를 설정하세요."
-
-#: files/marked_files.py:227
-msgid ""
-"Failed to send file to the trash, so it will be deleted. Either pip install "
-"send2trash or set a specific trash folder in config.json."
-msgstr ""
-"파일을 휴지통으로 보내지 못했으므로 삭제됩니다. pip에서 send2trash를 설치하거나 config.json에서 특정 휴지통 폴더를 "
-"설정하세요."
 
 #: ui/app_window/file_ops_controller.py:212
 msgid "Invalid directory"
@@ -4062,25 +4142,25 @@ msgstr "슬라이드쇼 시작"
 msgid "Slideshows ended"
 msgstr "슬라이드 쇼 종료"
 
-#: ui/app_window/notification_controller.py:401
+#: ui/app_window/notification_controller.py:406
 msgid "GROUP_DETAILS"
 msgstr ""
 "그룹 {0} 중 {1}\n"
 "크기: {2}"
 
-#: ui/app_window/notification_controller.py:409
+#: ui/app_window/notification_controller.py:414
 msgid "No media files found"
 msgstr "미디어 파일 없음"
 
-#: ui/app_window/notification_controller.py:411
+#: ui/app_window/notification_controller.py:416
 msgid "1 media file found"
 msgstr "1개의 미디어 파일이 검색되었습니다"
 
-#: ui/app_window/notification_controller.py:413
+#: ui/app_window/notification_controller.py:418
 msgid "{0} media files found"
 msgstr "{0} 미디어 파일이 발견되었습니다"
 
-#: ui/app_window/notification_controller.py:418
+#: ui/app_window/notification_controller.py:423
 msgid "(filtered)"
 msgstr "(필터)"
 
@@ -4133,7 +4213,7 @@ msgstr "진행하시겠습니까?"
 
 #: ui/app_window/search_controller.py:501
 #: ui/app_window/search_controller.py:532
-#: ui/app_window/search_controller.py:769
+#: ui/app_window/search_controller.py:780
 msgid "Failed to get active media filepath"
 msgstr "활성 미디어 파일 경로를 가져오는 데 실패했습니다"
 
@@ -4163,16 +4243,15 @@ msgstr "유효하지 않은 이미지 편집 — 관련 이미지 참조 또는 
 msgid "Running image gen on directory: "
 msgstr "디렉터리에 이미지 생성 실행 중: "
 
-#: ui/app_window/search_controller.py:746
+#: ui/app_window/search_controller.py:757
 msgid "Navigated to {0}"
 msgstr "{0} 로 이동했습니다"
 
-#: ui/app_window/search_controller.py:747
-#: ui/app_window/search_controller.py:754
+#: ui/app_window/search_controller.py:719
 msgid "Next downstream image"
 msgstr "다음 하류 이미지"
 
-#: ui/app_window/search_controller.py:751
+#: ui/app_window/search_controller.py:762
 msgid "No downstream related image(s) found in {0}"
 msgstr "{0} 에서 다운스트림 관련 이미지를 찾을 수 없습니다."
 
@@ -4386,6 +4465,26 @@ msgid ""
 " marked files."
 msgstr "현재 표시된 파일에 대해 파일 작업(복사/이동) 세트를 구성하고 실행합니다."
 
+#: ui/app_window/sidebar_panel.py:339 ui/files/marked_file_mover_qt.py:359
+msgid "Interceptor rules"
+msgstr "인터셉터 규칙"
+
+#: ui/app_window/sidebar_panel.py:344
+msgid ""
+"Configure rules that block or transform marked files as they are moved or "
+"copied to a target directory."
+msgstr "대상 디렉터리로 이동하거나 복사될 때 표시된 파일을 차단하거나 변환하는 규칙을 설정합니다."
+
+#: ui/app_window/sidebar_panel.py:348
+msgid "Auto-sort confirmation"
+msgstr "자동 정렬 확인"
+
+#: ui/app_window/sidebar_panel.py:353
+msgid ""
+"Choose which automatically sorted categories ask for confirmation before "
+"their media is viewed."
+msgstr "자동으로 정렬된 카테고리 중 미디어가 표시되기 전에 확인을 요구하는 항목을 선택하십시오."
+
 #: ui/app_window/sidebar_panel.py:362
 msgid ""
 "Open the folder containing the current file in the system file manager."
@@ -4438,7 +4537,7 @@ msgid "Video cropped"
 msgstr "비디오가 잘림"
 
 #: ui/app_window/video_crop_overlay_qt.py:202
-#: ui/app_window/window_launcher.py:803
+#: ui/app_window/window_launcher.py:821
 msgid "Drag to select crop, Enter to confirm, Escape to cancel"
 msgstr "드래그하여 자르기 선택, Enter로 확인, Escape로 취소"
 
@@ -4451,7 +4550,7 @@ msgid "Video box added"
 msgstr "비디오 상자가 추가되었습니다"
 
 #: ui/app_window/video_crop_overlay_qt.py:215
-#: ui/app_window/window_launcher.py:825
+#: ui/app_window/window_launcher.py:843
 msgid "Drag to select box location, Enter to confirm, Escape to cancel"
 msgstr "상자 위치를 선택하려면 드래그, 확인은 Enter, 취소는 Escape"
 
@@ -4464,7 +4563,7 @@ msgid "Video background box added"
 msgstr "비디오 배경 상자가 추가되었습니다"
 
 #: ui/app_window/video_crop_overlay_qt.py:229
-#: ui/app_window/window_launcher.py:849
+#: ui/app_window/window_launcher.py:867
 msgid "Drag to select area to keep, Enter to confirm, Escape to cancel"
 msgstr "유지할 영역을 드래그하여 선택하고 Enter로 확인, Escape로 취소"
 
@@ -4504,81 +4603,81 @@ msgstr "이 미디어 유형에서는 대화형 자르기가 지원되지 않습
 msgid "Could not read GIF frame: "
 msgstr "GIF 프레임을 읽을 수 없습니다: "
 
-#: ui/app_window/window_launcher.py:799
+#: ui/app_window/window_launcher.py:817
 msgid "Crop selection too small"
 msgstr "자르기 선택 영역이 너무 작습니다"
 
-#: ui/app_window/window_launcher.py:800 ui/app_window/window_launcher.py:876
+#: ui/app_window/window_launcher.py:818 ui/app_window/window_launcher.py:894
 msgid "Cropped"
 msgstr "잘린"
 
-#: ui/app_window/window_launcher.py:801 ui/app_window/window_launcher.py:877
+#: ui/app_window/window_launcher.py:819 ui/app_window/window_launcher.py:895
 msgid "Crop failed"
 msgstr "작물 실패"
 
-#: ui/app_window/window_launcher.py:820
+#: ui/app_window/window_launcher.py:838
 msgid "Box selection too small"
 msgstr "상자 선택이 너무 작습니다"
 
-#: ui/app_window/window_launcher.py:821 ui/app_window/window_launcher.py:901
+#: ui/app_window/window_launcher.py:839 ui/app_window/window_launcher.py:919
 msgid "Box added"
 msgstr "상자가 추가되었습니다"
 
-#: ui/app_window/window_launcher.py:822 ui/app_window/window_launcher.py:902
+#: ui/app_window/window_launcher.py:840 ui/app_window/window_launcher.py:920
 msgid "Box draw failed"
 msgstr "상자 그리기 실패"
 
-#: ui/app_window/window_launcher.py:843
+#: ui/app_window/window_launcher.py:861
 msgid "Selection too small"
 msgstr "선택 영역이 너무 작습니다"
 
-#: ui/app_window/window_launcher.py:844 ui/app_window/window_launcher.py:927
+#: ui/app_window/window_launcher.py:862 ui/app_window/window_launcher.py:945
 msgid "Background box added"
 msgstr "배경 상자가 추가되었습니다"
 
-#: ui/app_window/window_launcher.py:845 ui/app_window/window_launcher.py:928
+#: ui/app_window/window_launcher.py:863 ui/app_window/window_launcher.py:946
 msgid "Background box draw failed"
 msgstr "배경 상자 그리기 실패"
 
-#: ui/app_window/window_launcher.py:852
+#: ui/app_window/window_launcher.py:870
 msgid "Freeform selection is not supported for video"
 msgstr "비디오에서는 자유 형식 선택이 지원되지 않습니다"
 
-#: ui/app_window/window_launcher.py:875 ui/app_window/window_launcher.py:900
-#: ui/app_window/window_launcher.py:926
+#: ui/app_window/window_launcher.py:893 ui/app_window/window_launcher.py:918
+#: ui/app_window/window_launcher.py:944
 msgid "Need at least 3 points"
 msgstr "최소 3점 필요"
 
-#: ui/app_window/window_launcher.py:880 ui/app_window/window_launcher.py:906
-#: ui/app_window/window_launcher.py:932
+#: ui/app_window/window_launcher.py:898 ui/app_window/window_launcher.py:924
+#: ui/app_window/window_launcher.py:950
 msgid ""
 "Click or click-drag to add points, click near the start to close, Enter to "
 "confirm, Escape to cancel"
 msgstr "클릭하거나 클릭 후 드래그하여 점 추가, 시작 부분 근처 클릭하여 닫기, Enter로 확인, Escape로 취소"
 
-#: ui/app_window/window_launcher.py:957
+#: ui/app_window/window_launcher.py:975
 msgid "No media selected"
 msgstr "선택된 미디어가 없습니다"
 
-#: ui/app_window/window_launcher.py:958
+#: ui/app_window/window_launcher.py:976
 msgid "No media file was selected for comparison"
 msgstr "비교를 위해 선택된 미디어 파일이 없습니다"
 
-#: ui/app_window/window_launcher.py:975
+#: ui/app_window/window_launcher.py:993
 msgid ""
 "Are you sure you want to run all prevalidations on directory {0} ? This may "
 "take a while."
 msgstr "디렉터리 {0}에서 모든 사전 유효성 검사를 실행하시겠습니까? 시간이 걸릴 수 있습니다."
 
-#: ui/app_window/window_launcher.py:984
+#: ui/app_window/window_launcher.py:1002
 msgid "run prevalidations"
 msgstr "사전 유효성 검사 실행"
 
-#: ui/app_window/window_launcher.py:1028
+#: ui/app_window/window_launcher.py:1046
 msgid "Prevalidations: {0} / {1}"
 msgstr "사전 검증: {0} / {1}"
 
-#: ui/app_window/window_launcher.py:1045
+#: ui/app_window/window_launcher.py:1063
 msgid ""
 "All prevalidations in this directory have finished.\n"
 "Files checked: {0} — outcomes: {1} — moves: {2} — copies: {3} — deletes: {4} — errors: {5}"
@@ -4586,37 +4685,37 @@ msgstr ""
 "이 디렉터리의 모든 사전 검증이 완료되었습니다.\n"
 "검증된 파일: {0} — 결과: {1} — 이동: {2} — 복사: {3} — 삭제: {4} — 오류: {5}"
 
-#: ui/app_window/window_launcher.py:1066
+#: ui/app_window/window_launcher.py:1084
 msgid "Prevalidations now running"
 msgstr "지금 실행"
 
-#: ui/app_window/window_launcher.py:1067
+#: ui/app_window/window_launcher.py:1085
 msgid "Prevalidations turned off"
 msgstr "사전 검증"
 
-#: ui/app_window/window_launcher.py:1077
+#: ui/app_window/window_launcher.py:1095
 msgid "Extra debug logging enabled"
 msgstr "추가 디버그 로깅 활성화됨"
 
-#: ui/app_window/window_launcher.py:1078
+#: ui/app_window/window_launcher.py:1096
 msgid "Extra debug logging disabled"
 msgstr "추가 디버그 로깅 비활성화됨"
 
-#: ui/app_window/window_launcher.py:1096
+#: ui/app_window/window_launcher.py:1114
 msgid "Removed from directory notes: {0}"
 msgstr "디렉토리의 메모에서 제거됨: {0}"
 
-#: ui/app_window/window_launcher.py:1101
+#: ui/app_window/window_launcher.py:1119
 msgid "Added to directory notes: {0}"
 msgstr "디렉토리의 메모에 추가됨: {0}"
 
-#: ui/app_window/window_launcher.py:1129
+#: ui/app_window/window_launcher.py:1147
 #: ui/files/directory_notes_window_qt.py:352
 msgid "Edit Note - {0}"
 msgstr "편집 노트 - {0}"
 
-#: ui/app_window/window_launcher.py:1142
-#: ui/compare/classifier_pipeline_editor_qt.py:1920
+#: ui/app_window/window_launcher.py:1160
+#: ui/compare/classifier_pipeline_editor_qt.py:2011
 #: ui/compare/hf_model_manager_window_qt.py:187
 #: ui/files/auto_sort_confirmation_window_qt.py:72
 #: ui/files/directory_notes_window_qt.py:375
@@ -4624,7 +4723,7 @@ msgstr "편집 노트 - {0}"
 msgid "Save"
 msgstr "저장"
 
-#: ui/app_window/window_launcher.py:1153
+#: ui/app_window/window_launcher.py:1171
 #: ui/files/directory_notes_window_qt.py:382
 msgid "Note saved for: {0}"
 msgstr "{0}을 위한 메모 저장됨"
@@ -4901,6 +5000,7 @@ msgid "Add Compare Instance"
 msgstr "비교 인스턴스 추가"
 
 #: ui/compare/add_instance_dialog_qt.py:70
+#: ui/compare/classifier_pipeline_editor_qt.py:924
 msgid "Compare mode:"
 msgstr "비교 모드:"
 
@@ -4965,10 +5065,10 @@ msgstr "새 이름"
 #: ui/files/file_action_sets_window_qt.py:276
 #: ui/files/file_action_sets_window_qt.py:339
 #: ui/files/file_action_sets_window_qt.py:346
-#: ui/files/file_action_sets_window_qt.py:370
+#: ui/files/file_action_sets_window_qt.py:373
 #: ui/files/file_actions_window_qt.py:106
-#: ui/files/file_actions_window_qt.py:400 ui/files/marked_file_mover_qt.py:411
-#: utils/constants.py:635
+#: ui/files/file_actions_window_qt.py:434 ui/files/marked_file_mover_qt.py:411
+#: utils/constants.py:636
 msgid "Copy"
 msgstr "복사"
 
@@ -5001,7 +5101,7 @@ msgid "Run on Profile:"
 msgstr "프로필 실행:"
 
 #: ui/compare/classifier_actions_tab_qt.py:179
-#: ui/compare/classifier_pipeline_editor_qt.py:1948
+#: ui/compare/classifier_pipeline_editor_qt.py:2039
 #: ui/compare/classifier_pipelines_tab_qt.py:170
 #: ui/compare/prevalidations_tab_qt.py:336
 msgid "Active"
@@ -5031,8 +5131,8 @@ msgstr "실행"
 
 #: ui/compare/classifier_actions_tab_qt.py:208
 #: ui/compare/prevalidations_tab_qt.py:372
-#: ui/files/file_actions_window_qt.py:414
-#: ui/files/file_actions_window_qt.py:462
+#: ui/files/file_actions_window_qt.py:448
+#: ui/files/file_actions_window_qt.py:496
 msgid "Modify"
 msgstr "수정하기"
 
@@ -5043,7 +5143,7 @@ msgid "Move down"
 msgstr "아래로 이동"
 
 #: ui/compare/classifier_actions_tab_qt.py:257
-#: ui/compare/classifier_pipeline_editor_qt.py:1930
+#: ui/compare/classifier_pipeline_editor_qt.py:2021
 msgid "Pipeline"
 msgstr "파이프라인"
 
@@ -5227,8 +5327,8 @@ msgstr "이름 *"
 
 #: ui/compare/classifier_management_window_qt.py:299
 #: ui/compare/hf_model_manager_window_qt.py:766
-#: ui/compare/hf_model_manager_window_qt.py:1278 ui/image/media_details.py:667
-#: ui/image/media_details.py:693 utils/constants.py:455
+#: ui/compare/hf_model_manager_window_qt.py:1278 ui/image/media_details.py:668
+#: ui/image/media_details.py:694 utils/constants.py:455
 msgid "Audio"
 msgstr "오디오"
 
@@ -5310,92 +5410,92 @@ msgstr "잘못된 구성"
 msgid "Classifier Management"
 msgstr "분류기 관리"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:72
+#: ui/compare/classifier_pipeline_editor_qt.py:73
 msgid "Classifier Rank"
 msgstr "분류기 순위"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:75
+#: ui/compare/classifier_pipeline_editor_qt.py:76
 msgid "Filename Contains"
 msgstr "파일 이름에 포함"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:76
+#: ui/compare/classifier_pipeline_editor_qt.py:77
 msgid "Related Image Exists"
 msgstr "관련 이미지가 있습니다"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:77
+#: ui/compare/classifier_pipeline_editor_qt.py:78
 msgid "Base Stem Match"
 msgstr "기본 스템 일치"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:78
+#: ui/compare/classifier_pipeline_editor_qt.py:79
 msgid "Unknown Suffix Guard"
 msgstr "알 수 없는 접미사 가드"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:80
+#: ui/compare/classifier_pipeline_editor_qt.py:81
 msgid "Prior Node Result"
 msgstr "이전 노드 결과"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:81
+#: ui/compare/classifier_pipeline_editor_qt.py:82
 msgid "Group Child Result"
 msgstr "그룹 자식 결과"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:84
+#: ui/compare/classifier_pipeline_editor_qt.py:85
 msgid "No Check (Always)"
 msgstr "검사 안 함 (항상)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:85
+#: ui/compare/classifier_pipeline_editor_qt.py:86
 msgid "Audio Classifier Rank"
 msgstr "오디오 분류기 순위"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:200
-#: ui/compare/classifier_pipeline_editor_qt.py:275
-#: ui/compare/classifier_pipeline_editor_qt.py:1490
-#: ui/compare/classifier_pipeline_editor_qt.py:2082
+#: ui/compare/classifier_pipeline_editor_qt.py:202
+#: ui/compare/classifier_pipeline_editor_qt.py:277
+#: ui/compare/classifier_pipeline_editor_qt.py:1580
+#: ui/compare/classifier_pipeline_editor_qt.py:2173
 #: ui/compare/directory_profile_window_qt.py:146
 msgid "Add"
 msgstr "추가"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:204
-#: ui/compare/classifier_pipeline_editor_qt.py:279
-#: ui/compare/classifier_pipeline_editor_qt.py:1491
-#: ui/compare/classifier_pipeline_editor_qt.py:2083
+#: ui/compare/classifier_pipeline_editor_qt.py:206
+#: ui/compare/classifier_pipeline_editor_qt.py:281
+#: ui/compare/classifier_pipeline_editor_qt.py:1581
+#: ui/compare/classifier_pipeline_editor_qt.py:2174
 #: ui/compare/directory_profile_window_qt.py:154
 #: ui/compare/directory_profile_window_qt.py:418
 #: ui/files/directory_notes_window_qt.py:197
 msgid "Remove"
 msgstr "제거"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:345
+#: ui/compare/classifier_pipeline_editor_qt.py:347
 msgid "positive text"
 msgstr "긍정적인 텍스트"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:346
+#: ui/compare/classifier_pipeline_editor_qt.py:348
 msgid "Positives:"
 msgstr "장점:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:348
+#: ui/compare/classifier_pipeline_editor_qt.py:350
 msgid "negative text"
 msgstr "부정적인 텍스트"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:349
+#: ui/compare/classifier_pipeline_editor_qt.py:351
 msgid "Negatives:"
 msgstr "단점:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:357
-#: ui/compare/classifier_pipeline_editor_qt.py:697
+#: ui/compare/classifier_pipeline_editor_qt.py:359
+#: ui/compare/classifier_pipeline_editor_qt.py:699
 msgid "Threshold:"
 msgstr "임계값:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:390
+#: ui/compare/classifier_pipeline_editor_qt.py:392
 msgid "Classifier:"
 msgstr "분류자:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:392
-#: ui/compare/classifier_pipeline_editor_qt.py:539
+#: ui/compare/classifier_pipeline_editor_qt.py:394
+#: ui/compare/classifier_pipeline_editor_qt.py:541
 msgid "Inherit from pipeline category map"
 msgstr "파이프라인 범주 맵에서 상속"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:395
-#: ui/compare/classifier_pipeline_editor_qt.py:542
+#: ui/compare/classifier_pipeline_editor_qt.py:397
+#: ui/compare/classifier_pipeline_editor_qt.py:544
 msgid ""
 "When checked, matches against ALL of the pipeline's category_map values "
 "instead of the list below. Leave unchecked to name only specific categories "
@@ -5407,18 +5507,18 @@ msgstr ""
 " 카테고리만)만 지정하려면 이 옵션을 선택 해제하세요. 이 조건이 전체 시드 대신 단일 카테고리 노드를 필터링하는 경우, 대개 이 설정을"
 " 사용하는 것이 일반적입니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:401
-#: ui/compare/classifier_pipeline_editor_qt.py:548
+#: ui/compare/classifier_pipeline_editor_qt.py:403
+#: ui/compare/classifier_pipeline_editor_qt.py:550
 msgid "Categories:"
 msgstr "카테고리:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:403
-#: ui/compare/classifier_pipeline_editor_qt.py:550
+#: ui/compare/classifier_pipeline_editor_qt.py:405
+#: ui/compare/classifier_pipeline_editor_qt.py:552
 msgid "category name"
 msgstr "카테고리 이름"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:405
-#: ui/compare/classifier_pipeline_editor_qt.py:552
+#: ui/compare/classifier_pipeline_editor_qt.py:407
+#: ui/compare/classifier_pipeline_editor_qt.py:554
 msgid ""
 "Categories this condition matches against. Matching is OR across this list: "
 "the condition succeeds if ANY of these categories occupies a qualifying rank"
@@ -5427,8 +5527,8 @@ msgstr ""
 "이 조건이 일치하는 카테고리. 이 목록 전체에 대해 OR 방식으로 매칭됩니다: 조건은 해당 카테고리 중 ANY가 순위 범위(see "
 "Rank range) 내에서 적격 순위 위치를 차지하고 충분히 높은 점수(see Min confidence)를 가질 경우 성공합니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:416
-#: ui/compare/classifier_pipeline_editor_qt.py:563
+#: ui/compare/classifier_pipeline_editor_qt.py:418
+#: ui/compare/classifier_pipeline_editor_qt.py:565
 msgid ""
 "Position in the classifier's own ranked output to start checking, where rank"
 " 1 is the single category the classifier considers most likely, rank 2 the "
@@ -5438,13 +5538,13 @@ msgstr ""
 "분류기의 자체 순위 출력 중 확인을 시작할 위치이며, 1위는 분류기가 가장 가능성이 높다고 판단하는 단일 카테고리, 2위는 그 다음으로 "
 "가능성이 높은 카테고리 등으로 이어집니다. Min/Max은 함께 검사할 포지션의 포함 구간을 정의하며, 이는 신뢰 구간이 아닙니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:422
-#: ui/compare/classifier_pipeline_editor_qt.py:569
+#: ui/compare/classifier_pipeline_editor_qt.py:424
+#: ui/compare/classifier_pipeline_editor_qt.py:571
 msgid "Min:"
 msgstr "최소:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:429
-#: ui/compare/classifier_pipeline_editor_qt.py:576
+#: ui/compare/classifier_pipeline_editor_qt.py:431
+#: ui/compare/classifier_pipeline_editor_qt.py:578
 msgid ""
 "End of the rank-position window (inclusive). Min=Max=1 (the default) only "
 "checks the classifier's single top guess, so a listed category ranked 2nd or"
@@ -5454,18 +5554,18 @@ msgstr ""
 "순위 위치 창의 끝(포함). Min=Max=1(기본값)은 분류기의 단일 최고 추정만 확인하므로, 2위 이하로 나열된 카테고리는 강력한 "
 "보조 신호라 하더라도 일치하지 않습니다. 이를 (예: 1‑3)으로 넓히면 상위 N 추정 중 어디에 있든 카테고리를 포착할 수 있습니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:435
-#: ui/compare/classifier_pipeline_editor_qt.py:582
+#: ui/compare/classifier_pipeline_editor_qt.py:437
+#: ui/compare/classifier_pipeline_editor_qt.py:584
 msgid "Max:"
 msgstr "최대:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:438
-#: ui/compare/classifier_pipeline_editor_qt.py:585
+#: ui/compare/classifier_pipeline_editor_qt.py:440
+#: ui/compare/classifier_pipeline_editor_qt.py:587
 msgid "Rank range:"
 msgstr "순위 범위:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:446
-#: ui/compare/classifier_pipeline_editor_qt.py:593
+#: ui/compare/classifier_pipeline_editor_qt.py:448
+#: ui/compare/classifier_pipeline_editor_qt.py:595
 msgid ""
 "Minimum score (0-1) a listed category must have at its rank position to "
 "count as a match. The default of 0.0 is the LEAST strict setting -- it "
@@ -5478,17 +5578,17 @@ msgstr ""
 " 설정으로, 모든 점수를 허용하므로 순위 위치와 카테고리 속성만으로 일치를 판단합니다. 이를 높이면(예: 0.3‑0.5) 분류기가 실제로"
 " 자신감 있게 판단하도록 요구하게 되며, 순위 창에 우연히 들어간 거의 0에 가까운 점수로 일치하는 것을 방지합니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:453
-#: ui/compare/classifier_pipeline_editor_qt.py:600
+#: ui/compare/classifier_pipeline_editor_qt.py:455
+#: ui/compare/classifier_pipeline_editor_qt.py:602
 msgid "Min confidence:"
 msgstr "최소 신뢰도:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:455
-#: ui/compare/classifier_pipeline_editor_qt.py:602
+#: ui/compare/classifier_pipeline_editor_qt.py:457
+#: ui/compare/classifier_pipeline_editor_qt.py:604
 msgid "Negate (match when categories are NOT found)"
 msgstr "부정 (카테고리를 찾을 수 없을 때 일치)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:458
+#: ui/compare/classifier_pipeline_editor_qt.py:460
 msgid ""
 "Unchecked (default): matches when a listed category IS found in the rank "
 "window with enough confidence -- a positive detection. Check this to flip "
@@ -5506,20 +5606,20 @@ msgstr ""
 "가능\"을 의미합니다 — 예: 'Cherry가 아직 아니면 바나나를 생성' 등. 별도의 NOT 컴포지트로 감쌀 필요가 없으며(이 서브 "
 "조건 선택자는 중첩을 지원하지 않음) 그렇지 않으면 두 번째 비캐시 분류기 평가가 추가로 비용이 듭니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:469
-#: ui/compare/classifier_pipeline_editor_qt.py:610
+#: ui/compare/classifier_pipeline_editor_qt.py:471
+#: ui/compare/classifier_pipeline_editor_qt.py:612
 msgid "Negate:"
 msgstr "부정:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:485
+#: ui/compare/classifier_pipeline_editor_qt.py:487
 msgid "(no classifiers)"
 msgstr "(분류자 없음)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:537
+#: ui/compare/classifier_pipeline_editor_qt.py:539
 msgid "Audio classifier:"
 msgstr "오디오 분류기:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:605
+#: ui/compare/classifier_pipeline_editor_qt.py:607
 msgid ""
 "Unchecked (default): matches when a listed category IS found in the rank "
 "window with enough confidence -- a positive detection. Check this to flip "
@@ -5528,93 +5628,93 @@ msgstr ""
 "선택 안 함(기본): 등급 창에서 나열된 카테고리가 충분한 신뢰도로 발견될 때 일치합니다(양성 감지). 이 옵션을 선택하면 반대로 "
 "동작하여, 나열된 카테고리 중 어느 것도 해당되지 않을 때 조건이 일치합니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:626
+#: ui/compare/classifier_pipeline_editor_qt.py:628
 msgid "(no audio classifiers)"
 msgstr "（오디오 분류기 없음）"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:672
+#: ui/compare/classifier_pipeline_editor_qt.py:674
 msgid "Positive prototype directory"
 msgstr "양수 프로토타입 디렉터리"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:676
-#: ui/compare/classifier_pipeline_editor_qt.py:686
-#: ui/compare/classifier_pipeline_editor_qt.py:835
-#: ui/compare/classifier_pipeline_editor_qt.py:937
-#: ui/compare/classifier_pipeline_editor_qt.py:1015
-#: ui/compare/classifier_pipeline_editor_qt.py:1737
+#: ui/compare/classifier_pipeline_editor_qt.py:678
+#: ui/compare/classifier_pipeline_editor_qt.py:688
+#: ui/compare/classifier_pipeline_editor_qt.py:837
+#: ui/compare/classifier_pipeline_editor_qt.py:1026
+#: ui/compare/classifier_pipeline_editor_qt.py:1104
+#: ui/compare/classifier_pipeline_editor_qt.py:1828
 msgid "Browse…"
 msgstr "찾아보기…"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:679
+#: ui/compare/classifier_pipeline_editor_qt.py:681
 msgid "Positive dir:"
 msgstr "양수 디렉터리:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:682
+#: ui/compare/classifier_pipeline_editor_qt.py:684
 msgid "Negative prototype directory (optional)"
 msgstr "네거티브 프로토타입 디렉터리(선택 사항)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:689
+#: ui/compare/classifier_pipeline_editor_qt.py:691
 msgid "Negative dir:"
 msgstr "음수 디렉터리:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:705
+#: ui/compare/classifier_pipeline_editor_qt.py:707
 msgid "Negative lambda:"
 msgstr "음수 람다:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:709
+#: ui/compare/classifier_pipeline_editor_qt.py:711
 #: ui/compare/directory_profile_window_qt.py:216
 #: ui/files/directory_picker_dialog.py:207
 msgid "Select directory"
 msgstr "디렉터리 선택"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:744
+#: ui/compare/classifier_pipeline_editor_qt.py:746
 msgid "Use global prompt blacklist"
 msgstr "전역 프롬프트 블랙리스트 사용"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:748
+#: ui/compare/classifier_pipeline_editor_qt.py:750
 msgid "Prompts to match (ignored when blacklist is checked):"
 msgstr "일치시킬 프롬프트(블랙리스트가 선택되면 무시됨):"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:751
+#: ui/compare/classifier_pipeline_editor_qt.py:753
 msgid "prompt keyword"
 msgstr "프롬프트 키워드"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:784
+#: ui/compare/classifier_pipeline_editor_qt.py:786
 msgid "Filename patterns (match if any substring found in filename):"
 msgstr "파일 이름 패턴(파일 이름에서 하위 문자열이 발견되면 일치):"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:786
+#: ui/compare/classifier_pipeline_editor_qt.py:788
 msgid "pattern"
 msgstr "패턴"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:789
+#: ui/compare/classifier_pipeline_editor_qt.py:791
 msgid "Case-sensitive"
 msgstr "대소문자 구분"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:819
+#: ui/compare/classifier_pipeline_editor_qt.py:821
 msgid "e.g. _edit"
 msgstr "예: _edit"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:821
+#: ui/compare/classifier_pipeline_editor_qt.py:823
 msgid "Edit suffix:"
 msgstr "편집 접미사:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:824
+#: ui/compare/classifier_pipeline_editor_qt.py:826
 msgid ""
 "Search configured related-image directories when no directory is set below"
 msgstr "아래에 디렉터리가 설정되지 않은 경우 구성된 관련 이미지 디렉터리를 검색합니다"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:831
+#: ui/compare/classifier_pipeline_editor_qt.py:833
 msgid "(empty = use configured dirs or pipeline working directory)"
 msgstr "(비어 있으면 구성된 디렉터리 또는 파이프라인 작업 디렉터리 사용)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:838
-#: ui/compare/classifier_pipeline_editor_qt.py:940
-#: ui/compare/classifier_pipeline_editor_qt.py:1018
+#: ui/compare/classifier_pipeline_editor_qt.py:840
+#: ui/compare/classifier_pipeline_editor_qt.py:1029
+#: ui/compare/classifier_pipeline_editor_qt.py:1107
 msgid "Search directory:"
 msgstr "디렉터리 검색:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:844
+#: ui/compare/classifier_pipeline_editor_qt.py:846
 msgid ""
 "This condition matches (True) when the downstream file count with this "
 "suffix is BELOW this threshold -- i.e. \"room to generate more\", not \"a "
@@ -5629,11 +5729,11 @@ msgstr ""
 " 충족됩니다. 이는 \"관련 이미지가 존재함\"이라는 표현이 언뜻 주는 인상과는 정반대입니다. 여기서 True는 이미지가 (아직) "
 "존재하지 않음을 의미하며, 이는 generate-node AND 조건에 필요한 극성(True = 생성 가능)과 정확히 일치합니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:853
+#: ui/compare/classifier_pipeline_editor_qt.py:855
 msgid "Count threshold:"
 msgstr "개수 임계값:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:856
+#: ui/compare/classifier_pipeline_editor_qt.py:858
 msgid ""
 "Matches when the downstream file count with this suffix is below the "
 "threshold (i.e. room to generate more). When 'Search directory' is empty and"
@@ -5643,17 +5743,17 @@ msgstr ""
 "이 접미사를 가진 다운스트림 파일 수가 임계값 미만일 때(즉, 더 생성할 여유가 있을 때) 일치합니다. '검색 디렉터리'가 비어 있고 "
 "체크박스가 선택된 경우, 구성된 모든 관련 이미지 디렉터리가 검색됩니다. 파일이 그중 하나라도 발견되면 생성이 억제됩니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:867
-#: ui/compare/classifier_pipeline_editor_qt.py:957
-#: ui/compare/classifier_pipeline_editor_qt.py:1044
+#: ui/compare/classifier_pipeline_editor_qt.py:869
+#: ui/compare/classifier_pipeline_editor_qt.py:1046
+#: ui/compare/classifier_pipeline_editor_qt.py:1133
 msgid "Select search directory"
 msgstr "검색 디렉터리 선택"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:902
+#: ui/compare/classifier_pipeline_editor_qt.py:991
 msgid "Pass when found (uncheck to pass when not found)"
 msgstr "찾을 때 통과 (찾지 않을 때 통과하려면 선택 취소)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:905
+#: ui/compare/classifier_pipeline_editor_qt.py:994
 msgid ""
 "Checked (default) is the intuitive reading: True means a file with this base"
 " stem WAS found. But category-fill style pipelines typically uncheck this, "
@@ -5667,31 +5767,31 @@ msgstr ""
 "않는다는 의미입니다. 즉, “중복 파일이 발견되었다”가 아니라 “이 카테고리는 아직 생성되어야 한다”는 뜻입니다. 이 조건의 극성을 "
 "노드의 나머지 AND 조건들이 기대하는 바에 맞춰 설정하십시오(예: True = 생성 가능)."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:913
+#: ui/compare/classifier_pipeline_editor_qt.py:1002
 msgid "Match mode:"
 msgstr "일치 모드:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:916
+#: ui/compare/classifier_pipeline_editor_qt.py:1005
 msgid "e.g. _a, _b  (comma-separated; empty = any)"
 msgstr "예: _a, _b (쉼표로 구분; 비어 있으면 = 모두)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:918
+#: ui/compare/classifier_pipeline_editor_qt.py:1007
 msgid "Suffix filter:"
 msgstr "접미사 필터:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:921
-#: ui/compare/classifier_pipeline_editor_qt.py:1003
+#: ui/compare/classifier_pipeline_editor_qt.py:1010
+#: ui/compare/classifier_pipeline_editor_qt.py:1092
 msgid "Search pipeline working directory when no directory is set below"
 msgstr "아래에 디렉터리가 설정되지 않은 경우 파이프라인 작업 디렉터리 검색"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:930
-#: ui/compare/classifier_pipeline_editor_qt.py:1011
+#: ui/compare/classifier_pipeline_editor_qt.py:1019
+#: ui/compare/classifier_pipeline_editor_qt.py:1100
 msgid ""
 "(empty = use configured related-image dirs or pipeline working directory; "
 "see checkbox)"
 msgstr "(비어 있음 = 구성된 관련 이미지 디렉터리 또는 파이프라인 작업 디렉터리 사용; 체크박스 참조)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:932
+#: ui/compare/classifier_pipeline_editor_qt.py:1021
 msgid ""
 "When empty, searches config: directories_to_search_for_related_images, or "
 "the pipeline working directory if the checkbox above is checked."
@@ -5699,7 +5799,7 @@ msgstr ""
 "비어 있으면 config: directories_to_search_for_related_images를 검색하거나, 위의 체크박스가 선택된"
 " 경우 파이프라인 작업 디렉터리를 검색합니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:946
+#: ui/compare/classifier_pipeline_editor_qt.py:1035
 msgid ""
 "Overflow detection: pass when stem group exceeds this many files. -1 = auto-"
 "compute from pipeline category count (len(categories) + 1), works regardless"
@@ -5710,31 +5810,31 @@ msgstr ""
 "계산(len(categories) + 1), 검색 디렉터리에 관계없이 작동합니다. 0 = 비활성화(또는 검색 디렉터리가 설정되지 않은 "
 "경우 자동 계산). 0이 아닌 경우 일치 모드가 무시됩니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:953
+#: ui/compare/classifier_pipeline_editor_qt.py:1042
 msgid "Max stem group size:"
 msgstr "최대 스템 그룹 크기:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:998
+#: ui/compare/classifier_pipeline_editor_qt.py:1087
 msgid "e.g. _a, _ani, _animal, _b, _c, _d  (comma-separated)"
 msgstr "예: _a, _ani, _animal, _b, _c, _d  (쉼표로 구분)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1000
+#: ui/compare/classifier_pipeline_editor_qt.py:1089
 msgid "Expected suffixes:"
 msgstr "예상 접미사:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1021
+#: ui/compare/classifier_pipeline_editor_qt.py:1110
 msgid "(empty = no inference; unknown files always block)"
 msgstr "(비어 있음 = 추론 없음; 알 수 없는 파일은 항상 차단)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1023
+#: ui/compare/classifier_pipeline_editor_qt.py:1112
 msgid "Classifier (inference):"
 msgstr "분류기(추론):"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1031
+#: ui/compare/classifier_pipeline_editor_qt.py:1120
 msgid "Inference threshold:"
 msgstr "추론 임계값:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1034
+#: ui/compare/classifier_pipeline_editor_qt.py:1123
 msgid ""
 "Returns True when an unrecognised-suffix file exists that the classifier "
 "cannot resolve. Wrap in CompositeCondition(NOT) as a guard node: "
@@ -5745,147 +5845,147 @@ msgstr ""
 "CompositeCondition(NOT)로 래핑하세요: on_match=CONTINUE, on_no_match=REJECT. 시드 "
 "이미지(접미사 없음)는 플래그 지정되지 않습니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1086
+#: ui/compare/classifier_pipeline_editor_qt.py:1175
 msgid "Lookahead:"
 msgstr "Lookahead:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1098
+#: ui/compare/classifier_pipeline_editor_qt.py:1187
 msgid "(no lookaheads)"
 msgstr "(룩어헤드 없음)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1122
+#: ui/compare/classifier_pipeline_editor_qt.py:1211
 msgid "Prior node:"
 msgstr "이전 노드:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1124
-#: ui/compare/classifier_pipeline_editor_qt.py:1183
+#: ui/compare/classifier_pipeline_editor_qt.py:1213
+#: ui/compare/classifier_pipeline_editor_qt.py:1272
 msgid "Expected result: matched"
 msgstr "예상 결과: 일치"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1130
+#: ui/compare/classifier_pipeline_editor_qt.py:1219
 msgid "Note: only nodes defined earlier in the pipeline are available."
 msgstr "참고: 파이프라인에서 이전에 정의된 노드만 사용할 수 있습니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1177
+#: ui/compare/classifier_pipeline_editor_qt.py:1266
 msgid "Group node:"
 msgstr "그룹 노드:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1181
+#: ui/compare/classifier_pipeline_editor_qt.py:1270
 msgid "Child node:"
 msgstr "자식 노드:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1188
+#: ui/compare/classifier_pipeline_editor_qt.py:1277
 msgid "Only prior group nodes and their children appear here."
 msgstr "여기에는 이전 그룹 노드와 해당 자식만 표시됩니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1201
+#: ui/compare/classifier_pipeline_editor_qt.py:1290
 msgid "(no children)"
 msgstr "(하위 항목 없음)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1211
+#: ui/compare/classifier_pipeline_editor_qt.py:1300
 msgid "(no prior group nodes)"
 msgstr "(이전 그룹 노드 없음)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1250
+#: ui/compare/classifier_pipeline_editor_qt.py:1339
 msgid ""
 "No check — this node always matches, so its on-match outcome simply "
 "executes."
 msgstr "검사 없음 — 이 노드는 항상 일치하므로 매치 시 결과가 바로 실행됩니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1274
-#: ui/compare/classifier_pipeline_editor_qt.py:1966
+#: ui/compare/classifier_pipeline_editor_qt.py:1363
+#: ui/compare/classifier_pipeline_editor_qt.py:2057
 msgid "Type:"
 msgstr "유형:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1346
-#: ui/compare/classifier_pipeline_editor_qt.py:1467
+#: ui/compare/classifier_pipeline_editor_qt.py:1436
+#: ui/compare/classifier_pipeline_editor_qt.py:1557
 msgid "Operator:"
 msgstr "운영자:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1355
+#: ui/compare/classifier_pipeline_editor_qt.py:1445
 msgid "AND/OR: ≥ 2 sub-conditions · NOT: exactly 1 · XOR: exactly 2"
 msgstr "AND/OR: ≥ 2개 하위 조건 · NOT: 정확히 1개 · XOR: 정확히 2개"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1373
+#: ui/compare/classifier_pipeline_editor_qt.py:1463
 msgid "Add sub-condition"
 msgstr "하위 조건 추가"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1376
+#: ui/compare/classifier_pipeline_editor_qt.py:1466
 msgid "Remove last"
 msgstr "마지막 제거"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1476
+#: ui/compare/classifier_pipeline_editor_qt.py:1566
 msgid "OR: match if any child matches  ·  AND: match if all children match"
 msgstr "OR: 자식 중 하나라도 일치하면 일치  ·  AND: 모든 자식이 일치하면 일치"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1479
+#: ui/compare/classifier_pipeline_editor_qt.py:1569
 msgid "Child nodes:"
 msgstr "자식 노드:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1492
-#: ui/compare/classifier_pipeline_editor_qt.py:2084
+#: ui/compare/classifier_pipeline_editor_qt.py:1582
+#: ui/compare/classifier_pipeline_editor_qt.py:2175
 msgid "↑"
 msgstr "↑"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1493
-#: ui/compare/classifier_pipeline_editor_qt.py:2085
+#: ui/compare/classifier_pipeline_editor_qt.py:1583
+#: ui/compare/classifier_pipeline_editor_qt.py:2176
 #: ui/compare/classifier_pipelines_tab_qt.py:252
 msgid "↓"
 msgstr "↓"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1508
+#: ui/compare/classifier_pipeline_editor_qt.py:1598
 msgid "unique child name"
 msgstr "고유한 자녀 이름"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1510
+#: ui/compare/classifier_pipeline_editor_qt.py:1600
 msgid "Child name:"
 msgstr "자녀 이름:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1515
+#: ui/compare/classifier_pipeline_editor_qt.py:1605
 msgid "Condition:"
 msgstr "조건:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1706
+#: ui/compare/classifier_pipeline_editor_qt.py:1797
 msgid "Outcome:"
 msgstr "결과:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1715
+#: ui/compare/classifier_pipeline_editor_qt.py:1806
 msgid "Jump to node:"
 msgstr "노드로 이동:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1724
+#: ui/compare/classifier_pipeline_editor_qt.py:1815
 msgid "Action:"
 msgstr "작업:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1732
+#: ui/compare/classifier_pipeline_editor_qt.py:1823
 msgid "Target dir:"
 msgstr "대상 디렉터리:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1734
+#: ui/compare/classifier_pipeline_editor_qt.py:1825
 msgid "Target directory for MOVE/COPY"
 msgstr "이동/복사 대상 디렉터리"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1747
+#: ui/compare/classifier_pipeline_editor_qt.py:1838
 msgid "Select target directory"
 msgstr "대상 디렉터리 선택"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1881
+#: ui/compare/classifier_pipeline_editor_qt.py:1972
 msgid "Edit Pipeline"
 msgstr "파이프라인 편집"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1940
+#: ui/compare/classifier_pipeline_editor_qt.py:2031
 msgid "Name:"
 msgstr "이름:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1945
+#: ui/compare/classifier_pipeline_editor_qt.py:2036
 msgid "Description:"
 msgstr "설명:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1951
+#: ui/compare/classifier_pipeline_editor_qt.py:2042
 msgid "Move generated to working dir"
 msgstr "생성된 항목을 작업 디렉터리로 이동"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1954
+#: ui/compare/classifier_pipeline_editor_qt.py:2045
 msgid ""
 "When enabled, GENERATE actions pass the current working directory to sd-"
 "runner so generated files land there instead of the default output folder."
@@ -5893,55 +5993,55 @@ msgstr ""
 "활성화되면 GENERATE 작업이 현재 작업 디렉터리를 sd-runner에 전달하여 생성된 파일이 기본 출력 폴더 대신 해당 위치에 "
 "저장되도록 합니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1970
-#: ui/compare/classifier_pipeline_editor_qt.py:2934
+#: ui/compare/classifier_pipeline_editor_qt.py:2061
+#: ui/compare/classifier_pipeline_editor_qt.py:3027
 #: ui/compare/classifier_pipelines_tab_qt.py:276
 msgid "(no profiles)"
 msgstr "(프로필 없음)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1975
+#: ui/compare/classifier_pipeline_editor_qt.py:2066
 msgid "Profile:"
 msgstr "프로필:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1983
+#: ui/compare/classifier_pipeline_editor_qt.py:2074
 msgid "Default action:"
 msgstr "기본 작업:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1989
+#: ui/compare/classifier_pipeline_editor_qt.py:2080
 msgid "Default reject action:"
 msgstr "기본 거부 작업:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1992
+#: ui/compare/classifier_pipeline_editor_qt.py:2083
 msgid "(Use global setting)"
 msgstr "(전역 설정 사용)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2001
+#: ui/compare/classifier_pipeline_editor_qt.py:2092
 msgid "Generation type:"
 msgstr "생성 유형:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2004
+#: ui/compare/classifier_pipeline_editor_qt.py:2095
 msgid "category name, e.g. Apple"
 msgstr "카테고리 이름(예: Apple)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2005
+#: ui/compare/classifier_pipeline_editor_qt.py:2096
 msgid "suffix, e.g. _apple"
 msgstr "접미사, 예: _apple"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2009
+#: ui/compare/classifier_pipeline_editor_qt.py:2100
 msgid "Category map:"
 msgstr "카테고리 맵:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2013
+#: ui/compare/classifier_pipeline_editor_qt.py:2104
 msgid ""
 "The category this pipeline generates from seed images. Used in the run "
 "confirmation dialog to label the operation."
 msgstr "이 파이프라인이 시드 이미지에서 생성하는 카테고리입니다. 실행 확인 대화 상자에서 작업을 레이블로 지정하는 데 사용됩니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2017
+#: ui/compare/classifier_pipeline_editor_qt.py:2108
 msgid "Seed category:"
 msgstr "시드 카테고리:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2022
+#: ui/compare/classifier_pipeline_editor_qt.py:2113
 msgid ""
 "File order for a batch run. No sort is fastest for a large directory since "
 "it skips wrapping/sorting entirely and uses the raw scan order as-is."
@@ -5949,37 +6049,64 @@ msgstr ""
 "배치 실행 시 파일 순서. 큰 디렉터리에서는 정렬하지 않는 것이 가장 빠르며, 래핑/정렬을 완전히 건너뛰고 원시 스캔 순서를 그대로 "
 "사용합니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2026
+#: ui/compare/classifier_pipeline_editor_qt.py:2117
 msgid "No sort (fastest)"
 msgstr "정렬 없음 (가장 빠름)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2034
+#: ui/compare/classifier_pipeline_editor_qt.py:2125
 msgid "Run sort order:"
 msgstr "실행 순서:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2067
+#: ui/compare/classifier_pipeline_editor_qt.py:2127
+msgid "Evaluate each stem group once"
+msgstr "각 줄기 그룹을 한 번 평가"
+
+#: ui/compare/classifier_pipeline_editor_qt.py:2130
+msgid ""
+"In a batch run, skip a file whose stem group has already been evaluated, and"
+" skip stem groups whose seed cannot be located or is not filed. Turn off to "
+"evaluate every file independently. Related Image sort order lets derivatives"
+" skip sooner, but is not required for correctness."
+msgstr ""
+"배치 실행 시, 이미 평가된 스템 그룹을 가진 파일을 건너뛰고, 시드가 찾을 수 없거나 파일에 저장되지 않은 스템 그룹도 건너뜁니다. "
+"꺼두면 각 파일을 독립적으로 평가합니다. 관련 이미지 정렬 순서는 파생 파일을 더 빨리 건너뛰게 하지만 정확성에 필수는 아닙니다."
+
+#: ui/compare/classifier_pipeline_editor_qt.py:2139
+msgid "Record per-node decisions"
+msgstr "노드별 결정 기록"
+
+#: ui/compare/classifier_pipeline_editor_qt.py:2142
+msgid ""
+"Write each evaluated file's per-node match result and score into the run "
+"dump, for auditing or threshold calibration. Adds one record per file, held "
+"in memory until the run finishes."
+msgstr ""
+"평가된 각 파일의 노드별 매치 결과와 점수를 실행 덤프에 기록합니다. 감시 또는 임계값 보정에 사용됩니다. 파일당 하나의 레코드를 "
+"추가하며, 실행이 끝날 때까지 메모리에 보관됩니다."
+
+#: ui/compare/classifier_pipeline_editor_qt.py:2158
 #: ui/compare/classifier_pipelines_tab_qt.py:173
 msgid "Nodes"
 msgstr "노드"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2093
+#: ui/compare/classifier_pipeline_editor_qt.py:2184
 msgid "Group Selected →"
 msgstr "선택한 그룹 →"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2095
+#: ui/compare/classifier_pipeline_editor_qt.py:2186
 msgid ""
 "Convert the selected nodes into children of a new Group node (select 2 or "
 "more with Ctrl+click)"
 msgstr "선택한 노드를 새 그룹 노드의 자식 노드로 변환합니다(Ctrl+클릭으로 2개 이상 선택)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2102
-#: ui/compare/classifier_pipeline_editor_qt.py:2492
-#: ui/compare/classifier_pipeline_editor_qt.py:2504
-#: ui/compare/classifier_pipeline_editor_qt.py:2548
+#: ui/compare/classifier_pipeline_editor_qt.py:2193
+#: ui/compare/classifier_pipeline_editor_qt.py:2585
+#: ui/compare/classifier_pipeline_editor_qt.py:2597
+#: ui/compare/classifier_pipeline_editor_qt.py:2641
 msgid "Fill from Map"
 msgstr "지도에서 채우기"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2104
+#: ui/compare/classifier_pipeline_editor_qt.py:2195
 msgid ""
 "Append one Generate node per category-map entry. Each node checks that no "
 "derivative exists yet and that the target directory lacks this stem, then "
@@ -5989,80 +6116,80 @@ msgstr ""
 "카테고리 맵 항목마다 하나의 Generate 노드를 추가합니다. 각 노드는 파생물이 아직 없고 대상 디렉터리에 이 스템이 없는지 확인한 "
 "후 카테고리 접미사로 생성합니다. 생성 후 노드별로 대상 디렉터리를 설정합니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2128
+#: ui/compare/classifier_pipeline_editor_qt.py:2219
 msgid "Node Editor"
 msgstr "노드 편집기"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2134
+#: ui/compare/classifier_pipeline_editor_qt.py:2225
 msgid "unique node name"
 msgstr "고유 노드 이름"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2136
+#: ui/compare/classifier_pipeline_editor_qt.py:2227
 msgid "Node name:"
 msgstr "노드 이름:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2141
+#: ui/compare/classifier_pipeline_editor_qt.py:2232
 msgid "Enabled:"
 msgstr "사용함:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2150
+#: ui/compare/classifier_pipeline_editor_qt.py:2241
 msgid "Condition type:"
 msgstr "조건 유형:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2191
+#: ui/compare/classifier_pipeline_editor_qt.py:2284
 msgid "On match:"
 msgstr "일치 시:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2192
+#: ui/compare/classifier_pipeline_editor_qt.py:2285
 msgid "On no-match:"
 msgstr "일치하지 않는 경우:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2202
+#: ui/compare/classifier_pipeline_editor_qt.py:2295
 msgid "Flow Preview"
 msgstr "흐름 미리보기"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2329
+#: ui/compare/classifier_pipeline_editor_qt.py:2422
 msgid "Toggle Enabled ({0} nodes)"
 msgstr "전환 활성화 ({0} 노드)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2331
+#: ui/compare/classifier_pipeline_editor_qt.py:2424
 msgid "Disable Node"
 msgstr "노드 비활성화"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2331
+#: ui/compare/classifier_pipeline_editor_qt.py:2424
 msgid "Enable Node"
 msgstr "노드 활성화"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2335
+#: ui/compare/classifier_pipeline_editor_qt.py:2428
 msgid "Run Node on Current Media"
 msgstr "현재 미디어에서 노드 실행"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2397
+#: ui/compare/classifier_pipeline_editor_qt.py:2490
 msgid "Run Node"
 msgstr "Node 실행"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2397
+#: ui/compare/classifier_pipeline_editor_qt.py:2490
 #: ui/compare/classifier_pipelines_tab_qt.py:502
 msgid "No active media to run on."
 msgstr "실행할 활성 미디어가 없습니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2417
+#: ui/compare/classifier_pipeline_editor_qt.py:2510
 msgid "Node '{node}' on {file}: {result}{action}"
 msgstr "파일 {file}의 노드 '{node}': {result}{action}"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2420
+#: ui/compare/classifier_pipeline_editor_qt.py:2513
 msgid "match"
 msgstr "일치"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2420
+#: ui/compare/classifier_pipeline_editor_qt.py:2513
 msgid "no match"
 msgstr "일치 없음"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2493
+#: ui/compare/classifier_pipeline_editor_qt.py:2586
 msgid "The category map is empty. Add categories before generating nodes."
 msgstr "카테고리 맵이 비어 있습니다. 노드를 생성하기 전에 카테고리를 추가하세요."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2505
+#: ui/compare/classifier_pipeline_editor_qt.py:2598
 msgid ""
 "The following categories already have a matching Generate node and will be skipped: {cats}.\n"
 "\n"
@@ -6072,33 +6199,33 @@ msgstr ""
 "\n"
 "나머지 범주에 노드를 추가하시겠습니까?"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2549
+#: ui/compare/classifier_pipeline_editor_qt.py:2642
 msgid ""
 "{count} node(s) added. Set the target directory on each BaseStemMatch sub-"
 "condition to the per-category output folder."
 msgstr ""
 "{count}개 노드가 추가되었습니다. 각 BaseStemMatch 하위 조건의 대상 디렉터리를 카테고리별 출력 폴더로 설정하세요."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2899
-#: ui/compare/classifier_pipeline_editor_qt.py:2907
-#: ui/compare/classifier_pipeline_editor_qt.py:2916
+#: ui/compare/classifier_pipeline_editor_qt.py:2992
+#: ui/compare/classifier_pipeline_editor_qt.py:3000
+#: ui/compare/classifier_pipeline_editor_qt.py:3009
 msgid "Validation Error"
 msgstr "유효성 검사 오류"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2899
+#: ui/compare/classifier_pipeline_editor_qt.py:2992
 msgid "Pipeline name is required."
 msgstr "파이프라인 이름이 필요합니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2908
-#: ui/compare/classifier_pipeline_editor_qt.py:2917
+#: ui/compare/classifier_pipeline_editor_qt.py:3001
+#: ui/compare/classifier_pipeline_editor_qt.py:3010
 msgid "A pipeline named '{}' already exists."
 msgstr "'{}'이라는 이름의 파이프라인이 이미 있습니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2962
+#: ui/compare/classifier_pipeline_editor_qt.py:3055
 msgid "Validation Errors"
 msgstr "유효성 검사 오류"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2972
+#: ui/compare/classifier_pipeline_editor_qt.py:3065
 msgid "Category Map Warnings"
 msgstr "카테고리 맵 경고"
 
@@ -6557,7 +6684,7 @@ msgstr "삭제된 임베딩 시드: "
 #: ui/compare/filter_builder_panel_qt.py:43
 #: ui/compare/filter_builder_panel_qt.py:123
 #: ui/compare/filter_builder_panel_qt.py:134
-#: ui/compare/filter_builder_panel_qt.py:176 ui/image/media_details.py:383
+#: ui/compare/filter_builder_panel_qt.py:176 ui/image/media_details.py:384
 #: utils/constants.py:56 utils/constants.py:89 utils/constants.py:172
 #: utils/constants.py:193
 msgid "Size"
@@ -7288,15 +7415,15 @@ msgid ""
 "directories"
 msgstr "사전 검증 캐시 통계: ~{memory} — {items}개 항목 — {directories}개 디렉터리"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:128
+#: ui/compare/seek_to_trigger_tab_qt.py:142
 msgid "Copy path"
 msgstr "경로 복사"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:144
+#: ui/compare/seek_to_trigger_tab_qt.py:158
 msgid "Custom sample density:"
 msgstr "사용자 지정 샘플 밀도:"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:148
+#: ui/compare/seek_to_trigger_tab_qt.py:162
 msgid ""
 "When unchecked, the action's own sample ratio is used (default).\n"
 "Enable to override with a custom density for this seek scan."
@@ -7304,7 +7431,7 @@ msgstr ""
 "이 옵션을 선택 해제하면 액션 자체의 샘플 비율이 사용됩니다(기본값).\n"
 "이 옵션을 선택하면 해당 탐색 스캔에 대해 사용자 지정 밀도를 적용할 수 있습니다."
 
-#: ui/compare/seek_to_trigger_tab_qt.py:162
+#: ui/compare/seek_to_trigger_tab_qt.py:176
 msgid ""
 "Controls what fraction of frames are scanned per seek.\n"
 "Higher values find trigger points more precisely but take longer.\n"
@@ -7316,14 +7443,14 @@ msgstr ""
 "약 75% 이상으로 설정하면 효율이 떨어지며, 긴 동영상의 경우 처리 속도가 매우 느려질 수 있습니다.\n"
 "100%로 설정하면 모든 프레임을 하나하나 검사합니다."
 
-#: ui/compare/seek_to_trigger_tab_qt.py:179
+#: ui/compare/seek_to_trigger_tab_qt.py:193
 msgid ""
 "Tip: values above 75 % give diminishing returns and may be very slow for "
 "long videos."
 msgstr "팁: 75% 이상의 값은 수익이 감소하고 긴 비디오의 경우 매우 느릴 수 있습니다."
 
-#: ui/compare/seek_to_trigger_tab_qt.py:230
 #: ui/compare/seek_to_trigger_tab_qt.py:244
+#: ui/compare/seek_to_trigger_tab_qt.py:258
 msgid "Seek to trigger"
 msgstr "트리거로 이동"
 
@@ -7331,47 +7458,47 @@ msgstr "트리거로 이동"
 msgid "No dynamic media is currently loaded."
 msgstr "현재 동적 미디어가 로드되지 않았습니다."
 
-#: ui/compare/seek_to_trigger_tab_qt.py:319
+#: ui/compare/seek_to_trigger_tab_qt.py:335
 msgid "A scan is already in progress."
 msgstr "이미 스캔이 진행 중입니다."
 
-#: ui/compare/seek_to_trigger_tab_qt.py:331
-#: ui/compare/seek_to_trigger_tab_qt.py:541
+#: ui/compare/seek_to_trigger_tab_qt.py:347
+#: ui/compare/seek_to_trigger_tab_qt.py:578
 msgid "Scanning '{name}' on {file}…"
 msgstr "{file}의 '{name}'을(를) 스캔하는 중…"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:380
-#: ui/compare/seek_to_trigger_tab_qt.py:559
+#: ui/compare/seek_to_trigger_tab_qt.py:407
+#: ui/compare/seek_to_trigger_tab_qt.py:603
 msgid ""
 "Trigger found (sample {slot}/{total}) but seek position could not be "
 "computed."
 msgstr "트리거를 찾았습니다(샘플 {slot}/{total})지만 탐색 위치를 계산할 수 없습니다."
 
-#: ui/compare/seek_to_trigger_tab_qt.py:392
-#: ui/compare/seek_to_trigger_tab_qt.py:566
+#: ui/compare/seek_to_trigger_tab_qt.py:419
+#: ui/compare/seek_to_trigger_tab_qt.py:610
 msgid "'{name}' triggers at {position} (sample {slot}/{total})."
 msgstr "'{name}'이(가) {position}에서 트리거됩니다(샘플 {slot}/{total})."
 
-#: ui/compare/seek_to_trigger_tab_qt.py:402
-#: ui/compare/seek_to_trigger_tab_qt.py:577
+#: ui/compare/seek_to_trigger_tab_qt.py:429
+#: ui/compare/seek_to_trigger_tab_qt.py:621
 msgid "'{name}' triggers on page {page} (sample {slot}/{total})."
 msgstr "'{name}'이 {page} 페이지에서 트리거됩니다 (예시: {slot}/{total})."
 
-#: ui/compare/seek_to_trigger_tab_qt.py:417
-#: ui/compare/seek_to_trigger_tab_qt.py:588
+#: ui/compare/seek_to_trigger_tab_qt.py:452
+#: ui/compare/seek_to_trigger_tab_qt.py:639
 msgid "'{name}' did not trigger on the current media ({n} samples scanned)."
 msgstr "'{name}'이(가) 현재 미디어에서 트리거되지 않았습니다({n} 샘플 스캔됨)."
 
-#: ui/compare/seek_to_trigger_tab_qt.py:425
-#: ui/compare/seek_to_trigger_tab_qt.py:595
+#: ui/compare/seek_to_trigger_tab_qt.py:462
+#: ui/compare/seek_to_trigger_tab_qt.py:646
 msgid "Error during trigger scan: {0}"
 msgstr "트리거 스캔 중 오류 발생: {0}"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:437
+#: ui/compare/seek_to_trigger_tab_qt.py:474
 msgid "Last action: {name}"
 msgstr "마지막 작업: {name}"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:525
+#: ui/compare/seek_to_trigger_tab_qt.py:562
 msgid "No media loaded."
 msgstr "미디어가 로드되지 않았습니다."
 
@@ -7379,21 +7506,41 @@ msgstr "미디어가 로드되지 않았습니다."
 msgid "Current media is not video, GIF, or PDF."
 msgstr "현재 미디어는 비디오, GIF 또는 PDF가 아닙니다."
 
-#: ui/compare/seek_to_trigger_tab_qt.py:533
+#: ui/compare/seek_to_trigger_tab_qt.py:570
 msgid "A seek scan is already in progress."
 msgstr "탐색 스캔이 이미 진행 중입니다."
 
-#: ui/compare/seek_to_trigger_tab_qt.py:615
+#: ui/compare/seek_to_trigger_tab_qt.py:689
 msgid "matched category: {cat}"
 msgstr "일치하는 카테고리: {cat}"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:624
+#: ui/compare/seek_to_trigger_tab_qt.py:698
 msgid "Trigger: audio classifier"
 msgstr "트리거: 오디오 분류기"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:632
+#: ui/compare/seek_to_trigger_tab_qt.py:706
 msgid "Trigger: {t}"
 msgstr "트리거: {t}"
+
+#: ui/files/auto_sort_confirmation_window_qt.py:34
+msgid "Auto-Sort Confirmation Categories"
+msgstr "자동 정렬 확인 카테고리"
+
+#: ui/files/auto_sort_confirmation_window_qt.py:47
+msgid ""
+"When viewing the last automatically sorted media, ask for confirmation first if it was sorted into one of these categories.\n"
+"Categories are matched without regard to case."
+msgstr ""
+"자동으로 정렬된 최신 미디어를 볼 때, 해당 미디어가 이 카테고리 중 하나에 포함된 경우 먼저 확인을 요청합니다.\n"
+"카테고리는 대소문자를 구분하지 않고 일치합니다."
+
+#: ui/files/auto_sort_confirmation_window_qt.py:56
+msgid "Categories (comma-separated):"
+msgstr "카테고리(쉼표 구분):"
+
+#: ui/files/auto_sort_confirmation_window_qt.py:105
+msgid "Confirmation set for {0} categories"
+msgstr "확인이 {0} 카테고리에 설정되었습니다"
 
 #: ui/files/directory_notes_window_qt.py:48
 msgid "Directory Notes - {0}"
@@ -7591,7 +7738,7 @@ msgstr "{0} 파일 이름을 찾을 수 없습니다:"
 
 #: ui/files/directory_notes_window_qt.py:523
 #: ui/files/directory_notes_window_qt.py:553
-#: ui/files/file_actions_window_qt.py:328
+#: ui/files/file_actions_window_qt.py:333
 msgid "... and {0} more"
 msgstr "... 및 {0}개 더"
 
@@ -7698,7 +7845,7 @@ msgstr ""
 msgid "Remove Favorite"
 msgstr "즐겨찾기 제거"
 
-#: ui/files/favorites_window_qt.py:253 ui/files/file_actions_window_qt.py:492
+#: ui/files/favorites_window_qt.py:253 ui/files/file_actions_window_qt.py:526
 msgid "File not found: "
 msgstr "파일을 찾을 수 없습니다: "
 
@@ -7757,15 +7904,15 @@ msgstr "단축키 또는 최근에서 작업을 추가하여 시작하세요."
 #: ui/files/file_action_sets_window_qt.py:276
 #: ui/files/file_action_sets_window_qt.py:339
 #: ui/files/file_action_sets_window_qt.py:346
-#: ui/files/file_action_sets_window_qt.py:370
+#: ui/files/file_action_sets_window_qt.py:373
 #: ui/files/file_actions_window_qt.py:105
-#: ui/files/file_actions_window_qt.py:398 ui/files/marked_file_mover_qt.py:404
-#: utils/constants.py:633
+#: ui/files/file_actions_window_qt.py:432 ui/files/marked_file_mover_qt.py:404
+#: utils/constants.py:634
 msgid "Move"
 msgstr "이동"
 
 #: ui/files/file_action_sets_window_qt.py:281
-#: ui/files/related_images_window_qt.py:71
+#: ui/files/related_images_window_qt.py:73
 msgid "(no directory)"
 msgstr "(디렉터리 없음)"
 
@@ -7773,32 +7920,32 @@ msgstr "(디렉터리 없음)"
 msgid "No hotkey actions configured."
 msgstr "구성된 핫키 동작이 없습니다."
 
-#: ui/files/file_action_sets_window_qt.py:365
+#: ui/files/file_action_sets_window_qt.py:368
 msgid "No recent file actions found."
 msgstr "최근 파일 작업을 찾을 수 없습니다."
 
-#: ui/files/file_action_sets_window_qt.py:381
+#: ui/files/file_action_sets_window_qt.py:384
 msgid "No presets saved yet."
 msgstr "아직 저장된 프리셋이 없습니다."
 
-#: ui/files/file_action_sets_window_qt.py:443
-#: ui/files/file_action_sets_window_qt.py:486
+#: ui/files/file_action_sets_window_qt.py:446
+#: ui/files/file_action_sets_window_qt.py:489
 msgid "No actions selected."
 msgstr "선택된 작업이 없습니다."
 
-#: ui/files/file_action_sets_window_qt.py:480
+#: ui/files/file_action_sets_window_qt.py:483
 msgid "run file action set"
 msgstr "파일 작업 세트 실행"
 
-#: ui/files/file_action_sets_window_qt.py:491
+#: ui/files/file_action_sets_window_qt.py:494
 msgid "No files are marked."
 msgstr "표시된 파일이 없습니다."
 
-#: ui/files/file_action_sets_window_qt.py:524
+#: ui/files/file_action_sets_window_qt.py:527
 msgid "File Action Sets Error"
 msgstr "파일 작업 집합 오류"
 
-#: ui/files/file_action_sets_window_qt.py:532
+#: ui/files/file_action_sets_window_qt.py:535
 msgid "Executed {0} action(s) on {1} file(s)."
 msgstr "{1}개 파일에서 {0}개 작업을 실행했습니다."
 
@@ -7814,125 +7961,125 @@ msgstr "파일 작업 기록"
 msgid "All"
 msgstr "모두"
 
-#: ui/files/file_actions_window_qt.py:115
+#: ui/files/file_actions_window_qt.py:116
 msgid "Any"
 msgstr "모두"
 
-#: ui/files/file_actions_window_qt.py:116
+#: ui/files/file_actions_window_qt.py:117
 msgid "User"
 msgstr "사용자"
 
-#: ui/files/file_actions_window_qt.py:117
+#: ui/files/file_actions_window_qt.py:118
 msgid "Auto"
 msgstr "자동"
 
-#: ui/files/file_actions_window_qt.py:123
+#: ui/files/file_actions_window_qt.py:124
 msgid "Search Media"
 msgstr "미디어 검색"
 
-#: ui/files/file_actions_window_qt.py:128
+#: ui/files/file_actions_window_qt.py:129
 msgid "Open in New Window"
 msgstr "새 창에서 열기"
 
-#: ui/files/file_actions_window_qt.py:134
+#: ui/files/file_actions_window_qt.py:135
 msgid "Search in New Window"
 msgstr "새 창에서 검색"
 
-#: ui/files/file_actions_window_qt.py:140
+#: ui/files/file_actions_window_qt.py:141
 msgid "Clear History"
 msgstr "기록 지우기"
 
-#: ui/files/file_actions_window_qt.py:207
+#: ui/files/file_actions_window_qt.py:208
 msgid "moves"
 msgstr "이동"
 
-#: ui/files/file_actions_window_qt.py:208
+#: ui/files/file_actions_window_qt.py:209
 msgid "copies"
 msgstr "사본"
 
-#: ui/files/file_actions_window_qt.py:209
+#: ui/files/file_actions_window_qt.py:210
 msgid "deletes"
 msgstr "삭제"
 
-#: ui/files/file_actions_window_qt.py:212
+#: ui/files/file_actions_window_qt.py:214
 msgid "No {0} in history."
 msgstr "역사상 {0}이(가) 없습니다."
 
-#: ui/files/file_actions_window_qt.py:214
+#: ui/files/file_actions_window_qt.py:216
 msgid "No actions match the current filter."
 msgstr "현재 필터와 일치하는 작업이 없습니다."
 
-#: ui/files/file_actions_window_qt.py:226
+#: ui/files/file_actions_window_qt.py:228
 msgid "Load More ({0} remaining)"
 msgstr "더 불러오기 ({0}개 남음)"
 
-#: ui/files/file_actions_window_qt.py:250
-#: ui/files/file_actions_window_qt.py:258
+#: ui/files/file_actions_window_qt.py:252
+#: ui/files/file_actions_window_qt.py:261
 msgid "Deleted"
 msgstr "삭제됨"
 
-#: ui/files/file_actions_window_qt.py:251
+#: ui/files/file_actions_window_qt.py:254
 msgid "Total"
 msgstr "총계"
 
-#: ui/files/file_actions_window_qt.py:284
+#: ui/files/file_actions_window_qt.py:288
 msgid "Move Statistics"
 msgstr "이동 관련 통계"
 
-#: ui/files/file_actions_window_qt.py:285
+#: ui/files/file_actions_window_qt.py:289
 msgid "Copy Statistics"
 msgstr "부수 통계"
 
-#: ui/files/file_actions_window_qt.py:286
+#: ui/files/file_actions_window_qt.py:290
 msgid "Delete Statistics"
 msgstr "삭제 통계"
 
-#: ui/files/file_actions_window_qt.py:289
+#: ui/files/file_actions_window_qt.py:294
 msgid "Today's File Actions"
 msgstr "오늘의 파일 작업"
 
-#: ui/files/file_actions_window_qt.py:293
+#: ui/files/file_actions_window_qt.py:298
 msgid "File Action Statistics"
 msgstr "파일 작업 통계"
 
-#: ui/files/file_actions_window_qt.py:300
+#: ui/files/file_actions_window_qt.py:305
 msgid "All Time"
 msgstr "모든 시간"
 
-#: ui/files/file_actions_window_qt.py:300
+#: ui/files/file_actions_window_qt.py:305
 msgid "Today Only"
 msgstr "오늘만"
 
-#: ui/files/file_actions_window_qt.py:306
+#: ui/files/file_actions_window_qt.py:311
 msgid "Target Directory"
 msgstr "대상 디렉토리"
 
-#: ui/files/file_actions_window_qt.py:386
+#: ui/files/file_actions_window_qt.py:417
 msgid " ({0} files)"
 msgstr " ({0} 파일)"
 
-#: ui/files/file_actions_window_qt.py:388
+#: ui/files/file_actions_window_qt.py:419
 msgid "(auto)"
 msgstr "(자동)"
 
-#: ui/files/file_actions_window_qt.py:408
-#: ui/files/file_actions_window_qt.py:454
+#: ui/files/file_actions_window_qt.py:442
+#: ui/files/file_actions_window_qt.py:488
 msgid "Undo"
 msgstr "실행 취소"
 
-#: ui/files/file_actions_window_qt.py:447
+#: ui/files/file_actions_window_qt.py:481
 msgid "Copy Filename"
 msgstr "파일 이름 복사"
 
-#: ui/files/file_actions_window_qt.py:503
+#: ui/files/file_actions_window_qt.py:537
 msgid "Error opening media: "
 msgstr "에러: 미디어 열기 중 "
 
-#: ui/files/file_actions_window_qt.py:526
+#: ui/files/file_actions_window_qt.py:560
 msgid "Override Prevalidation?"
 msgstr "사전 검증을 재정의하시겠습니까?"
 
-#: ui/files/file_actions_window_qt.py:528
+#: ui/files/file_actions_window_qt.py:562
 msgid ""
 "This action was performed automatically by a prevalidation. Undoing it will create a prevalidation override for this file.\n"
 "\n"
@@ -7942,48 +8089,48 @@ msgstr ""
 "\n"
 "계속하시겠습니까?"
 
-#: ui/files/file_actions_window_qt.py:541
+#: ui/files/file_actions_window_qt.py:575
 msgid "Image does not exist: "
 msgstr "이미지가 존재하지 않습니다: "
 
-#: ui/files/file_actions_window_qt.py:543
-#: ui/files/file_actions_window_qt.py:562
+#: ui/files/file_actions_window_qt.py:577
+#: ui/files/file_actions_window_qt.py:596
 msgid "File Action Error"
 msgstr "파일 작업 오류"
 
-#: ui/files/file_actions_window_qt.py:560
+#: ui/files/file_actions_window_qt.py:594
 msgid "Images not found"
 msgstr "이미지를 찾을 수 없습니다"
 
-#: ui/files/file_actions_window_qt.py:692
+#: ui/files/file_actions_window_qt.py:726
 msgid "moves only"
 msgstr "이동 전용"
 
-#: ui/files/file_actions_window_qt.py:693
+#: ui/files/file_actions_window_qt.py:727
 msgid "copies only"
 msgstr "복사본만"
 
-#: ui/files/file_actions_window_qt.py:694
+#: ui/files/file_actions_window_qt.py:728
 msgid "deletes only"
 msgstr "삭제만"
 
-#: ui/files/file_actions_window_qt.py:698
+#: ui/files/file_actions_window_qt.py:733
 msgid "auto only"
 msgstr "자동만"
 
-#: ui/files/file_actions_window_qt.py:698
+#: ui/files/file_actions_window_qt.py:733
 msgid "user only"
 msgstr "사용자만"
 
-#: ui/files/file_actions_window_qt.py:700
+#: ui/files/file_actions_window_qt.py:735
 msgid "Filter: {}"
 msgstr "필터: {}"
 
-#: ui/files/file_actions_window_qt.py:718
+#: ui/files/file_actions_window_qt.py:753
 msgid "Clear File Action History?"
 msgstr "파일 작업 기록을 지우시겠습니까?"
 
-#: ui/files/file_actions_window_qt.py:720
+#: ui/files/file_actions_window_qt.py:755
 msgid ""
 "This will permanently clear the entire recorded file action history. This cannot be undone.\n"
 "\n"
@@ -7993,14 +8140,120 @@ msgstr ""
 "\n"
 "계속하시겠습니까?"
 
-#: ui/files/file_actions_window_qt.py:820
+#: ui/files/file_actions_window_qt.py:855
 msgid "No active media file to search with."
 msgstr "검색할 활성 미디어 파일이 없습니다."
 
-#: ui/files/file_actions_window_qt.py:826
-#: ui/files/file_actions_window_qt.py:854
+#: ui/files/file_actions_window_qt.py:861
+#: ui/files/file_actions_window_qt.py:889
 msgid "No existing destination files found in action history."
 msgstr "작업 기록에서 기존 대상 파일을 찾을 수 없습니다."
+
+#: ui/files/file_interceptor_rules_window_qt.py:57
+msgid "Edit Interceptor Rule"
+msgstr "인터셉터 규칙 편집"
+
+#: ui/files/file_interceptor_rules_window_qt.py:68
+msgid "Rule is active"
+msgstr "규칙이 활성화되었습니다"
+
+#: ui/files/file_interceptor_rules_window_qt.py:78
+msgid "Applies to"
+msgstr "적용 대상"
+
+#: ui/files/file_interceptor_rules_window_qt.py:82
+msgid "Comma-separated target directories. Leave empty to match any target."
+msgstr "쉼표로 구분된 대상 디렉터리. 비워 두면 모든 대상과 일치합니다."
+
+#: ui/files/file_interceptor_rules_window_qt.py:84
+msgid "Target directories"
+msgstr "대상 디렉터리"
+
+#: ui/files/file_interceptor_rules_window_qt.py:86
+msgid "Also match subdirectories"
+msgstr "하위 디렉터리도 일치"
+
+#: ui/files/file_interceptor_rules_window_qt.py:92
+msgid "Comma-separated substrings. Leave empty to match any filename."
+msgstr "쉼표로 구분된 하위 문자열입니다. 비워두면 모든 파일 이름과 일치합니다."
+
+#: ui/files/file_interceptor_rules_window_qt.py:94
+msgid "Filename contains"
+msgstr "파일 이름에 포함"
+
+#: ui/files/file_interceptor_rules_window_qt.py:96
+msgid "Filename match is case-sensitive"
+msgstr "파일 이름 일치는 대소문자를 구분합니다"
+
+#: ui/files/file_interceptor_rules_window_qt.py:101
+msgid "Leave all unchecked to match any media type."
+msgstr "모두 선택 해제한 상태로 두면 모든 미디어 유형과 일치합니다."
+
+#: ui/files/file_interceptor_rules_window_qt.py:113
+msgid "Media types"
+msgstr "미디어 유형"
+
+#: ui/files/file_interceptor_rules_window_qt.py:122
+msgid "Behavior"
+msgstr "행동"
+
+#: ui/files/file_interceptor_rules_window_qt.py:126
+msgid "Shown when this rule blocks a transfer. Optional."
+msgstr "이 규칙이 전송을 차단할 때 표시됩니다. 선택 사항."
+
+#: ui/files/file_interceptor_rules_window_qt.py:128
+msgid "Block message"
+msgstr "메시지 차단"
+
+#: ui/files/file_interceptor_rules_window_qt.py:137
+msgid "Transform operation"
+msgstr "변환 작업"
+
+#: ui/files/file_interceptor_rules_window_qt.py:140
+msgid "Remove the original after moving the transformed file"
+msgstr "변환된 파일을 이동한 후 원본을 삭제합니다"
+
+#: ui/files/file_interceptor_rules_window_qt.py:144
+msgid "Never applies to copy operations, only to moves."
+msgstr "복사 작업에는 절대 적용되지 않고, 이동에만 적용됩니다."
+
+#: ui/files/file_interceptor_rules_window_qt.py:200
+msgid "File Handling Interceptor Rules"
+msgstr "파일 처리 인터셉터 규칙"
+
+#: ui/files/file_interceptor_rules_window_qt.py:214
+msgid ""
+"Rules are checked in order when marked files are moved or copied; the first "
+"matching rule applies."
+msgstr "표시된 파일을 이동하거나 복사할 때 규칙이 순서대로 확인됩니다; 첫 번째 일치하는 규칙이 적용됩니다."
+
+#: ui/files/file_interceptor_rules_window_qt.py:223
+msgid "Add rule"
+msgstr "규칙 추가"
+
+#: ui/files/file_interceptor_rules_window_qt.py:280
+msgid "No interceptor rules configured."
+msgstr "인터셉터 규칙이 구성되지 않았습니다."
+
+#: ui/files/file_interceptor_rules_window_qt.py:296
+msgid "Move this rule earlier in the evaluation order"
+msgstr "이 규칙을 평가 순서에서 앞쪽으로 이동"
+
+#: ui/files/file_interceptor_rules_window_qt.py:304
+msgid "Move this rule later in the evaluation order"
+msgstr "이 규칙을 평가 순서에서 뒤로 이동"
+
+#: ui/files/file_interceptor_rules_window_qt.py:317
+msgid "Remove this rule"
+msgstr "이 규칙을 삭제"
+
+#: ui/files/file_interceptor_rules_window_qt.py:349
+msgid "Added interceptor rule: {0}"
+msgstr "인터셉터 규칙이 추가되었습니다: {0}"
+
+#: ui/files/file_interceptor_rules_window_qt.py:365
+msgid "Removed interceptor rule: {0}"
+msgstr "인터셉터 규칙이 제거되었습니다: {0}"
 
 #: ui/files/go_to_file_qt.py:135 ui/files/go_to_file_qt.py:149
 msgid "Go To File"
@@ -8233,6 +8486,10 @@ msgstr "보간 GIF"
 msgid "Create PDF"
 msgstr "PDF 만들기"
 
+#: ui/files/marked_file_mover_qt.py:362
+msgid "Configure rules applied while moving or copying marked files"
+msgstr "표시된 파일을 이동하거나 복사할 때 적용되는 규칙 구성"
+
 #: ui/files/marked_file_mover_qt.py:421
 msgid "Unlock"
 msgstr "잠금 해제"
@@ -8422,40 +8679,40 @@ msgstr "이미지 비교 디렉토리 설정"
 msgid "Set image comparison directory"
 msgstr "설정 이미지 비교 디렉토리"
 
-#: ui/files/related_images_window_qt.py:47
+#: ui/files/related_images_window_qt.py:49
 msgid "Related Images"
 msgstr "관련 이미지"
 
-#: ui/files/related_images_window_qt.py:61
+#: ui/files/related_images_window_qt.py:63
 msgid "Related Image Actions"
 msgstr "관련 이미지 작업"
 
-#: ui/files/related_images_window_qt.py:72
+#: ui/files/related_images_window_qt.py:74
 msgid "Current media source: {0}"
 msgstr "현재 미디어 소스: {0}"
 
-#: ui/files/related_images_window_qt.py:76
+#: ui/files/related_images_window_qt.py:78
 msgid ""
 "Actions in this window use the current media of the window that opened it."
 msgstr "이 창에서 수행하는 작업은 해당 창을 연 창에서 현재 선택된 미디어를 사용합니다."
 
-#: ui/files/related_images_window_qt.py:83
+#: ui/files/related_images_window_qt.py:85 ui/image/media_details.py:1510
 msgid "View related image"
 msgstr "관련 이미지 보기"
 
-#: ui/files/related_images_window_qt.py:85
+#: ui/files/related_images_window_qt.py:87
 msgid "Next downstream image in open window"
 msgstr "열려 있는 창에서 다음 하류 이미지"
 
-#: ui/files/related_images_window_qt.py:91
+#: ui/files/related_images_window_qt.py:93
 msgid "Mark all downstream files in current directory"
 msgstr "현재 디렉터리의 모든 다운스트림 파일 표시"
 
-#: ui/files/related_images_window_qt.py:113
+#: ui/files/related_images_window_qt.py:115
 msgid "Results"
 msgstr "결과"
 
-#: ui/files/related_images_window_qt.py:119
+#: ui/files/related_images_window_qt.py:121
 msgid "(no results yet)"
 msgstr "（아직 결과가 없습니다）"
 
@@ -8513,7 +8770,7 @@ msgstr "HTML을 지원하려면 pyppeteer 패키지가 필요합니다"
 msgid "Media Type Configuration"
 msgstr "미디어 유형 구성"
 
-#: ui/files/type_configuration_window_qt.py:163 utils/constants.py:701
+#: ui/files/type_configuration_window_qt.py:163 utils/constants.py:702
 msgid "Configure Media Types"
 msgstr "미디어 유형 구성"
 
@@ -8541,332 +8798,346 @@ msgstr "이 창에서 모든 기존 비교를 명확하게합니다. 계속?"
 msgid "Media type configuration updated"
 msgstr "미디어 유형 구성 업데이트됨"
 
-#: ui/image/media_details.py:263
+#: ui/image/auto_sort_open_gate.py:40
+msgid "Confirm Auto-Sorted Category"
+msgstr "자동 정렬된 카테고리 확인"
+
+#: ui/image/auto_sort_open_gate.py:42
+msgid ""
+"This file was automatically sorted into \"{0}\".\n"
+"\n"
+"View it now?"
+msgstr ""
+"이 파일이 자동으로 \"{0}\"에 정렬되었습니다.\n"
+"\n"
+"지금 보시겠습니까?"
+
+#: ui/image/media_details.py:264
 msgid "(negative prompt not shown by config setting)"
 msgstr "(config 설정에 의해 표시되지 않는 네거티브 프롬프트)"
 
-#: ui/image/media_details.py:361
+#: ui/image/media_details.py:362
 msgid "Image Path"
 msgstr "이미지 경로"
 
-#: ui/image/media_details.py:365
+#: ui/image/media_details.py:366
 msgid "Temp Path"
 msgstr "임시 경로"
 
-#: ui/image/media_details.py:371
+#: ui/image/media_details.py:372
 msgid "File Index"
 msgstr "파일 색인"
 
-#: ui/image/media_details.py:375
+#: ui/image/media_details.py:376
 msgid "Color Mode"
 msgstr "색깔 형태"
 
-#: ui/image/media_details.py:379
+#: ui/image/media_details.py:380
 msgid "Dimensions"
 msgstr "치수"
 
-#: ui/image/media_details.py:387
+#: ui/image/media_details.py:388
 msgid "Modification Time"
 msgstr "수정 시간"
 
-#: ui/image/media_details.py:391
+#: ui/image/media_details.py:392
 msgid "Positive"
 msgstr "지원하다"
 
-#: ui/image/media_details.py:400
+#: ui/image/media_details.py:401
 msgid "Negative"
 msgstr "이름 *"
 
-#: ui/image/media_details.py:409 utils/constants.py:57 utils/constants.py:91
+#: ui/image/media_details.py:410 utils/constants.py:57 utils/constants.py:91
 msgid "Models"
 msgstr "모델 번호:"
 
-#: ui/image/media_details.py:413
+#: ui/image/media_details.py:414
 msgid "LoRAs"
 msgstr "LoRA"
 
-#: ui/image/media_details.py:418
+#: ui/image/media_details.py:419
 msgid "Copy Prompt"
 msgstr "프롬프트 복사"
 
-#: ui/image/media_details.py:419
+#: ui/image/media_details.py:420
 msgid "Copy Prompt No BREAK"
 msgstr "복사 금지 없음 BREAK"
 
-#: ui/image/media_details.py:432
+#: ui/image/media_details.py:433
 msgid "Randomly Modify"
 msgstr "무작위 수정"
 
-#: ui/image/media_details.py:435
+#: ui/image/media_details.py:436
 msgid "Scramble Image"
 msgstr "이미지 섞기"
 
-#: ui/image/media_details.py:436
+#: ui/image/media_details.py:437
 msgid "Semi-Scramble Image"
 msgstr "반 스크램블 이미지"
 
-#: ui/image/media_details.py:443 ui/image/media_details.py:1165
+#: ui/image/media_details.py:444 ui/image/media_details.py:1208
 msgid "Change Aspect Ratio"
 msgstr "화면비율 변경"
 
-#: ui/image/media_details.py:444
+#: ui/image/media_details.py:445
 msgid "Flip Aspect Ratio"
 msgstr "비율 반전"
 
-#: ui/image/media_details.py:453
+#: ui/image/media_details.py:454
 msgid "Run OCR"
 msgstr "OCR 실행"
 
-#: ui/image/media_details.py:457
+#: ui/image/media_details.py:458
 msgid "Color Diversity Score"
 msgstr "색상 다양성 점수"
 
-#: ui/image/media_details.py:458
+#: ui/image/media_details.py:459
 msgid "Hue Breadth Score"
 msgstr "색상 범위 점수"
 
-#: ui/image/media_details.py:481
+#: ui/image/media_details.py:482
 msgid "Press Shift+I on a main app window to run this"
 msgstr "프레스 Shift+ 나는 메인 앱 창에서 이것을 실행"
 
-#: ui/image/media_details.py:489
+#: ui/image/media_details.py:490
 msgid "Tags"
 msgstr "이름 *"
 
-#: ui/image/media_details.py:497
+#: ui/image/media_details.py:498
 msgid "Update Tags"
 msgstr "업데이트"
 
-#: ui/image/media_details.py:557 ui/image/media_details.py:658
-#: ui/image/media_details.py:695 ui/image/media_details.py:1400
+#: ui/image/media_details.py:558 ui/image/media_details.py:659
+#: ui/image/media_details.py:696 ui/image/media_details.py:1476
 msgid "(Not available)"
 msgstr "(사용 불가)"
 
-#: ui/image/media_details.py:559
+#: ui/image/media_details.py:560
 msgid "Unavailable"
 msgstr "사용 불가"
 
-#: ui/image/media_details.py:562
+#: ui/image/media_details.py:563
 msgid ""
 "This media type is not enabled in configuration, or the path is invalid."
 msgstr "이 미디어 유형이 구성에서 활성화되어 있지 않거나 경로가 올바르지 않습니다."
 
-#: ui/image/media_details.py:604
+#: ui/image/media_details.py:605
 msgid "Video (ffprobe unavailable)"
 msgstr "동영상 (ffprobe 사용 불가)"
 
-#: ui/image/media_details.py:621
+#: ui/image/media_details.py:622
 msgid "(Could not load video details)"
 msgstr "(동영상 정보를 불러올 수 없습니다)"
 
-#: ui/image/media_details.py:652
+#: ui/image/media_details.py:653
 msgid "Audio (ffprobe unavailable)"
 msgstr "오디오 (ffprobe를 사용할 수 없음)"
 
-#: ui/image/media_details.py:667
+#: ui/image/media_details.py:668
 msgid "Audio ({0})"
 msgstr "오디오 ({0})"
 
-#: ui/image/media_details.py:693
+#: ui/image/media_details.py:694
 msgid "(Could not load audio details)"
 msgstr "(오디오 세부 정보를 로드할 수 없음)"
 
-#: ui/image/media_details.py:887
+#: ui/image/media_details.py:888
 msgid "No prompt found"
 msgstr "프롬프트를 찾을 수 없습니다"
 
-#: ui/image/media_details.py:894
+#: ui/image/media_details.py:895
 msgid "Copied prompt without BREAK"
 msgstr "BREAK없이 복사 된 프롬프트"
 
-#: ui/image/media_details.py:913
+#: ui/image/media_details.py:914
 msgid "No files found in current directory"
 msgstr "현재 디렉터리에서 파일을 찾을 수 없습니다"
 
-#: ui/image/media_details.py:918
+#: ui/image/media_details.py:919
 msgid "No files available"
 msgstr "사용 가능한 파일이 없습니다"
 
-#: ui/image/media_details.py:943
+#: ui/image/media_details.py:944
 msgid "Copied prompt from {0}"
 msgstr "{0}에서 복사한 프롬프트"
 
-#: ui/image/media_details.py:950
+#: ui/image/media_details.py:951
 msgid "No files with prompts found in current directory"
 msgstr "현재 디렉터리에서 프롬프트가 포함된 파일을 찾을 수 없습니다"
 
-#: ui/image/media_details.py:997 ui/image/media_details.py:1218
+#: ui/image/media_details.py:1011 ui/image/media_details.py:1269
 msgid "Rotated image right"
 msgstr "연락처"
 
-#: ui/image/media_details.py:997 ui/image/media_details.py:1218
+#: ui/image/media_details.py:1011 ui/image/media_details.py:1269
 msgid "Rotated image left"
 msgstr "왼쪽된 이미지"
 
-#: ui/image/media_details.py:1006 ui/image/media_details.py:1226
+#: ui/image/media_details.py:1026 ui/image/media_details.py:1283
 msgid "Cropped image"
 msgstr "자른 이미지"
 
-#: ui/image/media_details.py:1013 ui/image/media_details.py:1231
+#: ui/image/media_details.py:1033 ui/image/media_details.py:1288
 msgid "No crops found"
 msgstr "발견되지 않은 작물"
 
-#: ui/image/media_details.py:1017 ui/image/media_details.py:1238
+#: ui/image/media_details.py:1039 ui/image/media_details.py:1296
 msgid "Enhanced image"
 msgstr "향상된 이미지"
 
-#: ui/image/media_details.py:1021 ui/image/media_details.py:1247
+#: ui/image/media_details.py:1046 ui/image/media_details.py:1307
 msgid "Randomly cropped image"
 msgstr "무작위 이미지"
 
-#: ui/image/media_details.py:1035 ui/image/media_details.py:1255
+#: ui/image/media_details.py:1065 ui/image/media_details.py:1320
 msgid "Randomly modified image"
 msgstr "무작위 이미지"
 
-#: ui/image/media_details.py:1043 ui/image/media_details.py:1059
-#: ui/image/media_details.py:1260
+#: ui/image/media_details.py:1073 ui/image/media_details.py:1094
+#: ui/image/media_details.py:1325
 msgid "No new image created"
 msgstr "새로운 이미지가 생성되지 않았습니다"
 
-#: ui/image/media_details.py:1047 ui/image/media_details.py:1054
+#: ui/image/media_details.py:1079 ui/image/media_details.py:1089
 msgid "Scrambled image"
 msgstr "스크램블 이미지"
 
-#: ui/image/media_details.py:1063
+#: ui/image/media_details.py:1100
 msgid "Semi-scrambled image"
 msgstr "반 스크램블 이미지"
 
-#: ui/image/media_details.py:1070
+#: ui/image/media_details.py:1109
 msgid "Confirm Vertical Flip"
 msgstr "수직 반전 확인"
 
-#: ui/image/media_details.py:1072
+#: ui/image/media_details.py:1111
 msgid ""
 "Are you sure you want to flip this image vertically? This is an uncommon "
 "operation and may have been clicked by accident."
 msgstr "이 이미지를 세로로 뒤집으시겠습니까? 이는 흔하지 않은 작업이며 실수로 클릭했을 수 있습니다."
 
-#: ui/image/media_details.py:1082 ui/image/media_details.py:1264
+#: ui/image/media_details.py:1121 ui/image/media_details.py:1331
 msgid "Flipped image"
 msgstr "좋은 이미지"
 
-#: ui/image/media_details.py:1115
+#: ui/image/media_details.py:1155
 msgid "Please enter a target ratio"
 msgstr "대상 비율을 입력해 주세요"
 
-#: ui/image/media_details.py:1125
+#: ui/image/media_details.py:1166
 msgid "Changed image aspect ratio"
 msgstr "이미지 화면비가 바뀌었습니다."
 
-#: ui/image/media_details.py:1130
+#: ui/image/media_details.py:1173
 msgid "Error changing image aspect ratio"
 msgstr "이미지 비율을 변경하는 중에 오류가 발생했습니다."
 
-#: ui/image/media_details.py:1149 ui/image/media_details.py:1156
+#: ui/image/media_details.py:1192 ui/image/media_details.py:1199
 msgid "Aspect ratio changes are only available for images"
 msgstr "화면비 변경 기능은 이미지에만 적용됩니다"
 
-#: ui/image/media_details.py:1170
+#: ui/image/media_details.py:1213
 msgid "Current ratio: {0}"
 msgstr "유동비율: {0}"
 
-#: ui/image/media_details.py:1172
+#: ui/image/media_details.py:1215
 msgid "Target ratio (e.g. 16:9 or 1.777):"
 msgstr "타겟 비율 (예: 16:9 또는 1.777):"
 
-#: ui/image/media_details.py:1199 ui/image/media_details.py:1271
+#: ui/image/media_details.py:1243 ui/image/media_details.py:1341
 msgid "Copied image without EXIF data"
 msgstr "EXIF 데이터 없이 복사된 이미지"
 
-#: ui/image/media_details.py:1204 ui/image/media_details.py:1277
+#: ui/image/media_details.py:1250 ui/image/media_details.py:1349
 msgid "Error copying image without EXIF"
 msgstr "EXIF가 없는 이미지 복사 오류"
 
-#: ui/image/media_details.py:1209 ui/image/media_details.py:1282
+#: ui/image/media_details.py:1257 ui/image/media_details.py:1356
 msgid "Converted image to JPG"
 msgstr "이미지를 JPG로 변환"
 
-#: ui/image/media_details.py:1212 ui/image/media_details.py:1285
+#: ui/image/media_details.py:1262 ui/image/media_details.py:1361
 msgid "Error converting image to JPG"
 msgstr "이미지를 JPG로 변환하는 중 오류 발생"
 
-#: ui/image/media_details.py:1291
+#: ui/image/media_details.py:1367
 msgid "Metadata is not available for this path"
 msgstr "이 경로에 대한 메타데이터가 없습니다"
 
-#: ui/image/media_details.py:1296
+#: ui/image/media_details.py:1372
 msgid "ffprobe not found on PATH"
 msgstr "PATH에 ffprobe가 없습니다"
 
-#: ui/image/media_details.py:1304 ui/image/media_details.py:1311
+#: ui/image/media_details.py:1380 ui/image/media_details.py:1387
 msgid "No metadata found"
 msgstr "메타데이터 없음"
 
-#: ui/image/media_details.py:1331
+#: ui/image/media_details.py:1407
 msgid "OCR is only available for images"
 msgstr "OCR는 이미지에만 사용할 수 있습니다."
 
-#: ui/image/media_details.py:1334
+#: ui/image/media_details.py:1410
 msgid "Surya OCR is not installed"
 msgstr "Surya OCR은 설치되지 않았습니다."
 
-#: ui/image/media_details.py:1339
+#: ui/image/media_details.py:1415
 msgid "No text found in image"
 msgstr "이미지에 텍스트 없음"
 
-#: ui/image/media_details.py:1346
+#: ui/image/media_details.py:1422
 msgid "OCR failed: "
 msgstr "OCR 오류로 인해: "
 
-#: ui/image/media_details.py:1366
+#: ui/image/media_details.py:1442
 msgid "Could not compute color diversity score"
 msgstr "색상 다양성 점수를 계산할 수 없습니다"
 
-#: ui/image/media_details.py:1369 ui/image/media_details.py:1386
+#: ui/image/media_details.py:1445 ui/image/media_details.py:1462
 msgid "high"
 msgstr "높음"
 
-#: ui/image/media_details.py:1371 ui/image/media_details.py:1388
+#: ui/image/media_details.py:1447 ui/image/media_details.py:1464
 msgid "medium"
 msgstr "중간"
 
-#: ui/image/media_details.py:1373 ui/image/media_details.py:1390
+#: ui/image/media_details.py:1449 ui/image/media_details.py:1466
 msgid "low"
 msgstr "낮음"
 
-#: ui/image/media_details.py:1375
+#: ui/image/media_details.py:1451
 msgid "Color diversity score: {0:.2f} ({1})"
 msgstr "색상 다양성 점수: {0:.2f} ({1})"
 
-#: ui/image/media_details.py:1383
+#: ui/image/media_details.py:1459
 msgid "Could not compute hue breadth score"
 msgstr "색조 범위 점수를 계산할 수 없습니다"
 
-#: ui/image/media_details.py:1392
+#: ui/image/media_details.py:1468
 msgid "Hue breadth score: {0:.2f} ({1})"
 msgstr "색조 너비 점수: {0:.2f} ({1})"
 
-#: ui/image/media_details.py:1402
+#: ui/image/media_details.py:1478
 msgid "(Related image lookup is not available for video)"
 msgstr "(동영상에는 관련 이미지 검색 기능이 제공되지 않습니다)"
 
-#: ui/image/media_details.py:1404
+#: ui/image/media_details.py:1480
 msgid "(Related image lookup is not available for audio)"
 msgstr "(오디오에 대한 관련 이미지 조회를 사용할 수 없음)"
 
-#: ui/image/media_details.py:1409
+#: ui/image/media_details.py:1485
 msgid "Related image is not available for this path"
 msgstr "이 경로에는 관련 이미지가 없습니다"
 
-#: ui/image/media_details.py:1412
+#: ui/image/media_details.py:1488
 msgid "Related image is not available for video files"
 msgstr "동영상 파일의 경우 관련 이미지를 확인할 수 없습니다"
 
-#: ui/image/media_details.py:1495
+#: ui/image/media_details.py:1587
 msgid "Prevalidation Warning"
 msgstr "사전 검증 경고"
 
-#: ui/image/media_details.py:1497
+#: ui/image/media_details.py:1589
 msgid ""
 "Prevalidation \"{0}\" would normally apply action \"{1}\" to this file.\n"
 "\n"
@@ -8876,15 +9147,15 @@ msgstr ""
 "\n"
 "그래도 표시하시겠습니까?"
 
-#: ui/image/media_details.py:1566
+#: ui/image/media_details.py:1658
 msgid "Unable to open media"
 msgstr "미디어를 열 수 없습니다"
 
-#: ui/image/media_details.py:1567
+#: ui/image/media_details.py:1659
 msgid "Could not load: \"{0}\""
 msgstr "로드할 수 없음: \"{0}\""
 
-#: ui/image/media_details.py:1674
+#: ui/image/media_details.py:1766
 msgid "Updated tags for {0}"
 msgstr "{0}에 대한 업데이트 된 태그"
 
@@ -9034,11 +9305,6 @@ msgstr "프롬프트 (정확한 일치)"
 #: utils/constants.py:58 utils/constants.py:93
 msgid "Color Histogram"
 msgstr "색상 히스토그램"
-
-#: tests/unit/test_compare_embeddings_audio_clap.py:26 utils/constants.py:59
-#: utils/constants.py:95
-msgid "CLAP Audio Embedding"
-msgstr "CLAP 오디오 임베딩"
 
 #: utils/constants.py:118
 msgid "Color diff threshold"
@@ -9244,131 +9510,131 @@ msgstr "HTML"
 msgid "Unconfigured"
 msgstr "설정되지 않음"
 
-#: utils/constants.py:541
+#: utils/constants.py:542
 msgid "Moved files"
 msgstr "파일 이동"
 
-#: utils/constants.py:543
+#: utils/constants.py:544
 msgid "Copied files"
 msgstr "복사된 파일"
 
-#: utils/constants.py:545
+#: utils/constants.py:546
 msgid "Removed files"
 msgstr "제거된 파일"
 
-#: utils/constants.py:547
+#: utils/constants.py:548
 msgid "Marked files"
 msgstr "표시된 파일"
 
-#: utils/constants.py:549
+#: utils/constants.py:550
 msgid "Unmarked files"
 msgstr "미표시된 파일들"
 
-#: utils/constants.py:551
+#: utils/constants.py:552
 msgid "Searched files"
 msgstr "관련 파일"
 
-#: utils/constants.py:553
+#: utils/constants.py:554
 msgid "Compared files"
 msgstr "관련 파일"
 
-#: utils/constants.py:555
+#: utils/constants.py:556
 msgid "Generated images"
 msgstr "생성된 이미지"
 
-#: utils/constants.py:557
+#: utils/constants.py:558
 msgid "Changed directory"
 msgstr "관련 링크"
 
-#: utils/constants.py:559
+#: utils/constants.py:560
 msgid "System"
 msgstr "시스템"
 
-#: utils/constants.py:571
+#: utils/constants.py:572
 msgid "Classifier Action"
 msgstr "분류기 작업"
 
-#: utils/constants.py:627
+#: utils/constants.py:628
 msgid "Hide"
 msgstr "숨기세요"
 
-#: utils/constants.py:629
+#: utils/constants.py:630
 msgid "Notify"
 msgstr "알림"
 
-#: utils/constants.py:631
+#: utils/constants.py:632
 msgid "Skip"
 msgstr "건너뛰기"
 
-#: utils/constants.py:639
+#: utils/constants.py:640
 msgid "Add Mark"
 msgstr "마크 추가"
 
-#: utils/constants.py:641
+#: utils/constants.py:642
 msgid "Blur"
 msgstr "흐림"
 
-#: utils/constants.py:643
+#: utils/constants.py:644
 msgid "Generate"
 msgstr "생성"
 
-#: utils/constants.py:645
+#: ui/files/file_actions_window_qt.py:362 utils/constants.py:646
 msgid "Scramble"
 msgstr "스크램블"
 
-#: utils/constants.py:647
+#: ui/files/file_actions_window_qt.py:357 utils/constants.py:648
 msgid "Rotate"
 msgstr "회전"
 
-#: utils/constants.py:688
+#: utils/constants.py:689
 msgid "Start Application"
 msgstr "소프트웨어 시작"
 
-#: utils/constants.py:689
+#: utils/constants.py:690
 msgid "Run Compares"
 msgstr "비교 실행"
 
-#: utils/constants.py:690
+#: utils/constants.py:691
 msgid "Run Search"
 msgstr "검색 실행"
 
-#: utils/constants.py:691
+#: utils/constants.py:692
 msgid "Run Search Preset"
 msgstr "검색 사전 설정 실행"
 
-#: utils/constants.py:693
+#: utils/constants.py:694
 msgid "View Recent Directories"
 msgstr "최근 디렉터리 보기"
 
-#: utils/constants.py:694
+#: utils/constants.py:695
 msgid "View File Actions"
 msgstr "파일 작업 보기"
 
-#: utils/constants.py:695
+#: utils/constants.py:696
 msgid "Run File Actions"
 msgstr "파일 작업 실행"
 
-#: utils/constants.py:696
+#: utils/constants.py:697
 msgid "Edit Prevalidations"
 msgstr "유효성 검사 편집"
 
-#: utils/constants.py:697
+#: utils/constants.py:698
 msgid "Run Prevalidations"
 msgstr "사전 유효성 검사 실행"
 
-#: utils/constants.py:699
+#: utils/constants.py:700
 msgid "Run RefacDir"
 msgstr "RefacDir 실행"
 
-#: utils/constants.py:700
+#: utils/constants.py:701
 msgid "Delete Media"
 msgstr "미디어 삭제"
 
-#: utils/constants.py:702
+#: utils/constants.py:703
 msgid "Set Hotkey Actions"
 msgstr "핫키 동작 설정"
 
-#: utils/constants.py:703
+#: utils/constants.py:704
 msgid "Access Password Administration"
 msgstr "액세스 비밀번호 관리"
 
@@ -9396,274 +9662,283 @@ msgstr "Shift"
 msgid "Alt"
 msgstr "Alt"
 
-#: compare/classifier_pipeline.py:503
+#: compare/classifier_pipeline.py:330
+msgid "Node {0}: min_similarity must be between 0 and 1."
+msgstr "노드 {0}: min_similarity 값은 0과 1 사이여야 합니다."
+
+#: compare/classifier_pipeline.py:334
+msgid "Node {0}: max_similarity must be between 0 and 1."
+msgstr "노드 {0}: max_similarity는 0과 1 사이여야 합니다."
+
+#: compare/classifier_pipeline.py:338
+msgid "Node {0}: max_similarity ({1}) must be ≥ min_similarity ({2})."
+msgstr "노드 {0}: max_similarity ({1})는 min_similarity ({2}) 이상이어야 합니다."
+
+#: compare/classifier_pipeline.py:347
+msgid "Node {0}: {1} is not an embedding compare mode."
+msgstr "노드 {0}: {1} 은(는) 임베딩 비교 모드가 아닙니다."
+
+#: compare/classifier_pipeline.py:573
 msgid ""
-"Stem-group dedup is on but the run sort order is not '{0}'. Whichever file "
-"of a stem group is reached first is the only one evaluated, so a derivative "
-"reached before its seed can generate duplicates. Set the run sort order to "
-"'{0}', or turn off stem-group dedup."
+"Node {0}: similarity band {1}-{2} is very wide — the condition will rarely "
+"fire."
+msgstr "노드 {0}: 유사성 밴드 {1}-{2}가 매우 넓습니다 — 조건이 거의 발생하지 않습니다."
+
+#: compare/classifier_pipeline_conditions.py:623
+msgid "inside band"
+msgstr "내부 밴드"
+
+#: compare/classifier_pipeline_conditions.py:625
+msgid "unresolved matches"
+msgstr "해결되지 않은 일치"
+
+#: compare/classifier_pipeline_conditions.py:626
+msgid "VarianceFromOriginal"
+msgstr "원본과의 차이"
+
+#: tests/ui/test_related_images_window.py:115
+#: ui/files/related_images_window_qt.py:228
+msgid "{0} large unconfirmed director(ies) skipped"
+msgstr "{0}개의 큰 확인되지 않은 감독이 건너뛰었습니다"
+
+#: tests/ui/test_related_images_window.py:128
+#: ui/files/related_images_window_qt.py:160
+msgid "metadata"
+msgstr "메타데이터"
+
+#: tests/ui/test_related_images_window.py:128
+#: ui/files/related_images_window_qt.py:162
+msgid "name prefix"
+msgstr "이름 접두사"
+
+#: tests/ui/test_related_images_window.py:129
+#: ui/files/related_images_window_qt.py:216
+msgid "from a cached scan"
+msgstr "캐시된 스캔에서"
+
+#: tests/ui/test_related_images_window.py:140
+#: ui/files/related_images_window_qt.py:207
+msgid "{0} of {1} in cycle"
+msgstr "{0}/{1} 사이클"
+
+#: tests/ui/test_related_images_window.py:152
+#: ui/files/related_images_window_qt.py:145
+msgid "cancelled"
+msgstr "취소됨"
+
+#: ui/app_window/app_window.py:537
+msgid "{dir}  —  {count} files"
+msgstr "{dir} — {count} 파일"
+
+#: ui/app_window/app_window.py:541
+msgid "Large Directories Detected"
+msgstr "큰 디렉터리가 감지되었습니다"
+
+#: ui/app_window/app_window.py:542
+msgid ""
+"{n} directories from the last session have a large number of files, or a "
+"fair-sized number on external storage, and will be slow to load. Uncheck any"
+" you do not want to load now."
 msgstr ""
-"Stem-group 중복제거가 켜져 있지만 실행 정렬 순서가 '{0}'이 아닙니다. Stem-group의 파일 중 먼저 도달한 파일만 "
-"평가되므로 시드보다 먼저 도달한 파생 파일이 중복을 생성할 수 있습니다. 실행 정렬 순서를 '{0}'으로 설정하거나 Stem-group "
-"중복제거를 끄세요."
+"지난 세션의 {n}개 디렉터리에 파일이 많이 있거나 외부 저장소에 다소 많은 파일이 있어 로드가 느립니다. 지금 로드하고 싶지 않은 "
+"항목은 선택을 해제하세요."
 
-#: compare/pipeline_run_report.py:220
-#: tests/unit/test_pipeline_decision_record.py:288
-#: tests/unit/test_pipeline_decision_record.py:294
-msgid "Decision records captured: {0}"
-msgstr "캡처된 결정 레코드: {0}"
+#: ui/app_window/file_marks_controller.py:396
+#: ui/app_window/file_marks_controller.py:567
+#: ui/app_window/file_marks_controller.py:622
+#: ui/app_window/search_controller.py:728
+msgid "Waiting for a directory selection."
+msgstr "디렉터리 선택을 기다리는 중."
 
-#: files/file_interceptor_rule.py:40
-msgid "Move only"
-msgstr "이동만"
+#: ui/app_window/file_marks_controller.py:411
+#: ui/app_window/search_controller.py:743
+msgid "Cancelled: that directory has too many files."
+msgstr "취소됨: 해당 디렉터리에 파일이 너무 많습니다."
 
-#: files/file_interceptor_rule.py:42
-msgid "Copy only"
-msgstr "복사만"
+#: ui/app_window/file_marks_controller.py:423
+#: ui/app_window/file_marks_controller.py:534
+#: ui/app_window/file_marks_controller.py:592
+#: ui/app_window/file_marks_controller.py:647
+#: ui/app_window/file_marks_controller.py:699
+msgid "Cancelled: marks were not changed."
+msgstr "취소됨: 표시가 변경되지 않았습니다."
 
-#: files/file_interceptor_rule.py:43
-msgid "Move and copy"
-msgstr "이동 및 복사"
+#: ui/compare/classifier_pipeline_editor_qt.py:87
+msgid "Variance From Original"
+msgstr "원본과의 차이"
 
-#: files/file_interceptor_rule.py:64
-msgid "Transform"
-msgstr "변환"
+#: ui/compare/classifier_pipeline_editor_qt.py:910
+msgid "Min similarity:"
+msgstr "최소 유사도:"
 
-#: files/file_interceptor_rule.py:65 files/file_interceptor_rule.py:183
-msgid "Block"
-msgstr "차단"
+#: ui/compare/classifier_pipeline_editor_qt.py:918
+msgid "Max similarity:"
+msgstr "최대 유사도:"
 
-#: files/file_interceptor_rule.py:84
-msgid "Improve image"
-msgstr "이미지 개선"
+#: ui/compare/classifier_pipeline_editor_qt.py:926
+msgid "Fire inside the band instead of outside"
+msgstr "바깥이 아니라 밴드 내부의 불"
 
-#: files/file_interceptor_rule.py:109
-msgid "New Interceptor Rule"
-msgstr "새 인터셉터 규칙"
+#: ui/compare/classifier_pipeline_editor_qt.py:930
+msgid "Match when the original can't be resolved"
+msgstr "원본을 해결할 수 없을 때 일치시키기"
 
-#: files/file_interceptor_rule.py:163
-msgid "into {0} (and subdirectories)"
-msgstr "{0} 로 (하위 디렉터리 포함)"
-
-#: files/file_interceptor_rule.py:165
-msgid "into {0}"
-msgstr "{0}에"
-
-#: files/file_interceptor_rule.py:169
-msgid "name contains {0}"
-msgstr "이름에 {0}이 포함됩니다"
-
-#: files/file_interceptor_rule.py:173
-msgid "type is {0}"
-msgstr "유형은 {0}"
-
-#: files/file_interceptor_rule.py:177
-msgid "any file"
-msgstr "임의 파일"
-
-#: files/file_interceptor_rule.py:181
-msgid ", removing the original"
-msgstr ", 원본 삭제"
-
-#: files/file_interceptor_rules_manager.py:189
-msgid "Blocked by interceptor rule: {0}"
-msgstr "인터셉터 규칙에 의해 차단됨: {0}"
-
-#: files/file_interceptor_rules_manager.py:196
+#: ui/compare/classifier_pipeline_editor_qt.py:935
 msgid ""
-"{0}\n"
-"Blocked: {1}"
+"Compares each image against the seed of its related-image group. The band is"
+" the range of ACCEPTABLE similarity: the condition fires for images outside "
+"it — too different to be the same subject, or too similar to be a useful "
+"variation. Seed images themselves never match. Run this after the generating"
+" pipeline, not as part of it."
 msgstr ""
-"{0}\n"
-"차단됨: {1}"
+"각 이미지를 해당 관련 이미지 그룹의 시드와 비교합니다. 밴드는 허용 가능한 유사성 범위이며, 이 범위를 벗어난 이미지에 대해 조건이 "
+"트리거됩니다 — 같은 대상이 되기엔 너무 다르거나, 유용한 변형이 되기엔 너무 유사한 경우입니다. 시드 이미지는 절대 일치하지 않습니다."
+" 생성 파이프라인 후에 실행하고, 파이프라인의 일부로는 사용하지 마세요."
 
-#: ui/app_window/sidebar_panel.py:339 ui/files/marked_file_mover_qt.py:359
-msgid "Interceptor rules"
-msgstr "인터셉터 규칙"
+#: ui/compare/seek_to_trigger_tab_qt.py:331
+msgid "No media is currently loaded."
+msgstr "현재 로드된 미디어가 없습니다."
 
-#: ui/app_window/sidebar_panel.py:344
-msgid ""
-"Configure rules that block or transform marked files as they are moved or "
-"copied to a target directory."
-msgstr "대상 디렉터리로 이동하거나 복사될 때 표시된 파일을 차단하거나 변환하는 규칙을 설정합니다."
+#: ui/compare/seek_to_trigger_tab_qt.py:390
+#: ui/compare/seek_to_trigger_tab_qt.py:591
+msgid "'{name}' triggers on this image{dims}."
+msgstr "'{name}'이(가) 이 이미지에서 트리거됩니다{dims}."
 
-#: ui/app_window/sidebar_panel.py:348
-msgid "Auto-sort confirmation"
-msgstr "자동 정렬 확인"
+#: ui/compare/seek_to_trigger_tab_qt.py:447
+#: ui/compare/seek_to_trigger_tab_qt.py:632
+msgid "'{name}' did not trigger on this image{dims}."
+msgstr "'{name}'이(가) 이 이미지{dims}에서 트리거되지 않았습니다."
 
-#: ui/app_window/sidebar_panel.py:353
-msgid ""
-"Choose which automatically sorted categories ask for confirmation before "
-"their media is viewed."
-msgstr "자동으로 정렬된 카테고리 중 미디어가 표시되기 전에 확인을 요구하는 항목을 선택하십시오."
+#: ui/compare/seek_to_trigger_tab_qt.py:565
+msgid "Current media file no longer exists."
+msgstr "현재 미디어 파일이 더 이상 존재하지 않습니다."
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2036
-msgid "Evaluate each stem group once"
-msgstr "각 줄기 그룹을 한 번 평가"
+#: ui/files/file_actions_window_qt.py:108
+#: ui/files/file_actions_window_qt.py:430
+msgid "Image Op"
+msgstr "이미지 작업"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2039
-msgid ""
-"In a batch run, skip a file whose stem group has already been evaluated, and"
-" skip stem groups whose seed cannot be located or is not filed. Turn off to "
-"evaluate every file independently. Related Image sort order lets derivatives"
-" skip sooner, but is not required for correctness."
-msgstr ""
-"배치 실행 시, 이미 평가된 스템 그룹을 가진 파일을 건너뛰고, 시드가 찾을 수 없거나 파일에 저장되지 않은 스템 그룹도 건너뜁니다. "
-"꺼두면 각 파일을 독립적으로 평가합니다. 관련 이미지 정렬 순서는 파생 파일을 더 빨리 건너뛰게 하지만 정확성에 필수는 아닙니다."
+#: ui/files/file_actions_window_qt.py:211
+msgid "image ops"
+msgstr "이미지 작업"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2048
-msgid "Record per-node decisions"
-msgstr "노드별 결정 기록"
+#: ui/files/file_actions_window_qt.py:253
+#: ui/files/file_actions_window_qt.py:262
+msgid "Image Ops"
+msgstr "이미지 작업"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2051
-msgid ""
-"Write each evaluated file's per-node match result and score into the run "
-"dump, for auditing or threshold calibration. Adds one record per file, held "
-"in memory until the run finishes."
-msgstr ""
-"평가된 각 파일의 노드별 매치 결과와 점수를 실행 덤프에 기록합니다. 감시 또는 임계값 보정에 사용됩니다. 파일당 하나의 레코드를 "
-"추가하며, 실행이 끝날 때까지 메모리에 보관됩니다."
+#: ui/files/file_actions_window_qt.py:291
+msgid "Image Op Statistics"
+msgstr "이미지 작업 통계"
 
-#: ui/files/auto_sort_confirmation_window_qt.py:34
-msgid "Auto-Sort Confirmation Categories"
-msgstr "자동 정렬 확인 카테고리"
+#: ui/files/file_actions_window_qt.py:358
+msgid "Enhance"
+msgstr "강화"
 
-#: ui/files/auto_sort_confirmation_window_qt.py:47
-msgid ""
-"When viewing the last automatically sorted media, ask for confirmation first if it was sorted into one of these categories.\n"
-"Categories are matched without regard to case."
-msgstr ""
-"자동으로 정렬된 최신 미디어를 볼 때, 해당 미디어가 이 카테고리 중 하나에 포함된 경우 먼저 확인을 요청합니다.\n"
-"카테고리는 대소문자를 구분하지 않고 일치합니다."
+#: ui/files/file_actions_window_qt.py:359
+msgid "Flip"
+msgstr "플립"
 
-#: ui/files/auto_sort_confirmation_window_qt.py:56
-msgid "Categories (comma-separated):"
-msgstr "카테고리(쉼표 구분):"
+#: ui/files/file_actions_window_qt.py:360
+msgid "Aspect Ratio"
+msgstr "종횡비"
 
-#: ui/files/auto_sort_confirmation_window_qt.py:105
-msgid "Confirmation set for {0} categories"
-msgstr "확인이 {0} 카테고리에 설정되었습니다"
+#: ui/files/file_actions_window_qt.py:363
+msgid "Semi-Scramble"
+msgstr "세미 스크램블"
 
-#: ui/files/file_interceptor_rules_window_qt.py:57
-msgid "Edit Interceptor Rule"
-msgstr "인터셉터 규칙 편집"
+#: ui/files/file_actions_window_qt.py:365
+msgid "Random Modification"
+msgstr "무작위 수정"
 
-#: ui/files/file_interceptor_rules_window_qt.py:68
-msgid "Rule is active"
-msgstr "규칙이 활성화되었습니다"
+#: ui/files/file_actions_window_qt.py:366
+msgid "Crop"
+msgstr "자르기"
 
-#: ui/files/file_interceptor_rules_window_qt.py:78
-msgid "Applies to"
-msgstr "적용 대상"
+#: ui/files/file_actions_window_qt.py:367
+msgid "Crop (Freeform)"
+msgstr "자르기 (프리폼)"
 
-#: ui/files/file_interceptor_rules_window_qt.py:82
-msgid "Comma-separated target directories. Leave empty to match any target."
-msgstr "쉼표로 구분된 대상 디렉터리. 비워 두면 모든 대상과 일치합니다."
+#: ui/files/file_actions_window_qt.py:368
+msgid "Box"
+msgstr "박스"
 
-#: ui/files/file_interceptor_rules_window_qt.py:84
-msgid "Target directories"
-msgstr "대상 디렉터리"
+#: ui/files/file_actions_window_qt.py:369
+msgid "Box (Freeform)"
+msgstr "박스(프리폼)"
 
-#: ui/files/file_interceptor_rules_window_qt.py:86
-msgid "Also match subdirectories"
-msgstr "하위 디렉터리도 일치"
+#: ui/files/file_actions_window_qt.py:370
+msgid "Background Box"
+msgstr "배경 상자"
 
-#: ui/files/file_interceptor_rules_window_qt.py:92
-msgid "Comma-separated substrings. Leave empty to match any filename."
-msgstr "쉼표로 구분된 하위 문자열입니다. 비워두면 모든 파일 이름과 일치합니다."
+#: ui/files/file_actions_window_qt.py:371
+msgid "Background Box (Freeform)"
+msgstr "배경 상자 (프리폼)"
 
-#: ui/files/file_interceptor_rules_window_qt.py:94
-msgid "Filename contains"
-msgstr "파일 이름에 포함"
+#: ui/files/file_actions_window_qt.py:372
+msgid "Smart Crop"
+msgstr "스마트 크롭"
 
-#: ui/files/file_interceptor_rules_window_qt.py:96
-msgid "Filename match is case-sensitive"
-msgstr "파일 이름 일치는 대소문자를 구분합니다"
+#: ui/files/file_actions_window_qt.py:373
+msgid "Strip Metadata"
+msgstr "메타데이터 제거"
 
-#: ui/files/file_interceptor_rules_window_qt.py:101
-msgid "Leave all unchecked to match any media type."
-msgstr "모두 선택 해제한 상태로 두면 모든 미디어 유형과 일치합니다."
+#: ui/files/file_actions_window_qt.py:729
+msgid "image ops only"
+msgstr "이미지 작업만"
 
-#: ui/files/file_interceptor_rules_window_qt.py:113
-msgid "Media types"
-msgstr "미디어 유형"
+#: ui/files/related_images_window_qt.py:146
+msgid "waiting"
+msgstr "대기 중"
 
-#: ui/files/file_interceptor_rules_window_qt.py:122
-msgid "Behavior"
-msgstr "행동"
+#: ui/files/related_images_window_qt.py:147
+msgid "no media"
+msgstr "미디어 없음"
 
-#: ui/files/file_interceptor_rules_window_qt.py:126
-msgid "Shown when this rule blocks a transfer. Optional."
-msgstr "이 규칙이 전송을 차단할 때 표시됩니다. 선택 사항."
+#: ui/files/related_images_window_qt.py:148
+msgid "no files"
+msgstr "파일이 없습니다"
 
-#: ui/files/file_interceptor_rules_window_qt.py:128
-msgid "Block message"
-msgstr "메시지 차단"
+#: ui/files/related_images_window_qt.py:149
+msgid "too many files"
+msgstr "파일이 너무 많습니다"
 
-#: ui/files/file_interceptor_rules_window_qt.py:137
-msgid "Transform operation"
-msgstr "변환 작업"
+#: ui/files/related_images_window_qt.py:161
+msgid "filename"
+msgstr "파일명"
 
-#: ui/files/file_interceptor_rules_window_qt.py:140
-msgid "Remove the original after moving the transformed file"
-msgstr "변환된 파일을 이동한 후 원본을 삭제합니다"
+#: ui/files/related_images_window_qt.py:183
+msgid "source: {0}"
+msgstr "소스: {0}"
 
-#: ui/files/file_interceptor_rules_window_qt.py:144
-msgid "Never applies to copy operations, only to moves."
-msgstr "복사 작업에는 절대 적용되지 않고, 이동에만 적용됩니다."
+#: ui/files/related_images_window_qt.py:193
+msgid "searched {0} director(ies)"
+msgstr "검색한 {0} 감독"
 
-#: ui/files/file_interceptor_rules_window_qt.py:200
-msgid "File Handling Interceptor Rules"
-msgstr "파일 처리 인터셉터 규칙"
+#: ui/files/related_images_window_qt.py:195
+msgid "in {0}"
+msgstr "{0} 안"
 
-#: ui/files/file_interceptor_rules_window_qt.py:214
-msgid ""
-"Rules are checked in order when marked files are moved or copied; the first "
-"matching rule applies."
-msgstr "표시된 파일을 이동하거나 복사할 때 규칙이 순서대로 확인됩니다; 첫 번째 일치하는 규칙이 적용됩니다."
+#: ui/files/related_images_window_qt.py:201
+msgid "{0} of {1} file(s) scanned"
+msgstr "{0}/{1} 파일이 스캔되었습니다"
 
-#: ui/files/file_interceptor_rules_window_qt.py:223
-msgid "Add rule"
-msgstr "규칙 추가"
+#: ui/files/related_images_window_qt.py:203
+msgid "{0} file(s) scanned"
+msgstr "{0} 파일이 스캔되었습니다"
 
-#: ui/files/file_interceptor_rules_window_qt.py:280
-msgid "No interceptor rules configured."
-msgstr "인터셉터 규칙이 구성되지 않았습니다."
+#: ui/files/related_images_window_qt.py:211
+msgid "matched by: "
+msgstr "일치: "
 
-#: ui/files/file_interceptor_rules_window_qt.py:296
-msgid "Move this rule earlier in the evaluation order"
-msgstr "이 규칙을 평가 순서에서 앞쪽으로 이동"
+#: ui/files/related_images_window_qt.py:223
+msgid ", and {0} more"
+msgstr ", 그리고 {0}개 더"
 
-#: ui/files/file_interceptor_rules_window_qt.py:304
-msgid "Move this rule later in the evaluation order"
-msgstr "이 규칙을 평가 순서에서 뒤로 이동"
+#: ui/image/media_details.py:1527
+msgid "Referenced related image was not found on disk."
+msgstr "참조된 관련 이미지가 디스크에서 찾을 수 없습니다."
 
-#: ui/files/file_interceptor_rules_window_qt.py:317
-msgid "Remove this rule"
-msgstr "이 규칙을 삭제"
-
-#: ui/files/file_interceptor_rules_window_qt.py:349
-msgid "Added interceptor rule: {0}"
-msgstr "인터셉터 규칙이 추가되었습니다: {0}"
-
-#: ui/files/file_interceptor_rules_window_qt.py:365
-msgid "Removed interceptor rule: {0}"
-msgstr "인터셉터 규칙이 제거되었습니다: {0}"
-
-#: ui/files/marked_file_mover_qt.py:362
-msgid "Configure rules applied while moving or copying marked files"
-msgstr "표시된 파일을 이동하거나 복사할 때 적용되는 규칙 구성"
-
-#: ui/image/auto_sort_open_gate.py:40
-msgid "Confirm Auto-Sorted Category"
-msgstr "자동 정렬된 카테고리 확인"
-
-#: ui/image/auto_sort_open_gate.py:42
-msgid ""
-"This file was automatically sorted into \"{0}\".\n"
-"\n"
-"View it now?"
-msgstr ""
-"이 파일이 자동으로 \"{0}\"에 정렬되었습니다.\n"
-"\n"
-"지금 보시겠습니까?"
+#: ui/image/media_details.py:1532
+msgid "Showing {0}"
+msgstr "표시 중 {0}"

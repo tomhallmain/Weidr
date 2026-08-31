@@ -2,8 +2,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: 1.0\n"
-"POT-Creation-Date: 2026-08-25 10:55-0400\n"
-"PO-Revision-Date: 2026-08-25 10:55-0400\n"
+"POT-Creation-Date: 2026-08-31 19:22-0400\n"
+"PO-Revision-Date: 2026-08-31 19:22-0400\n"
 "Last-Translator: Translator Name <translator@example.com>\n"
 "Language-Team: ja Team <<EMAIL>>\n"
 "Language: ja\n"
@@ -82,144 +82,448 @@ msgstr "不明エラー"
 msgid "Evaluating {0} files..."
 msgstr "評価中 {0} ファイル..."
 
-#: compare/classifier_action.py:1271
-#: compare/classifier_pipeline_runner.py:1188 ui/image/media_details.py:1491
+#: compare/classifier_action.py:1318
+#: compare/classifier_pipeline_runner.py:1299 ui/image/media_details.py:1583
 msgid " detected"
 msgstr " 検出"
 
-#: compare/classifier_action.py:1273
-#: compare/classifier_pipeline_runner.py:1192
+#: compare/classifier_action.py:1320
+#: compare/classifier_pipeline_runner.py:1303
 msgid " - skipped"
 msgstr " - スキップ"
 
-#: compare/classifier_action.py:1276
-#: compare/classifier_pipeline_runner.py:1200
+#: compare/classifier_action.py:1323
+#: compare/classifier_pipeline_runner.py:1311
 msgid " - hidden"
 msgstr " - 隠し"
 
-#: compare/classifier_action.py:1281
-#: compare/classifier_pipeline_runner.py:1214
+#: compare/classifier_action.py:1328
+#: compare/classifier_pipeline_runner.py:1325
 msgid " - marked"
 msgstr " - マーク"
 
-#: compare/classifier_action.py:1285
+#: compare/classifier_action.py:1332
 msgid " - could not determine rotation angle, skipped"
 msgstr " - 回転角度を判断できず、スキップしました"
 
-#: compare/classifier_action.py:1288
+#: compare/classifier_action.py:1335
 msgid " - already correctly oriented"
 msgstr " - すでに正しく向いています"
 
-#: compare/classifier_action.py:1294 compare/classifier_action.py:1298
-#: compare/classifier_action.py:1302
+#: compare/classifier_action.py:1341 compare/classifier_action.py:1345
+#: compare/classifier_action.py:1349
 msgid " - rotating {0} degrees (new file)"
 msgstr " - {0}度回転（新しいファイル）"
 
-#: compare/classifier_action.py:1316
+#: compare/classifier_action.py:1363
 msgid " - rotation not supported for this file type, skipped"
 msgstr " - このファイルタイプでは回転がサポートされていません、スキップしました"
 
-#: compare/classifier_action.py:1321
+#: compare/classifier_action.py:1368
 msgid " - rotating {0} degrees, saving rendered preview: {1}"
 msgstr " - {0}度回転、レンダリングプレビューを保存中: {1}"
 
-#: compare/classifier_action.py:1355
+#: compare/classifier_action.py:1402
 msgid "Moving file: "
 msgstr "ファイルの移動: "
 
-#: compare/classifier_action.py:1401
-#: compare/classifier_pipeline_runner.py:1264
+#: compare/classifier_action.py:1448
+#: compare/classifier_pipeline_runner.py:1375
 msgid "Deleting file: "
 msgstr "ファイルの削除: "
 
-#: compare/classifier_action.py:1410
-#: compare/classifier_pipeline_runner.py:1278
+#: compare/classifier_action.py:1457
+#: compare/classifier_pipeline_runner.py:1389
 msgid " - blurred"
 msgstr " - ぼやけた"
 
-#: compare/classifier_action.py:1419
-#: compare/classifier_pipeline_runner.py:1286
+#: compare/classifier_action.py:1466
+#: compare/classifier_pipeline_runner.py:1397
 msgid " - generating"
 msgstr " - 生成中"
 
-#: compare/classifier_action.py:1424
-#: compare/classifier_pipeline_runner.py:1298
+#: compare/classifier_action.py:1471
+#: compare/classifier_pipeline_runner.py:1409
 msgid " - scrambling"
 msgstr " - スクランブル"
 
-#: compare/classifier_action.py:1524
+#: compare/classifier_action.py:1571
 msgid "Action modifier is not a valid directory: "
 msgstr "アクション修飾子は有効なディレクトリではありません : "
 
-#: compare/classifier_action.py:1526
+#: compare/classifier_action.py:1573
 msgid "Invalid classifier action {0}, may cause errors or be unable to run!"
 msgstr "無効な分類器アクション {0} は、エラーを引き起こすか、実行できない可能性があります！"
 
-#: compare/classifier_action.py:1728
+#: compare/classifier_action.py:1775
 msgid "embedding"
 msgstr "埋め込み"
 
-#: compare/classifier_action.py:1731
+#: compare/classifier_action.py:1778
 msgid "audio classifier {0}"
 msgstr "オーディオ分類器 {0}"
 
-#: compare/classifier_action.py:1733
+#: compare/classifier_action.py:1780
 msgid "classifier {0}"
 msgstr "クラシファイア {0}"
 
-#: compare/classifier_action.py:1735
+#: compare/classifier_action.py:1782
 msgid "prompts"
 msgstr "プロンプト"
 
-#: compare/classifier_action.py:1737
+#: compare/classifier_action.py:1784
 msgid "prototype"
 msgstr "試作品"
 
-#: compare/classifier_action.py:1739
+#: compare/classifier_action.py:1786
 msgid "pseudo-static dynamic media"
 msgstr "疑似静的動的メディア"
 
-#: compare/classifier_action.py:1747
+#: compare/classifier_action.py:1794
 msgid "categories: {0}"
 msgstr "カテゴリに分類されます： {0}"
 
-#: compare/classifier_action.py:1751
+#: compare/classifier_action.py:1798
 msgid "{0} positives, {1} negatives"
 msgstr "{0} 陽性、{1} 陰性"
 
-#: compare/classifier_action.py:1755
+#: compare/classifier_action.py:1802
 msgid " using {0} ({1})"
 msgstr " {0} ({1})"
 
-#: compare/classifier_action.py:1757
+#: compare/classifier_action.py:1804
 msgid " using {0}"
 msgstr " {0}"
 
-#: compare/classifier_action.py:1759
+#: compare/classifier_action.py:1806
 msgid " ({0} positives, {1} negatives)"
 msgstr " ({0} 陽性、{1} 陰性)"
 
-#: compare/classifier_action.py:1762
+#: compare/classifier_action.py:1809
 #: tests/ui/test_classifier_pipeline_editor_qt.py:1172
 #: tests/ui/test_classifier_pipeline_editor_qt.py:1194
 msgid "disabled"
 msgstr "無効化"
 
-#: compare/classifier_action.py:1764
+#: compare/classifier_action.py:1811
 msgid "cannot run"
 msgstr "実行できません"
 
-#: compare/classifier_action.py:1865
+#: compare/classifier_action.py:1912
 msgid "Profile directory is not a valid directory: "
 msgstr "プロファイルディレクトリが無効なディレクトリです: "
 
-#: compare/classifier_action.py:1867
+#: compare/classifier_action.py:1914
 msgid "Invalid prevalidation {0}, may cause errors or be unable to run!"
 msgstr "無効な事前検証 {0} は、エラーの原因となるか、実行できない場合があります！"
 
-#: compare/classifier_action.py:1964
+#: compare/classifier_action.py:2011
 msgid "lookaheads: {0}"
 msgstr "先読み: {0}"
+
+#: compare/classifier_pipeline.py:70 compare/classifier_pipeline.py:695
+#: compare/classifier_pipeline.py:764
+#: ui/compare/classifier_pipeline_editor_qt.py:1972
+#: ui/compare/classifier_pipelines_tab_qt.py:89
+msgid "New Pipeline"
+msgstr "新しいパイプライン"
+
+#: compare/classifier_pipeline.py:186
+msgid "Pipeline name is empty."
+msgstr "パイプライン名が空です。"
+
+#: compare/classifier_pipeline.py:191
+#: tests/unit/test_classifier_pipeline.py:1754
+msgid "seed_category '{0}' is set but category_map is empty."
+msgstr "seed_category '{0}' が設定されていますが、category_map が空です。"
+
+#: compare/classifier_pipeline.py:197
+msgid "seed_category '{0}' is not a key in category_map."
+msgstr "seed_category '{0}' は category_map のキーではありません。"
+
+#: compare/classifier_pipeline.py:205
+#: tests/unit/test_classifier_pipeline.py:1833
+#: tests/unit/test_classifier_pipeline.py:1842
+#: tests/unit/test_classifier_pipeline.py:1859
+msgid ""
+"category_map entry '{0}': suffix '{1}' is purely numeric and cannot be used "
+"as a suffix."
+msgstr "category_map エントリ '{0}': サフィックス '{1}' は純粋に数値であり、サフィックスとして使用できません。"
+
+#: compare/classifier_pipeline.py:214
+#: tests/unit/test_classifier_pipeline.py:743
+msgid "A node has an empty name."
+msgstr "ノードの名前が空です。"
+
+#: compare/classifier_pipeline.py:216
+#: tests/unit/test_classifier_pipeline.py:603
+msgid "Duplicate node name: {0}."
+msgstr "ノード名が重複しています: {0}。"
+
+#: compare/classifier_pipeline.py:229
+msgid "Node {0}: GOTO has no target."
+msgstr "ノード {0}: GOTO のターゲットがありません。"
+
+#: compare/classifier_pipeline.py:232
+msgid "Node {0}: GOTO target {1} does not exist."
+msgstr "ノード {0}: GOTO ターゲット {1} が存在しません。"
+
+#: compare/classifier_pipeline.py:240
+#: tests/unit/test_classifier_pipeline.py:621
+msgid "Node {0}: GOTO target {1} must be a later node (cycle prevention)."
+msgstr "ノード {0}: GOTO ターゲット {1} は後続のノードである必要があります（サイクルの防止）。"
+
+#: compare/classifier_pipeline.py:246
+msgid "Node {0}: {1} outcome has no action_type."
+msgstr "ノード {0}: {1} の結果に action_type がありません。"
+
+#: compare/classifier_pipeline.py:262
+msgid ""
+"Node {0}: RelatedImageCondition.edit_suffix ({1}) must match the GENERATE "
+"outcome's action_modifier ({2})."
+msgstr ""
+"Node {0}: RelatedImageCondition.edit_suffix ({1}) は、GENERATE アウトカムの "
+"action_modifier ({2}) と一致する必要があります。"
+
+#: compare/classifier_pipeline.py:275
+msgid "Node {0}: NodeResultCondition has no node_name."
+msgstr "ノード {0}: NodeResultCondition に node_name がありません。"
+
+#: compare/classifier_pipeline.py:278
+#: tests/unit/test_classifier_pipeline.py:639
+msgid ""
+"Node {0}: NodeResultCondition references {1} which is not a prior node."
+msgstr "ノード {0}: NodeResultCondition が {1} を参照していますが、これは先行ノードではありません。"
+
+#: compare/classifier_pipeline.py:286
+msgid "Node {0}: ClassifierRankCondition has no classifier_name."
+msgstr "ノード {0}: ClassifierRankCondition に classifier_name がありません。"
+
+#: compare/classifier_pipeline.py:294
+msgid "Node {0}: classifier {1} is not registered."
+msgstr "ノード {0}: 分類器 {1} が登録されていません。"
+
+#: compare/classifier_pipeline.py:301 compare/classifier_pipeline.py:323
+msgid "Node {0}: min_rank must be ≥ 1."
+msgstr "ノード {0}: min_rank は ≥ 1 である必要があります。"
+
+#: compare/classifier_pipeline.py:303 compare/classifier_pipeline.py:325
+msgid "Node {0}: max_rank must be ≥ min_rank."
+msgstr "ノード {0}: max_rank は min_rank 以上である必要があります。"
+
+#: compare/classifier_pipeline.py:308
+msgid "Node {0}: AudioClassifierRankCondition has no classifier_name."
+msgstr "ノード {0}: AudioClassifierRankCondition に classifier_name がありません。"
+
+#: compare/classifier_pipeline.py:316
+msgid "Node {0}: audio classifier {1} is not registered."
+msgstr "ノード {0}: オーディオ分類器 {1} が登録されていません。"
+
+#: compare/classifier_pipeline.py:357
+msgid "Node {0}: FilenameContainsCondition has no patterns."
+msgstr "ノード {0}: FilenameContainsCondition にパターンがありません。"
+
+#: compare/classifier_pipeline.py:363
+#: tests/unit/test_classifier_pipeline.py:1289
+msgid "Node {0}: MediaTypeCondition has no media_types."
+msgstr "ノード {0}: MediaTypeCondition に media_types がありません。"
+
+#: compare/classifier_pipeline.py:368
+msgid "Node {0}: LookaheadCondition has no lookahead_name."
+msgstr "ノード {0}: LookaheadCondition に lookahead_name がありません。"
+
+#: compare/classifier_pipeline.py:374
+msgid "Node {0}: lookahead {1} is not defined."
+msgstr "ノード {0}: 先読み {1} は定義されていません。"
+
+#: compare/classifier_pipeline.py:384
+msgid ""
+"Node {0}: BaseStemMatchCondition.search_directory ({1}) is not a valid "
+"directory."
+msgstr ""
+"ノード {0}: BaseStemMatchCondition.search_directory ({1}) は有効なディレクトリではありません。"
+
+#: compare/classifier_pipeline.py:392
+msgid ""
+"Node {0}: UnknownSuffixCondition.search_directory ({1}) is not a valid "
+"directory."
+msgstr ""
+"ノード {0}: UnknownSuffixCondition.search_directory ({1}) は有効なディレクトリではありません。"
+
+#: compare/classifier_pipeline.py:399
+msgid "Node {0}: RelatedImageCondition has no edit_suffix."
+msgstr "ノード {0}: RelatedImageCondition に edit_suffix がありません。"
+
+#: compare/classifier_pipeline.py:402
+msgid ""
+"Node {0}: RelatedImageCondition.search_directory ({1}) is not a valid "
+"directory."
+msgstr ""
+"ノード {0}: RelatedImageCondition.search_directory ({1}) は有効なディレクトリではありません。"
+
+#: compare/classifier_pipeline.py:410
+msgid "Node {0}: unknown composite operator {1}."
+msgstr "ノード {0}: 不明な合成演算子 {1}。"
+
+#: compare/classifier_pipeline.py:415
+msgid "Node {0}: NOT requires exactly 1 sub-condition, got {1}."
+msgstr "ノード {0}: NOT には正確に 1 つのサブ条件が必要ですが、{1} が指定されました。"
+
+#: compare/classifier_pipeline.py:419
+msgid "Node {0}: XOR requires exactly 2 sub-conditions, got {1}."
+msgstr "ノード {0}: XOR には正確に 2 つのサブ条件が必要ですが、{1} 個指定されました。"
+
+#: compare/classifier_pipeline.py:428
+msgid "Node {0}: {1} requires at least 1 sub-condition, got {2}."
+msgstr "ノード {0}: {1} は少なくとも1つのサブ条件が必要です。取得したのは{2}です。"
+
+#: compare/classifier_pipeline.py:438
+msgid "Node {0}: GroupCondition has unknown operator {1}."
+msgstr "ノード {0}: GroupCondition に不明な演算子 {1} があります。"
+
+#: compare/classifier_pipeline.py:443
+#: tests/unit/test_classifier_pipeline.py:922
+msgid "Node {0}: GroupCondition has no child nodes."
+msgstr "ノード {0}: GroupCondition に子ノードがありません。"
+
+#: compare/classifier_pipeline.py:449
+msgid "Node {0}: GroupCondition child has an empty name."
+msgstr "ノード {0}: GroupConditionの子の名前が空です。"
+
+#: compare/classifier_pipeline.py:453
+#: tests/unit/test_classifier_pipeline.py:938
+msgid "Node {0}: GroupCondition duplicate child name {1}."
+msgstr "ノード {0}: GroupCondition 重複する子ノード名 {1}。"
+
+#: compare/classifier_pipeline.py:466
+msgid "Node {0}: GroupChildResultCondition has no group_node_name."
+msgstr "ノード {0}: GroupChildResultCondition に group_node_name がありません。"
+
+#: compare/classifier_pipeline.py:470
+msgid "Node {0}: GroupChildResultCondition has no child_node_name."
+msgstr "ノード {0}: GroupChildResultCondition に child_node_name がありません。"
+
+#: compare/classifier_pipeline.py:474
+msgid ""
+"Node {0}: GroupChildResultCondition references group {1} which is not a "
+"prior node."
+msgstr "ノード {0}: GroupChildResultCondition が先行ノードではないグループ {1} を参照しています。"
+
+#: compare/classifier_pipeline.py:531
+msgid ""
+"Stem-group dedup is on but the run sort order is not '{0}'. Whichever file "
+"of a stem group is reached first is the only one evaluated, so a derivative "
+"reached before its seed can generate duplicates. Set the run sort order to "
+"'{0}', or turn off stem-group dedup."
+msgstr ""
+"ステムグループの重複除去はオンですが、実行の並び順が'{0}'ではありません。ステムグループ内で最初に到達したファイルだけが評価されるため、シードより先に到達した派生が重複を生成する可能性があります。実行の並び順を'{0}'に設定するか、ステムグループの重複除去をオフにしてください。"
+
+#: compare/classifier_pipeline.py:545
+msgid ""
+"Node {0}: ClassifierRankCondition has inherit_categories=True but the "
+"pipeline has no category map — condition will match nothing."
+msgstr ""
+"ノード {0}: ClassifierRankCondition に inherit_categories=True "
+"が指定されていますが、パイプラインにカテゴリマップがありません — 条件は何にも一致しません。"
+
+#: compare/classifier_pipeline.py:550
+msgid ""
+"Node {0}: AudioClassifierRankCondition has inherit_categories=True but the "
+"pipeline has no category map — condition will match nothing."
+msgstr ""
+"ノード {0}: AudioClassifierRankCondition は inherit_categories=True "
+"ですが、パイプラインにカテゴリマップがありません — 条件は何にも一致しません。"
+
+#: compare/classifier_pipeline.py:557
+msgid "Node {0}: suffix filter {1} is not in the pipeline's category map."
+msgstr "ノード {0}: サフィックスフィルタ {1} がパイプラインのカテゴリマップにありません。"
+
+#: compare/classifier_pipeline.py:564
+msgid "Node {0}: expected suffix {1} is not in the pipeline's category map."
+msgstr "ノード {0}: 予期されたサフィックス {1} がパイプラインのカテゴリマップにありません。"
+
+#: compare/classifier_pipeline.py:593
+#: tests/unit/test_classifier_pipelines_manager.py:92
+msgid "(empty)"
+msgstr "(空)"
+
+#: compare/classifier_pipeline.py:595
+#: compare/classifier_pipeline_conditions.py:61
+#: tests/unit/test_classifier_pipeline.py:1163
+#: tests/unit/test_classifier_pipeline.py:1227
+#: tests/unit/test_classifier_pipelines_manager.py:99
+#: ui/compare/classifier_pipeline_editor_qt.py:72
+msgid "Embedding"
+msgstr "埋め込み"
+
+#: compare/classifier_pipeline.py:596
+#: compare/classifier_pipeline_conditions.py:126
+msgid "ClsRank"
+msgstr "ClsRank"
+
+#: compare/classifier_pipeline.py:597
+#: compare/classifier_pipeline_conditions.py:190
+msgid "AudioClsRank"
+msgstr "オーディオ分類順位"
+
+#: compare/classifier_pipeline.py:598
+#: compare/classifier_pipeline_conditions.py:216
+#: ui/compare/classifier_pipeline_editor_qt.py:74
+msgid "Prototype"
+msgstr "プロトタイプ"
+
+#: compare/classifier_pipeline.py:599
+#: ui/compare/classifier_pipeline_editor_qt.py:75
+msgid "Prompt"
+msgstr "プロンプト"
+
+#: compare/classifier_pipeline.py:600
+msgid "Always"
+msgstr "常に"
+
+#: compare/classifier_pipeline.py:601
+#: ui/compare/classifier_pipeline_editor_qt.py:80
+msgid "Lookahead"
+msgstr "Lookahead"
+
+#: compare/classifier_pipeline.py:602
+#: compare/classifier_pipeline_conditions.py:365
+msgid "NodeResult"
+msgstr "NodeResult"
+
+#: compare/classifier_pipeline.py:603
+#: compare/classifier_pipeline_conditions.py:393
+#: ui/compare/classifier_pipeline_editor_qt.py:83
+msgid "Composite"
+msgstr "コンポジット"
+
+#: compare/classifier_pipeline.py:604
+#: ui/compare/classifier_pipeline_editor_qt.py:84
+msgid "Group"
+msgstr "グループ"
+
+#: compare/classifier_pipeline.py:605
+#: compare/classifier_pipeline_conditions.py:698
+msgid "GroupChild"
+msgstr "GroupChild"
+
+#: compare/classifier_pipeline.py:613
+msgid "Group ({0}, {1} children)"
+msgstr "グループ（{0}、{1} 子ノード）"
+
+#: compare/classifier_pipeline.py:621 compare/classifier_pipeline.py:639
+msgid "(end) → {0}"
+msgstr "(終了) → {0}"
+
+#: compare/classifier_pipeline.py:626
+#: tests/unit/test_classifier_pipeline.py:1075
+#: ui/compare/classifier_pipeline_editor_qt.py:2825
+msgid "(no nodes)"
+msgstr "(ノードなし)"
+
+#: compare/classifier_pipeline.py:634
+msgid "  ({0} of {1} children)"
+msgstr "  （{1} 子ノード中 {0}）"
 
 #: compare/classifier_pipeline_conditions.py:60
 #: compare/classifier_pipeline_conditions.py:119
@@ -229,20 +533,11 @@ msgstr "先読み: {0}"
 #: compare/classifier_pipeline_conditions.py:320
 #: compare/classifier_pipeline_conditions.py:519
 #: tests/ui/test_classifier_pipeline_editor_qt.py:1102
-#: ui/compare/classifier_pipeline_editor_qt.py:118
-#: ui/compare/classifier_pipeline_editor_qt.py:137
-#: ui/compare/classifier_pipeline_editor_qt.py:2243
+#: ui/compare/classifier_pipeline_editor_qt.py:120
+#: ui/compare/classifier_pipeline_editor_qt.py:139
+#: ui/compare/classifier_pipeline_editor_qt.py:2336
 msgid "(none)"
 msgstr "(なし)"
-
-#: compare/classifier_pipeline.py:556
-#: compare/classifier_pipeline_conditions.py:61
-#: tests/unit/test_classifier_pipeline.py:1163
-#: tests/unit/test_classifier_pipeline.py:1227
-#: tests/unit/test_classifier_pipelines_manager.py:99
-#: ui/compare/classifier_pipeline_editor_qt.py:71
-msgid "Embedding"
-msgstr "埋め込み"
 
 #: compare/classifier_pipeline_conditions.py:117
 #: compare/classifier_pipeline_conditions.py:181
@@ -265,22 +560,6 @@ msgstr "ランク {0}-{1}"
 #: compare/classifier_pipeline_conditions.py:189
 msgid "NOT "
 msgstr "非 "
-
-#: compare/classifier_pipeline.py:557
-#: compare/classifier_pipeline_conditions.py:126
-msgid "ClsRank"
-msgstr "ClsRank"
-
-#: compare/classifier_pipeline.py:558
-#: compare/classifier_pipeline_conditions.py:190
-msgid "AudioClsRank"
-msgstr "オーディオ分類順位"
-
-#: compare/classifier_pipeline.py:559
-#: compare/classifier_pipeline_conditions.py:216
-#: ui/compare/classifier_pipeline_editor_qt.py:73
-msgid "Prototype"
-msgstr "プロトタイプ"
 
 #: compare/classifier_pipeline_conditions.py:245
 #: tests/unit/test_classifier_pipeline.py:1201
@@ -319,29 +598,18 @@ msgid "Lookahead: {0}"
 msgstr "Lookahead: {0}"
 
 #: compare/classifier_pipeline_conditions.py:364
-#: compare/classifier_pipeline_conditions.py:636
+#: compare/classifier_pipeline_conditions.py:697
 #: ui/compare/hf_model_manager_window_qt.py:936
 #: ui/compare/hf_model_manager_window_qt.py:1277
 msgid "yes"
 msgstr "はい"
 
 #: compare/classifier_pipeline_conditions.py:364
-#: compare/classifier_pipeline_conditions.py:636
+#: compare/classifier_pipeline_conditions.py:697
 #: ui/compare/hf_model_manager_window_qt.py:936
 #: ui/compare/hf_model_manager_window_qt.py:1277
 msgid "no"
 msgstr "いいえ"
-
-#: compare/classifier_pipeline.py:563
-#: compare/classifier_pipeline_conditions.py:365
-msgid "NodeResult"
-msgstr "NodeResult"
-
-#: compare/classifier_pipeline.py:564
-#: compare/classifier_pipeline_conditions.py:393
-#: ui/compare/classifier_pipeline_editor_qt.py:82
-msgid "Composite"
-msgstr "コンポジット"
 
 #: compare/classifier_pipeline_conditions.py:447
 msgid "working_dir, "
@@ -373,358 +641,99 @@ msgstr "UnknownSuffix"
 msgid "RelatedImage"
 msgstr "関連画像"
 
-#: compare/classifier_pipeline_conditions.py:605
+#: compare/classifier_pipeline_conditions.py:666
 msgid " +{0}"
 msgstr " +{0}"
 
-#: compare/classifier_pipeline_conditions.py:606
+#: compare/classifier_pipeline_conditions.py:667
 msgid "Group({0}: {1}{2})"
 msgstr "グループ({0}: {1}{2})"
 
-#: compare/classifier_pipeline.py:566
-#: compare/classifier_pipeline_conditions.py:637
-msgid "GroupChild"
-msgstr "GroupChild"
-
-#: compare/classifier_pipeline_nodes.py:161
+#: compare/classifier_pipeline_nodes.py:170
 msgid "Continue"
 msgstr "続行"
 
-#: compare/classifier_pipeline_nodes.py:162
+#: compare/classifier_pipeline_nodes.py:171
 msgid "Go to node"
 msgstr "ノードへ移動"
 
-#: compare/classifier_pipeline_nodes.py:163
+#: compare/classifier_pipeline_nodes.py:172
 msgid "Execute action"
 msgstr "アクションを実行"
 
-#: compare/classifier_pipeline_nodes.py:164
+#: compare/classifier_pipeline_nodes.py:173
 msgid "Execute and continue"
 msgstr "実行して続行"
 
-#: compare/classifier_pipeline_nodes.py:165 lib/fill_preview_dialog_qt.py:124
+#: compare/classifier_pipeline_nodes.py:174 lib/fill_preview_dialog_qt.py:124
 msgid "Accept"
 msgstr "受け入れる"
 
-#: compare/classifier_pipeline_nodes.py:166
+#: compare/classifier_pipeline_nodes.py:175
 msgid "Reject"
 msgstr "拒否"
 
-#: compare/classifier_pipeline_nodes.py:231 compare/pipeline_run_report.py:265
+#: compare/classifier_pipeline_nodes.py:240 compare/pipeline_run_report.py:265
 #: compare/pipeline_run_report.py:273
 msgid "(unknown)"
 msgstr "(不明)"
 
-#: compare/classifier_pipeline_nodes.py:232
-#: compare/classifier_pipeline_nodes.py:237
+#: compare/classifier_pipeline_nodes.py:241
+#: compare/classifier_pipeline_nodes.py:246
 msgid "{0}: {1}"
 msgstr "{0}: {1}"
 
-#: compare/classifier_pipeline_nodes.py:234
+#: compare/classifier_pipeline_nodes.py:243
 msgid " → {0}"
 msgstr " → {0}"
 
-#: compare/classifier_pipeline_nodes.py:301
+#: compare/classifier_pipeline_nodes.py:310
 #: tests/unit/test_classifier_pipeline.py:1233
 msgid "(no condition)"
 msgstr "（条件なし）"
 
-#: compare/classifier_pipeline.py:69 compare/classifier_pipeline.py:656
-#: compare/classifier_pipeline.py:725
-#: ui/compare/classifier_pipeline_editor_qt.py:1881
-#: ui/compare/classifier_pipelines_tab_qt.py:89
-msgid "New Pipeline"
-msgstr "新しいパイプライン"
-
-#: compare/classifier_pipeline.py:185
-msgid "Pipeline name is empty."
-msgstr "パイプライン名が空です。"
-
-#: compare/classifier_pipeline.py:190
-#: tests/unit/test_classifier_pipeline.py:1754
-msgid "seed_category '{0}' is set but category_map is empty."
-msgstr "seed_category '{0}' が設定されていますが、category_map が空です。"
-
-#: compare/classifier_pipeline.py:196
-msgid "seed_category '{0}' is not a key in category_map."
-msgstr "seed_category '{0}' は category_map のキーではありません。"
-
-#: compare/classifier_pipeline.py:204
-#: tests/unit/test_classifier_pipeline.py:1833
-#: tests/unit/test_classifier_pipeline.py:1842
-#: tests/unit/test_classifier_pipeline.py:1859
-msgid ""
-"category_map entry '{0}': suffix '{1}' is purely numeric and cannot be used "
-"as a suffix."
-msgstr "category_map エントリ '{0}': サフィックス '{1}' は純粋に数値であり、サフィックスとして使用できません。"
-
-#: compare/classifier_pipeline.py:213
-#: tests/unit/test_classifier_pipeline.py:743
-msgid "A node has an empty name."
-msgstr "ノードの名前が空です。"
-
-#: compare/classifier_pipeline.py:215
-#: tests/unit/test_classifier_pipeline.py:603
-msgid "Duplicate node name: {0}."
-msgstr "ノード名が重複しています: {0}。"
-
-#: compare/classifier_pipeline.py:228
-msgid "Node {0}: GOTO has no target."
-msgstr "ノード {0}: GOTO のターゲットがありません。"
-
-#: compare/classifier_pipeline.py:231
-msgid "Node {0}: GOTO target {1} does not exist."
-msgstr "ノード {0}: GOTO ターゲット {1} が存在しません。"
-
-#: compare/classifier_pipeline.py:239
-#: tests/unit/test_classifier_pipeline.py:621
-msgid "Node {0}: GOTO target {1} must be a later node (cycle prevention)."
-msgstr "ノード {0}: GOTO ターゲット {1} は後続のノードである必要があります（サイクルの防止）。"
-
-#: compare/classifier_pipeline.py:245
-msgid "Node {0}: {1} outcome has no action_type."
-msgstr "ノード {0}: {1} の結果に action_type がありません。"
-
-#: compare/classifier_pipeline.py:261
-msgid ""
-"Node {0}: RelatedImageCondition.edit_suffix ({1}) must match the GENERATE "
-"outcome's action_modifier ({2})."
-msgstr ""
-"Node {0}: RelatedImageCondition.edit_suffix ({1}) は、GENERATE アウトカムの "
-"action_modifier ({2}) と一致する必要があります。"
-
-#: compare/classifier_pipeline.py:274
-msgid "Node {0}: NodeResultCondition has no node_name."
-msgstr "ノード {0}: NodeResultCondition に node_name がありません。"
-
-#: compare/classifier_pipeline.py:277
-#: tests/unit/test_classifier_pipeline.py:639
-msgid ""
-"Node {0}: NodeResultCondition references {1} which is not a prior node."
-msgstr "ノード {0}: NodeResultCondition が {1} を参照していますが、これは先行ノードではありません。"
-
-#: compare/classifier_pipeline.py:285
-msgid "Node {0}: ClassifierRankCondition has no classifier_name."
-msgstr "ノード {0}: ClassifierRankCondition に classifier_name がありません。"
-
-#: compare/classifier_pipeline.py:293
-msgid "Node {0}: classifier {1} is not registered."
-msgstr "ノード {0}: 分類器 {1} が登録されていません。"
-
-#: compare/classifier_pipeline.py:300 compare/classifier_pipeline.py:322
-msgid "Node {0}: min_rank must be ≥ 1."
-msgstr "ノード {0}: min_rank は ≥ 1 である必要があります。"
-
-#: compare/classifier_pipeline.py:302 compare/classifier_pipeline.py:324
-msgid "Node {0}: max_rank must be ≥ min_rank."
-msgstr "ノード {0}: max_rank は min_rank 以上である必要があります。"
-
-#: compare/classifier_pipeline.py:307
-msgid "Node {0}: AudioClassifierRankCondition has no classifier_name."
-msgstr "ノード {0}: AudioClassifierRankCondition に classifier_name がありません。"
-
-#: compare/classifier_pipeline.py:315
-msgid "Node {0}: audio classifier {1} is not registered."
-msgstr "ノード {0}: オーディオ分類器 {1} が登録されていません。"
-
-#: compare/classifier_pipeline.py:329
-msgid "Node {0}: FilenameContainsCondition has no patterns."
-msgstr "ノード {0}: FilenameContainsCondition にパターンがありません。"
-
-#: compare/classifier_pipeline.py:335
-#: tests/unit/test_classifier_pipeline.py:1289
-msgid "Node {0}: MediaTypeCondition has no media_types."
-msgstr "ノード {0}: MediaTypeCondition に media_types がありません。"
-
-#: compare/classifier_pipeline.py:340
-msgid "Node {0}: LookaheadCondition has no lookahead_name."
-msgstr "ノード {0}: LookaheadCondition に lookahead_name がありません。"
-
-#: compare/classifier_pipeline.py:346
-msgid "Node {0}: lookahead {1} is not defined."
-msgstr "ノード {0}: 先読み {1} は定義されていません。"
-
-#: compare/classifier_pipeline.py:356
-msgid ""
-"Node {0}: BaseStemMatchCondition.search_directory ({1}) is not a valid "
-"directory."
-msgstr ""
-"ノード {0}: BaseStemMatchCondition.search_directory ({1}) は有効なディレクトリではありません。"
-
-#: compare/classifier_pipeline.py:364
-msgid ""
-"Node {0}: UnknownSuffixCondition.search_directory ({1}) is not a valid "
-"directory."
-msgstr ""
-"ノード {0}: UnknownSuffixCondition.search_directory ({1}) は有効なディレクトリではありません。"
-
-#: compare/classifier_pipeline.py:371
-msgid "Node {0}: RelatedImageCondition has no edit_suffix."
-msgstr "ノード {0}: RelatedImageCondition に edit_suffix がありません。"
-
-#: compare/classifier_pipeline.py:374
-msgid ""
-"Node {0}: RelatedImageCondition.search_directory ({1}) is not a valid "
-"directory."
-msgstr ""
-"ノード {0}: RelatedImageCondition.search_directory ({1}) は有効なディレクトリではありません。"
-
-#: compare/classifier_pipeline.py:382
-msgid "Node {0}: unknown composite operator {1}."
-msgstr "ノード {0}: 不明な合成演算子 {1}。"
-
-#: compare/classifier_pipeline.py:387
-msgid "Node {0}: NOT requires exactly 1 sub-condition, got {1}."
-msgstr "ノード {0}: NOT には正確に 1 つのサブ条件が必要ですが、{1} が指定されました。"
-
-#: compare/classifier_pipeline.py:391
-msgid "Node {0}: XOR requires exactly 2 sub-conditions, got {1}."
-msgstr "ノード {0}: XOR には正確に 2 つのサブ条件が必要ですが、{1} 個指定されました。"
-
-#: compare/classifier_pipeline.py:400
-msgid "Node {0}: {1} requires at least 1 sub-condition, got {2}."
-msgstr "ノード {0}: {1} は少なくとも1つのサブ条件が必要です。取得したのは{2}です。"
-
-#: compare/classifier_pipeline.py:410
-msgid "Node {0}: GroupCondition has unknown operator {1}."
-msgstr "ノード {0}: GroupCondition に不明な演算子 {1} があります。"
-
-#: compare/classifier_pipeline.py:415
-#: tests/unit/test_classifier_pipeline.py:922
-msgid "Node {0}: GroupCondition has no child nodes."
-msgstr "ノード {0}: GroupCondition に子ノードがありません。"
-
-#: compare/classifier_pipeline.py:421
-msgid "Node {0}: GroupCondition child has an empty name."
-msgstr "ノード {0}: GroupConditionの子の名前が空です。"
-
-#: compare/classifier_pipeline.py:425
-#: tests/unit/test_classifier_pipeline.py:938
-msgid "Node {0}: GroupCondition duplicate child name {1}."
-msgstr "ノード {0}: GroupCondition 重複する子ノード名 {1}。"
-
-#: compare/classifier_pipeline.py:438
-msgid "Node {0}: GroupChildResultCondition has no group_node_name."
-msgstr "ノード {0}: GroupChildResultCondition に group_node_name がありません。"
-
-#: compare/classifier_pipeline.py:442
-msgid "Node {0}: GroupChildResultCondition has no child_node_name."
-msgstr "ノード {0}: GroupChildResultCondition に child_node_name がありません。"
-
-#: compare/classifier_pipeline.py:446
-msgid ""
-"Node {0}: GroupChildResultCondition references group {1} which is not a "
-"prior node."
-msgstr "ノード {0}: GroupChildResultCondition が先行ノードではないグループ {1} を参照しています。"
-
-#: compare/classifier_pipeline.py:517
-msgid ""
-"Node {0}: ClassifierRankCondition has inherit_categories=True but the "
-"pipeline has no category map — condition will match nothing."
-msgstr ""
-"ノード {0}: ClassifierRankCondition に inherit_categories=True "
-"が指定されていますが、パイプラインにカテゴリマップがありません — 条件は何にも一致しません。"
-
-#: compare/classifier_pipeline.py:522
-msgid ""
-"Node {0}: AudioClassifierRankCondition has inherit_categories=True but the "
-"pipeline has no category map — condition will match nothing."
-msgstr ""
-"ノード {0}: AudioClassifierRankCondition は inherit_categories=True "
-"ですが、パイプラインにカテゴリマップがありません — 条件は何にも一致しません。"
-
-#: compare/classifier_pipeline.py:529
-msgid "Node {0}: suffix filter {1} is not in the pipeline's category map."
-msgstr "ノード {0}: サフィックスフィルタ {1} がパイプラインのカテゴリマップにありません。"
-
-#: compare/classifier_pipeline.py:536
-msgid "Node {0}: expected suffix {1} is not in the pipeline's category map."
-msgstr "ノード {0}: 予期されたサフィックス {1} がパイプラインのカテゴリマップにありません。"
-
-#: compare/classifier_pipeline.py:554
-#: tests/unit/test_classifier_pipelines_manager.py:92
-msgid "(empty)"
-msgstr "(空)"
-
-#: compare/classifier_pipeline.py:560
-#: ui/compare/classifier_pipeline_editor_qt.py:74
-msgid "Prompt"
-msgstr "プロンプト"
-
-#: compare/classifier_pipeline.py:561
-msgid "Always"
-msgstr "常に"
-
-#: compare/classifier_pipeline.py:562
-#: ui/compare/classifier_pipeline_editor_qt.py:79
-msgid "Lookahead"
-msgstr "Lookahead"
-
-#: compare/classifier_pipeline.py:565
-#: ui/compare/classifier_pipeline_editor_qt.py:83
-msgid "Group"
-msgstr "グループ"
-
-#: compare/classifier_pipeline.py:574
-msgid "Group ({0}, {1} children)"
-msgstr "グループ（{0}、{1} 子ノード）"
-
-#: compare/classifier_pipeline.py:582 compare/classifier_pipeline.py:600
-msgid "(end) → {0}"
-msgstr "(終了) → {0}"
-
-#: compare/classifier_pipeline.py:587
-#: tests/unit/test_classifier_pipeline.py:1075
-#: ui/compare/classifier_pipeline_editor_qt.py:2732
-msgid "(no nodes)"
-msgstr "(ノードなし)"
-
-#: compare/classifier_pipeline.py:595
-msgid "  ({0} of {1} children)"
-msgstr "  （{1} 子ノード中 {0}）"
-
-#: compare/classifier_pipeline_runner.py:338
+#: compare/classifier_pipeline_runner.py:349
 msgid "Node {0} is disabled — skipped"
 msgstr "ノード {0} が無効です — スキップされました"
 
-#: compare/classifier_pipeline_runner.py:363
+#: compare/classifier_pipeline_runner.py:374
 msgid "Seed image is assigned to category '{0}'; GENERATE skipped."
 msgstr "シードイメージがカテゴリ '{0}' に割り当てられています。GENERATE はスキップされました。"
 
-#: compare/classifier_pipeline_runner.py:913
+#: compare/classifier_pipeline_runner.py:940
 msgid ""
 "Stem {0} matches {1} files (limit {2}) — base stem is not unique enough"
 msgstr "語幹 {0} は {1} 個のファイルと一致します (制限 {2}) — 基本語幹が一意ではありません"
 
-#: compare/classifier_pipeline_runner.py:926
+#: compare/classifier_pipeline_runner.py:953
 msgid "{0} files share base stem {1} in the search location"
 msgstr "検索場所で {0} 個のファイルが基本ステム {1} を共有しています"
 
-#: compare/classifier_pipeline_runner.py:929
+#: compare/classifier_pipeline_runner.py:956
 msgid " (suffix filter: {0})"
 msgstr " (接尾辞フィルター: {0})"
 
-#: compare/classifier_pipeline_runner.py:996
+#: compare/classifier_pipeline_runner.py:1023
 msgid "Unrecognised suffix in stem group: {0}"
 msgstr "ステムグループ内に認識されない接尾辞: {0}"
 
-#: compare/classifier_pipeline_runner.py:1012
+#: compare/classifier_pipeline_runner.py:1039
 msgid " — classifier inconclusive"
 msgstr " — 分類器が確定できません"
 
-#: compare/classifier_pipeline_runner.py:1018
+#: compare/classifier_pipeline_runner.py:1045
 msgid "Cannot determine category of {0}{1}"
 msgstr "{0}{1}のカテゴリを特定できません"
 
-#: compare/classifier_pipeline_runner.py:1055
+#: compare/classifier_pipeline_runner.py:1082
 msgid "{0} inferred as {1} (confidence {2}) — treated as resolved"
 msgstr "{0}は{1}と推測されました（信頼度{2}） — 解決済みとして扱われます"
 
-#: compare/classifier_pipeline_runner.py:1249 files/marked_files.py:475
+#: compare/classifier_pipeline_runner.py:1360 files/marked_files.py:475
 msgid "Moving"
 msgstr "移動中"
 
-#: compare/classifier_pipeline_runner.py:1249 files/marked_files.py:475
+#: compare/classifier_pipeline_runner.py:1360 files/marked_files.py:475
 msgid "Copying"
 msgstr "コピー"
 
@@ -1023,6 +1032,12 @@ msgstr "キューに入っている生成: {0} ({1})"
 msgid "Generations queued: {0}"
 msgstr "キューに入っている生成: {0}"
 
+#: compare/pipeline_run_report.py:220
+#: tests/unit/test_pipeline_decision_record.py:288
+#: tests/unit/test_pipeline_decision_record.py:294
+msgid "Decision records captured: {0}"
+msgstr "取得した決定レコード: {0}"
+
 #: compare/pipeline_run_report.py:258
 #: tests/unit/test_classifier_pipeline_runner.py:1579
 msgid "  {0} ({1} file(s))"
@@ -1037,7 +1052,7 @@ msgstr "  [{0}] — {1} ファイル"
 msgid "      · … and {0} more"
 msgstr "      · … と他 {0} 件"
 
-#: extensions/sd_runner_client.py:104
+#: extensions/sd_runner_client.py:147
 msgid "Image does not contain a prompt to redo!"
 msgstr "画像にはやり直しの指示がない！"
 
@@ -1110,7 +1125,7 @@ msgstr "ファイル更新日時: {0}"
 #: extensions/gimp/gimp_wrapper.py:706 extensions/gimp/gimp_wrapper.py:735
 #: files/pdf_creator.py:135 files/pdf_creator.py:139 files/pdf_creator.py:142
 #: files/pdf_creator.py:230 files/pdf_creator.py:248 files/pdf_creator.py:280
-#: ui/app_window/notification_controller.py:377
+#: ui/app_window/notification_controller.py:382
 #: ui/auth/app_startup_auth_qt.py:122 ui/auth/password_admin_window.py:128
 #: ui/auth/password_admin_window.py:535 ui/auth/password_dialog.py:306
 #: ui/compare/classifier_action_copy_window_qt.py:219
@@ -1157,43 +1172,112 @@ msgstr "上書きを確認"
 msgid "File overwrite cancelled"
 msgstr "ファイルの上書きがキャンセルされました"
 
-#: files/file_browser.py:228 files/file_browser.py:240
-#: files/file_browser.py:252 ui/app_window/media_navigator.py:144
+#: files/file_browser.py:282 files/file_browser.py:294
+#: files/file_browser.py:306 ui/app_window/media_navigator.py:144
 #: ui/app_window/media_navigator.py:192
 msgid " (try setting recursive to True)"
 msgstr " (再帰をTrueに設定してみてください)"
 
-#: files/file_browser.py:229 files/file_browser.py:241
-#: files/file_browser.py:253 files/file_browser.py:331
+#: files/file_browser.py:283 files/file_browser.py:295
+#: files/file_browser.py:307 files/file_browser.py:385
 #: ui/app_window/media_navigator.py:146 ui/app_window/media_navigator.py:194
 msgid "No files found for current browsing settings."
 msgstr "現在の閲覧設定に該当するファイルが見つかりません。"
 
-#: files/file_browser.py:317
+#: files/file_browser.py:371
 msgid "FILE_BROWSER_INDEX_DETAILS"
 msgstr "ディレクトリ内の{1}ファイル中{0}ファイルを{2}順{3}でソート"
 
-#: files/file_browser.py:335
+#: files/file_browser.py:389
 msgid "Index must be 1 or greater."
 msgstr "インデックスは1以上でなければなりません。"
 
-#: files/file_browser.py:339
+#: files/file_browser.py:393
 msgid "Index {0} is out of range. There are {1} files."
 msgstr "インデックス {1} は範囲外です。ファイルは {0} つあります。"
 
-#: files/file_browser.py:367
+#: files/file_browser.py:421
 msgid "Search text provided to file_browser.find() was invalid."
 msgstr "file_browser.find() に指定された検索テキストが無効でした。"
 
-#: files/file_browser.py:781
+#: files/file_browser.py:835
 msgid ""
 "Loading directory... {0} files currently available (scanned {1} folders; "
 "total unknown)"
 msgstr "ディレクトリを読み込んでいます... {0} 件のファイルが現在利用可能です ( {1} 個のフォルダをスキャン済み; 総数不明 )"
 
-#: files/file_browser.py:1139 ui/app_window/file_ops_controller.py:532
+#: files/file_browser.py:1195 ui/app_window/file_ops_controller.py:532
 msgid "No files found"
 msgstr "ファイルが見つかりませんでした"
+
+#: files/file_interceptor_rule.py:40
+msgid "Move only"
+msgstr "移動のみ"
+
+#: files/file_interceptor_rule.py:42
+msgid "Copy only"
+msgstr "コピーのみ"
+
+#: files/file_interceptor_rule.py:43
+msgid "Move and copy"
+msgstr "移動とコピー"
+
+#: files/file_interceptor_rule.py:64
+msgid "Transform"
+msgstr "変換"
+
+#: files/file_interceptor_rule.py:65 files/file_interceptor_rule.py:183
+msgid "Block"
+msgstr "ブロック"
+
+#: files/file_interceptor_rule.py:84
+msgid "Improve image"
+msgstr "画像を改善"
+
+#: files/file_interceptor_rule.py:85 ui/files/file_actions_window_qt.py:361
+#: ui/help_and_config_qt.py:284 ui/image/media_details.py:449
+msgid "Convert to JPG"
+msgstr "JPGに変換"
+
+#: files/file_interceptor_rule.py:109
+msgid "New Interceptor Rule"
+msgstr "新しいインターセプタールール"
+
+#: files/file_interceptor_rule.py:163
+msgid "into {0} (and subdirectories)"
+msgstr "{0} に (サブディレクトリも)"
+
+#: files/file_interceptor_rule.py:165
+msgid "into {0}"
+msgstr "{0}に"
+
+#: files/file_interceptor_rule.py:169
+msgid "name contains {0}"
+msgstr "名前に{0}が含まれる"
+
+#: files/file_interceptor_rule.py:173
+msgid "type is {0}"
+msgstr "タイプは{0}"
+
+#: files/file_interceptor_rule.py:177
+msgid "any file"
+msgstr "任意のファイル"
+
+#: files/file_interceptor_rule.py:181
+msgid ", removing the original"
+msgstr ", 元のものを削除"
+
+#: files/file_interceptor_rules_manager.py:189
+msgid "Blocked by interceptor rule: {0}"
+msgstr "インターセプタールールによりブロックされました: {0}"
+
+#: files/file_interceptor_rules_manager.py:196
+msgid ""
+"{0}\n"
+"Blocked: {1}"
+msgstr ""
+"{0}\n"
+"ブロック済み: {1}"
 
 #: files/marked_files.py:61
 msgid "change marks"
@@ -1202,6 +1286,54 @@ msgstr "マークを変更"
 #: files/marked_files.py:147 ui/image/temp_media_window.py:153
 msgid "add mark"
 msgstr "マークを追加"
+
+#: files/marked_files.py:186
+msgid "Removing directory: {0}"
+msgstr "ディレクトリを削除中: {0}"
+
+#: files/marked_files.py:186
+msgid "Removing file: {0}"
+msgstr "ファイルを削除しています： {0}"
+
+#: files/marked_files.py:209 files/marked_files.py:216
+#: files/marked_files.py:220 files/marked_files.py:226
+#: files/marked_files.py:237 ui/app_window/app_window.py:1304
+#: ui/app_window/search_controller.py:644
+#: ui/app_window/search_controller.py:703
+#: ui/app_window/search_controller.py:780
+msgid "Warning"
+msgstr "警告"
+
+#: files/marked_files.py:209 files/marked_files.py:237
+msgid "Failed to delete item: {0}"
+msgstr "アイテムの削除に失敗しました: {0}"
+
+#: files/marked_files.py:213
+msgid ""
+"Failed to move directory to {0}. Double check the trash folder is set "
+"properly in config.json."
+msgstr "ディレクトリを{0}に移動できませんでした。config.jsonでゴミ箱フォルダーが正しく設定されているか確認してください。"
+
+#: files/marked_files.py:215
+msgid ""
+"Failed to send file to {0}. Double check the trash folder is set properly in"
+" config.json."
+msgstr "ファイルを{0}に送信できませんでした。config.jsonでゴミ箱フォルダーが正しく設定されているか確認してください。"
+
+#: files/marked_files.py:221
+msgid ""
+"Failed to move directory to the trash. Either pip install send2trash or set "
+"a specific trash folder in config.json."
+msgstr ""
+"ディレクトリをゴミ箱に移動できませんでしたので。pip install send2trash を実行するか、config.json "
+"で特定のゴミ箱フォルダーを設定してください。"
+
+#: files/marked_files.py:227
+msgid ""
+"Failed to send file to the trash, so it will be deleted. Either pip install "
+"send2trash or set a specific trash folder in config.json."
+msgstr ""
+"ゴミ箱へのファイル送信に失敗しました。pipでsend2trashをインストールするか、config.jsonでゴミ箱フォルダを指定してください。"
 
 #: files/marked_files.py:242
 msgid "clear marks"
@@ -1270,14 +1402,14 @@ msgstr ""
 "キャンセル — {0}個のすべてのファイルを元の場所に{3}。"
 
 #: files/marked_files.py:428 files/marked_files.py:1054
-#: ui/files/file_actions_window_qt.py:248
-#: ui/files/file_actions_window_qt.py:256
+#: ui/files/file_actions_window_qt.py:250
+#: ui/files/file_actions_window_qt.py:259
 msgid "Moved"
 msgstr "移動する"
 
 #: files/marked_files.py:428 files/marked_files.py:1054
-#: ui/files/file_actions_window_qt.py:249
-#: ui/files/file_actions_window_qt.py:257
+#: ui/files/file_actions_window_qt.py:251
+#: ui/files/file_actions_window_qt.py:260
 msgid "Copied"
 msgstr "コピッド"
 
@@ -1504,27 +1636,27 @@ msgid "Suffix must not be purely numeric."
 msgstr "サフィックスは純粋に数値であってはなりません。"
 
 #: files/related_image.py:259 tests/unit/test_downstream_image_matching.py:425
-#: ui/image/media_details.py:1441
+#: ui/image/media_details.py:1524
 msgid " (Exact Match Not Found)"
 msgstr " (正確なマッチが見つかりません)"
 
-#: files/related_image.py:261 ui/image/media_details.py:1438
+#: files/related_image.py:261 ui/image/media_details.py:1515
 msgid "(No related image found)"
 msgstr "(関連画像が見つかりません)"
 
-#: files/related_image.py:304 files/related_image.py:311
+#: files/related_image.py:309 files/related_image.py:318
 msgid "{0} downstream image(s) found."
 msgstr "{0} 下流画像(s)が見つかります。"
 
-#: files/related_image.py:307
+#: files/related_image.py:313
 msgid "{0} (cached) downstream image(s) found."
 msgstr "{0} (キャッシュ済み) ダウンストリーム画像が見つかりました。"
 
-#: files/related_image.py:314 ui/app_window/file_marks_controller.py:424
+#: files/related_image.py:323 ui/app_window/file_marks_controller.py:438
 msgid "No downstream related images found in"
 msgstr "下流関連の画像が見つかりません"
 
-#: image/image_data_extractor.py:491
+#: image/image_data_extractor.py:497
 msgid "(Unable to parse image prompt information for this file.)"
 msgstr "（このファイルの画像プロンプト情報を解析できませんでした。）"
 
@@ -1582,21 +1714,21 @@ msgstr "ffmpegが音声をミュート中にタイムアウトしました"
 msgid "Video ({0})"
 msgstr "動画 ( {0} )"
 
-#: image/video_ops.py:1013 ui/image/media_details.py:615
+#: image/video_ops.py:1013 ui/image/media_details.py:616
 #: utils/constants.py:447
 msgid "Video"
 msgstr "ビデオ"
 
-#: lib/custom_dialogs_qt.py:147 lib/fast_directory_picker_qt.py:329
-#: lib/fill_preview_dialog_qt.py:120 lib/qt_alert.py:32
-#: ui/app_window/file_ops_controller.py:244
+#: lib/custom_dialogs_qt.py:184 lib/custom_dialogs_qt.py:203
+#: lib/fast_directory_picker_qt.py:329 lib/fill_preview_dialog_qt.py:120
+#: lib/qt_alert.py:32 ui/app_window/file_ops_controller.py:244
 #: ui/app_window/file_ops_controller.py:1071
-#: ui/app_window/window_launcher.py:1143 ui/auth/app_startup_auth_qt.py:74
+#: ui/app_window/window_launcher.py:1161 ui/auth/app_startup_auth_qt.py:74
 #: ui/auth/password_admin_window.py:81 ui/auth/password_dialog.py:198
 #: ui/auth/password_dialog.py:268 ui/auth/password_dialog.py:289
 #: ui/compare/add_instance_dialog_qt.py:127
 #: ui/compare/classifier_action_copy_window_qt.py:166
-#: ui/compare/classifier_pipeline_editor_qt.py:1923
+#: ui/compare/classifier_pipeline_editor_qt.py:2014
 #: ui/compare/compare_settings_window_qt.py:335
 #: ui/compare/hf_model_manager_window_qt.py:184
 #: ui/files/auto_sort_confirmation_window_qt.py:69
@@ -1609,9 +1741,9 @@ msgstr "ビデオ"
 msgid "Cancel"
 msgstr "キャンセル"
 
-#: lib/custom_dialogs_qt.py:153 lib/qt_alert.py:31
-#: ui/auth/app_startup_auth_qt.py:77 ui/auth/password_dialog.py:201
-#: ui/compare/add_instance_dialog_qt.py:121
+#: lib/custom_dialogs_qt.py:190 lib/custom_dialogs_qt.py:209
+#: lib/qt_alert.py:31 ui/auth/app_startup_auth_qt.py:77
+#: ui/auth/password_dialog.py:201 ui/compare/add_instance_dialog_qt.py:121
 #: ui/compare/hf_model_manager_window_qt.py:1275
 #: ui/files/file_interceptor_rules_window_qt.py:150
 msgid "OK"
@@ -1644,7 +1776,7 @@ msgstr "RAMディスク"
 #: lib/fast_directory_picker_qt.py:156
 #: tests/unit/test_embedding_seed_library_window.py:33
 #: ui/compare/embedding_seed_library_window_qt.py:33
-#: ui/image/media_details.py:713
+#: ui/image/media_details.py:714
 msgid "Unknown"
 msgstr "不明"
 
@@ -1679,7 +1811,7 @@ msgstr "新しいフォルダー"
 
 #: lib/fast_directory_picker_qt.py:310
 #: ui/compare/hf_model_manager_window_qt.py:711
-#: ui/compare/seek_to_trigger_tab_qt.py:133
+#: ui/compare/seek_to_trigger_tab_qt.py:147
 msgid "Refresh"
 msgstr "リフレッシュ"
 
@@ -1752,7 +1884,7 @@ msgstr "ノー"
 #: ui/app_window/sidebar_panel.py:239
 #: ui/compare/classifier_actions_tab_qt.py:102
 #: ui/compare/classifier_management_window_qt.py:730
-#: ui/compare/seek_to_trigger_tab_qt.py:224
+#: ui/compare/seek_to_trigger_tab_qt.py:238
 msgid "Classifier Actions"
 msgstr "分類器アクション"
 
@@ -1765,7 +1897,7 @@ msgstr "パイプライン"
 #: tests/ui/test_classifier_management_window_qt.py:61
 #: ui/compare/classifier_management_window_qt.py:732
 #: ui/compare/prevalidations_tab_qt.py:266
-#: ui/compare/seek_to_trigger_tab_qt.py:238
+#: ui/compare/seek_to_trigger_tab_qt.py:252
 msgid "Prevalidations"
 msgstr "事前検証"
 
@@ -1787,29 +1919,29 @@ msgid "Directory Profiles"
 msgstr "ディレクトリプロファイル"
 
 #: tests/ui/test_classifier_pipeline_editor_qt.py:487
-#: ui/compare/classifier_pipeline_editor_qt.py:1144
+#: ui/compare/classifier_pipeline_editor_qt.py:1233
 msgid "(no prior nodes)"
 msgstr "(先行ノードなし)"
 
 #: tests/ui/test_classifier_pipeline_editor_qt.py:793
-#: ui/compare/classifier_pipeline_editor_qt.py:1796
+#: ui/compare/classifier_pipeline_editor_qt.py:1887
 msgid "(no later nodes)"
 msgstr "（それ以降のノードなし）"
 
 #: tests/ui/test_classifier_pipeline_editor_qt.py:1169
-#: ui/compare/classifier_pipeline_editor_qt.py:2721
+#: ui/compare/classifier_pipeline_editor_qt.py:2814
 msgid "(preview unavailable)"
 msgstr "(プレビューできません)"
 
 #: tests/ui/test_classifier_pipelines_tab_qt.py:148
-#: ui/compare/classifier_pipeline_editor_qt.py:1962
+#: ui/compare/classifier_pipeline_editor_qt.py:2053
 #: ui/compare/classifier_pipelines_tab_qt.py:196 ui/help_and_config_qt.py:200
-#: utils/constants.py:573
+#: utils/constants.py:574
 msgid "Prevalidation"
 msgstr "事前検証"
 
 #: tests/ui/test_classifier_pipelines_tab_qt.py:159
-#: ui/compare/classifier_pipeline_editor_qt.py:1962
+#: ui/compare/classifier_pipeline_editor_qt.py:2053
 #: ui/compare/classifier_pipelines_tab_qt.py:197 ui/help_and_config_qt.py:327
 msgid "General"
 msgstr "一般"
@@ -1838,8 +1970,8 @@ msgstr "GIMPで開く"
 
 #: tests/ui/test_context_menu_builder.py:67
 #: ui/app_window/context_menu_builder.py:121 ui/help_and_config_qt.py:287
-#: ui/image/media_details.py:480 ui/image/temp_media_window.py:244
-#: utils/constants.py:698
+#: ui/image/media_details.py:481 ui/image/temp_media_window.py:244
+#: utils/constants.py:699
 msgid "Run Image Generation"
 msgstr "画像生成を実行"
 
@@ -1910,109 +2042,112 @@ msgstr "インタラクティブな背景ボックス（フリーフォーム）
 msgid "Set Marked File as Related Image of Current"
 msgstr "マークされたファイルを現在の関連画像として設定"
 
-#: tests/ui/test_media_details.py:295 ui/image/media_details.py:245
+#: tests/ui/test_media_details.py:295 ui/image/media_details.py:246
 msgid "Video details"
 msgstr "ビデオの詳細"
 
-#: tests/ui/test_media_details.py:298 ui/image/media_details.py:247
+#: tests/ui/test_media_details.py:298 ui/image/media_details.py:248
 msgid "Audio details"
 msgstr "オーディオの詳細"
 
 #: tests/ui/test_media_details.py:301 tests/ui/test_media_details.py:318
-#: tests/ui/test_media_details.py:324 ui/image/media_details.py:154
-#: ui/image/media_details.py:249
+#: tests/ui/test_media_details.py:324 ui/image/media_details.py:155
+#: ui/image/media_details.py:250
 msgid "Image details"
 msgstr "画像詳細"
 
 #: tests/ui/test_media_details.py:314 tests/ui/test_media_details.py:327
-#: ui/app_window/sidebar_panel.py:315 ui/image/media_details.py:250
+#: ui/app_window/sidebar_panel.py:315 ui/image/media_details.py:251
 msgid "Media details"
 msgstr "メディアの詳細"
 
 #: tests/ui/test_media_details.py:371 ui/help_and_config_qt.py:276
-#: ui/image/media_details.py:423
+#: ui/image/media_details.py:424
 msgid "Rotate Image Left"
 msgstr "左にイメージを回転させる"
 
 #: tests/ui/test_media_details.py:372 ui/help_and_config_qt.py:275
-#: ui/image/media_details.py:427
+#: ui/image/media_details.py:428
 msgid "Crop Image (Smart Detect)"
 msgstr "画像を切り抜く（スマート検出）"
 
 #: tests/ui/test_related_images_window.py:74
-#: ui/files/related_images_window_qt.py:95
+#: ui/files/related_images_window_qt.py:97
 msgid "Search all open windows for downstream images"
 msgstr "すべての開いているウィンドウで下流画像を検索"
 
 #: tests/ui/test_related_images_window.py:75
-#: ui/files/related_images_window_qt.py:93
+#: ui/files/related_images_window_qt.py:95
 msgid "Mark files without a related image in current directory"
 msgstr "現在のディレクトリで関連画像がないファイルにマーキングする"
 
-#: tests/ui/test_related_images_window.py:180
-#: ui/app_window/file_marks_controller.py:508
+#: tests/ui/test_related_images_window.py:238
+#: ui/app_window/file_marks_controller.py:538
 msgid "{0} file marks set from {1} window(s)"
 msgstr "{0} ファイルマークが {1} ウィンドウから設定されました"
 
-#: tests/ui/test_related_images_window.py:233
-#: ui/app_window/file_marks_controller.py:493
-#: ui/app_window/file_marks_controller.py:515
+#: tests/ui/test_related_images_window.py:294
+#: ui/app_window/file_marks_controller.py:514
 msgid "Skipped {0} large unconfirmed director(ies)."
 msgstr "スキップされた {0} 件の大きな未確認ディレクター。"
 
-#: tests/ui/test_related_images_window.py:252
-#: ui/app_window/file_marks_controller.py:489
+#: tests/ui/test_related_images_window.py:313
+#: ui/app_window/file_marks_controller.py:519
 msgid "No downstream related images found across {0} open window(s)."
 msgstr "開いている{0}個のウィンドウで下流の関連画像が見つかりませんでした。"
 
-#: tests/ui/test_related_images_window.py:318
-#: ui/app_window/file_marks_controller.py:640
+#: tests/ui/test_related_images_window.py:379
+#: ui/app_window/file_marks_controller.py:688
 msgid "Every file in the current directory has a related image."
 msgstr "現在のディレクトリ内のすべてのファイルには、関連する画像があります。"
 
-#: tests/ui/test_related_images_window.py:350
-#: ui/app_window/file_marks_controller.py:643
-#: ui/app_window/file_marks_controller.py:648
-#: ui/app_window/file_marks_controller.py:656
+#: tests/ui/test_related_images_window.py:411
+#: ui/app_window/file_marks_controller.py:674
+#: ui/app_window/file_marks_controller.py:696
 msgid "Mark files without related images"
 msgstr "関連画像がないファイルをマーク"
 
-#: tests/ui/test_related_images_window.py:364
-#: ui/app_window/file_marks_controller.py:545
-#: ui/app_window/file_marks_controller.py:589
-#: ui/app_window/file_marks_controller.py:632
+#: tests/ui/test_related_images_window.py:425
+#: ui/app_window/file_marks_controller.py:572
+#: ui/app_window/file_marks_controller.py:627
+#: ui/app_window/file_marks_controller.py:678
 msgid "No files in current directory."
 msgstr "現在のディレクトリにファイルがありません。"
 
 #: tests/ui/test_seek_to_trigger_integration.py:432
-#: tests/unit/test_seek_to_trigger.py:697
-#: tests/unit/test_seek_to_trigger.py:711
-#: ui/compare/seek_to_trigger_tab_qt.py:624
+#: tests/unit/test_seek_to_trigger.py:769
+#: tests/unit/test_seek_to_trigger.py:783
+#: ui/compare/seek_to_trigger_tab_qt.py:698
 msgid "Trigger: image classifier"
 msgstr "トリガー: 画像分類器"
 
-#: tests/unit/test_seek_to_trigger.py:676
-#: ui/compare/seek_to_trigger_tab_qt.py:627
+#: tests/unit/test_compare_embeddings_audio_clap.py:26 utils/constants.py:59
+#: utils/constants.py:95
+msgid "CLAP Audio Embedding"
+msgstr "CLAP オーディオ埋め込み"
+
+#: tests/unit/test_seek_to_trigger.py:748
+#: ui/compare/seek_to_trigger_tab_qt.py:701
 msgid "Trigger: text embedding"
 msgstr "トリガー: テキスト埋め込み"
 
-#: tests/unit/test_seek_to_trigger.py:681
-#: ui/compare/seek_to_trigger_tab_qt.py:628
+#: tests/unit/test_seek_to_trigger.py:753
+#: ui/compare/seek_to_trigger_tab_qt.py:702
 msgid "Trigger: prompt match"
 msgstr "トリガー: プロンプト一致"
 
-#: tests/unit/test_seek_to_trigger.py:686
-#: ui/compare/seek_to_trigger_tab_qt.py:629
+#: tests/unit/test_seek_to_trigger.py:758
+#: ui/compare/seek_to_trigger_tab_qt.py:703
 msgid "Trigger: prototype"
 msgstr "トリガー：プロトタイプ"
 
-#: tests/unit/test_seek_to_trigger.py:691
-#: ui/compare/seek_to_trigger_tab_qt.py:630
+#: tests/unit/test_seek_to_trigger.py:763
+#: ui/compare/seek_to_trigger_tab_qt.py:704
 msgid "Trigger: filename match"
 msgstr "トリガー: ファイル名一致"
 
-#: tests/unit/test_seek_to_trigger.py:849
-#: ui/compare/seek_to_trigger_tab_qt.py:508
+#: tests/unit/test_seek_to_trigger.py:921
+#: ui/compare/seek_to_trigger_tab_qt.py:545
 msgid ""
 "No previous seek-to-trigger action — use the Seek to Trigger tab first."
 msgstr "以前のシークからトリガーへのアクションがありません — まず「シークからトリガーへ」タブを使用してください。"
@@ -2082,7 +2217,7 @@ msgstr "前のグループを表示"
 msgid "Show previous/next supergroup"
 msgstr "前/次のスーパーグループを表示"
 
-#: ui/files/file_actions_window_qt.py:441 ui/help_and_config_qt.py:112
+#: ui/files/file_actions_window_qt.py:475 ui/help_and_config_qt.py:112
 msgid "View"
 msgstr "ニュース"
 
@@ -2170,7 +2305,7 @@ msgstr "次のテキスト埋め込み検索プリセットを実行します"
 msgid "Run last seek-to-trigger action"
 msgstr "最後のシークからトリガーへのアクションを実行"
 
-#: ui/help_and_config_qt.py:146 ui/image/media_details.py:467
+#: ui/help_and_config_qt.py:146 ui/image/media_details.py:468
 msgid "Image Generation"
 msgstr "画像生成"
 
@@ -2232,7 +2367,7 @@ msgstr "前のマークリストから現在のマークを設定する"
 msgid "Set marks from downstream related images"
 msgstr "下流関連画像からマークを設定する"
 
-#: ui/files/related_images_window_qt.py:89 ui/help_and_config_qt.py:167
+#: ui/files/related_images_window_qt.py:91 ui/help_and_config_qt.py:167
 msgid "Mark sources with downstream files in current directory"
 msgstr "現在のディレクトリのダウンストリームファイルでソースをマーク"
 
@@ -2486,15 +2621,16 @@ msgstr "ディレクトリ内のマーク済みファイルをテスト（Ctrl/A
 msgid "Image Details Shortcuts"
 msgstr "画像詳細ショートカット"
 
-#: ui/help_and_config_qt.py:277 ui/image/media_details.py:424
+#: ui/help_and_config_qt.py:277 ui/image/media_details.py:425
 msgid "Rotate Image Right"
 msgstr "画像を右に回転させる"
 
-#: ui/help_and_config_qt.py:278 ui/image/media_details.py:428
+#: ui/help_and_config_qt.py:278 ui/image/media_details.py:429
 msgid "Enhance Image"
 msgstr "イメージの強化"
 
-#: ui/help_and_config_qt.py:279 ui/image/media_details.py:431
+#: ui/files/file_actions_window_qt.py:364 ui/help_and_config_qt.py:279
+#: ui/image/media_details.py:432
 msgid "Random Crop"
 msgstr "ランダムクロップ"
 
@@ -2502,32 +2638,27 @@ msgstr "ランダムクロップ"
 msgid "Randomly Modify Image"
 msgstr "画像をランダムに変更する"
 
-#: ui/help_and_config_qt.py:281 ui/image/media_details.py:439
+#: ui/help_and_config_qt.py:281 ui/image/media_details.py:440
 msgid "Flip Image Horizontally"
 msgstr "横のフリップ イメージ"
 
-#: ui/help_and_config_qt.py:282 ui/image/media_details.py:440
+#: ui/help_and_config_qt.py:282 ui/image/media_details.py:441
 msgid "Flip Image Vertically"
 msgstr "縦にフリップ イメージ"
 
-#: ui/help_and_config_qt.py:283 ui/image/media_details.py:447
+#: ui/help_and_config_qt.py:283 ui/image/media_details.py:448
 msgid "Copy Without EXIF"
 msgstr "EXIFなしコピー"
 
-#: files/file_interceptor_rule.py:85 ui/help_and_config_qt.py:284
-#: ui/image/media_details.py:448
-msgid "Convert to JPG"
-msgstr "JPGに変換"
-
-#: ui/help_and_config_qt.py:285 ui/image/media_details.py:451
+#: ui/help_and_config_qt.py:285 ui/image/media_details.py:452
 msgid "Show Metadata"
 msgstr "メタデータを表示する"
 
-#: ui/help_and_config_qt.py:286 ui/image/media_details.py:461
+#: ui/help_and_config_qt.py:286 ui/image/media_details.py:462
 msgid "Open Related Image"
 msgstr "関連する画像を開く"
 
-#: ui/help_and_config_qt.py:288 ui/image/media_details.py:484
+#: ui/help_and_config_qt.py:288 ui/image/media_details.py:485
 #: utils/constants.py:375
 msgid "Redo Prompt"
 msgstr "プロンプトをやり直す"
@@ -2850,44 +2981,44 @@ msgstr ""
 "\n"
 "一部の変更（フォントサイズ、ウィンドウサイズ、トーストのタイミングなど）は、完全に有効にするためにアプリケーションの再起動が必要です。"
 
-#: ui/app_window/app_window.py:145 ui/app_window/app_window.py:217
-#: ui/app_window/app_window.py:919
+#: ui/app_window/app_window.py:151 ui/app_window/app_window.py:226
+#: ui/app_window/app_window.py:1040
 msgid " Weidr - Media Handler "
 msgstr " Weidr - メディア ハンドラー "
 
-#: ui/app_window/app_window.py:625
+#: ui/app_window/app_window.py:746
 msgid "Set Title Bar Color..."
 msgstr "タイトルバーの色を設定..."
 
-#: ui/app_window/app_window.py:634
+#: ui/app_window/app_window.py:755
 msgid "Clear Title Bar Color"
 msgstr "透明にするタイトルバーの色"
 
-#: ui/app_window/app_window.py:647
+#: ui/app_window/app_window.py:768
 msgid "No directory loaded."
 msgstr "ディレクトリがロードされていません。"
 
-#: ui/app_window/app_window.py:654
+#: ui/app_window/app_window.py:775
 msgid "Choose Title Bar Color"
 msgstr "タイトルバーの色を選択する"
 
-#: ui/app_window/app_window.py:662
+#: ui/app_window/app_window.py:783
 msgid "Title bar color set for this directory."
 msgstr "このディレクトリのタイトルバーのカラー設定。"
 
-#: ui/app_window/app_window.py:677
+#: ui/app_window/app_window.py:798
 msgid "Title bar color cleared for this directory."
 msgstr "このディレクトリのタイトルバーclrされました。"
 
-#: ui/app_window/app_window.py:722 ui/app_window/sidebar_panel.py:105
+#: ui/app_window/app_window.py:843 ui/app_window/sidebar_panel.py:105
 msgid "Enter base directory..."
 msgstr "基本ディレクトリ... を入力してください。"
 
-#: ui/app_window/app_window.py:727
+#: ui/app_window/app_window.py:848
 msgid "Set media comparison directory"
 msgstr "メディア比較ディレクトリを指定します"
 
-#: ui/app_window/app_window.py:750
+#: ui/app_window/app_window.py:871
 msgid ""
 "Path is not an existing directory:\n"
 "{0}"
@@ -2895,15 +3026,15 @@ msgstr ""
 "指定されたパスは既存のディレクトリではありません：\n"
 "{0}"
 
-#: ui/app_window/app_window.py:922
+#: ui/app_window/app_window.py:1043
 msgid " [PV DISABLED]"
 msgstr " [PV無効]"
 
-#: ui/app_window/app_window.py:965
+#: ui/app_window/app_window.py:1101
 msgid "Large Directory Detected: {0}"
 msgstr "大規模なディレクトリが検出されました: {0}"
 
-#: ui/app_window/app_window.py:966
+#: ui/app_window/app_window.py:1102
 msgid ""
 "A directory with a large number of files or a directory with a fair-sized "
 "number of files on external storage was detected, which may result in a slow"
@@ -2911,53 +3042,44 @@ msgid ""
 msgstr ""
 "外部ストレージに大量のファイルを含むディレクトリまたは相当数のファイルを含むディレクトリが検出されました。これにより、読み込み時間が遅くなる可能性があります。フルディレクトリを読み込むことを確認してください。"
 
-#: ui/app_window/app_window.py:1004
+#: ui/app_window/app_window.py:1140
 msgid "Restored compare result state for {0} file(s) moved back"
 msgstr "戻された {0} ファイルの比較結果状態を復元"
 
-#: ui/app_window/app_window.py:1046
+#: ui/app_window/app_window.py:1182
 msgid "Browsing mode set."
 msgstr "ブラウジングモードセット。"
 
-#: ui/app_window/app_window.py:1061 ui/app_window/window_launcher.py:974
+#: ui/app_window/app_window.py:1197 ui/app_window/window_launcher.py:992
 msgid "Many Files"
 msgstr "多くのファイル"
 
-#: files/marked_files.py:209 files/marked_files.py:216
-#: files/marked_files.py:220 files/marked_files.py:226
-#: files/marked_files.py:237 ui/app_window/app_window.py:1168
-#: ui/app_window/search_controller.py:644
-#: ui/app_window/search_controller.py:703
-#: ui/app_window/search_controller.py:769
-msgid "Warning"
-msgstr "警告"
-
-#: ui/app_window/app_window.py:1168
+#: ui/app_window/app_window.py:1304
 msgid "No files found in directory after refresh."
 msgstr "更新後、ディレクトリにファイルが見つかりません。"
 
-#: ui/app_window/app_window.py:1194
+#: ui/app_window/app_window.py:1330
 msgid "NEW_MEDIA_QUEUED"
 msgstr "{0} 個の新しいメディアファイルがキューに入れられました"
 
-#: ui/app_window/app_window.py:1302
+#: ui/app_window/app_window.py:1438
 msgid "No cached image for this file."
 msgstr "このファイルのキャッシュされたイメージはありません。"
 
-#: ui/app_window/app_window.py:1305
+#: ui/app_window/app_window.py:1441
 msgid "Could not read cached image."
 msgstr "キャッシュされた画像を読み取れませんでした。"
 
-#: ui/app_window/app_window.py:1308
+#: ui/app_window/app_window.py:1444
 msgid "Clipboard unavailable."
 msgstr "クリップボードが使用できません。"
 
-#: ui/app_window/app_window.py:1327 ui/app_window/app_window.py:1341
-#: ui/app_window/app_window.py:1357
+#: ui/app_window/app_window.py:1463 ui/app_window/app_window.py:1477
+#: ui/app_window/app_window.py:1493
 msgid "Screenshot Failed"
 msgstr "スクリーンショット失敗しました。"
 
-#: ui/app_window/app_window.py:1328
+#: ui/app_window/app_window.py:1464
 msgid ""
 "Unable to create screenshot directory:\n"
 "{0}\n"
@@ -2969,7 +3091,7 @@ msgstr ""
 "\n"
 "{1}"
 
-#: ui/app_window/app_window.py:1342
+#: ui/app_window/app_window.py:1478
 msgid ""
 "Unable to save screenshot.\n"
 "\n"
@@ -2979,7 +3101,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: ui/app_window/app_window.py:1348
+#: ui/app_window/app_window.py:1484
 msgid ""
 "Screenshot saved to:\n"
 "{0}"
@@ -2987,7 +3109,7 @@ msgstr ""
 "スクリーンショットが保存されました:\n"
 "{0}"
 
-#: ui/app_window/app_window.py:1358
+#: ui/app_window/app_window.py:1494
 msgid ""
 "Unable to copy image to clipboard.\n"
 "\n"
@@ -2997,36 +3119,36 @@ msgstr ""
 "\n"
 "{0}"
 
-#: ui/app_window/app_window.py:1362
+#: ui/app_window/app_window.py:1498
 msgid "Copied image to clipboard."
 msgstr "画像をクリップボードにコピーしました。"
 
-#: ui/app_window/app_window.py:1366
+#: ui/app_window/app_window.py:1502
 msgid ""
 "Screenshots are available for videos, animated GIFs, and PDF/SVG/HTML files."
 msgstr "動画、アニメーションGIF、PDF/SVG/HTMLファイルのスクリーンショットを利用できます。"
 
-#: ui/app_window/app_window.py:1424
+#: ui/app_window/app_window.py:1560
 msgid "Masonry view"
 msgstr "タイル表示"
 
-#: ui/app_window/app_window.py:1429
+#: ui/app_window/app_window.py:1565
 msgid "Full-window view"
 msgstr "全画面表示"
 
-#: ui/app_window/app_window.py:1489
+#: ui/app_window/app_window.py:1625
 msgid "Theme switched to {0}."
 msgstr "テーマを{0}に切り替えます。"
 
-#: ui/app_window/app_window.py:1638
+#: ui/app_window/app_window.py:1774
 msgid "Confirm Quit"
 msgstr "終了を確認する"
 
-#: ui/app_window/app_window.py:1638
+#: ui/app_window/app_window.py:1774
 msgid "Would you like to quit the application?"
 msgstr "アプリケーションを終了しますか？"
 
-#: ui/app_window/context_menu_builder.py:60 utils/constants.py:692
+#: ui/app_window/context_menu_builder.py:60 utils/constants.py:693
 msgid "View Media Details"
 msgstr "メディア詳細を見る"
 
@@ -3141,7 +3263,7 @@ msgstr "RefacDirを実行してください。"
 #: ui/compare/embedding_seed_library_window_qt.py:95
 #: ui/compare/prevalidations_tab_qt.py:384
 #: ui/files/file_actions_window_qt.py:107
-#: ui/files/file_actions_window_qt.py:396 utils/constants.py:637
+#: ui/files/file_actions_window_qt.py:427 utils/constants.py:638
 msgid "Delete"
 msgstr "削除"
 
@@ -3205,39 +3327,36 @@ msgstr ""
 "{0}マークが設定された(>={1}の予定)。\n"
 "マークを設定するには Shift+M を使用します。"
 
-#: ui/app_window/file_marks_controller.py:410
+#: ui/app_window/file_marks_controller.py:420
 msgid "Set marks from related media"
 msgstr "関連メディアからマークを設定"
 
-#: ui/app_window/file_marks_controller.py:414
+#: ui/app_window/file_marks_controller.py:427
 msgid "{0} file marks set"
 msgstr "{0} ファイル マーク セット"
 
-#: ui/app_window/file_marks_controller.py:417
-#: ui/app_window/file_marks_controller.py:425
-#: ui/files/related_images_window_qt.py:87
+#: ui/app_window/file_marks_controller.py:385
+#: ui/files/related_images_window_qt.py:89
 msgid "Set marks from downstream images"
 msgstr "下流画像からマークを設定"
 
-#: ui/app_window/file_marks_controller.py:447
+#: ui/app_window/file_marks_controller.py:461
 msgid "No active media to search from."
 msgstr "検索できるアクティブメディアがありません。"
 
-#: ui/app_window/file_marks_controller.py:491
-#: ui/app_window/file_marks_controller.py:510
+#: ui/app_window/file_marks_controller.py:508
 msgid "Source: {0}"
 msgstr "ソース: {0}"
 
-#: ui/app_window/file_marks_controller.py:497
-#: ui/app_window/file_marks_controller.py:519
+#: ui/app_window/file_marks_controller.py:454
 msgid "Search all open windows"
 msgstr "すべての開いているウィンドウを検索"
 
-#: ui/app_window/file_marks_controller.py:504
+#: ui/app_window/file_marks_controller.py:531
 msgid "Set marks from related media (all windows)"
 msgstr "関連メディアからマークを設定 (すべてのウィンドウ)"
 
-#: ui/app_window/file_marks_controller.py:551
+#: ui/app_window/file_marks_controller.py:581
 msgid ""
 "No source files with downstream images found in\n"
 "{0}"
@@ -3245,20 +3364,19 @@ msgstr ""
 "ダウンストリーム画像を含むソースファイルが見つかりません\n"
 "{0}"
 
-#: ui/app_window/file_marks_controller.py:554
-#: ui/app_window/file_marks_controller.py:566
+#: ui/app_window/file_marks_controller.py:560
 msgid "Mark sources with downstream"
 msgstr "下流のあるソースにマークする"
 
-#: ui/app_window/file_marks_controller.py:558
+#: ui/app_window/file_marks_controller.py:589
 msgid "Mark sources with downstream images"
 msgstr "下流イメージを持つソースをマーク"
 
-#: ui/app_window/file_marks_controller.py:563
+#: ui/app_window/file_marks_controller.py:597
 msgid "{0} source file(s) marked"
 msgstr "{0} 個のソースファイルがマークされました"
 
-#: ui/app_window/file_marks_controller.py:595
+#: ui/app_window/file_marks_controller.py:636
 msgid ""
 "No downstream files found in\n"
 "{0}"
@@ -3266,41 +3384,40 @@ msgstr ""
 "ダウンストリームファイルが見つかりませんでした\n"
 "{0}"
 
-#: ui/app_window/file_marks_controller.py:598
-#: ui/app_window/file_marks_controller.py:602
-#: ui/app_window/file_marks_controller.py:610
+#: ui/app_window/file_marks_controller.py:615
+#: ui/app_window/file_marks_controller.py:644
 msgid "Mark downstream files"
 msgstr "ダウンストリームファイルをマーク"
 
-#: ui/app_window/file_marks_controller.py:607
+#: ui/app_window/file_marks_controller.py:652
 msgid "{0} downstream file(s) marked"
 msgstr "{0}個のダウンストリームファイルがマークされました"
 
-#: ui/app_window/file_marks_controller.py:653
+#: ui/app_window/file_marks_controller.py:704
 msgid "{0} file(s) without a related image marked"
 msgstr "{0} 個のファイルに関連画像がマークされていません"
 
-#: ui/app_window/file_marks_controller.py:672
+#: ui/app_window/file_marks_controller.py:723
 msgid "Set related image"
 msgstr "関連画像を設定"
 
-#: ui/app_window/file_marks_controller.py:678
+#: ui/app_window/file_marks_controller.py:729
 msgid "Exactly one file must be marked for this operation."
 msgstr "この操作には、正確に1つのファイルをマークする必要があります。"
 
-#: ui/app_window/file_marks_controller.py:686
+#: ui/app_window/file_marks_controller.py:737
 msgid "No valid current media file."
 msgstr "有効な現在のメディアファイルがありません。"
 
-#: ui/app_window/file_marks_controller.py:689
+#: ui/app_window/file_marks_controller.py:740
 msgid "Marked file no longer exists."
 msgstr "マークされたファイルはもう存在しません。"
 
-#: ui/app_window/file_marks_controller.py:698
+#: ui/app_window/file_marks_controller.py:749
 msgid "Set as Related Image"
 msgstr "関連画像として設定"
 
-#: ui/app_window/file_marks_controller.py:700
+#: ui/app_window/file_marks_controller.py:751
 msgid ""
 "Enter a suffix (1–8 alphanumeric characters, not purely numeric).\n"
 "The marked file will be renamed to:\n"
@@ -3310,23 +3427,23 @@ msgstr ""
 "マークされたファイルの名前は次のように変更されます：\n"
 "{0}_<サフィックス>{1}"
 
-#: ui/app_window/file_marks_controller.py:712
+#: ui/app_window/file_marks_controller.py:763
 msgid "Invalid Suffix"
 msgstr "無効なサフィックス"
 
-#: ui/app_window/file_marks_controller.py:721
+#: ui/app_window/file_marks_controller.py:772
 msgid "File Already Exists"
 msgstr "ファイルは既に存在します"
 
-#: ui/app_window/file_marks_controller.py:722
+#: ui/app_window/file_marks_controller.py:773
 msgid "A file named {0} already exists in that directory."
 msgstr "そのディレクトリには既に {0} という名前のファイルが存在します。"
 
-#: ui/app_window/file_marks_controller.py:732
+#: ui/app_window/file_marks_controller.py:783
 msgid "Rename Failed"
 msgstr "名前の変更に失敗しました"
 
-#: ui/app_window/file_marks_controller.py:737
+#: ui/app_window/file_marks_controller.py:788
 msgid "Renamed to {0}"
 msgstr "{0}に名前変更"
 
@@ -3352,45 +3469,6 @@ msgstr "無効な操作です、検索されたメディアが見つかりませ
 #: ui/app_window/file_ops_controller.py:175
 msgid "Failed to delete current file, unable to get valid filepath"
 msgstr "有効なファイルパスが取得できず、現在のファイルの削除に失敗しました。"
-
-#: files/marked_files.py:186
-msgid "Removing directory: {0}"
-msgstr "ディレクトリを削除中: {0}"
-
-#: files/marked_files.py:186
-msgid "Removing file: {0}"
-msgstr "ファイルを削除しています： {0}"
-
-#: files/marked_files.py:209 files/marked_files.py:237
-msgid "Failed to delete item: {0}"
-msgstr "アイテムの削除に失敗しました: {0}"
-
-#: files/marked_files.py:213
-msgid ""
-"Failed to move directory to {0}. Double check the trash folder is set "
-"properly in config.json."
-msgstr "ディレクトリを{0}に移動できませんでした。config.jsonでゴミ箱フォルダーが正しく設定されているか確認してください。"
-
-#: files/marked_files.py:215
-msgid ""
-"Failed to send file to {0}. Double check the trash folder is set properly in"
-" config.json."
-msgstr "ファイルを{0}に送信できませんでした。config.jsonでゴミ箱フォルダーが正しく設定されているか確認してください。"
-
-#: files/marked_files.py:221
-msgid ""
-"Failed to move directory to the trash. Either pip install send2trash or set "
-"a specific trash folder in config.json."
-msgstr ""
-"ディレクトリをゴミ箱に移動できませんでしたので。pip install send2trash を実行するか、config.json "
-"で特定のゴミ箱フォルダーを設定してください。"
-
-#: files/marked_files.py:227
-msgid ""
-"Failed to send file to the trash, so it will be deleted. Either pip install "
-"send2trash or set a specific trash folder in config.json."
-msgstr ""
-"ゴミ箱へのファイル送信に失敗しました。pipでsend2trashをインストールするか、config.jsonでゴミ箱フォルダを指定してください。"
 
 #: ui/app_window/file_ops_controller.py:212
 msgid "Invalid directory"
@@ -4054,25 +4132,25 @@ msgstr "スライドショー開始"
 msgid "Slideshows ended"
 msgstr "スライドショー終了"
 
-#: ui/app_window/notification_controller.py:401
+#: ui/app_window/notification_controller.py:406
 msgid "GROUP_DETAILS"
 msgstr ""
 "グループ{0}/{1}\n"
 "サイズ：{2}"
 
-#: ui/app_window/notification_controller.py:409
+#: ui/app_window/notification_controller.py:414
 msgid "No media files found"
 msgstr "メディアファイルが見つかりませんでした"
 
-#: ui/app_window/notification_controller.py:411
+#: ui/app_window/notification_controller.py:416
 msgid "1 media file found"
 msgstr "1 メディアファイルが見つかりました"
 
-#: ui/app_window/notification_controller.py:413
+#: ui/app_window/notification_controller.py:418
 msgid "{0} media files found"
 msgstr "{0} メディアファイルが発見されています"
 
-#: ui/app_window/notification_controller.py:418
+#: ui/app_window/notification_controller.py:423
 msgid "(filtered)"
 msgstr "(フィルタリング)"
 
@@ -4125,7 +4203,7 @@ msgstr "続行したいですか?"
 
 #: ui/app_window/search_controller.py:501
 #: ui/app_window/search_controller.py:532
-#: ui/app_window/search_controller.py:769
+#: ui/app_window/search_controller.py:780
 msgid "Failed to get active media filepath"
 msgstr "アクティブなメディアファイルパスを取得できませんでした"
 
@@ -4155,16 +4233,15 @@ msgstr "無効な画像編集です — 関連する画像参照またはサフ�
 msgid "Running image gen on directory: "
 msgstr "ディレクトリで画像生成を実行中: "
 
-#: ui/app_window/search_controller.py:746
+#: ui/app_window/search_controller.py:757
 msgid "Navigated to {0}"
 msgstr "{0} に移動しました"
 
-#: ui/app_window/search_controller.py:747
-#: ui/app_window/search_controller.py:754
+#: ui/app_window/search_controller.py:719
 msgid "Next downstream image"
 msgstr "次の下流画像"
 
-#: ui/app_window/search_controller.py:751
+#: ui/app_window/search_controller.py:762
 msgid "No downstream related image(s) found in {0}"
 msgstr "{0} に下流関連の画像は見つかりませんでした。"
 
@@ -4378,6 +4455,26 @@ msgid ""
 " marked files."
 msgstr "現在マークされているファイルに対して、ファイルアクション（コピー/移動）のセットを構成して実行します。"
 
+#: ui/app_window/sidebar_panel.py:339 ui/files/marked_file_mover_qt.py:359
+msgid "Interceptor rules"
+msgstr "インターセプタールール"
+
+#: ui/app_window/sidebar_panel.py:344
+msgid ""
+"Configure rules that block or transform marked files as they are moved or "
+"copied to a target directory."
+msgstr "対象ディレクトリに移動またはコピーされる際に、マークされたファイルをブロックまたは変換するルールを設定します。"
+
+#: ui/app_window/sidebar_panel.py:348
+msgid "Auto-sort confirmation"
+msgstr "自動並び替えの確認"
+
+#: ui/app_window/sidebar_panel.py:353
+msgid ""
+"Choose which automatically sorted categories ask for confirmation before "
+"their media is viewed."
+msgstr "自動的に分類されたカテゴリのうち、メディアが表示される前に確認を求めるものを選択してください。"
+
 #: ui/app_window/sidebar_panel.py:362
 msgid ""
 "Open the folder containing the current file in the system file manager."
@@ -4430,7 +4527,7 @@ msgid "Video cropped"
 msgstr "ビデオがトリミングされました"
 
 #: ui/app_window/video_crop_overlay_qt.py:202
-#: ui/app_window/window_launcher.py:803
+#: ui/app_window/window_launcher.py:821
 msgid "Drag to select crop, Enter to confirm, Escape to cancel"
 msgstr "ドラッグしてトリミングを選択、Enterで確定、Escapeでキャンセル"
 
@@ -4443,7 +4540,7 @@ msgid "Video box added"
 msgstr "ビデオボックスが追加されました"
 
 #: ui/app_window/video_crop_overlay_qt.py:215
-#: ui/app_window/window_launcher.py:825
+#: ui/app_window/window_launcher.py:843
 msgid "Drag to select box location, Enter to confirm, Escape to cancel"
 msgstr "ボックスの場所を選択するにはドラッグ、確定はEnter、キャンセルはEscape"
 
@@ -4456,7 +4553,7 @@ msgid "Video background box added"
 msgstr "ビデオ背景ボックスを追加しました"
 
 #: ui/app_window/video_crop_overlay_qt.py:229
-#: ui/app_window/window_launcher.py:849
+#: ui/app_window/window_launcher.py:867
 msgid "Drag to select area to keep, Enter to confirm, Escape to cancel"
 msgstr "保持する範囲をドラッグして選択、Enterで確定、Escapeでキャンセル"
 
@@ -4496,81 +4593,81 @@ msgstr "このメディアタイプではインタラクティブなトリミン
 msgid "Could not read GIF frame: "
 msgstr "GIFフレームを読み取れませんでした: "
 
-#: ui/app_window/window_launcher.py:799
+#: ui/app_window/window_launcher.py:817
 msgid "Crop selection too small"
 msgstr "選択範囲が小さすぎます"
 
-#: ui/app_window/window_launcher.py:800 ui/app_window/window_launcher.py:876
+#: ui/app_window/window_launcher.py:818 ui/app_window/window_launcher.py:894
 msgid "Cropped"
 msgstr "トリミング済み"
 
-#: ui/app_window/window_launcher.py:801 ui/app_window/window_launcher.py:877
+#: ui/app_window/window_launcher.py:819 ui/app_window/window_launcher.py:895
 msgid "Crop failed"
 msgstr "作物が失敗しました"
 
-#: ui/app_window/window_launcher.py:820
+#: ui/app_window/window_launcher.py:838
 msgid "Box selection too small"
 msgstr "ボックス選択が小さすぎます"
 
-#: ui/app_window/window_launcher.py:821 ui/app_window/window_launcher.py:901
+#: ui/app_window/window_launcher.py:839 ui/app_window/window_launcher.py:919
 msgid "Box added"
 msgstr "ボックスが追加されました"
 
-#: ui/app_window/window_launcher.py:822 ui/app_window/window_launcher.py:902
+#: ui/app_window/window_launcher.py:840 ui/app_window/window_launcher.py:920
 msgid "Box draw failed"
 msgstr "ボックスの描画に失敗しました"
 
-#: ui/app_window/window_launcher.py:843
+#: ui/app_window/window_launcher.py:861
 msgid "Selection too small"
 msgstr "選択範囲が小さすぎます"
 
-#: ui/app_window/window_launcher.py:844 ui/app_window/window_launcher.py:927
+#: ui/app_window/window_launcher.py:862 ui/app_window/window_launcher.py:945
 msgid "Background box added"
 msgstr "背景ボックスが追加されました"
 
-#: ui/app_window/window_launcher.py:845 ui/app_window/window_launcher.py:928
+#: ui/app_window/window_launcher.py:863 ui/app_window/window_launcher.py:946
 msgid "Background box draw failed"
 msgstr "背景ボックスの描画に失敗しました"
 
-#: ui/app_window/window_launcher.py:852
+#: ui/app_window/window_launcher.py:870
 msgid "Freeform selection is not supported for video"
 msgstr "ビデオでは自由な選択はサポートされていません"
 
-#: ui/app_window/window_launcher.py:875 ui/app_window/window_launcher.py:900
-#: ui/app_window/window_launcher.py:926
+#: ui/app_window/window_launcher.py:893 ui/app_window/window_launcher.py:918
+#: ui/app_window/window_launcher.py:944
 msgid "Need at least 3 points"
 msgstr "少なくとも3ポイントが必要です"
 
-#: ui/app_window/window_launcher.py:880 ui/app_window/window_launcher.py:906
-#: ui/app_window/window_launcher.py:932
+#: ui/app_window/window_launcher.py:898 ui/app_window/window_launcher.py:924
+#: ui/app_window/window_launcher.py:950
 msgid ""
 "Click or click-drag to add points, click near the start to close, Enter to "
 "confirm, Escape to cancel"
 msgstr "クリックまたはクリック＆ドラッグでポイントを追加、開始点付近をクリックして閉じる、Enterで確定、Escapeでキャンセル"
 
-#: ui/app_window/window_launcher.py:957
+#: ui/app_window/window_launcher.py:975
 msgid "No media selected"
 msgstr "選択されたメディアはありません"
 
-#: ui/app_window/window_launcher.py:958
+#: ui/app_window/window_launcher.py:976
 msgid "No media file was selected for comparison"
 msgstr "比較用に選択されたメディアファイルがありません"
 
-#: ui/app_window/window_launcher.py:975
+#: ui/app_window/window_launcher.py:993
 msgid ""
 "Are you sure you want to run all prevalidations on directory {0} ? This may "
 "take a while."
 msgstr "本当にディレクトリ{0}ですべての事前検証を実行したいのですか？時間がかかるかもしれません。"
 
-#: ui/app_window/window_launcher.py:984
+#: ui/app_window/window_launcher.py:1002
 msgid "run prevalidations"
 msgstr "事前検証を実行"
 
-#: ui/app_window/window_launcher.py:1028
+#: ui/app_window/window_launcher.py:1046
 msgid "Prevalidations: {0} / {1}"
 msgstr "事前検証: {0} / {1}"
 
-#: ui/app_window/window_launcher.py:1045
+#: ui/app_window/window_launcher.py:1063
 msgid ""
 "All prevalidations in this directory have finished.\n"
 "Files checked: {0} — outcomes: {1} — moves: {2} — copies: {3} — deletes: {4} — errors: {5}"
@@ -4578,37 +4675,37 @@ msgstr ""
 "このディレクトリ内のすべての事前検証が完了しました。\n"
 "チェックしたファイル数: {0} — 結果: {1} — 移動: {2} — コピー: {3} — 削除: {4} — エラー: {5}"
 
-#: ui/app_window/window_launcher.py:1066
+#: ui/app_window/window_launcher.py:1084
 msgid "Prevalidations now running"
 msgstr "今すぐ実行する準備"
 
-#: ui/app_window/window_launcher.py:1067
+#: ui/app_window/window_launcher.py:1085
 msgid "Prevalidations turned off"
 msgstr "無効化がオフ"
 
-#: ui/app_window/window_launcher.py:1077
+#: ui/app_window/window_launcher.py:1095
 msgid "Extra debug logging enabled"
 msgstr "追加デバッグログ記録を有効化"
 
-#: ui/app_window/window_launcher.py:1078
+#: ui/app_window/window_launcher.py:1096
 msgid "Extra debug logging disabled"
 msgstr "追加デバッグログ記録を無効化"
 
-#: ui/app_window/window_launcher.py:1096
+#: ui/app_window/window_launcher.py:1114
 msgid "Removed from directory notes: {0}"
 msgstr "ディレクトリのメモから削除されました: {0}"
 
-#: ui/app_window/window_launcher.py:1101
+#: ui/app_window/window_launcher.py:1119
 msgid "Added to directory notes: {0}"
 msgstr "ディレクトリのメモへ追加: {0}"
 
-#: ui/app_window/window_launcher.py:1129
+#: ui/app_window/window_launcher.py:1147
 #: ui/files/directory_notes_window_qt.py:352
 msgid "Edit Note - {0}"
 msgstr "編集注 - {0}"
 
-#: ui/app_window/window_launcher.py:1142
-#: ui/compare/classifier_pipeline_editor_qt.py:1920
+#: ui/app_window/window_launcher.py:1160
+#: ui/compare/classifier_pipeline_editor_qt.py:2011
 #: ui/compare/hf_model_manager_window_qt.py:187
 #: ui/files/auto_sort_confirmation_window_qt.py:72
 #: ui/files/directory_notes_window_qt.py:375
@@ -4616,7 +4713,7 @@ msgstr "編集注 - {0}"
 msgid "Save"
 msgstr "保存"
 
-#: ui/app_window/window_launcher.py:1153
+#: ui/app_window/window_launcher.py:1171
 #: ui/files/directory_notes_window_qt.py:382
 msgid "Note saved for: {0}"
 msgstr "メモを保存しました：{0}"
@@ -4893,6 +4990,7 @@ msgid "Add Compare Instance"
 msgstr "比較インスタンスを追加"
 
 #: ui/compare/add_instance_dialog_qt.py:70
+#: ui/compare/classifier_pipeline_editor_qt.py:924
 msgid "Compare mode:"
 msgstr "比較モード:"
 
@@ -4957,10 +5055,10 @@ msgstr "新しい名前："
 #: ui/files/file_action_sets_window_qt.py:276
 #: ui/files/file_action_sets_window_qt.py:339
 #: ui/files/file_action_sets_window_qt.py:346
-#: ui/files/file_action_sets_window_qt.py:370
+#: ui/files/file_action_sets_window_qt.py:373
 #: ui/files/file_actions_window_qt.py:106
-#: ui/files/file_actions_window_qt.py:400 ui/files/marked_file_mover_qt.py:411
-#: utils/constants.py:635
+#: ui/files/file_actions_window_qt.py:434 ui/files/marked_file_mover_qt.py:411
+#: utils/constants.py:636
 msgid "Copy"
 msgstr "コピー"
 
@@ -4993,7 +5091,7 @@ msgid "Run on Profile:"
 msgstr "プロファイル上で実行:"
 
 #: ui/compare/classifier_actions_tab_qt.py:179
-#: ui/compare/classifier_pipeline_editor_qt.py:1948
+#: ui/compare/classifier_pipeline_editor_qt.py:2039
 #: ui/compare/classifier_pipelines_tab_qt.py:170
 #: ui/compare/prevalidations_tab_qt.py:336
 msgid "Active"
@@ -5023,8 +5121,8 @@ msgstr "実行"
 
 #: ui/compare/classifier_actions_tab_qt.py:208
 #: ui/compare/prevalidations_tab_qt.py:372
-#: ui/files/file_actions_window_qt.py:414
-#: ui/files/file_actions_window_qt.py:462
+#: ui/files/file_actions_window_qt.py:448
+#: ui/files/file_actions_window_qt.py:496
 msgid "Modify"
 msgstr "変更する"
 
@@ -5035,7 +5133,7 @@ msgid "Move down"
 msgstr "移動する"
 
 #: ui/compare/classifier_actions_tab_qt.py:257
-#: ui/compare/classifier_pipeline_editor_qt.py:1930
+#: ui/compare/classifier_pipeline_editor_qt.py:2021
 msgid "Pipeline"
 msgstr "パイプライン"
 
@@ -5219,8 +5317,8 @@ msgstr "サイトマップ"
 
 #: ui/compare/classifier_management_window_qt.py:299
 #: ui/compare/hf_model_manager_window_qt.py:766
-#: ui/compare/hf_model_manager_window_qt.py:1278 ui/image/media_details.py:667
-#: ui/image/media_details.py:693 utils/constants.py:455
+#: ui/compare/hf_model_manager_window_qt.py:1278 ui/image/media_details.py:668
+#: ui/image/media_details.py:694 utils/constants.py:455
 msgid "Audio"
 msgstr "オーディオ"
 
@@ -5302,92 +5400,92 @@ msgstr "無効な構成"
 msgid "Classifier Management"
 msgstr "分類器管理"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:72
+#: ui/compare/classifier_pipeline_editor_qt.py:73
 msgid "Classifier Rank"
 msgstr "分類子ランク"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:75
+#: ui/compare/classifier_pipeline_editor_qt.py:76
 msgid "Filename Contains"
 msgstr "ファイル名に含む"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:76
+#: ui/compare/classifier_pipeline_editor_qt.py:77
 msgid "Related Image Exists"
 msgstr "関連画像が存在します"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:77
+#: ui/compare/classifier_pipeline_editor_qt.py:78
 msgid "Base Stem Match"
 msgstr "ベースステムマッチ"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:78
+#: ui/compare/classifier_pipeline_editor_qt.py:79
 msgid "Unknown Suffix Guard"
 msgstr "不明なサフィックスガード"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:80
+#: ui/compare/classifier_pipeline_editor_qt.py:81
 msgid "Prior Node Result"
 msgstr "以前のノードの結果"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:81
+#: ui/compare/classifier_pipeline_editor_qt.py:82
 msgid "Group Child Result"
 msgstr "グループ子の結果"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:84
+#: ui/compare/classifier_pipeline_editor_qt.py:85
 msgid "No Check (Always)"
 msgstr "チェックなし (常に)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:85
+#: ui/compare/classifier_pipeline_editor_qt.py:86
 msgid "Audio Classifier Rank"
 msgstr "音声分類器ランク"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:200
-#: ui/compare/classifier_pipeline_editor_qt.py:275
-#: ui/compare/classifier_pipeline_editor_qt.py:1490
-#: ui/compare/classifier_pipeline_editor_qt.py:2082
+#: ui/compare/classifier_pipeline_editor_qt.py:202
+#: ui/compare/classifier_pipeline_editor_qt.py:277
+#: ui/compare/classifier_pipeline_editor_qt.py:1580
+#: ui/compare/classifier_pipeline_editor_qt.py:2173
 #: ui/compare/directory_profile_window_qt.py:146
 msgid "Add"
 msgstr "追加"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:204
-#: ui/compare/classifier_pipeline_editor_qt.py:279
-#: ui/compare/classifier_pipeline_editor_qt.py:1491
-#: ui/compare/classifier_pipeline_editor_qt.py:2083
+#: ui/compare/classifier_pipeline_editor_qt.py:206
+#: ui/compare/classifier_pipeline_editor_qt.py:281
+#: ui/compare/classifier_pipeline_editor_qt.py:1581
+#: ui/compare/classifier_pipeline_editor_qt.py:2174
 #: ui/compare/directory_profile_window_qt.py:154
 #: ui/compare/directory_profile_window_qt.py:418
 #: ui/files/directory_notes_window_qt.py:197
 msgid "Remove"
 msgstr "削除"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:345
+#: ui/compare/classifier_pipeline_editor_qt.py:347
 msgid "positive text"
 msgstr "肯定的なテキスト"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:346
+#: ui/compare/classifier_pipeline_editor_qt.py:348
 msgid "Positives:"
 msgstr "メリット:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:348
+#: ui/compare/classifier_pipeline_editor_qt.py:350
 msgid "negative text"
 msgstr "ネガティブなテキスト"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:349
+#: ui/compare/classifier_pipeline_editor_qt.py:351
 msgid "Negatives:"
 msgstr "マイナス面:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:357
-#: ui/compare/classifier_pipeline_editor_qt.py:697
+#: ui/compare/classifier_pipeline_editor_qt.py:359
+#: ui/compare/classifier_pipeline_editor_qt.py:699
 msgid "Threshold:"
 msgstr "しきい値:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:390
+#: ui/compare/classifier_pipeline_editor_qt.py:392
 msgid "Classifier:"
 msgstr "分類子:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:392
-#: ui/compare/classifier_pipeline_editor_qt.py:539
+#: ui/compare/classifier_pipeline_editor_qt.py:394
+#: ui/compare/classifier_pipeline_editor_qt.py:541
 msgid "Inherit from pipeline category map"
 msgstr "パイプライン カテゴリ マップから継承"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:395
-#: ui/compare/classifier_pipeline_editor_qt.py:542
+#: ui/compare/classifier_pipeline_editor_qt.py:397
+#: ui/compare/classifier_pipeline_editor_qt.py:544
 msgid ""
 "When checked, matches against ALL of the pipeline's category_map values "
 "instead of the list below. Leave unchecked to name only specific categories "
@@ -5398,18 +5496,18 @@ msgstr ""
 "このチェックボックスをオンにすると、以下のリストではなく、パイプラインの `category_map` "
 "のすべての値と照合されます。特定のカテゴリのみを指定するには（例：除外したいカテゴリのみ）、チェックを外しておいてください。この条件がシード全体ではなく、単一のカテゴリノードを条件として指定している場合、通常はこの設定が適切です。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:401
-#: ui/compare/classifier_pipeline_editor_qt.py:548
+#: ui/compare/classifier_pipeline_editor_qt.py:403
+#: ui/compare/classifier_pipeline_editor_qt.py:550
 msgid "Categories:"
 msgstr "カテゴリ:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:403
-#: ui/compare/classifier_pipeline_editor_qt.py:550
+#: ui/compare/classifier_pipeline_editor_qt.py:405
+#: ui/compare/classifier_pipeline_editor_qt.py:552
 msgid "category name"
 msgstr "カテゴリ名"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:405
-#: ui/compare/classifier_pipeline_editor_qt.py:552
+#: ui/compare/classifier_pipeline_editor_qt.py:407
+#: ui/compare/classifier_pipeline_editor_qt.py:554
 msgid ""
 "Categories this condition matches against. Matching is OR across this list: "
 "the condition succeeds if ANY of these categories occupies a qualifying rank"
@@ -5418,8 +5516,8 @@ msgstr ""
 "この条件が一致するカテゴリ。このリスト全体は OR で評価されます。条件は、これらのカテゴリのいずれかが（Rank range "
 "を参照）適格なランク位置にあり、かつ十分に高いスコア（Min confidence を参照）を持っている場合に成功します。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:416
-#: ui/compare/classifier_pipeline_editor_qt.py:563
+#: ui/compare/classifier_pipeline_editor_qt.py:418
+#: ui/compare/classifier_pipeline_editor_qt.py:565
 msgid ""
 "Position in the classifier's own ranked output to start checking, where rank"
 " 1 is the single category the classifier considers most likely, rank 2 the "
@@ -5429,13 +5527,13 @@ msgstr ""
 "分類器自身の順位付けされた出力で、チェックを開始する位置です。ランク1は分類器が最も可能性が高いと見なす唯一のカテゴリ、ランク2は次に可能性が高いカテゴリ、というように続きます。Min/Max"
 " は合わせて、検査対象となる位置の包含的なウィンドウを定義します――信頼度範囲ではありません。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:422
-#: ui/compare/classifier_pipeline_editor_qt.py:569
+#: ui/compare/classifier_pipeline_editor_qt.py:424
+#: ui/compare/classifier_pipeline_editor_qt.py:571
 msgid "Min:"
 msgstr "最小:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:429
-#: ui/compare/classifier_pipeline_editor_qt.py:576
+#: ui/compare/classifier_pipeline_editor_qt.py:431
+#: ui/compare/classifier_pipeline_editor_qt.py:578
 msgid ""
 "End of the rank-position window (inclusive). Min=Max=1 (the default) only "
 "checks the classifier's single top guess, so a listed category ranked 2nd or"
@@ -5444,18 +5542,18 @@ msgid ""
 msgstr ""
 "ランク位置ウィンドウの終端（含む）。Min=Max=1（デフォルト）は分類器のトップ予測1件だけをチェックするため、リストされたカテゴリが2位以下の場合、たとえ強い二次シグナルであっても一致しません。この範囲を拡大（例：1‑3）すると、上位N予測のどこにあってもカテゴリを捕捉できます。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:435
-#: ui/compare/classifier_pipeline_editor_qt.py:582
+#: ui/compare/classifier_pipeline_editor_qt.py:437
+#: ui/compare/classifier_pipeline_editor_qt.py:584
 msgid "Max:"
 msgstr "最大:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:438
-#: ui/compare/classifier_pipeline_editor_qt.py:585
+#: ui/compare/classifier_pipeline_editor_qt.py:440
+#: ui/compare/classifier_pipeline_editor_qt.py:587
 msgid "Rank range:"
 msgstr "ランク範囲:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:446
-#: ui/compare/classifier_pipeline_editor_qt.py:593
+#: ui/compare/classifier_pipeline_editor_qt.py:448
+#: ui/compare/classifier_pipeline_editor_qt.py:595
 msgid ""
 "Minimum score (0-1) a listed category must have at its rank position to "
 "count as a match. The default of 0.0 is the LEAST strict setting -- it "
@@ -5468,17 +5566,17 @@ msgstr ""
 "は最も緩い設定で、任意のスコアを受け入れるため、ランク位置とカテゴリ所属のみがマッチを決定します。これを上げる（例: "
 "0.3‑0.5）ことで、分類器が実際に自信を持っていることを要求し、ランクウィンドウに偶然入ったほぼゼロに近いスコアでのマッチを防ぎます。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:453
-#: ui/compare/classifier_pipeline_editor_qt.py:600
+#: ui/compare/classifier_pipeline_editor_qt.py:455
+#: ui/compare/classifier_pipeline_editor_qt.py:602
 msgid "Min confidence:"
 msgstr "最小信頼度:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:455
-#: ui/compare/classifier_pipeline_editor_qt.py:602
+#: ui/compare/classifier_pipeline_editor_qt.py:457
+#: ui/compare/classifier_pipeline_editor_qt.py:604
 msgid "Negate (match when categories are NOT found)"
 msgstr "除外 (カテゴリが見つからない場合に一致)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:458
+#: ui/compare/classifier_pipeline_editor_qt.py:460
 msgid ""
 "Unchecked (default): matches when a listed category IS found in the rank "
 "window with enough confidence -- a positive detection. Check this to flip "
@@ -5496,20 +5594,20 @@ msgstr ""
 "はすでに「生成可」を意味します――例: 「Cherry でない場合にのみバナナを生成」など。別個の NOT "
 "コンポジットでラップする必要がなく（このサブ条件ピッカーはネストをサポートしていません）、そうしないと二回目の非キャッシュ分類器評価が余分にかかります。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:469
-#: ui/compare/classifier_pipeline_editor_qt.py:610
+#: ui/compare/classifier_pipeline_editor_qt.py:471
+#: ui/compare/classifier_pipeline_editor_qt.py:612
 msgid "Negate:"
 msgstr "否定:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:485
+#: ui/compare/classifier_pipeline_editor_qt.py:487
 msgid "(no classifiers)"
 msgstr "（分類子なし）"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:537
+#: ui/compare/classifier_pipeline_editor_qt.py:539
 msgid "Audio classifier:"
 msgstr "オーディオ分類器："
 
-#: ui/compare/classifier_pipeline_editor_qt.py:605
+#: ui/compare/classifier_pipeline_editor_qt.py:607
 msgid ""
 "Unchecked (default): matches when a listed category IS found in the rank "
 "window with enough confidence -- a positive detection. Check this to flip "
@@ -5517,93 +5615,93 @@ msgid ""
 msgstr ""
 "チェックなし（デフォルト）：リストされたカテゴリがランクウィンドウ内で十分な信頼度で検出された場合に一致します（陽性検出）。これをチェックすると反転し、リストされたカテゴリのいずれも該当しない場合に条件が一致します。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:626
+#: ui/compare/classifier_pipeline_editor_qt.py:628
 msgid "(no audio classifiers)"
 msgstr "（音声分類器なし）"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:672
+#: ui/compare/classifier_pipeline_editor_qt.py:674
 msgid "Positive prototype directory"
 msgstr "正のプロトタイプディレクトリ"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:676
-#: ui/compare/classifier_pipeline_editor_qt.py:686
-#: ui/compare/classifier_pipeline_editor_qt.py:835
-#: ui/compare/classifier_pipeline_editor_qt.py:937
-#: ui/compare/classifier_pipeline_editor_qt.py:1015
-#: ui/compare/classifier_pipeline_editor_qt.py:1737
+#: ui/compare/classifier_pipeline_editor_qt.py:678
+#: ui/compare/classifier_pipeline_editor_qt.py:688
+#: ui/compare/classifier_pipeline_editor_qt.py:837
+#: ui/compare/classifier_pipeline_editor_qt.py:1026
+#: ui/compare/classifier_pipeline_editor_qt.py:1104
+#: ui/compare/classifier_pipeline_editor_qt.py:1828
 msgid "Browse…"
 msgstr "参照…"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:679
+#: ui/compare/classifier_pipeline_editor_qt.py:681
 msgid "Positive dir:"
 msgstr "正のディレクトリ:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:682
+#: ui/compare/classifier_pipeline_editor_qt.py:684
 msgid "Negative prototype directory (optional)"
 msgstr "ネガティブプロトタイプディレクトリ（オプション）"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:689
+#: ui/compare/classifier_pipeline_editor_qt.py:691
 msgid "Negative dir:"
 msgstr "負のディレクトリ:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:705
+#: ui/compare/classifier_pipeline_editor_qt.py:707
 msgid "Negative lambda:"
 msgstr "ネガティブラムダ:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:709
+#: ui/compare/classifier_pipeline_editor_qt.py:711
 #: ui/compare/directory_profile_window_qt.py:216
 #: ui/files/directory_picker_dialog.py:207
 msgid "Select directory"
 msgstr "ディレクトリを選択"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:744
+#: ui/compare/classifier_pipeline_editor_qt.py:746
 msgid "Use global prompt blacklist"
 msgstr "グローバルプロンプトブラックリストを使用する"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:748
+#: ui/compare/classifier_pipeline_editor_qt.py:750
 msgid "Prompts to match (ignored when blacklist is checked):"
 msgstr "一致させるプロンプト（ブラックリストがチェックされている場合は無視されます）："
 
-#: ui/compare/classifier_pipeline_editor_qt.py:751
+#: ui/compare/classifier_pipeline_editor_qt.py:753
 msgid "prompt keyword"
 msgstr "プロンプトキーワード"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:784
+#: ui/compare/classifier_pipeline_editor_qt.py:786
 msgid "Filename patterns (match if any substring found in filename):"
 msgstr "ファイル名パターン（ファイル名に部分文字列が含まれる場合に一致）："
 
-#: ui/compare/classifier_pipeline_editor_qt.py:786
+#: ui/compare/classifier_pipeline_editor_qt.py:788
 msgid "pattern"
 msgstr "パターン"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:789
+#: ui/compare/classifier_pipeline_editor_qt.py:791
 msgid "Case-sensitive"
 msgstr "大文字と小文字を区別"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:819
+#: ui/compare/classifier_pipeline_editor_qt.py:821
 msgid "e.g. _edit"
 msgstr "例: _edit"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:821
+#: ui/compare/classifier_pipeline_editor_qt.py:823
 msgid "Edit suffix:"
 msgstr "編集サフィックス:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:824
+#: ui/compare/classifier_pipeline_editor_qt.py:826
 msgid ""
 "Search configured related-image directories when no directory is set below"
 msgstr "以下でディレクトリが設定されていない場合、設定された関連画像ディレクトリを検索します"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:831
+#: ui/compare/classifier_pipeline_editor_qt.py:833
 msgid "(empty = use configured dirs or pipeline working directory)"
 msgstr "(空の場合は設定されたディレクトリまたはパイプラインの作業ディレクトリを使用)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:838
-#: ui/compare/classifier_pipeline_editor_qt.py:940
-#: ui/compare/classifier_pipeline_editor_qt.py:1018
+#: ui/compare/classifier_pipeline_editor_qt.py:840
+#: ui/compare/classifier_pipeline_editor_qt.py:1029
+#: ui/compare/classifier_pipeline_editor_qt.py:1107
 msgid "Search directory:"
 msgstr "ディレクトリ検索:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:844
+#: ui/compare/classifier_pipeline_editor_qt.py:846
 msgid ""
 "This condition matches (True) when the downstream file count with this "
 "suffix is BELOW this threshold -- i.e. \"room to generate more\", not \"a "
@@ -5619,11 +5717,11 @@ msgstr ""
 "True とは、画像が（まだ）存在しないことを意味し、これは generate-node の AND 条件に必要な極性（True = "
 "生成可能）と完全に一致しています。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:853
+#: ui/compare/classifier_pipeline_editor_qt.py:855
 msgid "Count threshold:"
 msgstr "数のしきい値:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:856
+#: ui/compare/classifier_pipeline_editor_qt.py:858
 msgid ""
 "Matches when the downstream file count with this suffix is below the "
 "threshold (i.e. room to generate more). When 'Search directory' is empty and"
@@ -5632,17 +5730,17 @@ msgid ""
 msgstr ""
 "このサフィックスを持つダウンストリームのファイル数がしきい値を下回っている場合（つまり、さらに生成する余地がある場合）に一致します。「検索ディレクトリ」が空でチェックボックスがオンの場合、構成されたすべての関連画像ディレクトリが検索されます。いずれかでファイルが見つかると、生成は抑制されます。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:867
-#: ui/compare/classifier_pipeline_editor_qt.py:957
-#: ui/compare/classifier_pipeline_editor_qt.py:1044
+#: ui/compare/classifier_pipeline_editor_qt.py:869
+#: ui/compare/classifier_pipeline_editor_qt.py:1046
+#: ui/compare/classifier_pipeline_editor_qt.py:1133
 msgid "Select search directory"
 msgstr "検索ディレクトリを選択"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:902
+#: ui/compare/classifier_pipeline_editor_qt.py:991
 msgid "Pass when found (uncheck to pass when not found)"
 msgstr "見つかった場合に合格（見つからなかった場合に合格する場合はチェックを外してください）"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:905
+#: ui/compare/classifier_pipeline_editor_qt.py:994
 msgid ""
 "Checked (default) is the intuitive reading: True means a file with this base"
 " stem WAS found. But category-fill style pipelines typically uncheck this, "
@@ -5657,31 +5755,31 @@ msgstr ""
 "は「ターゲットディレクトリにこのベースステムを持つファイルがまだ存在しない」ことを意味します。つまり、「重複が見つかった」のではなく、「このカテゴリはまだ生成されていない」ということです。この条件の極性を、ノードの残りのAND条件が想定している内容に合わせて調整してください（例：True"
 " = 生成可能）。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:913
+#: ui/compare/classifier_pipeline_editor_qt.py:1002
 msgid "Match mode:"
 msgstr "マッチモード:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:916
+#: ui/compare/classifier_pipeline_editor_qt.py:1005
 msgid "e.g. _a, _b  (comma-separated; empty = any)"
 msgstr "例: _a, _b (カンマ区切り; 空欄 = 任意)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:918
+#: ui/compare/classifier_pipeline_editor_qt.py:1007
 msgid "Suffix filter:"
 msgstr "サフィックスフィルター:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:921
-#: ui/compare/classifier_pipeline_editor_qt.py:1003
+#: ui/compare/classifier_pipeline_editor_qt.py:1010
+#: ui/compare/classifier_pipeline_editor_qt.py:1092
 msgid "Search pipeline working directory when no directory is set below"
 msgstr "以下でディレクトリが設定されていない場合、パイプラインの作業ディレクトリを検索"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:930
-#: ui/compare/classifier_pipeline_editor_qt.py:1011
+#: ui/compare/classifier_pipeline_editor_qt.py:1019
+#: ui/compare/classifier_pipeline_editor_qt.py:1100
 msgid ""
 "(empty = use configured related-image dirs or pipeline working directory; "
 "see checkbox)"
 msgstr "(空 = 設定された関連画像ディレクトリまたはパイプラインの作業ディレクトリを使用する; チェックボックスを参照)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:932
+#: ui/compare/classifier_pipeline_editor_qt.py:1021
 msgid ""
 "When empty, searches config: directories_to_search_for_related_images, or "
 "the pipeline working directory if the checkbox above is checked."
@@ -5689,7 +5787,7 @@ msgstr ""
 "空の場合、config: directories_to_search_for_related_images "
 "を検索するか、上のチェックボックスがオンの場合はパイプラインの作業ディレクトリを検索します。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:946
+#: ui/compare/classifier_pipeline_editor_qt.py:1035
 msgid ""
 "Overflow detection: pass when stem group exceeds this many files. -1 = auto-"
 "compute from pipeline category count (len(categories) + 1), works regardless"
@@ -5700,31 +5798,31 @@ msgstr ""
 " 1）、検索ディレクトリに関係なく機能します。0 = "
 "無効（または検索ディレクトリが設定されていない場合に自動計算）。ゼロ以外の場合、一致モードは無視されます。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:953
+#: ui/compare/classifier_pipeline_editor_qt.py:1042
 msgid "Max stem group size:"
 msgstr "最大ステムグループサイズ:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:998
+#: ui/compare/classifier_pipeline_editor_qt.py:1087
 msgid "e.g. _a, _ani, _animal, _b, _c, _d  (comma-separated)"
 msgstr "例: _a, _ani, _animal, _b, _c, _d  (カンマ区切り)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1000
+#: ui/compare/classifier_pipeline_editor_qt.py:1089
 msgid "Expected suffixes:"
 msgstr "想定される接尾辞:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1021
+#: ui/compare/classifier_pipeline_editor_qt.py:1110
 msgid "(empty = no inference; unknown files always block)"
 msgstr "（空 = 推論なし; 不明なファイルは常にブロック）"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1023
+#: ui/compare/classifier_pipeline_editor_qt.py:1112
 msgid "Classifier (inference):"
 msgstr "分類器（推論）："
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1031
+#: ui/compare/classifier_pipeline_editor_qt.py:1120
 msgid "Inference threshold:"
 msgstr "推論しきい値:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1034
+#: ui/compare/classifier_pipeline_editor_qt.py:1123
 msgid ""
 "Returns True when an unrecognised-suffix file exists that the classifier "
 "cannot resolve. Wrap in CompositeCondition(NOT) as a guard node: "
@@ -5733,147 +5831,147 @@ msgid ""
 msgstr ""
 "認識されないサフィックスを持つファイルが存在し、分類子が解決できない場合にTrueを返します。ガードノードとしてCompositeCondition(NOT)でラップします：on_match=CONTINUE、on_no_match=REJECT。シードイメージ（サフィックスなし）はフラグされません。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1086
+#: ui/compare/classifier_pipeline_editor_qt.py:1175
 msgid "Lookahead:"
 msgstr "Lookahead:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1098
+#: ui/compare/classifier_pipeline_editor_qt.py:1187
 msgid "(no lookaheads)"
 msgstr "(先読みなし)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1122
+#: ui/compare/classifier_pipeline_editor_qt.py:1211
 msgid "Prior node:"
 msgstr "前のノード:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1124
-#: ui/compare/classifier_pipeline_editor_qt.py:1183
+#: ui/compare/classifier_pipeline_editor_qt.py:1213
+#: ui/compare/classifier_pipeline_editor_qt.py:1272
 msgid "Expected result: matched"
 msgstr "期待される結果: 一致"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1130
+#: ui/compare/classifier_pipeline_editor_qt.py:1219
 msgid "Note: only nodes defined earlier in the pipeline are available."
 msgstr "注：パイプラインの前の方で定義されたノードのみ使用できます。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1177
+#: ui/compare/classifier_pipeline_editor_qt.py:1266
 msgid "Group node:"
 msgstr "グループノード:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1181
+#: ui/compare/classifier_pipeline_editor_qt.py:1270
 msgid "Child node:"
 msgstr "子ノード:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1188
+#: ui/compare/classifier_pipeline_editor_qt.py:1277
 msgid "Only prior group nodes and their children appear here."
 msgstr "ここには以前のグループノードとその子のみが表示されます。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1201
+#: ui/compare/classifier_pipeline_editor_qt.py:1290
 msgid "(no children)"
 msgstr "（子ノードなし）"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1211
+#: ui/compare/classifier_pipeline_editor_qt.py:1300
 msgid "(no prior group nodes)"
 msgstr "(以前のグループノードなし)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1250
+#: ui/compare/classifier_pipeline_editor_qt.py:1339
 msgid ""
 "No check — this node always matches, so its on-match outcome simply "
 "executes."
 msgstr "チェックなし — このノードは常に一致するため、オンマッチ結果はそのまま実行されます。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1274
-#: ui/compare/classifier_pipeline_editor_qt.py:1966
+#: ui/compare/classifier_pipeline_editor_qt.py:1363
+#: ui/compare/classifier_pipeline_editor_qt.py:2057
 msgid "Type:"
 msgstr "タイプ:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1346
-#: ui/compare/classifier_pipeline_editor_qt.py:1467
+#: ui/compare/classifier_pipeline_editor_qt.py:1436
+#: ui/compare/classifier_pipeline_editor_qt.py:1557
 msgid "Operator:"
 msgstr "オペレーター:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1355
+#: ui/compare/classifier_pipeline_editor_qt.py:1445
 msgid "AND/OR: ≥ 2 sub-conditions · NOT: exactly 1 · XOR: exactly 2"
 msgstr "AND/OR: ≥ 2 のサブ条件 · NOT: 正確に 1 · XOR: 正確に 2"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1373
+#: ui/compare/classifier_pipeline_editor_qt.py:1463
 msgid "Add sub-condition"
 msgstr "サブ条件を追加"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1376
+#: ui/compare/classifier_pipeline_editor_qt.py:1466
 msgid "Remove last"
 msgstr "最後を削除"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1476
+#: ui/compare/classifier_pipeline_editor_qt.py:1566
 msgid "OR: match if any child matches  ·  AND: match if all children match"
 msgstr "OR: いずれかの子が一致する場合に一致  ·  AND: すべての子が一致する場合に一致"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1479
+#: ui/compare/classifier_pipeline_editor_qt.py:1569
 msgid "Child nodes:"
 msgstr "子ノード:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1492
-#: ui/compare/classifier_pipeline_editor_qt.py:2084
+#: ui/compare/classifier_pipeline_editor_qt.py:1582
+#: ui/compare/classifier_pipeline_editor_qt.py:2175
 msgid "↑"
 msgstr "↑"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1493
-#: ui/compare/classifier_pipeline_editor_qt.py:2085
+#: ui/compare/classifier_pipeline_editor_qt.py:1583
+#: ui/compare/classifier_pipeline_editor_qt.py:2176
 #: ui/compare/classifier_pipelines_tab_qt.py:252
 msgid "↓"
 msgstr "↓"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1508
+#: ui/compare/classifier_pipeline_editor_qt.py:1598
 msgid "unique child name"
 msgstr "ユニークな子供の名前"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1510
+#: ui/compare/classifier_pipeline_editor_qt.py:1600
 msgid "Child name:"
 msgstr "お子様のお名前："
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1515
+#: ui/compare/classifier_pipeline_editor_qt.py:1605
 msgid "Condition:"
 msgstr "条件:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1706
+#: ui/compare/classifier_pipeline_editor_qt.py:1797
 msgid "Outcome:"
 msgstr "結果："
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1715
+#: ui/compare/classifier_pipeline_editor_qt.py:1806
 msgid "Jump to node:"
 msgstr "ノードへジャンプ:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1724
+#: ui/compare/classifier_pipeline_editor_qt.py:1815
 msgid "Action:"
 msgstr "アクション:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1732
+#: ui/compare/classifier_pipeline_editor_qt.py:1823
 msgid "Target dir:"
 msgstr "ターゲットディレクトリ:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1734
+#: ui/compare/classifier_pipeline_editor_qt.py:1825
 msgid "Target directory for MOVE/COPY"
 msgstr "移動/コピーの宛先ディレクトリ"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1747
+#: ui/compare/classifier_pipeline_editor_qt.py:1838
 msgid "Select target directory"
 msgstr "ターゲットディレクトリを選択"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1881
+#: ui/compare/classifier_pipeline_editor_qt.py:1972
 msgid "Edit Pipeline"
 msgstr "パイプラインを編集"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1940
+#: ui/compare/classifier_pipeline_editor_qt.py:2031
 msgid "Name:"
 msgstr "名前:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1945
+#: ui/compare/classifier_pipeline_editor_qt.py:2036
 msgid "Description:"
 msgstr "説明:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1951
+#: ui/compare/classifier_pipeline_editor_qt.py:2042
 msgid "Move generated to working dir"
 msgstr "生成されたものを作業ディレクトリに移動"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1954
+#: ui/compare/classifier_pipeline_editor_qt.py:2045
 msgid ""
 "When enabled, GENERATE actions pass the current working directory to sd-"
 "runner so generated files land there instead of the default output folder."
@@ -5881,92 +5979,117 @@ msgstr ""
 "有効にすると、GENERATE アクションは現在の作業ディレクトリを sd-runner "
 "に渡し、生成されたファイルがデフォルトの出力フォルダーではなくそこに配置されるようにします。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1970
-#: ui/compare/classifier_pipeline_editor_qt.py:2934
+#: ui/compare/classifier_pipeline_editor_qt.py:2061
+#: ui/compare/classifier_pipeline_editor_qt.py:3027
 #: ui/compare/classifier_pipelines_tab_qt.py:276
 msgid "(no profiles)"
 msgstr "(プロファイルなし)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1975
+#: ui/compare/classifier_pipeline_editor_qt.py:2066
 msgid "Profile:"
 msgstr "プロフィール:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1983
+#: ui/compare/classifier_pipeline_editor_qt.py:2074
 msgid "Default action:"
 msgstr "デフォルトのアクション:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1989
+#: ui/compare/classifier_pipeline_editor_qt.py:2080
 msgid "Default reject action:"
 msgstr "デフォルトの拒否アクション:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:1992
+#: ui/compare/classifier_pipeline_editor_qt.py:2083
 msgid "(Use global setting)"
 msgstr "(グローバル設定を使用)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2001
+#: ui/compare/classifier_pipeline_editor_qt.py:2092
 msgid "Generation type:"
 msgstr "生成タイプ:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2004
+#: ui/compare/classifier_pipeline_editor_qt.py:2095
 msgid "category name, e.g. Apple"
 msgstr "カテゴリ名（例: Apple）"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2005
+#: ui/compare/classifier_pipeline_editor_qt.py:2096
 msgid "suffix, e.g. _apple"
 msgstr "接尾辞、例：_apple"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2009
+#: ui/compare/classifier_pipeline_editor_qt.py:2100
 msgid "Category map:"
 msgstr "カテゴリーマップ:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2013
+#: ui/compare/classifier_pipeline_editor_qt.py:2104
 msgid ""
 "The category this pipeline generates from seed images. Used in the run "
 "confirmation dialog to label the operation."
 msgstr "このパイプラインがシード画像から生成するカテゴリ。実行確認ダイアログで操作をラベル付けするために使用されます。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2017
+#: ui/compare/classifier_pipeline_editor_qt.py:2108
 msgid "Seed category:"
 msgstr "シードのカテゴリ："
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2022
+#: ui/compare/classifier_pipeline_editor_qt.py:2113
 msgid ""
 "File order for a batch run. No sort is fastest for a large directory since "
 "it skips wrapping/sorting entirely and uses the raw scan order as-is."
 msgstr ""
 "バッチ実行時のファイル順序。大きなディレクトリではソートしない方が最速です。ラップ/ソートを完全に省略し、生のスキャン順序をそのまま使用します。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2026
+#: ui/compare/classifier_pipeline_editor_qt.py:2117
 msgid "No sort (fastest)"
 msgstr "ソートなし（最速）"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2034
+#: ui/compare/classifier_pipeline_editor_qt.py:2125
 msgid "Run sort order:"
 msgstr "実行順序:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2067
+#: ui/compare/classifier_pipeline_editor_qt.py:2127
+msgid "Evaluate each stem group once"
+msgstr "各ステムグループを一度評価する"
+
+#: ui/compare/classifier_pipeline_editor_qt.py:2130
+msgid ""
+"In a batch run, skip a file whose stem group has already been evaluated, and"
+" skip stem groups whose seed cannot be located or is not filed. Turn off to "
+"evaluate every file independently. Related Image sort order lets derivatives"
+" skip sooner, but is not required for correctness."
+msgstr ""
+"バッチ実行では、ステムグループが既に評価済みのファイルをスキップし、シードが見つからない、または登録されていないステムグループもスキップします。オフにすると各ファイルを個別に評価します。関連画像のソート順は派生物を早めにスキップさせますが、正確さに必須ではありません。"
+
+#: ui/compare/classifier_pipeline_editor_qt.py:2139
+msgid "Record per-node decisions"
+msgstr "ノードごとの決定を記録"
+
+#: ui/compare/classifier_pipeline_editor_qt.py:2142
+msgid ""
+"Write each evaluated file's per-node match result and score into the run "
+"dump, for auditing or threshold calibration. Adds one record per file, held "
+"in memory until the run finishes."
+msgstr ""
+"評価された各ファイルのノード単位のマッチ結果とスコアを実行ダンプに書き込みます。監査やしきい値のキャリブレーションに使用します。ファイルごとに1つのレコードを追加し、実行が完了するまでメモリに保持します。"
+
+#: ui/compare/classifier_pipeline_editor_qt.py:2158
 #: ui/compare/classifier_pipelines_tab_qt.py:173
 msgid "Nodes"
 msgstr "ノード"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2093
+#: ui/compare/classifier_pipeline_editor_qt.py:2184
 msgid "Group Selected →"
 msgstr "選択したグループ →"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2095
+#: ui/compare/classifier_pipeline_editor_qt.py:2186
 msgid ""
 "Convert the selected nodes into children of a new Group node (select 2 or "
 "more with Ctrl+click)"
 msgstr "選択したノードを新しいグループノードの子ノードに変換します（Ctrl+クリックで2つ以上を選択）"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2102
-#: ui/compare/classifier_pipeline_editor_qt.py:2492
-#: ui/compare/classifier_pipeline_editor_qt.py:2504
-#: ui/compare/classifier_pipeline_editor_qt.py:2548
+#: ui/compare/classifier_pipeline_editor_qt.py:2193
+#: ui/compare/classifier_pipeline_editor_qt.py:2585
+#: ui/compare/classifier_pipeline_editor_qt.py:2597
+#: ui/compare/classifier_pipeline_editor_qt.py:2641
 msgid "Fill from Map"
 msgstr "マップから入力"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2104
+#: ui/compare/classifier_pipeline_editor_qt.py:2195
 msgid ""
 "Append one Generate node per category-map entry. Each node checks that no "
 "derivative exists yet and that the target directory lacks this stem, then "
@@ -5975,80 +6098,80 @@ msgid ""
 msgstr ""
 "カテゴリマップエントリごとに1つのGenerateノードを追加します。各ノードは、派生物がまだ存在せず、ターゲットディレクトリにこのステムがないことを確認してから、カテゴリサフィックスを使用して生成します。生成後にノードごとにターゲットディレクトリを設定します。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2128
+#: ui/compare/classifier_pipeline_editor_qt.py:2219
 msgid "Node Editor"
 msgstr "ノードエディター"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2134
+#: ui/compare/classifier_pipeline_editor_qt.py:2225
 msgid "unique node name"
 msgstr "一意のノード名"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2136
+#: ui/compare/classifier_pipeline_editor_qt.py:2227
 msgid "Node name:"
 msgstr "ノード名:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2141
+#: ui/compare/classifier_pipeline_editor_qt.py:2232
 msgid "Enabled:"
 msgstr "有効:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2150
+#: ui/compare/classifier_pipeline_editor_qt.py:2241
 msgid "Condition type:"
 msgstr "条件タイプ:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2191
+#: ui/compare/classifier_pipeline_editor_qt.py:2284
 msgid "On match:"
 msgstr "一致時:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2192
+#: ui/compare/classifier_pipeline_editor_qt.py:2285
 msgid "On no-match:"
 msgstr "一致しない場合:"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2202
+#: ui/compare/classifier_pipeline_editor_qt.py:2295
 msgid "Flow Preview"
 msgstr "フローのプレビュー"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2329
+#: ui/compare/classifier_pipeline_editor_qt.py:2422
 msgid "Toggle Enabled ({0} nodes)"
 msgstr "切替有効 ({0} ノード)"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2331
+#: ui/compare/classifier_pipeline_editor_qt.py:2424
 msgid "Disable Node"
 msgstr "ノードを無効にする"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2331
+#: ui/compare/classifier_pipeline_editor_qt.py:2424
 msgid "Enable Node"
 msgstr "ノードを有効化"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2335
+#: ui/compare/classifier_pipeline_editor_qt.py:2428
 msgid "Run Node on Current Media"
 msgstr "現在のメディアでノードを実行"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2397
+#: ui/compare/classifier_pipeline_editor_qt.py:2490
 msgid "Run Node"
 msgstr "Nodeを実行"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2397
+#: ui/compare/classifier_pipeline_editor_qt.py:2490
 #: ui/compare/classifier_pipelines_tab_qt.py:502
 msgid "No active media to run on."
 msgstr "実行できるアクティブメディアがありません。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2417
+#: ui/compare/classifier_pipeline_editor_qt.py:2510
 msgid "Node '{node}' on {file}: {result}{action}"
 msgstr "ファイル「{file}」のノード「{node}」: {result}{action}"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2420
+#: ui/compare/classifier_pipeline_editor_qt.py:2513
 msgid "match"
 msgstr "一致"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2420
+#: ui/compare/classifier_pipeline_editor_qt.py:2513
 msgid "no match"
 msgstr "一致なし"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2493
+#: ui/compare/classifier_pipeline_editor_qt.py:2586
 msgid "The category map is empty. Add categories before generating nodes."
 msgstr "カテゴリマップが空です。ノードを生成する前にカテゴリを追加してください。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2505
+#: ui/compare/classifier_pipeline_editor_qt.py:2598
 msgid ""
 "The following categories already have a matching Generate node and will be skipped: {cats}.\n"
 "\n"
@@ -6058,33 +6181,33 @@ msgstr ""
 "\n"
 "残りのカテゴリにノードを追加しますか？"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2549
+#: ui/compare/classifier_pipeline_editor_qt.py:2642
 msgid ""
 "{count} node(s) added. Set the target directory on each BaseStemMatch sub-"
 "condition to the per-category output folder."
 msgstr ""
 "{count}ノードが追加されました。各BaseStemMatchサブ条件のターゲットディレクトリをカテゴリごとの出力フォルダーに設定します。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2899
-#: ui/compare/classifier_pipeline_editor_qt.py:2907
-#: ui/compare/classifier_pipeline_editor_qt.py:2916
+#: ui/compare/classifier_pipeline_editor_qt.py:2992
+#: ui/compare/classifier_pipeline_editor_qt.py:3000
+#: ui/compare/classifier_pipeline_editor_qt.py:3009
 msgid "Validation Error"
 msgstr "検証エラー"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2899
+#: ui/compare/classifier_pipeline_editor_qt.py:2992
 msgid "Pipeline name is required."
 msgstr "パイプライン名が必要です。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2908
-#: ui/compare/classifier_pipeline_editor_qt.py:2917
+#: ui/compare/classifier_pipeline_editor_qt.py:3001
+#: ui/compare/classifier_pipeline_editor_qt.py:3010
 msgid "A pipeline named '{}' already exists."
 msgstr "'{}' という名前のパイプラインは既に存在します。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2962
+#: ui/compare/classifier_pipeline_editor_qt.py:3055
 msgid "Validation Errors"
 msgstr "検証エラー"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2972
+#: ui/compare/classifier_pipeline_editor_qt.py:3065
 msgid "Category Map Warnings"
 msgstr "カテゴリマップの警告"
 
@@ -6541,7 +6664,7 @@ msgstr "削除された埋め込みシード： "
 #: ui/compare/filter_builder_panel_qt.py:43
 #: ui/compare/filter_builder_panel_qt.py:123
 #: ui/compare/filter_builder_panel_qt.py:134
-#: ui/compare/filter_builder_panel_qt.py:176 ui/image/media_details.py:383
+#: ui/compare/filter_builder_panel_qt.py:176 ui/image/media_details.py:384
 #: utils/constants.py:56 utils/constants.py:89 utils/constants.py:172
 #: utils/constants.py:193
 msgid "Size"
@@ -7270,15 +7393,15 @@ msgid ""
 "directories"
 msgstr "事前検証キャッシュの統計情報: ~{memory} — {items} アイテム — {directories} ディレクトリ"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:128
+#: ui/compare/seek_to_trigger_tab_qt.py:142
 msgid "Copy path"
 msgstr "パスをコピー"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:144
+#: ui/compare/seek_to_trigger_tab_qt.py:158
 msgid "Custom sample density:"
 msgstr "カスタムサンプル密度:"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:148
+#: ui/compare/seek_to_trigger_tab_qt.py:162
 msgid ""
 "When unchecked, the action's own sample ratio is used (default).\n"
 "Enable to override with a custom density for this seek scan."
@@ -7286,7 +7409,7 @@ msgstr ""
 "チェックを外すと、アクション独自のサンプリング比が使用されます（デフォルト）。\n"
 "このシークスキャンに対してカスタム密度を適用するには、このチェックボックスをオンにしてください。"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:162
+#: ui/compare/seek_to_trigger_tab_qt.py:176
 msgid ""
 "Controls what fraction of frames are scanned per seek.\n"
 "Higher values find trigger points more precisely but take longer.\n"
@@ -7298,14 +7421,14 @@ msgstr ""
 "75％を超えると効果が頭打ちになり、長い動画では処理が非常に遅くなる可能性があります。\n"
 "100％に設定すると、すべてのフレームが検査されます。"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:179
+#: ui/compare/seek_to_trigger_tab_qt.py:193
 msgid ""
 "Tip: values above 75 % give diminishing returns and may be very slow for "
 "long videos."
 msgstr "ヒント: 75%を超える値は効果が薄れ、長いビデオでは非常に遅くなる可能性があります。"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:230
 #: ui/compare/seek_to_trigger_tab_qt.py:244
+#: ui/compare/seek_to_trigger_tab_qt.py:258
 msgid "Seek to trigger"
 msgstr "トリガー位置にシーク"
 
@@ -7313,47 +7436,47 @@ msgstr "トリガー位置にシーク"
 msgid "No dynamic media is currently loaded."
 msgstr "現在、動的メディアは読み込まれていません。"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:319
+#: ui/compare/seek_to_trigger_tab_qt.py:335
 msgid "A scan is already in progress."
 msgstr "スキャンが既に進行中です。"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:331
-#: ui/compare/seek_to_trigger_tab_qt.py:541
+#: ui/compare/seek_to_trigger_tab_qt.py:347
+#: ui/compare/seek_to_trigger_tab_qt.py:578
 msgid "Scanning '{name}' on {file}…"
 msgstr "{file} の {name} をスキャンしています…"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:380
-#: ui/compare/seek_to_trigger_tab_qt.py:559
+#: ui/compare/seek_to_trigger_tab_qt.py:407
+#: ui/compare/seek_to_trigger_tab_qt.py:603
 msgid ""
 "Trigger found (sample {slot}/{total}) but seek position could not be "
 "computed."
 msgstr "トリガーが見つかりました（サンプル {slot}/{total}）が、シーク位置を計算できませんでした。"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:392
-#: ui/compare/seek_to_trigger_tab_qt.py:566
+#: ui/compare/seek_to_trigger_tab_qt.py:419
+#: ui/compare/seek_to_trigger_tab_qt.py:610
 msgid "'{name}' triggers at {position} (sample {slot}/{total})."
 msgstr "{position}で「{name}」がトリガーされます（サンプル{slot}/{total}）。"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:402
-#: ui/compare/seek_to_trigger_tab_qt.py:577
+#: ui/compare/seek_to_trigger_tab_qt.py:429
+#: ui/compare/seek_to_trigger_tab_qt.py:621
 msgid "'{name}' triggers on page {page} (sample {slot}/{total})."
 msgstr "「{name}」はページ {page} でトリガーされます（サンプル {slot}/{total}）。"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:417
-#: ui/compare/seek_to_trigger_tab_qt.py:588
+#: ui/compare/seek_to_trigger_tab_qt.py:452
+#: ui/compare/seek_to_trigger_tab_qt.py:639
 msgid "'{name}' did not trigger on the current media ({n} samples scanned)."
 msgstr "「{name}」 は現在のメディアでトリガーされませんでした（{n} サンプルがスキャンされました）。"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:425
-#: ui/compare/seek_to_trigger_tab_qt.py:595
+#: ui/compare/seek_to_trigger_tab_qt.py:462
+#: ui/compare/seek_to_trigger_tab_qt.py:646
 msgid "Error during trigger scan: {0}"
 msgstr "トリガースキャン中のエラー: {0}"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:437
+#: ui/compare/seek_to_trigger_tab_qt.py:474
 msgid "Last action: {name}"
 msgstr "最後の操作: {name}"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:525
+#: ui/compare/seek_to_trigger_tab_qt.py:562
 msgid "No media loaded."
 msgstr "メディアが読み込まれていません。"
 
@@ -7361,21 +7484,41 @@ msgstr "メディアが読み込まれていません。"
 msgid "Current media is not video, GIF, or PDF."
 msgstr "現在のメディアは動画、GIF、またはPDFではありません。"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:533
+#: ui/compare/seek_to_trigger_tab_qt.py:570
 msgid "A seek scan is already in progress."
 msgstr "シークスキャンは既に進行中です。"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:615
+#: ui/compare/seek_to_trigger_tab_qt.py:689
 msgid "matched category: {cat}"
 msgstr "一致したカテゴリ: {cat}"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:624
+#: ui/compare/seek_to_trigger_tab_qt.py:698
 msgid "Trigger: audio classifier"
 msgstr "トリガー: 音声分類器"
 
-#: ui/compare/seek_to_trigger_tab_qt.py:632
+#: ui/compare/seek_to_trigger_tab_qt.py:706
 msgid "Trigger: {t}"
 msgstr "トリガー: {t}"
+
+#: ui/files/auto_sort_confirmation_window_qt.py:34
+msgid "Auto-Sort Confirmation Categories"
+msgstr "自動ソート確認カテゴリ"
+
+#: ui/files/auto_sort_confirmation_window_qt.py:47
+msgid ""
+"When viewing the last automatically sorted media, ask for confirmation first if it was sorted into one of these categories.\n"
+"Categories are matched without regard to case."
+msgstr ""
+"自動的に分類された最新のメディアを表示する際、これらのカテゴリのいずれかに分類された場合は、まず確認を求めます。\n"
+"カテゴリは大文字小文字を区別せずに照合されます。"
+
+#: ui/files/auto_sort_confirmation_window_qt.py:56
+msgid "Categories (comma-separated):"
+msgstr "カテゴリ（カンマ区切り）:"
+
+#: ui/files/auto_sort_confirmation_window_qt.py:105
+msgid "Confirmation set for {0} categories"
+msgstr "確認が{0}カテゴリに設定されました"
 
 #: ui/files/directory_notes_window_qt.py:48
 msgid "Directory Notes - {0}"
@@ -7573,7 +7716,7 @@ msgstr "{0} ファイル名が見つかりません:"
 
 #: ui/files/directory_notes_window_qt.py:523
 #: ui/files/directory_notes_window_qt.py:553
-#: ui/files/file_actions_window_qt.py:328
+#: ui/files/file_actions_window_qt.py:333
 msgid "... and {0} more"
 msgstr "...および{0}件以上"
 
@@ -7680,7 +7823,7 @@ msgstr ""
 msgid "Remove Favorite"
 msgstr "お気に入りを削除する"
 
-#: ui/files/favorites_window_qt.py:253 ui/files/file_actions_window_qt.py:492
+#: ui/files/favorites_window_qt.py:253 ui/files/file_actions_window_qt.py:526
 msgid "File not found: "
 msgstr "ファイルが見つかりませんでした： "
 
@@ -7739,15 +7882,15 @@ msgstr "ショートカットまたは最近使用したものからアクショ
 #: ui/files/file_action_sets_window_qt.py:276
 #: ui/files/file_action_sets_window_qt.py:339
 #: ui/files/file_action_sets_window_qt.py:346
-#: ui/files/file_action_sets_window_qt.py:370
+#: ui/files/file_action_sets_window_qt.py:373
 #: ui/files/file_actions_window_qt.py:105
-#: ui/files/file_actions_window_qt.py:398 ui/files/marked_file_mover_qt.py:404
-#: utils/constants.py:633
+#: ui/files/file_actions_window_qt.py:432 ui/files/marked_file_mover_qt.py:404
+#: utils/constants.py:634
 msgid "Move"
 msgstr "交通アクセス"
 
 #: ui/files/file_action_sets_window_qt.py:281
-#: ui/files/related_images_window_qt.py:71
+#: ui/files/related_images_window_qt.py:73
 msgid "(no directory)"
 msgstr "(ディレクトリなし)"
 
@@ -7755,32 +7898,32 @@ msgstr "(ディレクトリなし)"
 msgid "No hotkey actions configured."
 msgstr "ホットキーのアクションが設定されていません。"
 
-#: ui/files/file_action_sets_window_qt.py:365
+#: ui/files/file_action_sets_window_qt.py:368
 msgid "No recent file actions found."
 msgstr "最近のファイル操作が見つかりません。"
 
-#: ui/files/file_action_sets_window_qt.py:381
+#: ui/files/file_action_sets_window_qt.py:384
 msgid "No presets saved yet."
 msgstr "保存されたプリセットはまだありません。"
 
-#: ui/files/file_action_sets_window_qt.py:443
-#: ui/files/file_action_sets_window_qt.py:486
+#: ui/files/file_action_sets_window_qt.py:446
+#: ui/files/file_action_sets_window_qt.py:489
 msgid "No actions selected."
 msgstr "アクションが選択されていません。"
 
-#: ui/files/file_action_sets_window_qt.py:480
+#: ui/files/file_action_sets_window_qt.py:483
 msgid "run file action set"
 msgstr "ファイルアクションセットを実行"
 
-#: ui/files/file_action_sets_window_qt.py:491
+#: ui/files/file_action_sets_window_qt.py:494
 msgid "No files are marked."
 msgstr "マークされたファイルはありません。"
 
-#: ui/files/file_action_sets_window_qt.py:524
+#: ui/files/file_action_sets_window_qt.py:527
 msgid "File Action Sets Error"
 msgstr "ファイルアクションセットのエラー"
 
-#: ui/files/file_action_sets_window_qt.py:532
+#: ui/files/file_action_sets_window_qt.py:535
 msgid "Executed {0} action(s) on {1} file(s)."
 msgstr "{1}個のファイルで{0}個のアクションを実行しました。"
 
@@ -7796,125 +7939,125 @@ msgstr "ファイル操作履歴"
 msgid "All"
 msgstr "すべて"
 
-#: ui/files/file_actions_window_qt.py:115
+#: ui/files/file_actions_window_qt.py:116
 msgid "Any"
 msgstr "すべて"
 
-#: ui/files/file_actions_window_qt.py:116
+#: ui/files/file_actions_window_qt.py:117
 msgid "User"
 msgstr "ユーザー"
 
-#: ui/files/file_actions_window_qt.py:117
+#: ui/files/file_actions_window_qt.py:118
 msgid "Auto"
 msgstr "自動"
 
-#: ui/files/file_actions_window_qt.py:123
+#: ui/files/file_actions_window_qt.py:124
 msgid "Search Media"
 msgstr "メディアを検索"
 
-#: ui/files/file_actions_window_qt.py:128
+#: ui/files/file_actions_window_qt.py:129
 msgid "Open in New Window"
 msgstr "新しいウィンドウで開く"
 
-#: ui/files/file_actions_window_qt.py:134
+#: ui/files/file_actions_window_qt.py:135
 msgid "Search in New Window"
 msgstr "新しいウィンドウで検索"
 
-#: ui/files/file_actions_window_qt.py:140
+#: ui/files/file_actions_window_qt.py:141
 msgid "Clear History"
 msgstr "履歴をクリア"
 
-#: ui/files/file_actions_window_qt.py:207
+#: ui/files/file_actions_window_qt.py:208
 msgid "moves"
 msgstr "動き"
 
-#: ui/files/file_actions_window_qt.py:208
+#: ui/files/file_actions_window_qt.py:209
 msgid "copies"
 msgstr "コピー"
 
-#: ui/files/file_actions_window_qt.py:209
+#: ui/files/file_actions_window_qt.py:210
 msgid "deletes"
 msgstr "削除"
 
-#: ui/files/file_actions_window_qt.py:212
+#: ui/files/file_actions_window_qt.py:214
 msgid "No {0} in history."
 msgstr "歴史上、{0}は存在しません。"
 
-#: ui/files/file_actions_window_qt.py:214
+#: ui/files/file_actions_window_qt.py:216
 msgid "No actions match the current filter."
 msgstr "現在のフィルターに一致するアクションがありません。"
 
-#: ui/files/file_actions_window_qt.py:226
+#: ui/files/file_actions_window_qt.py:228
 msgid "Load More ({0} remaining)"
 msgstr "さらに表示（残り {0} 件）"
 
-#: ui/files/file_actions_window_qt.py:250
-#: ui/files/file_actions_window_qt.py:258
+#: ui/files/file_actions_window_qt.py:252
+#: ui/files/file_actions_window_qt.py:261
 msgid "Deleted"
 msgstr "削除済み"
 
-#: ui/files/file_actions_window_qt.py:251
+#: ui/files/file_actions_window_qt.py:254
 msgid "Total"
 msgstr "合計"
 
-#: ui/files/file_actions_window_qt.py:284
+#: ui/files/file_actions_window_qt.py:288
 msgid "Move Statistics"
 msgstr "移動統計"
 
-#: ui/files/file_actions_window_qt.py:285
+#: ui/files/file_actions_window_qt.py:289
 msgid "Copy Statistics"
 msgstr "コピー統計"
 
-#: ui/files/file_actions_window_qt.py:286
+#: ui/files/file_actions_window_qt.py:290
 msgid "Delete Statistics"
 msgstr "削除に関する統計"
 
-#: ui/files/file_actions_window_qt.py:289
+#: ui/files/file_actions_window_qt.py:294
 msgid "Today's File Actions"
 msgstr "本日のファイル操作"
 
-#: ui/files/file_actions_window_qt.py:293
+#: ui/files/file_actions_window_qt.py:298
 msgid "File Action Statistics"
 msgstr "ファイル操作統計"
 
-#: ui/files/file_actions_window_qt.py:300
+#: ui/files/file_actions_window_qt.py:305
 msgid "All Time"
 msgstr "全期間"
 
-#: ui/files/file_actions_window_qt.py:300
+#: ui/files/file_actions_window_qt.py:305
 msgid "Today Only"
 msgstr "本日限定"
 
-#: ui/files/file_actions_window_qt.py:306
+#: ui/files/file_actions_window_qt.py:311
 msgid "Target Directory"
 msgstr "ターゲットディレクトリ"
 
-#: ui/files/file_actions_window_qt.py:386
+#: ui/files/file_actions_window_qt.py:417
 msgid " ({0} files)"
 msgstr " ({0} ファイル)"
 
-#: ui/files/file_actions_window_qt.py:388
+#: ui/files/file_actions_window_qt.py:419
 msgid "(auto)"
 msgstr "(自動)"
 
-#: ui/files/file_actions_window_qt.py:408
-#: ui/files/file_actions_window_qt.py:454
+#: ui/files/file_actions_window_qt.py:442
+#: ui/files/file_actions_window_qt.py:488
 msgid "Undo"
 msgstr "ログイン"
 
-#: ui/files/file_actions_window_qt.py:447
+#: ui/files/file_actions_window_qt.py:481
 msgid "Copy Filename"
 msgstr "ファイル名コピー"
 
-#: ui/files/file_actions_window_qt.py:503
+#: ui/files/file_actions_window_qt.py:537
 msgid "Error opening media: "
 msgstr "メディアを開けません： "
 
-#: ui/files/file_actions_window_qt.py:526
+#: ui/files/file_actions_window_qt.py:560
 msgid "Override Prevalidation?"
 msgstr "事前検証を上書きしますか？"
 
-#: ui/files/file_actions_window_qt.py:528
+#: ui/files/file_actions_window_qt.py:562
 msgid ""
 "This action was performed automatically by a prevalidation. Undoing it will create a prevalidation override for this file.\n"
 "\n"
@@ -7924,48 +8067,48 @@ msgstr ""
 "\n"
 "続行しますか？"
 
-#: ui/files/file_actions_window_qt.py:541
+#: ui/files/file_actions_window_qt.py:575
 msgid "Image does not exist: "
 msgstr "画像が存在しません。 "
 
-#: ui/files/file_actions_window_qt.py:543
-#: ui/files/file_actions_window_qt.py:562
+#: ui/files/file_actions_window_qt.py:577
+#: ui/files/file_actions_window_qt.py:596
 msgid "File Action Error"
 msgstr "ファイルアクションエラー"
 
-#: ui/files/file_actions_window_qt.py:560
+#: ui/files/file_actions_window_qt.py:594
 msgid "Images not found"
 msgstr "見つからない画像"
 
-#: ui/files/file_actions_window_qt.py:692
+#: ui/files/file_actions_window_qt.py:726
 msgid "moves only"
 msgstr "移動のみ"
 
-#: ui/files/file_actions_window_qt.py:693
+#: ui/files/file_actions_window_qt.py:727
 msgid "copies only"
 msgstr "コピーのみ"
 
-#: ui/files/file_actions_window_qt.py:694
+#: ui/files/file_actions_window_qt.py:728
 msgid "deletes only"
 msgstr "削除のみ"
 
-#: ui/files/file_actions_window_qt.py:698
+#: ui/files/file_actions_window_qt.py:733
 msgid "auto only"
 msgstr "自動のみ"
 
-#: ui/files/file_actions_window_qt.py:698
+#: ui/files/file_actions_window_qt.py:733
 msgid "user only"
 msgstr "ユーザーのみ"
 
-#: ui/files/file_actions_window_qt.py:700
+#: ui/files/file_actions_window_qt.py:735
 msgid "Filter: {}"
 msgstr "フィルター: {}"
 
-#: ui/files/file_actions_window_qt.py:718
+#: ui/files/file_actions_window_qt.py:753
 msgid "Clear File Action History?"
 msgstr "ファイル操作履歴をクリアしますか？"
 
-#: ui/files/file_actions_window_qt.py:720
+#: ui/files/file_actions_window_qt.py:755
 msgid ""
 "This will permanently clear the entire recorded file action history. This cannot be undone.\n"
 "\n"
@@ -7975,14 +8118,120 @@ msgstr ""
 "\n"
 "続行しますか？"
 
-#: ui/files/file_actions_window_qt.py:820
+#: ui/files/file_actions_window_qt.py:855
 msgid "No active media file to search with."
 msgstr "検索対象のアクティブなメディアファイルがありません。"
 
-#: ui/files/file_actions_window_qt.py:826
-#: ui/files/file_actions_window_qt.py:854
+#: ui/files/file_actions_window_qt.py:861
+#: ui/files/file_actions_window_qt.py:889
 msgid "No existing destination files found in action history."
 msgstr "アクション履歴に既存の宛先ファイルが見つかりません。"
+
+#: ui/files/file_interceptor_rules_window_qt.py:57
+msgid "Edit Interceptor Rule"
+msgstr "インターセプタールールの編集"
+
+#: ui/files/file_interceptor_rules_window_qt.py:68
+msgid "Rule is active"
+msgstr "ルールが有効です"
+
+#: ui/files/file_interceptor_rules_window_qt.py:78
+msgid "Applies to"
+msgstr "適用先"
+
+#: ui/files/file_interceptor_rules_window_qt.py:82
+msgid "Comma-separated target directories. Leave empty to match any target."
+msgstr "カンマ区切りのターゲットディレクトリ。空欄にするとすべてのターゲットに一致します。"
+
+#: ui/files/file_interceptor_rules_window_qt.py:84
+msgid "Target directories"
+msgstr "対象ディレクトリ"
+
+#: ui/files/file_interceptor_rules_window_qt.py:86
+msgid "Also match subdirectories"
+msgstr "サブディレクトリも一致させる"
+
+#: ui/files/file_interceptor_rules_window_qt.py:92
+msgid "Comma-separated substrings. Leave empty to match any filename."
+msgstr "カンマ区切りのサブ文字列です。空欄にすると任意のファイル名に一致します。"
+
+#: ui/files/file_interceptor_rules_window_qt.py:94
+msgid "Filename contains"
+msgstr "ファイル名に含まれる"
+
+#: ui/files/file_interceptor_rules_window_qt.py:96
+msgid "Filename match is case-sensitive"
+msgstr "ファイル名の一致は大文字と小文字を区別します"
+
+#: ui/files/file_interceptor_rules_window_qt.py:101
+msgid "Leave all unchecked to match any media type."
+msgstr "すべてのチェックを外したままにすると、すべてのメディアタイプに一致します。"
+
+#: ui/files/file_interceptor_rules_window_qt.py:113
+msgid "Media types"
+msgstr "メディアタイプ"
+
+#: ui/files/file_interceptor_rules_window_qt.py:122
+msgid "Behavior"
+msgstr "行動"
+
+#: ui/files/file_interceptor_rules_window_qt.py:126
+msgid "Shown when this rule blocks a transfer. Optional."
+msgstr "このルールが転送をブロックしたときに表示されます。オプション。"
+
+#: ui/files/file_interceptor_rules_window_qt.py:128
+msgid "Block message"
+msgstr "メッセージをブロック"
+
+#: ui/files/file_interceptor_rules_window_qt.py:137
+msgid "Transform operation"
+msgstr "変換操作"
+
+#: ui/files/file_interceptor_rules_window_qt.py:140
+msgid "Remove the original after moving the transformed file"
+msgstr "変換されたファイルを移動した後、元ファイルを削除する"
+
+#: ui/files/file_interceptor_rules_window_qt.py:144
+msgid "Never applies to copy operations, only to moves."
+msgstr "コピー操作には適用されず、移動にのみ適用されます。"
+
+#: ui/files/file_interceptor_rules_window_qt.py:200
+msgid "File Handling Interceptor Rules"
+msgstr "ファイル処理インターセプタールール"
+
+#: ui/files/file_interceptor_rules_window_qt.py:214
+msgid ""
+"Rules are checked in order when marked files are moved or copied; the first "
+"matching rule applies."
+msgstr "マークされたファイルが移動またはコピーされる際、ルールは順番にチェックされます。最初に一致したルールが適用されます。"
+
+#: ui/files/file_interceptor_rules_window_qt.py:223
+msgid "Add rule"
+msgstr "ルールを追加"
+
+#: ui/files/file_interceptor_rules_window_qt.py:280
+msgid "No interceptor rules configured."
+msgstr "インターセプタールールが設定されていません。"
+
+#: ui/files/file_interceptor_rules_window_qt.py:296
+msgid "Move this rule earlier in the evaluation order"
+msgstr "このルールを評価順序の上位に移動する"
+
+#: ui/files/file_interceptor_rules_window_qt.py:304
+msgid "Move this rule later in the evaluation order"
+msgstr "このルールを評価順序の後方に移動"
+
+#: ui/files/file_interceptor_rules_window_qt.py:317
+msgid "Remove this rule"
+msgstr "このルールを削除"
+
+#: ui/files/file_interceptor_rules_window_qt.py:349
+msgid "Added interceptor rule: {0}"
+msgstr "インターセプタールールが追加されました: {0}"
+
+#: ui/files/file_interceptor_rules_window_qt.py:365
+msgid "Removed interceptor rule: {0}"
+msgstr "インターセプタールールを削除しました: {0}"
 
 #: ui/files/go_to_file_qt.py:135 ui/files/go_to_file_qt.py:149
 msgid "Go To File"
@@ -8214,6 +8463,10 @@ msgstr "補間GIF"
 msgid "Create PDF"
 msgstr "PDFを作成する"
 
+#: ui/files/marked_file_mover_qt.py:362
+msgid "Configure rules applied while moving or copying marked files"
+msgstr "マークされたファイルの移動またはコピー時に適用されるルールを構成する"
+
 #: ui/files/marked_file_mover_qt.py:421
 msgid "Unlock"
 msgstr "アンロック"
@@ -8403,40 +8656,40 @@ msgstr "画像比較ディレクトリの設定"
 msgid "Set image comparison directory"
 msgstr "画像比較ディレクトリの設定"
 
-#: ui/files/related_images_window_qt.py:47
+#: ui/files/related_images_window_qt.py:49
 msgid "Related Images"
 msgstr "関連画像"
 
-#: ui/files/related_images_window_qt.py:61
+#: ui/files/related_images_window_qt.py:63
 msgid "Related Image Actions"
 msgstr "関連画像アクション"
 
-#: ui/files/related_images_window_qt.py:72
+#: ui/files/related_images_window_qt.py:74
 msgid "Current media source: {0}"
 msgstr "現在のメディアソース: {0}"
 
-#: ui/files/related_images_window_qt.py:76
+#: ui/files/related_images_window_qt.py:78
 msgid ""
 "Actions in this window use the current media of the window that opened it."
 msgstr "このウィンドウでの操作は、そのウィンドウを開いた元のウィンドウの現在のメディアを使用します。"
 
-#: ui/files/related_images_window_qt.py:83
+#: ui/files/related_images_window_qt.py:85 ui/image/media_details.py:1510
 msgid "View related image"
 msgstr "関連画像を見る"
 
-#: ui/files/related_images_window_qt.py:85
+#: ui/files/related_images_window_qt.py:87
 msgid "Next downstream image in open window"
 msgstr "開いているウィンドウで次の下流画像"
 
-#: ui/files/related_images_window_qt.py:91
+#: ui/files/related_images_window_qt.py:93
 msgid "Mark all downstream files in current directory"
 msgstr "現在のディレクトリ内のダウンストリームファイルをすべてマーク"
 
-#: ui/files/related_images_window_qt.py:113
+#: ui/files/related_images_window_qt.py:115
 msgid "Results"
 msgstr "結果"
 
-#: ui/files/related_images_window_qt.py:119
+#: ui/files/related_images_window_qt.py:121
 msgid "(no results yet)"
 msgstr "（結果はまだありません）"
 
@@ -8494,7 +8747,7 @@ msgstr "HTMLをサポートするには、pyppeteer パッケージが必要で�
 msgid "Media Type Configuration"
 msgstr "媒体のタイプ構成"
 
-#: ui/files/type_configuration_window_qt.py:163 utils/constants.py:701
+#: ui/files/type_configuration_window_qt.py:163 utils/constants.py:702
 msgid "Configure Media Types"
 msgstr "メディアタイプの設定"
 
@@ -8522,332 +8775,346 @@ msgstr "これは、オープンウィンドウのすべての既存の比較を
 msgid "Media type configuration updated"
 msgstr "メディアタイプ構成更新"
 
-#: ui/image/media_details.py:263
+#: ui/image/auto_sort_open_gate.py:40
+msgid "Confirm Auto-Sorted Category"
+msgstr "自動ソートされたカテゴリを確認"
+
+#: ui/image/auto_sort_open_gate.py:42
+msgid ""
+"This file was automatically sorted into \"{0}\".\n"
+"\n"
+"View it now?"
+msgstr ""
+"このファイルは自動的に「{0}」に振り分けられました。\n"
+"\n"
+"今すぐ表示しますか？"
+
+#: ui/image/media_details.py:264
 msgid "(negative prompt not shown by config setting)"
 msgstr "(コンフィグ設定で示さないネガティブプロンプト)"
 
-#: ui/image/media_details.py:361
+#: ui/image/media_details.py:362
 msgid "Image Path"
 msgstr "イメージパス"
 
-#: ui/image/media_details.py:365
+#: ui/image/media_details.py:366
 msgid "Temp Path"
 msgstr "一時パス"
 
-#: ui/image/media_details.py:371
+#: ui/image/media_details.py:372
 msgid "File Index"
 msgstr "ファイルインデックス"
 
-#: ui/image/media_details.py:375
+#: ui/image/media_details.py:376
 msgid "Color Mode"
 msgstr "色モード"
 
-#: ui/image/media_details.py:379
+#: ui/image/media_details.py:380
 msgid "Dimensions"
 msgstr "サイズ:"
 
-#: ui/image/media_details.py:387
+#: ui/image/media_details.py:388
 msgid "Modification Time"
 msgstr "変更の時間"
 
-#: ui/image/media_details.py:391
+#: ui/image/media_details.py:392
 msgid "Positive"
 msgstr "ポジティブ"
 
-#: ui/image/media_details.py:400
+#: ui/image/media_details.py:401
 msgid "Negative"
 msgstr "ログイン"
 
-#: ui/image/media_details.py:409 utils/constants.py:57 utils/constants.py:91
+#: ui/image/media_details.py:410 utils/constants.py:57 utils/constants.py:91
 msgid "Models"
 msgstr "モデル"
 
-#: ui/image/media_details.py:413
+#: ui/image/media_details.py:414
 msgid "LoRAs"
 msgstr "LoRA"
 
-#: ui/image/media_details.py:418
+#: ui/image/media_details.py:419
 msgid "Copy Prompt"
 msgstr "コピープロンプト"
 
-#: ui/image/media_details.py:419
+#: ui/image/media_details.py:420
 msgid "Copy Prompt No BREAK"
 msgstr "プロンプトをコピー BREAKなし"
 
-#: ui/image/media_details.py:432
+#: ui/image/media_details.py:433
 msgid "Randomly Modify"
 msgstr "ランダム修正"
 
-#: ui/image/media_details.py:435
+#: ui/image/media_details.py:436
 msgid "Scramble Image"
 msgstr "画像をシャッフル"
 
-#: ui/image/media_details.py:436
+#: ui/image/media_details.py:437
 msgid "Semi-Scramble Image"
 msgstr "半スクランブル画像"
 
-#: ui/image/media_details.py:443 ui/image/media_details.py:1165
+#: ui/image/media_details.py:444 ui/image/media_details.py:1208
 msgid "Change Aspect Ratio"
 msgstr "アスペクトレシオを変更する"
 
-#: ui/image/media_details.py:444
+#: ui/image/media_details.py:445
 msgid "Flip Aspect Ratio"
 msgstr "フリップ アスペクト レシオ"
 
-#: ui/image/media_details.py:453
+#: ui/image/media_details.py:454
 msgid "Run OCR"
 msgstr "OCRを実行する"
 
-#: ui/image/media_details.py:457
+#: ui/image/media_details.py:458
 msgid "Color Diversity Score"
 msgstr "カラーバリエーションスコア"
 
-#: ui/image/media_details.py:458
+#: ui/image/media_details.py:459
 msgid "Hue Breadth Score"
 msgstr "色相の広さスコア"
 
-#: ui/image/media_details.py:481
+#: ui/image/media_details.py:482
 msgid "Press Shift+I on a main app window to run this"
 msgstr "プレスシフト+ 私はメインアプリウィンドウでこれを実行します"
 
-#: ui/image/media_details.py:489
+#: ui/image/media_details.py:490
 msgid "Tags"
 msgstr "ニュース"
 
-#: ui/image/media_details.py:497
+#: ui/image/media_details.py:498
 msgid "Update Tags"
 msgstr "更新タグ"
 
-#: ui/image/media_details.py:557 ui/image/media_details.py:658
-#: ui/image/media_details.py:695 ui/image/media_details.py:1400
+#: ui/image/media_details.py:558 ui/image/media_details.py:659
+#: ui/image/media_details.py:696 ui/image/media_details.py:1476
 msgid "(Not available)"
 msgstr "（利用不可）"
 
-#: ui/image/media_details.py:559
+#: ui/image/media_details.py:560
 msgid "Unavailable"
 msgstr "利用不可"
 
-#: ui/image/media_details.py:562
+#: ui/image/media_details.py:563
 msgid ""
 "This media type is not enabled in configuration, or the path is invalid."
 msgstr "このメディアタイプは設定で有効になっていないか、パスが無効です。"
 
-#: ui/image/media_details.py:604
+#: ui/image/media_details.py:605
 msgid "Video (ffprobe unavailable)"
 msgstr "動画（ffprobeが利用不可）"
 
-#: ui/image/media_details.py:621
+#: ui/image/media_details.py:622
 msgid "(Could not load video details)"
 msgstr "（動画の詳細を読み込めませんでした）"
 
-#: ui/image/media_details.py:652
+#: ui/image/media_details.py:653
 msgid "Audio (ffprobe unavailable)"
 msgstr "オーディオ (ffprobe が利用できません)"
 
-#: ui/image/media_details.py:667
+#: ui/image/media_details.py:668
 msgid "Audio ({0})"
 msgstr "オーディオ ({0})"
 
-#: ui/image/media_details.py:693
+#: ui/image/media_details.py:694
 msgid "(Could not load audio details)"
 msgstr "(オーディオの詳細を読み込めませんでした)"
 
-#: ui/image/media_details.py:887
+#: ui/image/media_details.py:888
 msgid "No prompt found"
 msgstr "プロンプトが見つかりません"
 
-#: ui/image/media_details.py:894
+#: ui/image/media_details.py:895
 msgid "Copied prompt without BREAK"
 msgstr "BREAKなしでコピーされたプロンプト"
 
-#: ui/image/media_details.py:913
+#: ui/image/media_details.py:914
 msgid "No files found in current directory"
 msgstr "現在のディレクトリにファイルが見つかりません"
 
-#: ui/image/media_details.py:918
+#: ui/image/media_details.py:919
 msgid "No files available"
 msgstr "利用可能なファイルはありません"
 
-#: ui/image/media_details.py:943
+#: ui/image/media_details.py:944
 msgid "Copied prompt from {0}"
 msgstr "{0}からプロンプトをコピーしました"
 
-#: ui/image/media_details.py:950
+#: ui/image/media_details.py:951
 msgid "No files with prompts found in current directory"
 msgstr "現在のディレクトリにプロンプト付きのファイルが見つかりません"
 
-#: ui/image/media_details.py:997 ui/image/media_details.py:1218
+#: ui/image/media_details.py:1011 ui/image/media_details.py:1269
 msgid "Rotated image right"
 msgstr "右に回転した画像"
 
-#: ui/image/media_details.py:997 ui/image/media_details.py:1218
+#: ui/image/media_details.py:1011 ui/image/media_details.py:1269
 msgid "Rotated image left"
 msgstr "左に回転した画像"
 
-#: ui/image/media_details.py:1006 ui/image/media_details.py:1226
+#: ui/image/media_details.py:1026 ui/image/media_details.py:1283
 msgid "Cropped image"
 msgstr "トリミングされた画像"
 
-#: ui/image/media_details.py:1013 ui/image/media_details.py:1231
+#: ui/image/media_details.py:1033 ui/image/media_details.py:1288
 msgid "No crops found"
 msgstr "作物が見つかりません"
 
-#: ui/image/media_details.py:1017 ui/image/media_details.py:1238
+#: ui/image/media_details.py:1039 ui/image/media_details.py:1296
 msgid "Enhanced image"
 msgstr "高められたイメージ"
 
-#: ui/image/media_details.py:1021 ui/image/media_details.py:1247
+#: ui/image/media_details.py:1046 ui/image/media_details.py:1307
 msgid "Randomly cropped image"
 msgstr "ランダムにクロップされた画像"
 
-#: ui/image/media_details.py:1035 ui/image/media_details.py:1255
+#: ui/image/media_details.py:1065 ui/image/media_details.py:1320
 msgid "Randomly modified image"
 msgstr "ランダムに修正された画像"
 
-#: ui/image/media_details.py:1043 ui/image/media_details.py:1059
-#: ui/image/media_details.py:1260
+#: ui/image/media_details.py:1073 ui/image/media_details.py:1094
+#: ui/image/media_details.py:1325
 msgid "No new image created"
 msgstr "新しい画像が作成されませんでした"
 
-#: ui/image/media_details.py:1047 ui/image/media_details.py:1054
+#: ui/image/media_details.py:1079 ui/image/media_details.py:1089
 msgid "Scrambled image"
 msgstr "スクランブル画像"
 
-#: ui/image/media_details.py:1063
+#: ui/image/media_details.py:1100
 msgid "Semi-scrambled image"
 msgstr "半スクランブル画像"
 
-#: ui/image/media_details.py:1070
+#: ui/image/media_details.py:1109
 msgid "Confirm Vertical Flip"
 msgstr "垂直反転を確認"
 
-#: ui/image/media_details.py:1072
+#: ui/image/media_details.py:1111
 msgid ""
 "Are you sure you want to flip this image vertically? This is an uncommon "
 "operation and may have been clicked by accident."
 msgstr "この画像を縦方向に反転させてもよろしいですか？これはあまり行われない操作であり、誤ってクリックされた可能性があります。"
 
-#: ui/image/media_details.py:1082 ui/image/media_details.py:1264
+#: ui/image/media_details.py:1121 ui/image/media_details.py:1331
 msgid "Flipped image"
 msgstr "フリップイメージ"
 
-#: ui/image/media_details.py:1115
+#: ui/image/media_details.py:1155
 msgid "Please enter a target ratio"
 msgstr "お願(ねが)いします。ターゲット比率を入力してください。"
 
-#: ui/image/media_details.py:1125
+#: ui/image/media_details.py:1166
 msgid "Changed image aspect ratio"
 msgstr "画像の aspect 比 を 変更 しました。"
 
-#: ui/image/media_details.py:1130
+#: ui/image/media_details.py:1173
 msgid "Error changing image aspect ratio"
 msgstr "画像のアスペクトレートを変更するエラー"
 
-#: ui/image/media_details.py:1149 ui/image/media_details.py:1156
+#: ui/image/media_details.py:1192 ui/image/media_details.py:1199
 msgid "Aspect ratio changes are only available for images"
 msgstr "画像に対してのみ、アスペクトレートの変更が可能です。"
 
-#: ui/image/media_details.py:1170
+#: ui/image/media_details.py:1213
 msgid "Current ratio: {0}"
 msgstr "流動比率：{0}"
 
-#: ui/image/media_details.py:1172
+#: ui/image/media_details.py:1215
 msgid "Target ratio (e.g. 16:9 or 1.777):"
 msgstr "ターゲット アスペクトレート (例：16:9 または 1.777)："
 
-#: ui/image/media_details.py:1199 ui/image/media_details.py:1271
+#: ui/image/media_details.py:1243 ui/image/media_details.py:1341
 msgid "Copied image without EXIF data"
 msgstr "EXIFデータのないコピー画像"
 
-#: ui/image/media_details.py:1204 ui/image/media_details.py:1277
+#: ui/image/media_details.py:1250 ui/image/media_details.py:1349
 msgid "Error copying image without EXIF"
 msgstr "EXIFのない画像のコピーエラー"
 
-#: ui/image/media_details.py:1209 ui/image/media_details.py:1282
+#: ui/image/media_details.py:1257 ui/image/media_details.py:1356
 msgid "Converted image to JPG"
 msgstr "画像をJPGに変換"
 
-#: ui/image/media_details.py:1212 ui/image/media_details.py:1285
+#: ui/image/media_details.py:1262 ui/image/media_details.py:1361
 msgid "Error converting image to JPG"
 msgstr "画像をJPGに変換する際のエラー"
 
-#: ui/image/media_details.py:1291
+#: ui/image/media_details.py:1367
 msgid "Metadata is not available for this path"
 msgstr "このパスにはメタデータがありません"
 
-#: ui/image/media_details.py:1296
+#: ui/image/media_details.py:1372
 msgid "ffprobe not found on PATH"
 msgstr "PATHにffprobeが見つかりません"
 
-#: ui/image/media_details.py:1304 ui/image/media_details.py:1311
+#: ui/image/media_details.py:1380 ui/image/media_details.py:1387
 msgid "No metadata found"
 msgstr "メタデータが見つかりません"
 
-#: ui/image/media_details.py:1331
+#: ui/image/media_details.py:1407
 msgid "OCR is only available for images"
 msgstr "OCR は画像のみで利用可能です。"
 
-#: ui/image/media_details.py:1334
+#: ui/image/media_details.py:1410
 msgid "Surya OCR is not installed"
 msgstr "Surya OCR がインストールされていません"
 
-#: ui/image/media_details.py:1339
+#: ui/image/media_details.py:1415
 msgid "No text found in image"
 msgstr "画像中にテキストがありませんでした。"
 
-#: ui/image/media_details.py:1346
+#: ui/image/media_details.py:1422
 msgid "OCR failed: "
 msgstr "OCR失敗しました： "
 
-#: ui/image/media_details.py:1366
+#: ui/image/media_details.py:1442
 msgid "Could not compute color diversity score"
 msgstr "色の多様性スコアを計算できませんでした"
 
-#: ui/image/media_details.py:1369 ui/image/media_details.py:1386
+#: ui/image/media_details.py:1445 ui/image/media_details.py:1462
 msgid "high"
 msgstr "高い"
 
-#: ui/image/media_details.py:1371 ui/image/media_details.py:1388
+#: ui/image/media_details.py:1447 ui/image/media_details.py:1464
 msgid "medium"
 msgstr "中"
 
-#: ui/image/media_details.py:1373 ui/image/media_details.py:1390
+#: ui/image/media_details.py:1449 ui/image/media_details.py:1466
 msgid "low"
 msgstr "低い"
 
-#: ui/image/media_details.py:1375
+#: ui/image/media_details.py:1451
 msgid "Color diversity score: {0:.2f} ({1})"
 msgstr "カラーバリエーションスコア: {0:.2f} ({1})"
 
-#: ui/image/media_details.py:1383
+#: ui/image/media_details.py:1459
 msgid "Could not compute hue breadth score"
 msgstr "色相の広がりスコアを計算できませんでした"
 
-#: ui/image/media_details.py:1392
+#: ui/image/media_details.py:1468
 msgid "Hue breadth score: {0:.2f} ({1})"
 msgstr "色相の広がりスコア: {0:.2f} ({1})"
 
-#: ui/image/media_details.py:1402
+#: ui/image/media_details.py:1478
 msgid "(Related image lookup is not available for video)"
 msgstr "（動画では関連画像の検索は利用できません）"
 
-#: ui/image/media_details.py:1404
+#: ui/image/media_details.py:1480
 msgid "(Related image lookup is not available for audio)"
 msgstr "(音声の場合、関連画像の検索は利用できません)"
 
-#: ui/image/media_details.py:1409
+#: ui/image/media_details.py:1485
 msgid "Related image is not available for this path"
 msgstr "このパスには関連画像がありません"
 
-#: ui/image/media_details.py:1412
+#: ui/image/media_details.py:1488
 msgid "Related image is not available for video files"
 msgstr "動画ファイルには関連画像がありません"
 
-#: ui/image/media_details.py:1495
+#: ui/image/media_details.py:1587
 msgid "Prevalidation Warning"
 msgstr "事前検証の警告"
 
-#: ui/image/media_details.py:1497
+#: ui/image/media_details.py:1589
 msgid ""
 "Prevalidation \"{0}\" would normally apply action \"{1}\" to this file.\n"
 "\n"
@@ -8857,15 +9124,15 @@ msgstr ""
 "\n"
 "それでも表示しますか？"
 
-#: ui/image/media_details.py:1566
+#: ui/image/media_details.py:1658
 msgid "Unable to open media"
 msgstr "メディアを開けません"
 
-#: ui/image/media_details.py:1567
+#: ui/image/media_details.py:1659
 msgid "Could not load: \"{0}\""
 msgstr "読み込めませんでした: \"{0}\""
 
-#: ui/image/media_details.py:1674
+#: ui/image/media_details.py:1766
 msgid "Updated tags for {0}"
 msgstr "{0} のタグを更新"
 
@@ -9015,11 +9282,6 @@ msgstr "プロンプト（完全一致）"
 #: utils/constants.py:58 utils/constants.py:93
 msgid "Color Histogram"
 msgstr "カラーヒストグラム"
-
-#: tests/unit/test_compare_embeddings_audio_clap.py:26 utils/constants.py:59
-#: utils/constants.py:95
-msgid "CLAP Audio Embedding"
-msgstr "CLAP オーディオ埋め込み"
 
 #: utils/constants.py:118
 msgid "Color diff threshold"
@@ -9225,131 +9487,131 @@ msgstr "HTML"
 msgid "Unconfigured"
 msgstr "設定されていない"
 
-#: utils/constants.py:541
+#: utils/constants.py:542
 msgid "Moved files"
 msgstr "ファイルの移動"
 
-#: utils/constants.py:543
+#: utils/constants.py:544
 msgid "Copied files"
 msgstr "コピーされたファイル"
 
-#: utils/constants.py:545
+#: utils/constants.py:546
 msgid "Removed files"
 msgstr "削除されたファイル"
 
-#: utils/constants.py:547
+#: utils/constants.py:548
 msgid "Marked files"
 msgstr "マークされたファイル"
 
-#: utils/constants.py:549
+#: utils/constants.py:550
 msgid "Unmarked files"
 msgstr "注目のファイル"
 
-#: utils/constants.py:551
+#: utils/constants.py:552
 msgid "Searched files"
 msgstr "ファイル検索"
 
-#: utils/constants.py:553
+#: utils/constants.py:554
 msgid "Compared files"
 msgstr "比較ファイル"
 
-#: utils/constants.py:555
+#: utils/constants.py:556
 msgid "Generated images"
 msgstr "生成された画像"
 
-#: utils/constants.py:557
+#: utils/constants.py:558
 msgid "Changed directory"
 msgstr "変更ディレクトリ"
 
-#: utils/constants.py:559
+#: utils/constants.py:560
 msgid "System"
 msgstr "システム"
 
-#: utils/constants.py:571
+#: utils/constants.py:572
 msgid "Classifier Action"
 msgstr "分類器動作"
 
-#: utils/constants.py:627
+#: utils/constants.py:628
 msgid "Hide"
 msgstr "隠す"
 
-#: utils/constants.py:629
+#: utils/constants.py:630
 msgid "Notify"
 msgstr "通知する"
 
-#: utils/constants.py:631
+#: utils/constants.py:632
 msgid "Skip"
 msgstr "スキップ"
 
-#: utils/constants.py:639
+#: utils/constants.py:640
 msgid "Add Mark"
 msgstr "マークを追加する"
 
-#: utils/constants.py:641
+#: utils/constants.py:642
 msgid "Blur"
 msgstr "ぼかし"
 
-#: utils/constants.py:643
+#: utils/constants.py:644
 msgid "Generate"
 msgstr "生成"
 
-#: utils/constants.py:645
+#: ui/files/file_actions_window_qt.py:362 utils/constants.py:646
 msgid "Scramble"
 msgstr "スクランブル"
 
-#: utils/constants.py:647
+#: ui/files/file_actions_window_qt.py:357 utils/constants.py:648
 msgid "Rotate"
 msgstr "回転"
 
-#: utils/constants.py:688
+#: utils/constants.py:689
 msgid "Start Application"
 msgstr "スタート・ソフトウェア"
 
-#: utils/constants.py:689
+#: utils/constants.py:690
 msgid "Run Compares"
 msgstr "比較実行"
 
-#: utils/constants.py:690
+#: utils/constants.py:691
 msgid "Run Search"
 msgstr "検索を実行する"
 
-#: utils/constants.py:691
+#: utils/constants.py:692
 msgid "Run Search Preset"
 msgstr "検索プリセットの実行"
 
-#: utils/constants.py:693
+#: utils/constants.py:694
 msgid "View Recent Directories"
 msgstr "最近のディレクトリを見る"
 
-#: utils/constants.py:694
+#: utils/constants.py:695
 msgid "View File Actions"
 msgstr "ファイルアクションを見る"
 
-#: utils/constants.py:695
+#: utils/constants.py:696
 msgid "Run File Actions"
 msgstr "ファイルアクションの実行"
 
-#: utils/constants.py:696
+#: utils/constants.py:697
 msgid "Edit Prevalidations"
 msgstr "プリヴァリッドを編集する"
 
-#: utils/constants.py:697
+#: utils/constants.py:698
 msgid "Run Prevalidations"
 msgstr "ラン・プレバリデーション"
 
-#: utils/constants.py:699
+#: utils/constants.py:700
 msgid "Run RefacDir"
 msgstr "RefacDirの実行"
 
-#: utils/constants.py:700
+#: utils/constants.py:701
 msgid "Delete Media"
 msgstr "メディア削除"
 
-#: utils/constants.py:702
+#: utils/constants.py:703
 msgid "Set Hotkey Actions"
 msgstr "ホットキーアクションの設定"
 
-#: utils/constants.py:703
+#: utils/constants.py:704
 msgid "Access Password Administration"
 msgstr "アクセスパスワードの管理"
 
@@ -9377,270 +9639,280 @@ msgstr "Shift"
 msgid "Alt"
 msgstr "Alt"
 
-#: compare/classifier_pipeline.py:503
+#: compare/classifier_pipeline.py:330
+msgid "Node {0}: min_similarity must be between 0 and 1."
+msgstr "ノード {0}: min_similarity は 0 から 1 の間である必要があります。"
+
+#: compare/classifier_pipeline.py:334
+msgid "Node {0}: max_similarity must be between 0 and 1."
+msgstr "ノード {0}: max_similarity は 0 から 1 の間である必要があります。"
+
+#: compare/classifier_pipeline.py:338
+msgid "Node {0}: max_similarity ({1}) must be ≥ min_similarity ({2})."
+msgstr "ノード {0}: max_similarity ({1}) は min_similarity ({2}) 以上である必要があります。"
+
+#: compare/classifier_pipeline.py:347
+msgid "Node {0}: {1} is not an embedding compare mode."
+msgstr "ノード {0}: {1} は埋め込み比較モードではありません。"
+
+#: compare/classifier_pipeline.py:573
 msgid ""
-"Stem-group dedup is on but the run sort order is not '{0}'. Whichever file "
-"of a stem group is reached first is the only one evaluated, so a derivative "
-"reached before its seed can generate duplicates. Set the run sort order to "
-"'{0}', or turn off stem-group dedup."
+"Node {0}: similarity band {1}-{2} is very wide — the condition will rarely "
+"fire."
+msgstr "ノード{0}: 類似バンド{1}-{2}は非常に広いです — 条件が発動することはほとんどありません。"
+
+#: compare/classifier_pipeline_conditions.py:623
+msgid "inside band"
+msgstr "内部バンド"
+
+#: compare/classifier_pipeline_conditions.py:625
+msgid "unresolved matches"
+msgstr "未解決の一致"
+
+#: compare/classifier_pipeline_conditions.py:626
+msgid "VarianceFromOriginal"
+msgstr "元データからの差異"
+
+#: tests/ui/test_related_images_window.py:115
+#: ui/files/related_images_window_qt.py:228
+msgid "{0} large unconfirmed director(ies) skipped"
+msgstr "{0}件の大きな未確認監督がスキップされました"
+
+#: tests/ui/test_related_images_window.py:128
+#: ui/files/related_images_window_qt.py:160
+msgid "metadata"
+msgstr "メタデータ"
+
+#: tests/ui/test_related_images_window.py:128
+#: ui/files/related_images_window_qt.py:162
+msgid "name prefix"
+msgstr "名前の接頭辞"
+
+#: tests/ui/test_related_images_window.py:129
+#: ui/files/related_images_window_qt.py:216
+msgid "from a cached scan"
+msgstr "キャッシュされたスキャンから"
+
+#: tests/ui/test_related_images_window.py:140
+#: ui/files/related_images_window_qt.py:207
+msgid "{0} of {1} in cycle"
+msgstr "{0}/{1} のサイクル"
+
+#: tests/ui/test_related_images_window.py:152
+#: ui/files/related_images_window_qt.py:145
+msgid "cancelled"
+msgstr "キャンセル済み"
+
+#: ui/app_window/app_window.py:537
+msgid "{dir}  —  {count} files"
+msgstr "{dir} — {count} ファイル"
+
+#: ui/app_window/app_window.py:541
+msgid "Large Directories Detected"
+msgstr "大きなディレクトリが検出されました"
+
+#: ui/app_window/app_window.py:542
+msgid ""
+"{n} directories from the last session have a large number of files, or a "
+"fair-sized number on external storage, and will be slow to load. Uncheck any"
+" you do not want to load now."
 msgstr ""
-"ステムグループの重複除去はオンですが、実行の並び順が'{0}'ではありません。ステムグループ内で最初に到達したファイルだけが評価されるため、シードより先に到達した派生が重複を生成する可能性があります。実行の並び順を'{0}'に設定するか、ステムグループの重複除去をオフにしてください。"
+"前回のセッションからの{n}個のディレクトリには多数のファイルがあるか、外部ストレージにかなりの数があり、読み込みに時間がかかります。今すぐ読み込みたくないもののチェックを外してください。"
 
-#: compare/pipeline_run_report.py:220
-#: tests/unit/test_pipeline_decision_record.py:288
-#: tests/unit/test_pipeline_decision_record.py:294
-msgid "Decision records captured: {0}"
-msgstr "取得した決定レコード: {0}"
+#: ui/app_window/file_marks_controller.py:396
+#: ui/app_window/file_marks_controller.py:567
+#: ui/app_window/file_marks_controller.py:622
+#: ui/app_window/search_controller.py:728
+msgid "Waiting for a directory selection."
+msgstr "ディレクトリの選択を待っています。"
 
-#: files/file_interceptor_rule.py:40
-msgid "Move only"
-msgstr "移動のみ"
+#: ui/app_window/file_marks_controller.py:411
+#: ui/app_window/search_controller.py:743
+msgid "Cancelled: that directory has too many files."
+msgstr "キャンセル済み: そのディレクトリにはファイルが多すぎます。"
 
-#: files/file_interceptor_rule.py:42
-msgid "Copy only"
-msgstr "コピーのみ"
+#: ui/app_window/file_marks_controller.py:423
+#: ui/app_window/file_marks_controller.py:534
+#: ui/app_window/file_marks_controller.py:592
+#: ui/app_window/file_marks_controller.py:647
+#: ui/app_window/file_marks_controller.py:699
+msgid "Cancelled: marks were not changed."
+msgstr "キャンセル: マークは変更されませんでした。"
 
-#: files/file_interceptor_rule.py:43
-msgid "Move and copy"
-msgstr "移動とコピー"
+#: ui/compare/classifier_pipeline_editor_qt.py:87
+msgid "Variance From Original"
+msgstr "元データからの差異"
 
-#: files/file_interceptor_rule.py:64
-msgid "Transform"
-msgstr "変換"
+#: ui/compare/classifier_pipeline_editor_qt.py:910
+msgid "Min similarity:"
+msgstr "最小類似度："
 
-#: files/file_interceptor_rule.py:65 files/file_interceptor_rule.py:183
-msgid "Block"
-msgstr "ブロック"
+#: ui/compare/classifier_pipeline_editor_qt.py:918
+msgid "Max similarity:"
+msgstr "最大類似度:"
 
-#: files/file_interceptor_rule.py:84
-msgid "Improve image"
-msgstr "画像を改善"
+#: ui/compare/classifier_pipeline_editor_qt.py:926
+msgid "Fire inside the band instead of outside"
+msgstr "外側ではなくバンド内部の火"
 
-#: files/file_interceptor_rule.py:109
-msgid "New Interceptor Rule"
-msgstr "新しいインターセプタールール"
+#: ui/compare/classifier_pipeline_editor_qt.py:930
+msgid "Match when the original can't be resolved"
+msgstr "オリジナルが解決できない場合に一致させる"
 
-#: files/file_interceptor_rule.py:163
-msgid "into {0} (and subdirectories)"
-msgstr "{0} に (サブディレクトリも)"
-
-#: files/file_interceptor_rule.py:165
-msgid "into {0}"
-msgstr "{0}に"
-
-#: files/file_interceptor_rule.py:169
-msgid "name contains {0}"
-msgstr "名前に{0}が含まれる"
-
-#: files/file_interceptor_rule.py:173
-msgid "type is {0}"
-msgstr "タイプは{0}"
-
-#: files/file_interceptor_rule.py:177
-msgid "any file"
-msgstr "任意のファイル"
-
-#: files/file_interceptor_rule.py:181
-msgid ", removing the original"
-msgstr ", 元のものを削除"
-
-#: files/file_interceptor_rules_manager.py:189
-msgid "Blocked by interceptor rule: {0}"
-msgstr "インターセプタールールによりブロックされました: {0}"
-
-#: files/file_interceptor_rules_manager.py:196
+#: ui/compare/classifier_pipeline_editor_qt.py:935
 msgid ""
-"{0}\n"
-"Blocked: {1}"
+"Compares each image against the seed of its related-image group. The band is"
+" the range of ACCEPTABLE similarity: the condition fires for images outside "
+"it — too different to be the same subject, or too similar to be a useful "
+"variation. Seed images themselves never match. Run this after the generating"
+" pipeline, not as part of it."
 msgstr ""
-"{0}\n"
-"ブロック済み: {1}"
+"各画像を、その関連画像グループのシードと比較します。バンドは許容できる類似度の範囲です：条件はその範囲外の画像で発動します――同一対象とするには差が大きすぎるか、役立つバリエーションになるには類似しすぎるかのどちらかです。シード画像自体は一致しません。生成パイプラインの後にこれを実行し、パイプラインの一部としては使用しないでください。"
 
-#: ui/app_window/sidebar_panel.py:339 ui/files/marked_file_mover_qt.py:359
-msgid "Interceptor rules"
-msgstr "インターセプタールール"
+#: ui/compare/seek_to_trigger_tab_qt.py:331
+msgid "No media is currently loaded."
+msgstr "現在メディアはロードされていません。"
 
-#: ui/app_window/sidebar_panel.py:344
-msgid ""
-"Configure rules that block or transform marked files as they are moved or "
-"copied to a target directory."
-msgstr "対象ディレクトリに移動またはコピーされる際に、マークされたファイルをブロックまたは変換するルールを設定します。"
+#: ui/compare/seek_to_trigger_tab_qt.py:390
+#: ui/compare/seek_to_trigger_tab_qt.py:591
+msgid "'{name}' triggers on this image{dims}."
+msgstr "「{name}」がこの画像でトリガーされます{dims}。"
 
-#: ui/app_window/sidebar_panel.py:348
-msgid "Auto-sort confirmation"
-msgstr "自動並び替えの確認"
+#: ui/compare/seek_to_trigger_tab_qt.py:447
+#: ui/compare/seek_to_trigger_tab_qt.py:632
+msgid "'{name}' did not trigger on this image{dims}."
+msgstr "「{name}」はこの画像{dims}でトリガーされませんでした。"
 
-#: ui/app_window/sidebar_panel.py:353
-msgid ""
-"Choose which automatically sorted categories ask for confirmation before "
-"their media is viewed."
-msgstr "自動的に分類されたカテゴリのうち、メディアが表示される前に確認を求めるものを選択してください。"
+#: ui/compare/seek_to_trigger_tab_qt.py:565
+msgid "Current media file no longer exists."
+msgstr "現在のメディアファイルはもう存在しません。"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2036
-msgid "Evaluate each stem group once"
-msgstr "各ステムグループを一度評価する"
+#: ui/files/file_actions_window_qt.py:108
+#: ui/files/file_actions_window_qt.py:430
+msgid "Image Op"
+msgstr "画像操作"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2039
-msgid ""
-"In a batch run, skip a file whose stem group has already been evaluated, and"
-" skip stem groups whose seed cannot be located or is not filed. Turn off to "
-"evaluate every file independently. Related Image sort order lets derivatives"
-" skip sooner, but is not required for correctness."
-msgstr ""
-"バッチ実行では、ステムグループが既に評価済みのファイルをスキップし、シードが見つからない、または登録されていないステムグループもスキップします。オフにすると各ファイルを個別に評価します。関連画像のソート順は派生物を早めにスキップさせますが、正確さに必須ではありません。"
+#: ui/files/file_actions_window_qt.py:211
+msgid "image ops"
+msgstr "画像操作"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2048
-msgid "Record per-node decisions"
-msgstr "ノードごとの決定を記録"
+#: ui/files/file_actions_window_qt.py:253
+#: ui/files/file_actions_window_qt.py:262
+msgid "Image Ops"
+msgstr "画像操作"
 
-#: ui/compare/classifier_pipeline_editor_qt.py:2051
-msgid ""
-"Write each evaluated file's per-node match result and score into the run "
-"dump, for auditing or threshold calibration. Adds one record per file, held "
-"in memory until the run finishes."
-msgstr ""
-"評価された各ファイルのノード単位のマッチ結果とスコアを実行ダンプに書き込みます。監査やしきい値のキャリブレーションに使用します。ファイルごとに1つのレコードを追加し、実行が完了するまでメモリに保持します。"
+#: ui/files/file_actions_window_qt.py:291
+msgid "Image Op Statistics"
+msgstr "画像操作統計"
 
-#: ui/files/auto_sort_confirmation_window_qt.py:34
-msgid "Auto-Sort Confirmation Categories"
-msgstr "自動ソート確認カテゴリ"
+#: ui/files/file_actions_window_qt.py:358
+msgid "Enhance"
+msgstr "強化"
 
-#: ui/files/auto_sort_confirmation_window_qt.py:47
-msgid ""
-"When viewing the last automatically sorted media, ask for confirmation first if it was sorted into one of these categories.\n"
-"Categories are matched without regard to case."
-msgstr ""
-"自動的に分類された最新のメディアを表示する際、これらのカテゴリのいずれかに分類された場合は、まず確認を求めます。\n"
-"カテゴリは大文字小文字を区別せずに照合されます。"
+#: ui/files/file_actions_window_qt.py:359
+msgid "Flip"
+msgstr "フリップ"
 
-#: ui/files/auto_sort_confirmation_window_qt.py:56
-msgid "Categories (comma-separated):"
-msgstr "カテゴリ（カンマ区切り）:"
+#: ui/files/file_actions_window_qt.py:360
+msgid "Aspect Ratio"
+msgstr "アスペクト比"
 
-#: ui/files/auto_sort_confirmation_window_qt.py:105
-msgid "Confirmation set for {0} categories"
-msgstr "確認が{0}カテゴリに設定されました"
+#: ui/files/file_actions_window_qt.py:363
+msgid "Semi-Scramble"
+msgstr "セミスクランブル"
 
-#: ui/files/file_interceptor_rules_window_qt.py:57
-msgid "Edit Interceptor Rule"
-msgstr "インターセプタールールの編集"
+#: ui/files/file_actions_window_qt.py:365
+msgid "Random Modification"
+msgstr "ランダムな変更"
 
-#: ui/files/file_interceptor_rules_window_qt.py:68
-msgid "Rule is active"
-msgstr "ルールが有効です"
+#: ui/files/file_actions_window_qt.py:366
+msgid "Crop"
+msgstr "切り抜き"
 
-#: ui/files/file_interceptor_rules_window_qt.py:78
-msgid "Applies to"
-msgstr "適用先"
+#: ui/files/file_actions_window_qt.py:367
+msgid "Crop (Freeform)"
+msgstr "切り抜き（フリーフォーム）"
 
-#: ui/files/file_interceptor_rules_window_qt.py:82
-msgid "Comma-separated target directories. Leave empty to match any target."
-msgstr "カンマ区切りのターゲットディレクトリ。空欄にするとすべてのターゲットに一致します。"
+#: ui/files/file_actions_window_qt.py:368
+msgid "Box"
+msgstr "ボックス"
 
-#: ui/files/file_interceptor_rules_window_qt.py:84
-msgid "Target directories"
-msgstr "対象ディレクトリ"
+#: ui/files/file_actions_window_qt.py:369
+msgid "Box (Freeform)"
+msgstr "ボックス（フリーフォーム）"
 
-#: ui/files/file_interceptor_rules_window_qt.py:86
-msgid "Also match subdirectories"
-msgstr "サブディレクトリも一致させる"
+#: ui/files/file_actions_window_qt.py:370
+msgid "Background Box"
+msgstr "背景ボックス"
 
-#: ui/files/file_interceptor_rules_window_qt.py:92
-msgid "Comma-separated substrings. Leave empty to match any filename."
-msgstr "カンマ区切りのサブ文字列です。空欄にすると任意のファイル名に一致します。"
+#: ui/files/file_actions_window_qt.py:371
+msgid "Background Box (Freeform)"
+msgstr "背景ボックス（フリーフォーム）"
 
-#: ui/files/file_interceptor_rules_window_qt.py:94
-msgid "Filename contains"
-msgstr "ファイル名に含まれる"
+#: ui/files/file_actions_window_qt.py:372
+msgid "Smart Crop"
+msgstr "スマートクロップ"
 
-#: ui/files/file_interceptor_rules_window_qt.py:96
-msgid "Filename match is case-sensitive"
-msgstr "ファイル名の一致は大文字と小文字を区別します"
+#: ui/files/file_actions_window_qt.py:373
+msgid "Strip Metadata"
+msgstr "メタデータを削除"
 
-#: ui/files/file_interceptor_rules_window_qt.py:101
-msgid "Leave all unchecked to match any media type."
-msgstr "すべてのチェックを外したままにすると、すべてのメディアタイプに一致します。"
+#: ui/files/file_actions_window_qt.py:729
+msgid "image ops only"
+msgstr "画像操作のみ"
 
-#: ui/files/file_interceptor_rules_window_qt.py:113
-msgid "Media types"
-msgstr "メディアタイプ"
+#: ui/files/related_images_window_qt.py:146
+msgid "waiting"
+msgstr "待機中"
 
-#: ui/files/file_interceptor_rules_window_qt.py:122
-msgid "Behavior"
-msgstr "行動"
+#: ui/files/related_images_window_qt.py:147
+msgid "no media"
+msgstr "メディアなし"
 
-#: ui/files/file_interceptor_rules_window_qt.py:126
-msgid "Shown when this rule blocks a transfer. Optional."
-msgstr "このルールが転送をブロックしたときに表示されます。オプション。"
+#: ui/files/related_images_window_qt.py:148
+msgid "no files"
+msgstr "ファイルがありません"
 
-#: ui/files/file_interceptor_rules_window_qt.py:128
-msgid "Block message"
-msgstr "メッセージをブロック"
+#: ui/files/related_images_window_qt.py:149
+msgid "too many files"
+msgstr "ファイルが多すぎます"
 
-#: ui/files/file_interceptor_rules_window_qt.py:137
-msgid "Transform operation"
-msgstr "変換操作"
+#: ui/files/related_images_window_qt.py:161
+msgid "filename"
+msgstr "ファイル名"
 
-#: ui/files/file_interceptor_rules_window_qt.py:140
-msgid "Remove the original after moving the transformed file"
-msgstr "変換されたファイルを移動した後、元ファイルを削除する"
+#: ui/files/related_images_window_qt.py:183
+msgid "source: {0}"
+msgstr "ソース: {0}"
 
-#: ui/files/file_interceptor_rules_window_qt.py:144
-msgid "Never applies to copy operations, only to moves."
-msgstr "コピー操作には適用されず、移動にのみ適用されます。"
+#: ui/files/related_images_window_qt.py:193
+msgid "searched {0} director(ies)"
+msgstr "検索した {0} 監督"
 
-#: ui/files/file_interceptor_rules_window_qt.py:200
-msgid "File Handling Interceptor Rules"
-msgstr "ファイル処理インターセプタールール"
+#: ui/files/related_images_window_qt.py:195
+msgid "in {0}"
+msgstr "{0} 内"
 
-#: ui/files/file_interceptor_rules_window_qt.py:214
-msgid ""
-"Rules are checked in order when marked files are moved or copied; the first "
-"matching rule applies."
-msgstr "マークされたファイルが移動またはコピーされる際、ルールは順番にチェックされます。最初に一致したルールが適用されます。"
+#: ui/files/related_images_window_qt.py:201
+msgid "{0} of {1} file(s) scanned"
+msgstr "{0}/{1} ファイルをスキャンしました"
 
-#: ui/files/file_interceptor_rules_window_qt.py:223
-msgid "Add rule"
-msgstr "ルールを追加"
+#: ui/files/related_images_window_qt.py:203
+msgid "{0} file(s) scanned"
+msgstr "{0} 個のファイルがスキャンされました"
 
-#: ui/files/file_interceptor_rules_window_qt.py:280
-msgid "No interceptor rules configured."
-msgstr "インターセプタールールが設定されていません。"
+#: ui/files/related_images_window_qt.py:211
+msgid "matched by: "
+msgstr "一致: "
 
-#: ui/files/file_interceptor_rules_window_qt.py:296
-msgid "Move this rule earlier in the evaluation order"
-msgstr "このルールを評価順序の上位に移動する"
+#: ui/files/related_images_window_qt.py:223
+msgid ", and {0} more"
+msgstr ", 他{0}件"
 
-#: ui/files/file_interceptor_rules_window_qt.py:304
-msgid "Move this rule later in the evaluation order"
-msgstr "このルールを評価順序の後方に移動"
+#: ui/image/media_details.py:1527
+msgid "Referenced related image was not found on disk."
+msgstr "参照された関連画像がディスク上に見つかりませんでした。"
 
-#: ui/files/file_interceptor_rules_window_qt.py:317
-msgid "Remove this rule"
-msgstr "このルールを削除"
-
-#: ui/files/file_interceptor_rules_window_qt.py:349
-msgid "Added interceptor rule: {0}"
-msgstr "インターセプタールールが追加されました: {0}"
-
-#: ui/files/file_interceptor_rules_window_qt.py:365
-msgid "Removed interceptor rule: {0}"
-msgstr "インターセプタールールを削除しました: {0}"
-
-#: ui/files/marked_file_mover_qt.py:362
-msgid "Configure rules applied while moving or copying marked files"
-msgstr "マークされたファイルの移動またはコピー時に適用されるルールを構成する"
-
-#: ui/image/auto_sort_open_gate.py:40
-msgid "Confirm Auto-Sorted Category"
-msgstr "自動ソートされたカテゴリを確認"
-
-#: ui/image/auto_sort_open_gate.py:42
-msgid ""
-"This file was automatically sorted into \"{0}\".\n"
-"\n"
-"View it now?"
-msgstr ""
-"このファイルは自動的に「{0}」に振り分けられました。\n"
-"\n"
-"今すぐ表示しますか？"
+#: ui/image/media_details.py:1532
+msgid "Showing {0}"
+msgstr "表示中 {0}"

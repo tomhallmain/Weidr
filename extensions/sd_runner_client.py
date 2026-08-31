@@ -1,3 +1,5 @@
+import hashlib
+import os
 import queue
 import threading
 import time
@@ -10,15 +12,49 @@ from utils.logging_setup import get_logger
 from utils.translations import _
 logger = get_logger("sd_runner_client")
 
+#: Name this application reports to SD Runner. Shown there as the origin of any
+#: run this client starts, in the progress label and the runs window.
+CLIENT_NAME = "weidr"
+
+#: SD Runner bounds an id it receives to 64 characters; anything past that is
+#: cut there rather than here, where it would go unnoticed.
+MAX_CLIENT_ID_LEN = 64
+
+
+def _default_client_id() -> str:
+    """A name for this client that is stable across restarts.
+
+    SD Runner can only fall back to the peer host, and both ends of a loopback
+    connection share one address -- so an id that is not sent is an origin that
+    says nothing. Sending one is what makes that fallback irrelevant.
+
+    An explicit ``sd_runner_client_id`` in config wins. Otherwise the name is
+    qualified by a digest of this install's root, so a second copy on the same
+    machine reports something different while a restart of this one reports the
+    same thing it did before. The PID is deliberately not part of it: a request
+    staged by one session can be promoted in the next, and it should still be
+    attributed to the same client when it is.
+    """
+    configured = getattr(config, "sd_runner_client_id", None)
+    if configured:
+        return str(configured).strip()[:MAX_CLIENT_ID_LEN]
+    root = os.path.dirname(os.path.abspath(__file__))
+    digest = hashlib.sha1(root.encode("utf-8", "replace")).hexdigest()[:8]
+    return f"{CLIENT_NAME}-{digest}"[:MAX_CLIENT_ID_LEN]
+
+
 class SDRunnerClient:
     COMMAND_CLOSE_SERVER = 'close server'
     COMMAND_CLOSE_CONNECTION = 'close connection'
     COMMAND_VALIDATE = 'validate'
 
-    def __init__(self, host='localhost', port=config.sd_runner_client_port):
+    def __init__(self, host='localhost', port=config.sd_runner_client_port, client_id=None):
         self._host = host
         self._port = port
         self._conn = None
+        # Resolved once per client rather than per message: it must not change
+        # between the request that stages a run and the promotion that runs it.
+        self._client_id = client_id or _default_client_id()
         self._request_queue = queue.Queue()
         self._worker_thread = None
         self._shutdown = False
@@ -55,6 +91,13 @@ class SDRunnerClient:
         raise last_error
 
     def send(self, msg):
+        # Attached here rather than at each command so no message can go out
+        # anonymous, including any command added later. The server treats the
+        # field as optional and sticky for the connection, but this client opens
+        # a fresh connection per operation, so the first message of every one
+        # has to carry it. A copy, so a caller's dict is not mutated behind it.
+        if isinstance(msg, dict) and 'client_id' not in msg:
+            msg = {**msg, 'client_id': self._client_id}
         if config.debug:
             logger.debug(f"Sending {msg} to SD Runner")
         self._conn.send(msg)

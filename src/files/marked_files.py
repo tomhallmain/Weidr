@@ -175,6 +175,23 @@ class MarkedFiles():
         return True
 
     @staticmethod
+    def advance_mark_cursor(backward=False):
+        """Move mark_cursor to the next (or previous) marked file.
+
+        Wraps to the first mark once past the end. Raises if there are no
+        marks set.
+
+        Returns (the resolved file, whether the cursor wrapped this call).
+        """
+        if len(MarkedFiles.file_marks) == 0:
+            raise Exception("no marks set")
+        MarkedFiles.mark_cursor += -1 if backward else 1
+        wrapped = MarkedFiles.mark_cursor >= len(MarkedFiles.file_marks)
+        if wrapped:
+            MarkedFiles.mark_cursor = 0
+        return MarkedFiles.file_marks[MarkedFiles.mark_cursor], wrapped
+
+    @staticmethod
     def set_delete_lock(delete_lock=True):
         MarkedFiles.delete_lock = delete_lock
 

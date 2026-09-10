@@ -75,6 +75,15 @@ class QtWindowMCPSession:
             raise ValueError(str(e))
         return marked, filepath
 
+    def go_to_mark(self, backward: bool) -> Optional[str]:
+        from files.marked_files import MarkedFiles
+
+        try:
+            marked_file, _wrapped = MarkedFiles.advance_mark_cursor(backward=backward)
+        except Exception as e:
+            raise ValueError(str(e))
+        return self.go_to_file(marked_file)
+
     def delete_file(self, path: str) -> None:
         self._actions.delete(path)
 

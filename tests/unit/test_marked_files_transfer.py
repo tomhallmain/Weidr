@@ -67,6 +67,36 @@ def test_toggle_mark_blocks_while_delete_lock_is_set():
         MarkedFiles.delete_lock = False
 
 
+def test_advance_mark_cursor_moves_forward():
+    MarkedFiles.file_marks = ["/dir/a.jpg", "/dir/b.jpg"]
+    MarkedFiles.mark_cursor = -1
+    marked_file, wrapped = MarkedFiles.advance_mark_cursor()
+    assert marked_file == "/dir/a.jpg"
+    assert wrapped is False
+
+
+def test_advance_mark_cursor_moves_backward():
+    MarkedFiles.file_marks = ["/dir/a.jpg", "/dir/b.jpg"]
+    MarkedFiles.mark_cursor = 1
+    marked_file, wrapped = MarkedFiles.advance_mark_cursor(backward=True)
+    assert marked_file == "/dir/a.jpg"
+    assert wrapped is False
+
+
+def test_advance_mark_cursor_wraps_past_the_end():
+    MarkedFiles.file_marks = ["/dir/a.jpg", "/dir/b.jpg"]
+    MarkedFiles.mark_cursor = 1
+    marked_file, wrapped = MarkedFiles.advance_mark_cursor()
+    assert marked_file == "/dir/a.jpg"
+    assert wrapped is True
+
+
+def test_advance_mark_cursor_raises_with_no_marks():
+    MarkedFiles.file_marks = []
+    with pytest.raises(Exception):
+        MarkedFiles.advance_mark_cursor()
+
+
 def test_apply_file_marks_clears_successful_and_keeps_failed():
     MarkedFiles.file_marks = ["/dir/a.jpg", "/dir/c.jpg"]
     MarkedFiles._apply_file_marks_after_transfer(

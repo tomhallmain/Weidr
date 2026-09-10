@@ -77,6 +77,15 @@ class _FakeSession:
         self.marks.append(filepath)
         return True, filepath
 
+    def go_to_mark(self, backward):
+        if not self.marks:
+            raise ValueError("no marks set")
+        self.mark_index = getattr(self, "mark_index", -1) + (-1 if backward else 1)
+        self.mark_index %= len(self.marks)
+        self.current_file = self.marks[self.mark_index]
+        self.calls.append(("go_to_mark", backward))
+        return self.current_file
+
     def delete_file(self, path):
         self.calls.append(("delete_file", path))
 
@@ -249,6 +258,29 @@ class TestDispatch:
         ext, _ = _extension()
         with pytest.raises(MCPToolError):
             ext.dispatch("toggle_mark", {"path": "/locked/file.png"})
+
+    def test_go_to_mark_advances(self):
+        ext, session = _extension()
+        result = ext.dispatch("go_to_mark", {})
+        assert result == {"path": session.marks[0]}
+        assert ("go_to_mark", False) in session.calls
+
+    def test_go_to_mark_backward(self):
+        ext, session = _extension()
+        result = ext.dispatch("go_to_mark", {"backward": True})
+        assert ("go_to_mark", True) in session.calls
+        assert result["path"] in session.marks
+
+    def test_go_to_mark_defaults_backward_to_false(self):
+        ext, session = _extension()
+        ext.dispatch("go_to_mark")
+        assert ("go_to_mark", False) in session.calls
+
+    def test_go_to_mark_wraps_value_error_as_tool_error(self):
+        ext, session = _extension()
+        session.marks = []
+        with pytest.raises(MCPToolError):
+            ext.dispatch("go_to_mark", {})
 
     def test_run_compare(self):
         ext, session = _extension()

@@ -136,13 +136,9 @@ class FileMarksController:
             if event is not None
             else False
         )
-        MarkedFiles.mark_cursor += -1 if alt_pressed else 1
-        if MarkedFiles.mark_cursor >= len(MarkedFiles.file_marks):
-            MarkedFiles.mark_cursor = 0
-            if len(MarkedFiles.file_marks) > 1:
-                self._app.notification_ctrl.toast(_("First sorted mark"))
-
-        marked_file = MarkedFiles.file_marks[MarkedFiles.mark_cursor]
+        marked_file, wrapped = MarkedFiles.advance_mark_cursor(backward=alt_pressed)
+        if wrapped and len(MarkedFiles.file_marks) > 1:
+            self._app.notification_ctrl.toast(_("First sorted mark"))
 
         if self._app.mode == Mode.BROWSE:
             self._fb.go_to_file(marked_file)

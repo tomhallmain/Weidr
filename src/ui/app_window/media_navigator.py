@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Optional
 
 from PySide6.QtCore import QTimer
 
+from files.skip_aware_navigation import advance_past_skipped
 from ui.app_window.slideshow_dynamic_policy import (
     should_advance_slideshow_poll,
     skip_classic_slideshow_primary_tick,
@@ -79,10 +80,10 @@ class MediaNavigator:
             # A stale directory-listing cache can momentarily still contain a
             # file that was just moved/deleted; skip past it rather than
             # trying to display something that's gone.
-            while previous_media != start_media and (
-                self._cm.skip_media(previous_media) or not os.path.isfile(previous_media)
-            ):
-                previous_media = self._fb.previous_file()
+            previous_media = advance_past_skipped(
+                self._fb, self._cm.skip_media, backward=True,
+                start=start_media, current=previous_media,
+            )
             try:
                 self.create_media(previous_media)
                 return True
@@ -104,10 +105,10 @@ class MediaNavigator:
             # A stale directory-listing cache can momentarily still contain a
             # file that was just moved/deleted; skip past it rather than
             # trying to display something that's gone.
-            while next_media != start_media and (
-                self._cm.skip_media(next_media) or not os.path.isfile(next_media)
-            ):
-                next_media = self._fb.next_file()
+            next_media = advance_past_skipped(
+                self._fb, self._cm.skip_media, backward=False,
+                start=start_media, current=next_media,
+            )
             try:
                 self.create_media(next_media)
                 return True

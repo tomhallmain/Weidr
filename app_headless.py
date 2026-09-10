@@ -29,6 +29,7 @@ from compare.compare_manager import CompareManager
 from extensions.mcp_server import MCPServerExtension
 from files.file_browser import FileBrowser
 from files.marked_files import MarkedFiles
+from files.skip_aware_navigation import advance_past_skipped
 from utils.background_runner import ThreadedTaskRunner
 from utils.config import config
 from utils.constants import CompareMode, ImageGenerationType, Mode
@@ -76,7 +77,12 @@ class HeadlessMCPSession:
         return self._file_browser.current_file()
 
     def next_file(self) -> Optional[str]:
-        return self._file_browser.next_file()
+        start = self._file_browser.current_file()
+        candidate = self._file_browser.next_file()
+        return advance_past_skipped(
+            self._file_browser, self._compare_manager.skip_media,
+            backward=False, start=start, current=candidate,
+        )
 
     def go_to_file(self, path: str) -> Optional[str]:
         return self._file_browser.find(search_text=path, exact_match=True)
@@ -112,6 +118,13 @@ class HeadlessMCPSession:
         except Exception as e:
             raise ValueError(str(e))
         return marked, filepath
+
+    def go_to_mark(self, backward: bool) -> Optional[str]:
+        try:
+            marked_file, _wrapped = MarkedFiles.advance_mark_cursor(backward=backward)
+        except Exception as e:
+            raise ValueError(str(e))
+        return self.go_to_file(marked_file)
 
     def delete_file(self, path: str) -> None:
         MarkedFiles.delete_file_static(path, self._actions, toast=False, manual_delete=True)

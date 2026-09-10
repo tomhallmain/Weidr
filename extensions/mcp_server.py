@@ -111,6 +111,13 @@ def tool_descriptors() -> list:
             ),
         },
         {
+            "name": "go_to_mark",
+            "description": (
+                "Navigate to the next marked file (or the previous one, if backward "
+                "is set), wrapping around at the end of the mark list."
+            ),
+        },
+        {
             "name": "run_compare",
             "description": (
                 "Start a compare/grouping run in the given mode. Returns once the run "
@@ -277,6 +284,12 @@ class MCPServerExtension:
             except ValueError as e:
                 raise MCPToolError(str(e))
             return {"marked": marked, "path": path, "marks": list(session.list_marks())}
+        if tool_name == "go_to_mark":
+            try:
+                path = session.go_to_mark(bool(arguments.get("backward", False)))
+            except ValueError as e:
+                raise MCPToolError(str(e))
+            return {"path": path}
         if tool_name == "run_compare":
             mode = arguments.get("mode")
             if not mode:
@@ -420,6 +433,10 @@ class MCPServerExtension:
         @server.tool(name="toggle_mark", description=described["toggle_mark"])
         def toggle_mark(path: str | None = None) -> dict:
             return self.dispatch("toggle_mark", {"path": path})
+
+        @server.tool(name="go_to_mark", description=described["go_to_mark"])
+        def go_to_mark(backward: bool = False) -> dict:
+            return self.dispatch("go_to_mark", {"backward": backward})
 
         @server.tool(name="run_compare", description=described["run_compare"])
         def run_compare(mode: str, find_duplicates: bool = False) -> dict:

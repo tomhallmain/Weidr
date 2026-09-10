@@ -119,9 +119,7 @@ class FileMarksController:
                     start_file=MarkedFiles.file_marks[-1], end_file=self._app.media_path
                 )
 
-        for _file in files:
-            if _file not in MarkedFiles.file_marks:
-                MarkedFiles.file_marks.append(_file)
+        MarkedFiles.add_series(files, self._app.app_actions)
 
         self._app.notification_ctrl.toast(
             _("Marks added. Total set: {0}").format(len(MarkedFiles.file_marks))

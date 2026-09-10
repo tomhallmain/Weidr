@@ -163,9 +163,9 @@ class MarkedFiles():
         updates that follow it).
         """
         if not MarkedFiles.guard_mark_mutation(app_actions, _("toggle mark")):
-            raise Exception("marks are locked while a transfer is in progress")
+            raise Exception(_("Marks are locked while a transfer is in progress."))
         if MarkedFiles.delete_lock:
-            raise Exception("marks are locked while a delete is settling")
+            raise Exception(_("Marks are locked while a delete is settling."))
         if filepath in MarkedFiles.file_marks:
             MarkedFiles.file_marks.remove(filepath)
             if MarkedFiles.mark_cursor >= len(MarkedFiles.file_marks):
@@ -184,12 +184,26 @@ class MarkedFiles():
         Returns (the resolved file, whether the cursor wrapped this call).
         """
         if len(MarkedFiles.file_marks) == 0:
-            raise Exception("no marks set")
+            raise Exception(_("No marks set."))
         MarkedFiles.mark_cursor += -1 if backward else 1
         wrapped = MarkedFiles.mark_cursor >= len(MarkedFiles.file_marks)
         if wrapped:
             MarkedFiles.mark_cursor = 0
         return MarkedFiles.file_marks[MarkedFiles.mark_cursor], wrapped
+
+    @staticmethod
+    def add_series(files, app_actions=None) -> int:
+        """Add every file in *files* to the mark list that isn't already
+        present. Returns how many were actually added.
+        """
+        if not MarkedFiles.guard_mark_mutation(app_actions, _("add marks from group")):
+            raise Exception(_("Marks are locked while a transfer is in progress."))
+        added = 0
+        for filepath in files:
+            if filepath not in MarkedFiles.file_marks:
+                MarkedFiles.file_marks.append(filepath)
+                added += 1
+        return added
 
     @staticmethod
     def set_delete_lock(delete_lock=True):

@@ -97,6 +97,31 @@ def test_advance_mark_cursor_raises_with_no_marks():
         MarkedFiles.advance_mark_cursor()
 
 
+def test_add_series_adds_only_the_unmarked_ones():
+    MarkedFiles.file_marks = ["/dir/a.jpg"]
+    added = MarkedFiles.add_series(["/dir/a.jpg", "/dir/b.jpg", "/dir/c.jpg"])
+    assert added == 2
+    assert MarkedFiles.file_marks == ["/dir/a.jpg", "/dir/b.jpg", "/dir/c.jpg"]
+
+
+def test_add_series_with_no_new_files_adds_nothing():
+    MarkedFiles.file_marks = ["/dir/a.jpg", "/dir/b.jpg"]
+    added = MarkedFiles.add_series(["/dir/a.jpg", "/dir/b.jpg"])
+    assert added == 0
+    assert MarkedFiles.file_marks == ["/dir/a.jpg", "/dir/b.jpg"]
+
+
+def test_add_series_blocks_during_transfer():
+    MarkedFiles.file_marks = []
+    MarkedFiles.is_performing_action = True
+    try:
+        with pytest.raises(Exception):
+            MarkedFiles.add_series(["/dir/a.jpg"])
+        assert MarkedFiles.file_marks == []
+    finally:
+        MarkedFiles.is_performing_action = False
+
+
 def test_apply_file_marks_clears_successful_and_keeps_failed():
     MarkedFiles.file_marks = ["/dir/a.jpg", "/dir/c.jpg"]
     MarkedFiles._apply_file_marks_after_transfer(

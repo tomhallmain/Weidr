@@ -1,10 +1,9 @@
 """Advance a file-browser cursor past files a caller-supplied predicate
 vetoes, and past files that no longer exist on disk.
 
-Extracted from ``ui/app_window/media_navigator.py``'s
-``show_next_media``/``show_prev_media``, which had this loop inline and
-Qt-only -- so a headless session driving the same kind of file browser had
-no skip-awareness at all. Takes the veto as a predicate rather than a
+Used by both ``ui/app_window/media_navigator.py`` (Qt) and
+``app_headless.py`` (headless), so both drive the same kind of file browser
+with the same skip-awareness. Takes the veto as a predicate rather than a
 ``CompareManager`` directly so this module never has to import ``compare/``.
 """
 

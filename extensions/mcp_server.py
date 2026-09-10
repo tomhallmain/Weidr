@@ -118,11 +118,69 @@ def tool_descriptors() -> list:
             ),
         },
         {
+            "name": "add_marks_series",
+            "description": (
+                "Mark every file between the last existing mark and the current file, "
+                "in file-listing order. Needs at least one existing mark to start from."
+            ),
+        },
+        {
+            "name": "move_marks",
+            "description": (
+                "Move (or copy) every marked file into target_dir. Successfully "
+                "transferred files are removed from the mark list; files that failed "
+                "or already existed at the target stay marked."
+            ),
+        },
+        {
+            "name": "convert_to_jpg",
+            "description": (
+                "Convert every convertible image in the current directory scope to JPG. "
+                "overwrite_existing=True also re-encodes files already JPG (stripping "
+                "EXIF) and overwrites existing .jpg targets; False converts only "
+                "non-JPG sources and leaves existing targets alone."
+            ),
+        },
+        {
+            "name": "convert_svg_to_png",
+            "description": (
+                "Rasterise every SVG in the current directory scope to a PNG beside it. "
+                "overwrite_existing controls whether an existing .png target is replaced."
+            ),
+        },
+        {
+            "name": "scale_images",
+            "description": (
+                "Scale every image in the current directory scope so its pixel count "
+                "matches target_side squared (aspect ratio preserved). Modifies files "
+                "in place."
+            ),
+        },
+        {
+            "name": "strip_video_metadata",
+            "description": (
+                "Write a metadata-stripped sibling copy of every video in the current "
+                "directory scope (container tags and chapters removed, stream copy)."
+            ),
+        },
+        {
             "name": "run_compare",
             "description": (
-                "Start a compare/grouping run in the given mode. Returns once the run "
-                "is started, not once it has finished -- poll the compare_status "
-                "resource or call health_check to find out when it's done."
+                "Start a GROUP-mode compare/grouping run (results land in "
+                "compare_results' file_groups). Returns once the run is started, not "
+                "once it has finished -- poll the compare_status resource or call "
+                "health_check to find out when it's done."
+            ),
+        },
+        {
+            "name": "run_search",
+            "description": (
+                "Start a SEARCH-mode compare run for the given search_text and/or "
+                "search_media_path (positive) and search_text_negative and/or "
+                "negative_search_media_path (negative) -- at least one is required. "
+                "Results land in compare_results' files_matched. Returns once the run "
+                "is started, not once it has finished -- poll compare_status or call "
+                "health_check to find out when it's done."
             ),
         },
         {
@@ -166,6 +224,15 @@ def resource_descriptors() -> list:
             "name": "compare_status",
             "uri": "weidr://compare/status",
             "description": "Whether a compare is running, and the active compare mode.",
+        },
+        {
+            "name": "compare_results",
+            "uri": "weidr://compare/results",
+            "description": (
+                "What the last (or currently running) compare found: file_groups "
+                "for a GROUP-mode run, files_matched for a SEARCH-mode run. Empty "
+                "if no compare has run yet."
+            ),
         },
     ]
 
@@ -290,12 +357,48 @@ class MCPServerExtension:
             except ValueError as e:
                 raise MCPToolError(str(e))
             return {"path": path}
+        if tool_name == "add_marks_series":
+            try:
+                return session.add_marks_series()
+            except ValueError as e:
+                raise MCPToolError(str(e))
+        if tool_name == "move_marks":
+            target_dir = arguments.get("target_dir")
+            if not target_dir:
+                raise MCPToolError("move_marks needs a target_dir")
+            try:
+                return session.move_marks(str(target_dir), bool(arguments.get("copy", False)))
+            except ValueError as e:
+                raise MCPToolError(str(e))
+        if tool_name == "convert_to_jpg":
+            return session.convert_to_jpg(bool(arguments.get("overwrite_existing", False)))
+        if tool_name == "convert_svg_to_png":
+            return session.convert_svg_to_png(bool(arguments.get("overwrite_existing", False)))
+        if tool_name == "scale_images":
+            return session.scale_images(int(arguments.get("target_side", 320)))
+        if tool_name == "strip_video_metadata":
+            return session.strip_video_metadata()
         if tool_name == "run_compare":
             mode = arguments.get("mode")
             if not mode:
                 raise MCPToolError("run_compare needs a mode")
             try:
                 session.run_compare(str(mode), bool(arguments.get("find_duplicates", False)))
+            except ValueError as e:
+                raise MCPToolError(str(e))
+            return {"status": "started"}
+        if tool_name == "run_search":
+            mode = arguments.get("mode")
+            if not mode:
+                raise MCPToolError("run_search needs a mode")
+            try:
+                session.run_search(
+                    str(mode),
+                    search_text=arguments.get("search_text"),
+                    search_text_negative=arguments.get("search_text_negative"),
+                    search_media_path=arguments.get("search_media_path"),
+                    negative_search_media_path=arguments.get("negative_search_media_path"),
+                )
             except ValueError as e:
                 raise MCPToolError(str(e))
             return {"status": "started"}
@@ -322,6 +425,8 @@ class MCPServerExtension:
             return {"marks": list(session.list_marks())}
         if name == "compare_status":
             return {"running": session.is_compare_running(), "mode": session.get_compare_mode()}
+        if name == "compare_results":
+            return session.compare_results()
         raise MCPToolError(f"unknown resource: {name}")
 
     # ------------------------------------------------------------------
@@ -438,9 +543,48 @@ class MCPServerExtension:
         def go_to_mark(backward: bool = False) -> dict:
             return self.dispatch("go_to_mark", {"backward": backward})
 
+        @server.tool(name="add_marks_series", description=described["add_marks_series"])
+        def add_marks_series() -> dict:
+            return self.dispatch("add_marks_series")
+
+        @server.tool(name="move_marks", description=described["move_marks"])
+        def move_marks(target_dir: str, copy: bool = False) -> dict:
+            return self.dispatch("move_marks", {"target_dir": target_dir, "copy": copy})
+
+        @server.tool(name="convert_to_jpg", description=described["convert_to_jpg"])
+        def convert_to_jpg(overwrite_existing: bool = False) -> dict:
+            return self.dispatch("convert_to_jpg", {"overwrite_existing": overwrite_existing})
+
+        @server.tool(name="convert_svg_to_png", description=described["convert_svg_to_png"])
+        def convert_svg_to_png(overwrite_existing: bool = False) -> dict:
+            return self.dispatch("convert_svg_to_png", {"overwrite_existing": overwrite_existing})
+
+        @server.tool(name="scale_images", description=described["scale_images"])
+        def scale_images(target_side: int = 320) -> dict:
+            return self.dispatch("scale_images", {"target_side": target_side})
+
+        @server.tool(name="strip_video_metadata", description=described["strip_video_metadata"])
+        def strip_video_metadata() -> dict:
+            return self.dispatch("strip_video_metadata")
+
         @server.tool(name="run_compare", description=described["run_compare"])
         def run_compare(mode: str, find_duplicates: bool = False) -> dict:
             return self.dispatch("run_compare", {"mode": mode, "find_duplicates": find_duplicates})
+
+        @server.tool(name="run_search", description=described["run_search"])
+        def run_search(
+            mode: str,
+            search_text: str | None = None,
+            search_text_negative: str | None = None,
+            search_media_path: str | None = None,
+            negative_search_media_path: str | None = None,
+        ) -> dict:
+            return self.dispatch("run_search", {
+                "mode": mode,
+                "search_text": search_text, "search_text_negative": search_text_negative,
+                "search_media_path": search_media_path,
+                "negative_search_media_path": negative_search_media_path,
+            })
 
         @server.tool(name="run_image_generation", description=described["run_image_generation"])
         def run_image_generation(edit_suffix: str | None = None, target_dir: str | None = None) -> dict:

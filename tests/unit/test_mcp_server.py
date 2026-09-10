@@ -33,6 +33,9 @@ class _FakeSession:
         self.marks = ["/base/a.png", "/base/b.png"]
         self.compare_running = False
         self.compare_mode = "GROUP"
+        self.has_compare_result = False
+        self.file_groups = {}
+        self.files_matched = []
         self.calls = []
 
     def get_current_file(self):
@@ -86,6 +89,37 @@ class _FakeSession:
         self.calls.append(("go_to_mark", backward))
         return self.current_file
 
+    def add_marks_series(self):
+        if not self.marks:
+            raise ValueError("no existing mark to start the series from")
+        self.calls.append("add_marks_series")
+        added = ["/base/b.png", "/base/c.png"]
+        self.marks.extend(added)
+        return {"added": len(added), "marks": self.marks}
+
+    def move_marks(self, target_dir, copy):
+        if target_dir == "/no/such/dir":
+            raise ValueError("a marks transfer is already in progress")
+        self.calls.append(("move_marks", target_dir, copy))
+        self.marks = []
+        return {"already_present": False, "had_errors": False, "marks_remaining": self.marks}
+
+    def convert_to_jpg(self, overwrite_existing):
+        self.calls.append(("convert_to_jpg", overwrite_existing))
+        return {"converted": 3, "failed": 0, "skipped_existing": 1}
+
+    def convert_svg_to_png(self, overwrite_existing):
+        self.calls.append(("convert_svg_to_png", overwrite_existing))
+        return {"converted": 2, "failed": 0, "skipped_existing": 0}
+
+    def scale_images(self, target_side):
+        self.calls.append(("scale_images", target_side))
+        return {"scaled": 4, "skipped": 1, "failed": 0}
+
+    def strip_video_metadata(self):
+        self.calls.append("strip_video_metadata")
+        return {"written": 2, "failed": 0}
+
     def delete_file(self, path):
         self.calls.append(("delete_file", path))
 
@@ -98,11 +132,33 @@ class _FakeSession:
         self.calls.append(("run_compare", mode, find_duplicates))
         self.compare_running = True
 
+    def run_search(
+        self, mode,
+        search_text=None, search_text_negative=None,
+        search_media_path=None, negative_search_media_path=None,
+    ):
+        if mode == "NOT_A_REAL_MODE":
+            raise ValueError(f"unknown compare mode: {mode}")
+        if not any([search_text, search_text_negative, search_media_path, negative_search_media_path]):
+            raise ValueError("run_search needs at least one search input")
+        self.calls.append((
+            "run_search", mode,
+            search_text, search_text_negative, search_media_path, negative_search_media_path,
+        ))
+        self.compare_running = True
+
     def is_compare_running(self):
         return self.compare_running
 
     def get_compare_mode(self):
         return self.compare_mode
+
+    def compare_results(self):
+        return {
+            "has_compare": self.has_compare_result,
+            "file_groups": self.file_groups,
+            "files_matched": self.files_matched,
+        }
 
     def run_image_generation(self, edit_suffix, target_dir):
         self.calls.append(("run_image_generation", edit_suffix, target_dir))
@@ -282,6 +338,73 @@ class TestDispatch:
         with pytest.raises(MCPToolError):
             ext.dispatch("go_to_mark", {})
 
+    def test_add_marks_series(self):
+        ext, session = _extension()
+        result = ext.dispatch("add_marks_series")
+        assert result == {"added": 2, "marks": session.marks}
+        assert "add_marks_series" in session.calls
+
+    def test_add_marks_series_wraps_value_error_as_tool_error(self):
+        ext, session = _extension()
+        session.marks = []
+        with pytest.raises(MCPToolError):
+            ext.dispatch("add_marks_series")
+
+    def test_move_marks(self):
+        ext, session = _extension()
+        result = ext.dispatch("move_marks", {"target_dir": "/out", "copy": True})
+        assert result == {"already_present": False, "had_errors": False, "marks_remaining": []}
+        assert ("move_marks", "/out", True) in session.calls
+
+    def test_move_marks_defaults_copy_to_false(self):
+        ext, session = _extension()
+        ext.dispatch("move_marks", {"target_dir": "/out"})
+        assert ("move_marks", "/out", False) in session.calls
+
+    def test_move_marks_requires_target_dir(self):
+        ext, _ = _extension()
+        with pytest.raises(MCPToolError):
+            ext.dispatch("move_marks", {})
+
+    def test_move_marks_wraps_value_error_as_tool_error(self):
+        ext, _ = _extension()
+        with pytest.raises(MCPToolError):
+            ext.dispatch("move_marks", {"target_dir": "/no/such/dir"})
+
+    def test_convert_to_jpg(self):
+        ext, session = _extension()
+        result = ext.dispatch("convert_to_jpg", {"overwrite_existing": True})
+        assert result == {"converted": 3, "failed": 0, "skipped_existing": 1}
+        assert ("convert_to_jpg", True) in session.calls
+
+    def test_convert_to_jpg_defaults_overwrite_to_false(self):
+        ext, session = _extension()
+        ext.dispatch("convert_to_jpg")
+        assert ("convert_to_jpg", False) in session.calls
+
+    def test_convert_svg_to_png(self):
+        ext, session = _extension()
+        result = ext.dispatch("convert_svg_to_png", {"overwrite_existing": True})
+        assert result == {"converted": 2, "failed": 0, "skipped_existing": 0}
+        assert ("convert_svg_to_png", True) in session.calls
+
+    def test_scale_images(self):
+        ext, session = _extension()
+        result = ext.dispatch("scale_images", {"target_side": 512})
+        assert result == {"scaled": 4, "skipped": 1, "failed": 0}
+        assert ("scale_images", 512) in session.calls
+
+    def test_scale_images_defaults_target_side_to_320(self):
+        ext, session = _extension()
+        ext.dispatch("scale_images")
+        assert ("scale_images", 320) in session.calls
+
+    def test_strip_video_metadata(self):
+        ext, session = _extension()
+        result = ext.dispatch("strip_video_metadata")
+        assert result == {"written": 2, "failed": 0}
+        assert "strip_video_metadata" in session.calls
+
     def test_run_compare(self):
         ext, session = _extension()
         result = ext.dispatch("run_compare", {"mode": "GROUP", "find_duplicates": True})
@@ -300,6 +423,22 @@ class TestDispatch:
         ext, _ = _extension()
         with pytest.raises(MCPToolError):
             ext.dispatch("run_compare", {"mode": "NOT_A_REAL_MODE"})
+
+    def test_run_search(self):
+        ext, session = _extension()
+        result = ext.dispatch("run_search", {"mode": "CLIP_EMBEDDING", "search_text": "cat"})
+        assert result == {"status": "started"}
+        assert ("run_search", "CLIP_EMBEDDING", "cat", None, None, None) in session.calls
+
+    def test_run_search_requires_mode(self):
+        ext, _ = _extension()
+        with pytest.raises(MCPToolError):
+            ext.dispatch("run_search", {"search_text": "cat"})
+
+    def test_run_search_wraps_value_error_as_tool_error(self):
+        ext, _ = _extension()
+        with pytest.raises(MCPToolError):
+            ext.dispatch("run_search", {"mode": "CLIP_EMBEDDING"})
 
     def test_run_image_generation(self):
         ext, session = _extension()
@@ -358,6 +497,23 @@ class TestReadResource:
         session.compare_running = True
         session.compare_mode = "SEARCH"
         assert ext.read_resource("compare_status") == {"running": True, "mode": "SEARCH"}
+
+    def test_compare_results_empty_before_any_run(self):
+        ext, _ = _extension()
+        assert ext.read_resource("compare_results") == {
+            "has_compare": False, "file_groups": {}, "files_matched": [],
+        }
+
+    def test_compare_results_after_a_group_run(self):
+        ext, session = _extension()
+        session.has_compare_result = True
+        session.file_groups = {0: {"/base/a.png": 0.0, "/base/b.png": 0.12}}
+        result = ext.read_resource("compare_results")
+        assert result == {
+            "has_compare": True,
+            "file_groups": {0: {"/base/a.png": 0.0, "/base/b.png": 0.12}},
+            "files_matched": [],
+        }
 
     def test_unknown_resource_raises(self):
         ext, _ = _extension()

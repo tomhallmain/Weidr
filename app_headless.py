@@ -126,6 +126,47 @@ class HeadlessMCPSession:
             raise ValueError(str(e))
         return self.go_to_file(marked_file)
 
+    def add_marks_series(self) -> dict:
+        """Mark the run of files between the last existing mark and the
+        current file, in file-listing order (`FileBrowser.select_series`).
+
+        There is no headless equivalent of the Qt hotkey's compare-mode
+        variants (series within the current compare group, or every
+        matched file) -- headless has no "mode" concept to branch on, so
+        this only ever does the browse-listing version.
+        """
+        if not MarkedFiles.file_marks:
+            raise ValueError("no existing mark to start the series from")
+        current = self.get_current_file()
+        if not current:
+            raise ValueError("no current file")
+        if current in MarkedFiles.file_marks:
+            return {"added": 0, "marks": list(MarkedFiles.file_marks)}
+        files = self._file_browser.select_series(MarkedFiles.file_marks[-1], current)
+        try:
+            added = MarkedFiles.add_series(files, self._actions)
+        except Exception as e:
+            raise ValueError(str(e))
+        return {"added": added, "marks": list(MarkedFiles.file_marks)}
+
+    def move_marks(self, target_dir: str, copy: bool) -> dict:
+        from utils.utils import Utils
+
+        if not copy and self.is_compare_running():
+            raise ValueError("cannot move marks while a compare is running")
+        if MarkedFiles.is_performing_action:
+            raise ValueError("a marks transfer is already in progress")
+
+        already_present, had_errors = MarkedFiles.move_marks_to_dir_static(
+            self._actions, target_dir=target_dir,
+            move_func=Utils.copy_file if copy else Utils.move_file,
+        )
+        return {
+            "already_present": already_present,
+            "had_errors": had_errors,
+            "marks_remaining": list(MarkedFiles.file_marks),
+        }
+
     def delete_file(self, path: str) -> None:
         MarkedFiles.delete_file_static(path, self._actions, toast=False, manual_delete=True)
 
@@ -136,23 +177,75 @@ class HeadlessMCPSession:
         self.next_file()
 
     # ------------------------------------------------------------------
+    # Directory-wide operations
+    #
+    # Each wraps an existing survey/execute pair from image/directory_ops.py
+    # -- already Qt-free, already taking an explicit decision (overwrite or
+    # not) instead of reading one from a dialog -- so no new logic here
+    # beyond picking the file scope and calling it. Mirrors the shape
+    # scripts/agent_headless_demo.py's demo_directory_ops already uses.
+    # ------------------------------------------------------------------
+    def convert_to_jpg(self, overwrite_existing: bool) -> dict:
+        from image import directory_ops
+
+        files = self._file_browser.get_files()
+        survey = directory_ops.survey_jpg_conversion(files)
+        result = directory_ops.convert_files_to_jpg(survey, overwrite_existing=overwrite_existing)
+        if result.converted > 0:
+            self._file_browser.refresh()
+        return {"converted": result.converted, "failed": result.failed, "skipped_existing": result.skipped_existing}
+
+    def convert_svg_to_png(self, overwrite_existing: bool) -> dict:
+        from image import directory_ops
+
+        files = self._file_browser.get_files()
+        survey = directory_ops.survey_svg_conversion(files)
+        result = directory_ops.convert_svgs_to_png(survey, overwrite_existing=overwrite_existing)
+        if result.converted > 0:
+            self._file_browser.refresh()
+        return {"converted": result.converted, "failed": result.failed, "skipped_existing": result.skipped_existing}
+
+    def scale_images(self, target_side: int) -> dict:
+        from image import directory_ops
+
+        files = self._file_browser.get_files()
+        survey = directory_ops.survey_image_scaling(files, target_side)
+        result = directory_ops.scale_images(survey)
+        if result.scaled > 0:
+            self._file_browser.refresh()
+        return {"scaled": result.scaled, "skipped": result.skipped, "failed": result.failed}
+
+    def strip_video_metadata(self) -> dict:
+        from image import directory_ops
+
+        files = self._file_browser.get_files()
+        survey = directory_ops.survey_video_metadata_strip(files)
+        result = directory_ops.strip_video_metadata(survey)
+        if result.written > 0:
+            self._file_browser.refresh()
+        return {"written": result.written, "failed": result.failed}
+
+    # ------------------------------------------------------------------
     # Compare
     # ------------------------------------------------------------------
-    def run_compare(self, mode: str, find_duplicates: bool) -> None:
+    def _resolve_compare_mode(self, mode: str) -> CompareMode:
         try:
-            compare_mode = CompareMode[mode]
+            return CompareMode[mode]
         except KeyError:
             raise ValueError(f"unknown compare mode: {mode}")
 
+    def _compare_threshold(self, compare_mode: CompareMode) -> float:
         # COLOR_MATCHING reads compare_threshold as a LAB colour distance
         # rather than an embedding similarity -- see
         # scripts/agent_headless_demo.py's API notes on this same gotcha.
-        threshold = (
+        return (
             config.color_diff_threshold
             if compare_mode == CompareMode.COLOR_MATCHING
             else config.embedding_similarity_threshold
         )
 
+    def run_compare(self, mode: str, find_duplicates: bool) -> None:
+        compare_mode = self._resolve_compare_mode(mode)
         compare_args = CompareArgs(
             base_dir=self._base_dir,
             mode=Mode.GROUP,
@@ -160,9 +253,43 @@ class HeadlessMCPSession:
             recursive=False,
             store_checkpoints=False,
             app_actions=self._actions,
-            compare_threshold=threshold,
+            compare_threshold=self._compare_threshold(compare_mode),
         )
         compare_args.find_duplicates = find_duplicates
+        self._runner.start(
+            self._compare_manager.run, [compare_args],
+            on_error=lambda msg: logger.error("Compare run failed: %s", msg),
+        )
+
+    def run_search(
+        self,
+        mode: str,
+        search_text: Optional[str] = None,
+        search_text_negative: Optional[str] = None,
+        search_media_path: Optional[str] = None,
+        negative_search_media_path: Optional[str] = None,
+    ) -> None:
+        if not any([search_text, search_text_negative, search_media_path, negative_search_media_path]):
+            raise ValueError(
+                "run_search needs at least one of search_text, search_text_negative, "
+                "search_media_path, negative_search_media_path"
+            )
+        compare_mode = self._resolve_compare_mode(mode)
+        compare_args = CompareArgs(
+            base_dir=self._base_dir,
+            mode=Mode.SEARCH,
+            compare_mode=compare_mode,
+            recursive=False,
+            store_checkpoints=False,
+            app_actions=self._actions,
+            compare_threshold=self._compare_threshold(compare_mode),
+            search_text=search_text,
+            search_text_negative=search_text_negative,
+            search_media_path=search_media_path,
+        )
+        # Not a CompareArgs constructor parameter -- only settable as an
+        # attribute after construction.
+        compare_args.negative_search_media_path = negative_search_media_path
         self._runner.start(
             self._compare_manager.run, [compare_args],
             on_error=lambda msg: logger.error("Compare run failed: %s", msg),
@@ -173,6 +300,14 @@ class HeadlessMCPSession:
 
     def get_compare_mode(self) -> str:
         return self._compare_manager.compare_mode.name
+
+    def compare_results(self) -> dict:
+        cm = self._compare_manager
+        return {
+            "has_compare": cm.has_compare(),
+            "file_groups": dict(cm.file_groups),
+            "files_matched": list(cm.files_matched),
+        }
 
     # ------------------------------------------------------------------
     # Image generation

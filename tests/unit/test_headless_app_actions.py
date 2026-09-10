@@ -209,8 +209,11 @@ _NO_QT_PROBE = textwrap.dedent(
 def test_usable_without_importing_pyside6(tmp_path):
     """Runs in a fresh interpreter that raises if anything imports PySide6."""
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    src_dir = os.path.join(project_root, "src")
     env = os.environ.copy()
-    env["PYTHONPATH"] = project_root + os.pathsep + env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = (
+        project_root + os.pathsep + src_dir + os.pathsep + env.get("PYTHONPATH", "")
+    )
     env.pop("QT_QPA_PLATFORM", None)
 
     result = subprocess.run(

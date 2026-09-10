@@ -1083,6 +1083,9 @@ if __name__ == "__main__":
     _repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if _repo_root not in sys.path:
         sys.path.insert(0, _repo_root)
+    _src_dir = os.path.join(_repo_root, "src")
+    if _src_dir not in sys.path:
+        sys.path.insert(0, _src_dir)
 
     # Redirect to a scratch state dir before touching the API. These smoke
     # tests end in reset_state_for_application(), which drops every row for

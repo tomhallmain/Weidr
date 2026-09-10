@@ -13,14 +13,14 @@ across the codebase.
 
 This file's own hop count is exactly that kind of assumption, and is not
 exempt from the problem it exists to centralize: it is currently correct
-for utils/repo_paths.py living directly under the project root. If this
-module is ever relocated (e.g. into a src/ layout), this is the one place
-that needs its hop count bumped to match the new depth.
+for src/utils/repo_paths.py, three directories under the project root. If
+this module is ever relocated again, this is the one place that needs its
+hop count bumped to match the new depth.
 """
 
 import os
 
 
 def repo_root() -> str:
-    """The project root -- two directories up from this file today."""
-    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    """The project root -- three directories up from this file today."""
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

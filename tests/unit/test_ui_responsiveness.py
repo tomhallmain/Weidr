@@ -14,6 +14,10 @@ def _project_root():
     return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 
+def _src_root():
+    return os.path.join(_project_root(), "src")
+
+
 def _import_statements(path):
     """Names imported by real import statements, ignoring prose mentions.
 
@@ -78,7 +82,7 @@ class TestQtFreedom:
     @pytest.mark.parametrize("package", PACKAGES)
     def test_package_imports_no_pyside6(self, package):
         offenders = []
-        root = os.path.join(_project_root(), package)
+        root = os.path.join(_src_root(), package)
         for dirpath, _dirnames, filenames in os.walk(root):
             if "__pycache__" in dirpath:
                 continue
@@ -123,7 +127,7 @@ class TestLayeringDirection:
     """
 
     def test_app_actions_has_no_module_level_ui_import(self):
-        path = os.path.join(_project_root(), "utils", "app_actions.py")
+        path = os.path.join(_src_root(), "utils", "app_actions.py")
         offenders = [
             n for n in _module_level_import_statements(path)
             if n.split(".")[0] == "ui"
@@ -134,7 +138,7 @@ class TestLayeringDirection:
         # related_images_signals() imports a Qt bridge on demand. That is
         # deliberate -- headless callers seed the slot so it is never reached --
         # so the check must look at module level only, not every import node.
-        path = os.path.join(_project_root(), "utils", "app_actions.py")
+        path = os.path.join(_src_root(), "utils", "app_actions.py")
         assert any(
             n.split(".")[0] == "ui" for n in _import_statements(path)
         ), "expected the lazy ui import to still be present"

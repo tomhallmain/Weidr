@@ -22,6 +22,8 @@ import os
 import sys
 from typing import Optional
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
+
 from compare.compare_args import CompareArgs
 from compare.compare_manager import CompareManager
 from extensions.mcp_server import MCPServerExtension

@@ -29,11 +29,16 @@ collect_ignore = [
     os.path.join(_here, "test_compare_embedding_matrix.py"),
 ]
 
-# Ensure the project root is on sys.path so that app packages (ui/, utils/,
-# etc.) are importable regardless of which directory pytest is invoked from.
+# Ensure the project root and src/ (ui/, compare/, files/, image/, utils/)
+# are both on sys.path so app packages are importable regardless of which
+# directory pytest is invoked from. pytest.ini's `pythonpath` setting covers
+# this too, but this runs at collection time either way, so keep both.
 _project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
+_src_dir = os.path.join(_project_root, "src")
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
 
 # Bootstrap a safe temporary location so that the singletons created during
 # initial import never touch the real cache or config files.

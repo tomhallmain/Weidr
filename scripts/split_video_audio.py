@@ -31,6 +31,7 @@ from typing import Iterable
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
 sys.path.insert(0, str(REPO_ROOT))
+sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from image.video_ops import VideoOps  # noqa: E402
 from utils.config import config  # noqa: E402

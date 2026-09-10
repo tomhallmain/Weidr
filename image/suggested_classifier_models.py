@@ -14,12 +14,11 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from utils.logging_setup import get_logger
+from utils.repo_paths import repo_root
 
 logger = get_logger("suggested_classifier_models")
 
-_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-_SUGGESTED_MODELS_JSON_PATH = os.path.join(_REPO_ROOT, "configs", "suggested_classifier_models.json")
+_SUGGESTED_MODELS_JSON_PATH = os.path.join(repo_root(), "configs", "suggested_classifier_models.json")
 
 
 @dataclass(slots=True, frozen=True)

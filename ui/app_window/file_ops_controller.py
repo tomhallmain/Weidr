@@ -19,6 +19,7 @@ from ui.auth.password_utils import require_password
 from utils.config import config
 from utils.constants import ActionType, Mode, ProtectedActions, Sort, SortBy
 from utils.logging_setup import get_logger
+from utils.repo_paths import repo_root
 from utils.running_tasks_registry import start_thread
 from utils.translations import _, compare_running_warn
 from utils.utils import Utils
@@ -1026,10 +1027,7 @@ class FileOpsController:
 
     @staticmethod
     def _randomize_filenames_script_path() -> str:
-        repo_root = os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        )
-        return os.path.join(repo_root, "scripts", "randomize_filenames.py")
+        return os.path.join(repo_root(), "scripts", "randomize_filenames.py")
 
     def run_randomize_filenames(self, event=None) -> None:
         """Spawn randomize_filenames.py on the base directory (dry run or execute)."""

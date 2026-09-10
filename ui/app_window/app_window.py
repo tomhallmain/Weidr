@@ -54,6 +54,7 @@ from utils.app_actions import AppActions
 from utils.config import config, FileCheckConfig, SlideshowConfig, StoreCacheConfig
 from utils.constants import Mode, Direction, ViewMode
 from utils.logging_setup import get_logger
+from utils.repo_paths import repo_root
 from utils.translations import _
 from utils.utils import Utils
 logger = get_logger("app_window")
@@ -152,8 +153,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         )
 
         # Set icon in the custom title bar and connect context menu
-        _root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-        icon_path = os.path.join(_root, "assets", "icon.png")
+        icon_path = os.path.join(repo_root(), "assets", "icon.png")
         if os.path.isfile(icon_path):
             title_bar = self.get_title_bar()
             if title_bar:

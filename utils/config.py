@@ -7,6 +7,7 @@ import sys
 from image.image_edit_configuration import ImageEditConfiguration
 from utils.constants import CompareMode, Sort, SortBy
 from utils.logging_setup import get_logger
+from utils.repo_paths import repo_root
 from utils.running_tasks_registry import running_tasks_registry
 from utils.utils import Utils
 
@@ -14,7 +15,7 @@ logger = get_logger("config")
 
 
 class Config:
-    CONFIGS_DIR_LOC = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), "configs")
+    CONFIGS_DIR_LOC = os.path.join(repo_root(), "configs")
 
     # Registry of config keys that the Help/Config dialog exposes as editable.
     # Maps key → expected Python type for conversion:

@@ -152,6 +152,29 @@ class MarkedFiles():
         return False
 
     @staticmethod
+    def toggle_mark(filepath, app_actions=None) -> bool:
+        """Add filepath to the mark list if absent, remove it if present.
+
+        Returns True if the file is now marked, False if it was just removed.
+        Raises if marks are locked: a transfer is running (guard_mark_mutation
+        already warns via app_actions in that case), or a delete is still
+        settling (delete_file_static sets delete_lock; callers that just
+        deleted the file being toggled would otherwise race the cursor/group
+        updates that follow it).
+        """
+        if not MarkedFiles.guard_mark_mutation(app_actions, _("toggle mark")):
+            raise Exception("marks are locked while a transfer is in progress")
+        if MarkedFiles.delete_lock:
+            raise Exception("marks are locked while a delete is settling")
+        if filepath in MarkedFiles.file_marks:
+            MarkedFiles.file_marks.remove(filepath)
+            if MarkedFiles.mark_cursor >= len(MarkedFiles.file_marks):
+                MarkedFiles.mark_cursor = -1
+            return False
+        MarkedFiles.file_marks.append(filepath)
+        return True
+
+    @staticmethod
     def set_delete_lock(delete_lock=True):
         MarkedFiles.delete_lock = delete_lock
 

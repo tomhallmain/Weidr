@@ -67,6 +67,16 @@ class _FakeSession:
     def list_marks(self):
         return self.marks
 
+    def toggle_mark(self, path):
+        filepath = path if path is not None else self.current_file
+        if filepath == "/locked/file.png":
+            raise ValueError("marks are locked while a transfer is in progress")
+        if filepath in self.marks:
+            self.marks.remove(filepath)
+            return False, filepath
+        self.marks.append(filepath)
+        return True, filepath
+
     def delete_file(self, path):
         self.calls.append(("delete_file", path))
 
@@ -214,6 +224,31 @@ class TestDispatch:
     def test_list_marks(self):
         ext, session = _extension()
         assert ext.dispatch("list_marks") == {"marks": session.marks}
+
+    def test_toggle_mark_adds_when_absent(self):
+        ext, session = _extension()
+        result = ext.dispatch("toggle_mark", {"path": "/base/c.png"})
+        assert result == {"marked": True, "path": "/base/c.png", "marks": session.marks}
+        assert "/base/c.png" in session.marks
+
+    def test_toggle_mark_removes_when_present(self):
+        ext, session = _extension()
+        assert "/base/a.png" in session.marks
+        result = ext.dispatch("toggle_mark", {"path": "/base/a.png"})
+        assert result == {"marked": False, "path": "/base/a.png", "marks": session.marks}
+        assert "/base/a.png" not in session.marks
+
+    def test_toggle_mark_defaults_to_current_file(self):
+        ext, session = _extension()
+        session.current_file = "/base/d.png"
+        result = ext.dispatch("toggle_mark", {})
+        assert result["path"] == "/base/d.png"
+        assert result["marked"] is True
+
+    def test_toggle_mark_wraps_value_error_as_tool_error(self):
+        ext, _ = _extension()
+        with pytest.raises(MCPToolError):
+            ext.dispatch("toggle_mark", {"path": "/locked/file.png"})
 
     def test_run_compare(self):
         ext, session = _extension()

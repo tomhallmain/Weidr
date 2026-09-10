@@ -25,6 +25,48 @@ def test_guard_mark_mutation_blocks_during_transfer():
         MarkedFiles.is_performing_action = False
 
 
+def test_toggle_mark_adds_when_absent():
+    MarkedFiles.file_marks = []
+    assert MarkedFiles.toggle_mark("/dir/a.jpg") is True
+    assert MarkedFiles.file_marks == ["/dir/a.jpg"]
+
+
+def test_toggle_mark_removes_when_present():
+    MarkedFiles.file_marks = ["/dir/a.jpg", "/dir/b.jpg"]
+    assert MarkedFiles.toggle_mark("/dir/a.jpg") is False
+    assert MarkedFiles.file_marks == ["/dir/b.jpg"]
+
+
+def test_toggle_mark_resets_cursor_when_it_falls_out_of_range():
+    MarkedFiles.file_marks = ["/dir/a.jpg"]
+    MarkedFiles.mark_cursor = 0
+    MarkedFiles.toggle_mark("/dir/a.jpg")
+    assert MarkedFiles.file_marks == []
+    assert MarkedFiles.mark_cursor == -1
+
+
+def test_toggle_mark_blocks_during_transfer():
+    MarkedFiles.file_marks = []
+    MarkedFiles.is_performing_action = True
+    try:
+        with pytest.raises(Exception):
+            MarkedFiles.toggle_mark("/dir/a.jpg")
+        assert MarkedFiles.file_marks == []
+    finally:
+        MarkedFiles.is_performing_action = False
+
+
+def test_toggle_mark_blocks_while_delete_lock_is_set():
+    MarkedFiles.file_marks = []
+    MarkedFiles.delete_lock = True
+    try:
+        with pytest.raises(Exception):
+            MarkedFiles.toggle_mark("/dir/a.jpg")
+        assert MarkedFiles.file_marks == []
+    finally:
+        MarkedFiles.delete_lock = False
+
+
 def test_apply_file_marks_clears_successful_and_keeps_failed():
     MarkedFiles.file_marks = ["/dir/a.jpg", "/dir/c.jpg"]
     MarkedFiles._apply_file_marks_after_transfer(

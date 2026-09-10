@@ -103,6 +103,16 @@ class HeadlessMCPSession:
     def list_marks(self) -> list:
         return list(MarkedFiles.file_marks)
 
+    def toggle_mark(self, path: Optional[str]) -> "tuple[bool, str]":
+        filepath = path if path is not None else self.get_current_file()
+        if not filepath:
+            raise ValueError("no file to mark")
+        try:
+            marked = MarkedFiles.toggle_mark(filepath, self._actions)
+        except Exception as e:
+            raise ValueError(str(e))
+        return marked, filepath
+
     def delete_file(self, path: str) -> None:
         MarkedFiles.delete_file_static(path, self._actions, toast=False, manual_delete=True)
 

@@ -104,6 +104,13 @@ def tool_descriptors() -> list:
             "description": "The current mark list. Marks are shared process-wide, not per-session.",
         },
         {
+            "name": "toggle_mark",
+            "description": (
+                "Mark a file if it isn't marked, unmark it if it is. Defaults to the "
+                "current file. Marks are shared process-wide, not per-session."
+            ),
+        },
+        {
             "name": "run_compare",
             "description": (
                 "Start a compare/grouping run in the given mode. Returns once the run "
@@ -264,6 +271,12 @@ class MCPServerExtension:
             return {}
         if tool_name == "list_marks":
             return {"marks": list(session.list_marks())}
+        if tool_name == "toggle_mark":
+            try:
+                marked, path = session.toggle_mark(arguments.get("path"))
+            except ValueError as e:
+                raise MCPToolError(str(e))
+            return {"marked": marked, "path": path, "marks": list(session.list_marks())}
         if tool_name == "run_compare":
             mode = arguments.get("mode")
             if not mode:
@@ -403,6 +416,10 @@ class MCPServerExtension:
         @server.tool(name="list_marks", description=described["list_marks"])
         def list_marks() -> dict:
             return self.dispatch("list_marks")
+
+        @server.tool(name="toggle_mark", description=described["toggle_mark"])
+        def toggle_mark(path: str | None = None) -> dict:
+            return self.dispatch("toggle_mark", {"path": path})
 
         @server.tool(name="run_compare", description=described["run_compare"])
         def run_compare(mode: str, find_duplicates: bool = False) -> dict:

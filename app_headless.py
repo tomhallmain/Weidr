@@ -63,6 +63,23 @@ class HeadlessMCPSession:
         self._actions = build_headless_app_actions({
             "get_base_dir": lambda: self._base_dir,
             "is_compare_running": lambda: self._runner.is_running(),
+            # Both wired through this session's own methods rather than
+            # passed directly, and both matching the exact call shape
+            # classifier_action.py/classifier_pipeline_runner.py actually
+            # use for these two callbacks (grepped, not assumed):
+            # hide_callback(image_path) and
+            # generate_callback(image_path, edit_suffix, target_dir=...) --
+            # both positional-image-path-first, not the Qt
+            # app_actions.hide_current_media(event=None, media_path=None) /
+            # .run_image_generation(event=None, _type=None, media_path=None,
+            # ...) shape. Without these two, a prevalidation or pipeline
+            # rule that fires HIDE or GENERATE during headless navigation
+            # raises HeadlessActionUnavailable instead of running, breaking
+            # skip_media() and everything that calls it (next_file,
+            # go_to_mark).
+            "hide_current_media": lambda media_path: self.hide_current_file(media_path),
+            "run_image_generation": lambda media_path, edit_suffix=None, target_dir=None:
+                self.run_image_generation(edit_suffix, target_dir, media_path=media_path),
         })
         self._compare_manager = CompareManager(
             master=None, app_actions=self._actions,
@@ -312,10 +329,21 @@ class HeadlessMCPSession:
     # ------------------------------------------------------------------
     # Image generation
     # ------------------------------------------------------------------
-    def run_image_generation(self, edit_suffix: Optional[str], target_dir: Optional[str]) -> None:
+    def run_image_generation(
+        self, edit_suffix: Optional[str], target_dir: Optional[str],
+        media_path: Optional[str] = None,
+    ) -> None:
+        """*media_path* defaults to the current file -- the MCP tool never
+        passes it explicitly. The prevalidation GENERATE callback does: the
+        file a prevalidation rule matched is not necessarily the file
+        currently displayed (or, headlessly, the file browser's current
+        cursor position), so it has to be threaded through rather than
+        assumed.
+        """
         from extensions.sd_runner_client import SDRunnerClient
 
-        media_path = self.get_current_file()
+        if media_path is None:
+            media_path = self.get_current_file()
         if media_path is None:
             raise ValueError("no current file to generate from")
         SDRunnerClient().run(

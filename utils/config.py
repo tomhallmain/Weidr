@@ -245,6 +245,11 @@ class Config:
         self.sd_runner_client_password = "<PASSWORD>"
         self.refacdir_client_port = 6001
         self.refacdir_client_password = "<PASSWORD>"
+        self.mcp_server_host = "localhost"
+        # Falsy = disabled. Loopback-only until token auth is implemented --
+        # see extensions/mcp_server.py's MCPServerExtension.refuses_to_start().
+        self.mcp_server_port = 0
+        self.mcp_server_token = ""
         self.gimp_exe_loc = "gimp-2.10"
         # Unset by default: GIMP inherits Weidr's own resolved locale (self.locale /
         # os.environ["LANG"]) unless a GIMP-specific locale is explicitly configured.
@@ -296,6 +301,8 @@ class Config:
                             "file_paths_json_path",
                             "sd_runner_client_password",
                             "refacdir_client_password",
+                            "mcp_server_host",
+                            "mcp_server_token",
                             "xvlm_loc",
                             "xvlm_model_loc",
                             "xvlm_model_size",
@@ -366,7 +373,8 @@ class Config:
                             "compare_embedding_dynamic_media_max_samples",
                             "vjepa2_num_frames",
                             "sd_runner_client_port",
-                            "refacdir_client_port")
+                            "refacdir_client_port",
+                            "mcp_server_port")
             self.set_values(float,
                             "background_opacity",
                             "embedding_similarity_threshold",

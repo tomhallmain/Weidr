@@ -21,6 +21,30 @@ from utils.utils import Utils
 logger = get_logger("app_qt")
 
 
+def _start_mcp_server():
+    """Start the MCP server on a daemon thread, if configured.
+
+    Resolves the active window fresh on every tool/resource call rather than
+    capturing one here -- see extensions/mcp_server.py's module docstring on
+    why a captured reference would go stale as windows open, switch focus,
+    and close.
+    """
+    import threading
+
+    from extensions.mcp_server import MCPServerExtension
+    from ui.app_window.mcp_session_qt import QtWindowMCPSession
+    from ui.app_window.window_manager import WindowManager
+
+    def _resolve_session():
+        window = WindowManager.get_active_window()
+        return QtWindowMCPSession(window) if window is not None else None
+
+    threading.Thread(
+        target=MCPServerExtension(session_resolver=_resolve_session).start,
+        daemon=True, name="mcp-server",
+    ).start()
+
+
 def main():
     # Single instance check -- prevent multiple instances from running
     lock_file, cleanup_lock = Utils.check_single_instance("Weidr")
@@ -79,6 +103,8 @@ def main():
             # Bring window to front and give it focus
             app_window.raise_()
             app_window.activateWindow()
+
+            _start_mcp_server()
         except Exception as e:
             logger.critical(f"Failed to create main window: {e}", exc_info=True)
             from PySide6.QtWidgets import QMessageBox

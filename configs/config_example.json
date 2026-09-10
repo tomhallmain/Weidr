@@ -181,6 +181,9 @@
   "sd_runner_client_password": "<PASSWORD>",
   "refacdir_client_port": 6001,
   "refacdir_client_password": "<PASSWORD>",
+  "mcp_server_host": "localhost",
+  "mcp_server_port": 0,
+  "mcp_server_token": "",
   "gimp_exe_loc": "gimp-3.0",
   "gimp_locale": null,
   "image_edit_configuration": {

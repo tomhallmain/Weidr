@@ -282,7 +282,9 @@ class FileBrowser:
             recursive_str = "" if self.recursive else _(" (try setting recursive to True)")
             raise Exception(_("No files found for current browsing settings.") + recursive_str)
         with self.cursor_lock:
-            if self.file_cursor == 0:
+            # current_file() resolves the -1 pre-position sentinel to index 0,
+            # so stepping back from it wraps to the last file, same as from 0.
+            if self.file_cursor <= 0:
                 self.file_cursor = len(files) - 1
             else:
                 self.file_cursor -= 1

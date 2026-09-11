@@ -178,10 +178,12 @@ class MarkedFiles():
     def advance_mark_cursor(backward=False):
         """Move mark_cursor to the next (or previous) marked file.
 
-        Wraps to the first mark once past the end. Raises if there are no
-        marks set.
+        Wraps to the first mark once past the end, and to the last mark once
+        before the start (including from the -1 "no mark visited yet"
+        sentinel). Raises if there are no marks set.
 
-        Returns (the resolved file, whether the cursor wrapped this call).
+        Returns (the resolved file, whether the cursor wrapped forward this
+        call).
         """
         if len(MarkedFiles.file_marks) == 0:
             raise Exception(_("No marks set."))
@@ -189,6 +191,8 @@ class MarkedFiles():
         wrapped = MarkedFiles.mark_cursor >= len(MarkedFiles.file_marks)
         if wrapped:
             MarkedFiles.mark_cursor = 0
+        elif MarkedFiles.mark_cursor < 0:
+            MarkedFiles.mark_cursor = len(MarkedFiles.file_marks) - 1
         return MarkedFiles.file_marks[MarkedFiles.mark_cursor], wrapped
 
     @staticmethod
@@ -292,11 +296,14 @@ class MarkedFiles():
                 return False
 
     @staticmethod
-    def clear_file_marks(app_actions) -> None:
+    def clear_file_marks(app_actions) -> bool:
+        """Empty the mark list. Returns False if a transfer blocked it."""
         if not MarkedFiles.guard_mark_mutation(app_actions, _("clear marks")):
-            return
+            return False
         MarkedFiles.file_marks = []
+        MarkedFiles.mark_cursor = -1
         app_actions.toast(_("Marks cleared."))
+        return True
 
     @staticmethod
     def _paths_match(path_a: Optional[str], path_b: Optional[str]) -> bool:

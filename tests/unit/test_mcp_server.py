@@ -34,6 +34,7 @@ class _FakeSession:
         self.compare_running = False
         self.compare_mode = "GROUP"
         self.has_compare_result = False
+        self.run_mode = "BROWSE"
         self.file_groups = {}
         self.files_matched = []
         self.calls = []
@@ -45,6 +46,14 @@ class _FakeSession:
         self.calls.append("next_file")
         self.current_file = "/base/b.png"
         return self.current_file
+
+    def previous_file(self):
+        self.calls.append("previous_file")
+        self.current_file = "/base/z.png"
+        return self.current_file
+
+    def get_index(self):
+        return 2, 5
 
     def go_to_file(self, path):
         self.calls.append(("go_to_file", path))
@@ -89,6 +98,13 @@ class _FakeSession:
         self.calls.append(("go_to_mark", backward))
         return self.current_file
 
+    def clear_marks(self):
+        if self.current_file == "/locked/file.png":
+            raise ValueError("marks are locked while a transfer is in progress")
+        cleared = len(self.marks)
+        self.marks = []
+        return cleared
+
     def add_marks_series(self):
         if not self.marks:
             raise ValueError("no existing mark to start the series from")
@@ -126,10 +142,12 @@ class _FakeSession:
     def hide_current_file(self, path):
         self.calls.append(("hide_current_file", path))
 
-    def run_compare(self, mode, find_duplicates):
+    def run_compare(self, mode, find_duplicates, run_mode="GROUP"):
         if mode == "NOT_A_REAL_MODE":
             raise ValueError(f"unknown compare mode: {mode}")
-        self.calls.append(("run_compare", mode, find_duplicates))
+        if run_mode not in ("GROUP", "GROUP_COMPLEMENT"):
+            raise ValueError(f"run_mode must be GROUP or GROUP_COMPLEMENT, not {run_mode}")
+        self.calls.append(("run_compare", mode, find_duplicates, run_mode))
         self.compare_running = True
 
     def run_search(
@@ -156,6 +174,7 @@ class _FakeSession:
     def compare_results(self):
         return {
             "has_compare": self.has_compare_result,
+            "run_mode": self.run_mode,
             "file_groups": self.file_groups,
             "files_matched": self.files_matched,
         }
@@ -260,6 +279,16 @@ class TestDispatch:
         assert result == {"advanced": True, "path": "/base/b.png"}
         assert "next_file" in session.calls
 
+    def test_previous_file(self):
+        ext, session = _extension()
+        result = ext.dispatch("previous_file")
+        assert result == {"moved": True, "path": "/base/z.png"}
+        assert "previous_file" in session.calls
+
+    def test_get_index(self):
+        ext, _ = _extension()
+        assert ext.dispatch("get_index") == {"index": 2, "count": 5}
+
     def test_set_base_dir(self):
         ext, session = _extension()
         result = ext.dispatch("set_base_dir", {"path": "/other"})
@@ -338,6 +367,16 @@ class TestDispatch:
         with pytest.raises(MCPToolError):
             ext.dispatch("go_to_mark", {})
 
+    def test_clear_marks(self):
+        ext, session = _extension()
+        assert ext.dispatch("clear_marks") == {"cleared": 2, "marks": []}
+        assert session.marks == []
+
+    def test_clear_marks_wraps_value_error_as_tool_error(self):
+        ext, _ = _extension(_FakeSession(current_file="/locked/file.png"))
+        with pytest.raises(MCPToolError):
+            ext.dispatch("clear_marks")
+
     def test_add_marks_series(self):
         ext, session = _extension()
         result = ext.dispatch("add_marks_series")
@@ -409,7 +448,17 @@ class TestDispatch:
         ext, session = _extension()
         result = ext.dispatch("run_compare", {"mode": "GROUP", "find_duplicates": True})
         assert result == {"status": "started"}
-        assert ("run_compare", "GROUP", True) in session.calls
+        assert ("run_compare", "GROUP", True, "GROUP") in session.calls
+
+    def test_run_compare_passes_run_mode_through(self):
+        ext, session = _extension()
+        ext.dispatch("run_compare", {"mode": "CLIP_EMBEDDING", "run_mode": "GROUP_COMPLEMENT"})
+        assert ("run_compare", "CLIP_EMBEDDING", False, "GROUP_COMPLEMENT") in session.calls
+
+    def test_run_compare_rejected_run_mode_is_a_tool_error(self):
+        ext, _ = _extension()
+        with pytest.raises(MCPToolError):
+            ext.dispatch("run_compare", {"mode": "CLIP_EMBEDDING", "run_mode": "SEARCH"})
 
     def test_run_compare_requires_mode(self):
         ext, _ = _extension()
@@ -501,16 +550,18 @@ class TestReadResource:
     def test_compare_results_empty_before_any_run(self):
         ext, _ = _extension()
         assert ext.read_resource("compare_results") == {
-            "has_compare": False, "file_groups": {}, "files_matched": [],
+            "has_compare": False, "run_mode": "BROWSE", "file_groups": {}, "files_matched": [],
         }
 
     def test_compare_results_after_a_group_run(self):
         ext, session = _extension()
         session.has_compare_result = True
+        session.run_mode = "GROUP"
         session.file_groups = {0: {"/base/a.png": 0.0, "/base/b.png": 0.12}}
         result = ext.read_resource("compare_results")
         assert result == {
             "has_compare": True,
+            "run_mode": "GROUP",
             "file_groups": {0: {"/base/a.png": 0.0, "/base/b.png": 0.12}},
             "files_matched": [],
         }

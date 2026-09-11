@@ -607,6 +607,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             "get_active_media_filepath": self.media_navigator.get_active_media_filepath,
             "create_media": ts(self.media_navigator.create_media),
             "show_next_media": ts(self.media_navigator.show_next_media),
+            "show_prev_media": ts(self.media_navigator.show_prev_media),
             "restart_slideshow_timer_after_interaction": ts(
                 self.media_navigator.restart_slideshow_timer_after_interaction
             ),

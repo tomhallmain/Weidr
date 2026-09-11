@@ -46,6 +46,23 @@ logger = get_logger("app_headless")
 _DEFAULT_IMAGE_GENERATION_TYPE = ImageGenerationType.CONTROL_NET
 
 
+class _CompareMaster:
+    """The part of an AppWindow that CompareWrapper reads off its master:
+    the app mode (kept current through the set_mode action), the file
+    browser whose sort orders a group complement, and a repaint hook.
+    """
+
+    def __init__(self, file_browser: FileBrowser):
+        self.file_browser = file_browser
+        self.mode = Mode.BROWSE
+
+    def set_mode(self, mode: Mode, do_update: bool = True) -> None:
+        self.mode = mode
+
+    def update(self) -> None:
+        pass
+
+
 class HeadlessMCPSession:
     """Session backed by one Qt-free FileBrowser/CompareManager pair.
 
@@ -60,9 +77,11 @@ class HeadlessMCPSession:
         self._runner = ThreadedTaskRunner()
         self._file_browser = FileBrowser(base_dir)
         self._file_browser.set_directory(base_dir)
+        self._compare_master = _CompareMaster(self._file_browser)
         self._actions = build_headless_app_actions({
             "get_base_dir": lambda: self._base_dir,
             "is_compare_running": lambda: self._runner.is_running(),
+            "set_mode": self._compare_master.set_mode,
             # Both wired through this session's own methods rather than
             # passed directly, and both matching the exact call shape
             # classifier_action.py/classifier_pipeline_runner.py actually
@@ -82,7 +101,7 @@ class HeadlessMCPSession:
                 self.run_image_generation(edit_suffix, target_dir, media_path=media_path),
         })
         self._compare_manager = CompareManager(
-            master=None, app_actions=self._actions,
+            master=self._compare_master, app_actions=self._actions,
             get_base_dir=lambda: self._base_dir,
             responsiveness=NullResponsiveness(),
         )
@@ -100,6 +119,20 @@ class HeadlessMCPSession:
             self._file_browser, self._compare_manager.skip_media,
             backward=False, start=start, current=candidate,
         )
+
+    def previous_file(self) -> Optional[str]:
+        start = self._file_browser.current_file()
+        candidate = self._file_browser.previous_file()
+        return advance_past_skipped(
+            self._file_browser, self._compare_manager.skip_media,
+            backward=True, start=start, current=candidate,
+        )
+
+    def get_index(self) -> "tuple[Optional[int], int]":
+        files = self._file_browser.get_files()
+        current = self.get_current_file()
+        index = files.index(current) + 1 if current in files else None
+        return index, len(files)
 
     def go_to_file(self, path: str) -> Optional[str]:
         return self._file_browser.find(search_text=path, exact_match=True)
@@ -142,6 +175,12 @@ class HeadlessMCPSession:
         except Exception as e:
             raise ValueError(str(e))
         return self.go_to_file(marked_file)
+
+    def clear_marks(self) -> int:
+        cleared = len(MarkedFiles.file_marks)
+        if not MarkedFiles.clear_file_marks(self._actions):
+            raise ValueError("marks are locked while a transfer is in progress")
+        return cleared
 
     def add_marks_series(self) -> dict:
         """Mark the run of files between the last existing mark and the
@@ -298,8 +337,44 @@ class HeadlessMCPSession:
             else config.embedding_similarity_threshold
         )
 
-    def run_compare(self, mode: str, find_duplicates: bool) -> None:
+    def _resolve_run_mode(self, run_mode: str) -> Mode:
+        resolved = Mode.__members__.get(run_mode)
+        if resolved not in (Mode.GROUP, Mode.GROUP_COMPLEMENT):
+            raise ValueError(f"run_mode must be GROUP or GROUP_COMPLEMENT, not {run_mode}")
+        return resolved
+
+    def _start_compare(self, compare_mode: CompareMode, compare_args: CompareArgs,
+                       complement: bool = False) -> None:
+        try:
+            self._runner.start(
+                self._run_compare_task, [compare_mode, compare_args, complement],
+                on_error=lambda msg: logger.error("Compare run failed: %s", msg),
+            )
+        except RuntimeError:
+            raise ValueError("a compare is already running")
+
+    def _run_compare_task(self, compare_mode: CompareMode, compare_args: CompareArgs,
+                          complement: bool) -> None:
+        # CompareManager.run compares with its own primary mode and ignores
+        # compare_args.compare_mode. Switched here, on the runner thread, so a
+        # start refused because a run is in flight leaves that run's mode alone.
+        if compare_mode != self._compare_manager.compare_mode:
+            self._compare_manager.set_compare_mode(compare_mode)
+        self._compare_manager.run(compare_args)
+        if complement:
+            self._compare_manager.enter_complement_mode()
+
+    def run_compare(self, mode: str, find_duplicates: bool, run_mode: str = "GROUP") -> None:
+        """*run_mode* GROUP_COMPLEMENT runs the same GROUP compare, then
+        switches to the files it left ungrouped, as the GUI's "View ungrouped
+        files" button does. That button exists only after a plain GROUP run,
+        so find_duplicates is refused with it. If every file was grouped the
+        session stays in GROUP mode (compare_results' run_mode says which).
+        """
         compare_mode = self._resolve_compare_mode(mode)
+        complement = self._resolve_run_mode(run_mode) == Mode.GROUP_COMPLEMENT
+        if complement and find_duplicates:
+            raise ValueError("run_mode GROUP_COMPLEMENT cannot be combined with find_duplicates")
         compare_args = CompareArgs(
             base_dir=self._base_dir,
             mode=Mode.GROUP,
@@ -310,10 +385,7 @@ class HeadlessMCPSession:
             compare_threshold=self._compare_threshold(compare_mode),
         )
         compare_args.find_duplicates = find_duplicates
-        self._runner.start(
-            self._compare_manager.run, [compare_args],
-            on_error=lambda msg: logger.error("Compare run failed: %s", msg),
-        )
+        self._start_compare(compare_mode, compare_args, complement=complement)
 
     def run_search(
         self,
@@ -344,10 +416,7 @@ class HeadlessMCPSession:
         # Not a CompareArgs constructor parameter -- only settable as an
         # attribute after construction.
         compare_args.negative_search_media_path = negative_search_media_path
-        self._runner.start(
-            self._compare_manager.run, [compare_args],
-            on_error=lambda msg: logger.error("Compare run failed: %s", msg),
-        )
+        self._start_compare(compare_mode, compare_args)
 
     def is_compare_running(self) -> bool:
         return self._runner.is_running()
@@ -359,6 +428,7 @@ class HeadlessMCPSession:
         cm = self._compare_manager
         return {
             "has_compare": cm.has_compare(),
+            "run_mode": self._compare_master.mode.name,
             "file_groups": dict(cm.file_groups),
             "files_matched": list(cm.files_matched),
         }

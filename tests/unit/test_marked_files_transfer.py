@@ -83,6 +83,22 @@ def test_advance_mark_cursor_moves_backward():
     assert wrapped is False
 
 
+def test_advance_mark_cursor_backward_from_the_sentinel_lands_on_the_last_mark():
+    MarkedFiles.file_marks = ["/dir/a.jpg"]
+    MarkedFiles.mark_cursor = -1
+    marked_file, wrapped = MarkedFiles.advance_mark_cursor(backward=True)
+    assert marked_file == "/dir/a.jpg"
+    assert MarkedFiles.mark_cursor == 0
+    assert wrapped is False
+
+
+def test_advance_mark_cursor_backward_cycles_without_running_off_the_start():
+    MarkedFiles.file_marks = ["/dir/a.jpg", "/dir/b.jpg"]
+    MarkedFiles.mark_cursor = -1
+    visited = [MarkedFiles.advance_mark_cursor(backward=True)[0] for _ in range(5)]
+    assert visited == ["/dir/b.jpg", "/dir/a.jpg", "/dir/b.jpg", "/dir/a.jpg", "/dir/b.jpg"]
+
+
 def test_advance_mark_cursor_wraps_past_the_end():
     MarkedFiles.file_marks = ["/dir/a.jpg", "/dir/b.jpg"]
     MarkedFiles.mark_cursor = 1
@@ -95,6 +111,24 @@ def test_advance_mark_cursor_raises_with_no_marks():
     MarkedFiles.file_marks = []
     with pytest.raises(Exception):
         MarkedFiles.advance_mark_cursor()
+
+
+def test_clear_file_marks_empties_the_list_and_resets_the_cursor():
+    MarkedFiles.file_marks = ["/dir/a.jpg", "/dir/b.jpg"]
+    MarkedFiles.mark_cursor = 1
+    assert MarkedFiles.clear_file_marks(MagicMock()) is True
+    assert MarkedFiles.file_marks == []
+    assert MarkedFiles.mark_cursor == -1
+
+
+def test_clear_file_marks_blocks_during_transfer():
+    MarkedFiles.file_marks = ["/dir/a.jpg"]
+    MarkedFiles.is_performing_action = True
+    try:
+        assert MarkedFiles.clear_file_marks(MagicMock()) is False
+        assert MarkedFiles.file_marks == ["/dir/a.jpg"]
+    finally:
+        MarkedFiles.is_performing_action = False
 
 
 def test_add_series_adds_only_the_unmarked_ones():

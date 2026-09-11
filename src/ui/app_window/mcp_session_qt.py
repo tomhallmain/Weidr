@@ -39,6 +39,16 @@ class QtWindowMCPSession:
         self._actions.show_next_media()
         return self.get_current_file()
 
+    def previous_file(self) -> Optional[str]:
+        self._actions.show_prev_media()
+        return self.get_current_file()
+
+    def get_index(self) -> "tuple[Optional[int], int]":
+        files = self._window.file_browser.get_files()
+        current = self.get_current_file()
+        index = files.index(current) + 1 if current in files else None
+        return index, len(files)
+
     def go_to_file(self, path: str) -> Optional[str]:
         found = self._actions.go_to_file(search_text=path)
         return self.get_current_file() if found else None
@@ -83,6 +93,14 @@ class QtWindowMCPSession:
         except Exception as e:
             raise ValueError(str(e))
         return self.go_to_file(marked_file)
+
+    def clear_marks(self) -> int:
+        from files.marked_files import MarkedFiles
+
+        cleared = len(MarkedFiles.file_marks)
+        if not MarkedFiles.clear_file_marks(self._actions):
+            raise ValueError("marks are locked while a transfer is in progress")
+        return cleared
 
     def add_marks_series(self) -> dict:
         """Mark the run of files between the last existing mark and the
@@ -241,7 +259,14 @@ class QtWindowMCPSession:
             else config.embedding_similarity_threshold
         )
 
-    def run_compare(self, mode: str, find_duplicates: bool) -> None:
+    def run_compare(self, mode: str, find_duplicates: bool, run_mode: str = "GROUP") -> None:
+        # GROUP_COMPLEMENT is headless-only: here it would have to be entered
+        # after SearchController's worker finishes, which it offers no hook for.
+        if run_mode != Mode.GROUP.name:
+            raise ValueError(
+                f"run_mode {run_mode} is not supported in an app window session; "
+                "run GROUP and use the window's View ungrouped files button"
+            )
         compare_mode = self._resolve_compare_mode(mode)
         # SearchController._run_compare overwrites CompareArgs.mode with the
         # window's own self._app.mode before running, so the mode this call
@@ -303,6 +328,7 @@ class QtWindowMCPSession:
         cm = self._window.compare_manager
         return {
             "has_compare": cm.has_compare(),
+            "run_mode": self._window.mode.name,
             "file_groups": dict(cm.file_groups),
             "files_matched": list(cm.files_matched),
         }

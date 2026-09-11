@@ -88,6 +88,18 @@ def tool_descriptors() -> list:
             "description": "Advance to the next file in the current browse listing.",
         },
         {
+            "name": "previous_file",
+            "description": "Go back to the previous file in the current browse listing.",
+        },
+        {
+            "name": "get_index",
+            "description": (
+                "The current file's 1-based position in the browse listing (null if "
+                "it isn't in the listing) and the listing's length. go_to_index with "
+                "1 or with that length jumps to the first or last file."
+            ),
+        },
+        {
             "name": "set_base_dir",
             "description": "Change the directory the current session is browsing.",
         },
@@ -116,6 +128,10 @@ def tool_descriptors() -> list:
                 "Navigate to the next marked file (or the previous one, if backward "
                 "is set), wrapping around at the end of the mark list."
             ),
+        },
+        {
+            "name": "clear_marks",
+            "description": "Empty the mark list. Marks are shared process-wide, not per-session.",
         },
         {
             "name": "add_marks_series",
@@ -167,9 +183,13 @@ def tool_descriptors() -> list:
             "name": "run_compare",
             "description": (
                 "Start a GROUP-mode compare/grouping run (results land in "
-                "compare_results' file_groups). Returns once the run is started, not "
-                "once it has finished -- poll the compare_status resource or call "
-                "health_check to find out when it's done."
+                "compare_results' file_groups). run_mode=GROUP_COMPLEMENT (headless "
+                "sessions only, not with find_duplicates) then switches to the scanned "
+                "files no group contains, in browse-listing order, in compare_results' "
+                "files_matched; if every file was grouped, compare_results' run_mode "
+                "stays GROUP. Returns once the run is started, not once it has "
+                "finished -- poll the compare_status resource or call health_check to "
+                "find out when it's done."
             ),
         },
         {
@@ -248,8 +268,9 @@ def resource_descriptors() -> list:
             "uri": "weidr://compare/results",
             "description": (
                 "What the last (or currently running) compare found: file_groups "
-                "for a GROUP-mode run, files_matched for a SEARCH-mode run. Empty "
-                "if no compare has run yet."
+                "for a GROUP-mode run, files_matched for a SEARCH-mode run (the "
+                "matches) or a GROUP_COMPLEMENT run (the ungrouped files). run_mode "
+                "names which of those the session is in. Empty if no compare has run yet."
             ),
         },
     ]
@@ -346,6 +367,12 @@ class MCPServerExtension:
         if tool_name == "next_file":
             new_path = session.next_file()
             return {"advanced": new_path is not None, "path": new_path}
+        if tool_name == "previous_file":
+            new_path = session.previous_file()
+            return {"moved": new_path is not None, "path": new_path}
+        if tool_name == "get_index":
+            index, count = session.get_index()
+            return {"index": index, "count": count}
         if tool_name == "set_base_dir":
             path = arguments.get("path")
             if not path:
@@ -375,6 +402,12 @@ class MCPServerExtension:
             except ValueError as e:
                 raise MCPToolError(str(e))
             return {"path": path}
+        if tool_name == "clear_marks":
+            try:
+                cleared = session.clear_marks()
+            except ValueError as e:
+                raise MCPToolError(str(e))
+            return {"cleared": cleared, "marks": list(session.list_marks())}
         if tool_name == "add_marks_series":
             try:
                 return session.add_marks_series()
@@ -401,7 +434,10 @@ class MCPServerExtension:
             if not mode:
                 raise MCPToolError("run_compare needs a mode")
             try:
-                session.run_compare(str(mode), bool(arguments.get("find_duplicates", False)))
+                session.run_compare(
+                    str(mode), bool(arguments.get("find_duplicates", False)),
+                    run_mode=str(arguments.get("run_mode") or "GROUP"),
+                )
             except ValueError as e:
                 raise MCPToolError(str(e))
             return {"status": "started"}
@@ -553,6 +589,14 @@ class MCPServerExtension:
         def next_file() -> dict:
             return self.dispatch("next_file")
 
+        @server.tool(name="previous_file", description=described["previous_file"])
+        def previous_file() -> dict:
+            return self.dispatch("previous_file")
+
+        @server.tool(name="get_index", description=described["get_index"])
+        def get_index() -> dict:
+            return self.dispatch("get_index")
+
         @server.tool(name="set_base_dir", description=described["set_base_dir"])
         def set_base_dir(path: str) -> dict:
             return self.dispatch("set_base_dir", {"path": path})
@@ -576,6 +620,10 @@ class MCPServerExtension:
         @server.tool(name="go_to_mark", description=described["go_to_mark"])
         def go_to_mark(backward: bool = False) -> dict:
             return self.dispatch("go_to_mark", {"backward": backward})
+
+        @server.tool(name="clear_marks", description=described["clear_marks"])
+        def clear_marks() -> dict:
+            return self.dispatch("clear_marks")
 
         @server.tool(name="add_marks_series", description=described["add_marks_series"])
         def add_marks_series() -> dict:
@@ -602,8 +650,10 @@ class MCPServerExtension:
             return self.dispatch("strip_video_metadata")
 
         @server.tool(name="run_compare", description=described["run_compare"])
-        def run_compare(mode: str, find_duplicates: bool = False) -> dict:
-            return self.dispatch("run_compare", {"mode": mode, "find_duplicates": find_duplicates})
+        def run_compare(mode: str, find_duplicates: bool = False, run_mode: str = "GROUP") -> dict:
+            return self.dispatch("run_compare", {
+                "mode": mode, "find_duplicates": find_duplicates, "run_mode": run_mode,
+            })
 
         @server.tool(name="run_search", description=described["run_search"])
         def run_search(

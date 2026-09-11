@@ -152,6 +152,12 @@ class TestNavigation:
         browser.go_to_index(1)  # f0
         assert os.path.basename(browser.previous_file()) == "f3.png"
 
+    def test_previous_file_from_a_fresh_directory_wraps_to_the_last_file(self, browser):
+        # The -1 pre-position sentinel reads as f0 via current_file(), so
+        # stepping back from it must reach f3, not f2 via negative indexing.
+        assert os.path.basename(browser.current_file()) == "f0.png"
+        assert os.path.basename(browser.previous_file()) == "f3.png"
+
     def test_go_to_file_moves_the_cursor(self, browser):
         target = browser.get_files()[2]
         browser.go_to_file(target)

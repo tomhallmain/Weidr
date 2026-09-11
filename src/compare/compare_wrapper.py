@@ -271,7 +271,7 @@ class CompareWrapper:
         thread so the display keeps updating — allowing the spinner badge to
         animate during the (potentially expensive) frame-sampling loop.
 
-        `hide_current_media` is already wrapped with BlockingQueuedConnection via
+        `hide_media` is already wrapped with BlockingQueuedConnection via
         ts(), so it is safe to call from the worker thread while the main-thread
         event loop is running.  `title_notify` uses Qt signals and is likewise
         thread-safe.  `add_mark_if_not_present` writes shared state and must run

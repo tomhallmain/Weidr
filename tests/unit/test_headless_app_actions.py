@@ -103,10 +103,16 @@ class TestDomainActions:
         assert "delete" in str(exc.value)
 
     def test_unsupplied_domain_action_is_safe_to_reference(self):
-        # _build_callbacks() binds hide_current_media without calling it, so
+        # _build_callbacks() binds hide_media without calling it, so
         # merely reaching the attribute must not raise.
         actions = build_headless_app_actions()
-        assert callable(actions.hide_current_media)
+        assert callable(actions.hide_media)
+
+    def test_hide_callback_is_the_non_navigating_hide_media(self):
+        hidden = []
+        actions = build_headless_app_actions({"hide_media": hidden.append})
+        actions.prevalidation_callbacks.hide_callback("/some/file.jpg")
+        assert hidden == ["/some/file.jpg"]
 
     def test_supplied_domain_action_is_used(self):
         actions = build_headless_app_actions({"get_base_dir": lambda: "/data"})

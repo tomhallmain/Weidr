@@ -107,3 +107,41 @@ class TestSearchControllerCompare:
             lambda: len(started) > 0 and not win.search_ctrl.is_compare_running(),
             timeout=5000,
         )
+
+    def test_on_success_runs_after_a_clean_run(
+        self, window_with_dir, qtbot, bypass_password, monkeypatch
+    ):
+        from compare.compare_args import CompareArgs
+
+        win, _ = window_with_dir
+        monkeypatch.setattr(win.search_ctrl._cm, "run", lambda _args: None)
+        succeeded = []
+
+        win.search_ctrl._run_with_progress(
+            win.search_ctrl._run_compare, args=[CompareArgs()],
+            on_success=lambda: succeeded.append(True),
+        )
+        qtbot.waitUntil(lambda: succeeded == [True], timeout=5000)
+        assert not win.search_ctrl.is_compare_running()
+
+    def test_on_success_does_not_run_after_a_failed_run(
+        self, window_with_dir, qtbot, bypass_password, monkeypatch
+    ):
+        from compare.compare_args import CompareArgs
+
+        win, _ = window_with_dir
+
+        def failing_run(_args):
+            raise RuntimeError("compare failed")
+
+        monkeypatch.setattr(win.search_ctrl._cm, "run", failing_run)
+        errors = []
+        monkeypatch.setattr(win.search_ctrl, "_on_worker_error", errors.append)
+        succeeded = []
+
+        win.search_ctrl._run_with_progress(
+            win.search_ctrl._run_compare, args=[CompareArgs()],
+            on_success=lambda: succeeded.append(True),
+        )
+        qtbot.waitUntil(lambda: bool(errors) and not win.search_ctrl.is_compare_running(), timeout=5000)
+        assert succeeded == []

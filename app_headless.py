@@ -82,23 +82,11 @@ class HeadlessMCPSession:
             "get_base_dir": lambda: self._base_dir,
             "is_compare_running": lambda: self._runner.is_running(),
             "set_mode": self._compare_master.set_mode,
-            # Both wired through this session's own methods rather than
-            # passed directly, and both matching the exact call shape
-            # classifier_action.py/classifier_pipeline_runner.py actually
-            # use for these two callbacks (grepped, not assumed):
-            # hide_callback(image_path) and
-            # generate_callback(image_path, edit_suffix, target_dir=...) --
-            # both positional-image-path-first, not the Qt
-            # app_actions.hide_current_media(event=None, media_path=None) /
-            # .run_image_generation(event=None, _type=None, media_path=None,
-            # ...) shape. Without these two, a prevalidation or pipeline
-            # rule that fires HIDE or GENERATE during headless navigation
-            # raises HeadlessActionUnavailable instead of running, breaking
-            # skip_media() and everything that calls it (next_file,
-            # go_to_mark).
-            "hide_current_media": lambda media_path: self.hide_current_file(media_path),
-            "run_image_generation": lambda media_path, edit_suffix=None, target_dir=None:
-                self.run_image_generation(edit_suffix, target_dir, media_path=media_path),
+            # Reached by prevalidation/pipeline HIDE and GENERATE rules through
+            # AppActions._build_callbacks; unsupplied, a matching rule would
+            # raise HeadlessActionUnavailable out of skip_media() mid-next_file.
+            "hide_media": self._hide_media,
+            "run_image_generation": self._generate_for_callback,
         })
         self._compare_manager = CompareManager(
             master=self._compare_master, app_actions=self._actions,
@@ -228,9 +216,15 @@ class HeadlessMCPSession:
 
     def hide_current_file(self, path: Optional[str]) -> None:
         filepath = path if path is not None else self.get_current_file()
-        if filepath is not None and filepath not in self._compare_manager.hidden_media:
-            self._compare_manager.hidden_media.append(filepath)
+        if filepath is not None:
+            self._hide_media(filepath)
         self.next_file()
+
+    def _hide_media(self, media_path: str) -> None:
+        # No navigation: the HIDE callback's caller is a skip loop that
+        # already steps past the file, or a batch run that shouldn't move.
+        if media_path not in self._compare_manager.hidden_media:
+            self._compare_manager.hidden_media.append(media_path)
 
     # ------------------------------------------------------------------
     # Directory-wide operations
@@ -425,12 +419,26 @@ class HeadlessMCPSession:
         return self._compare_manager.compare_mode.name
 
     def compare_results(self) -> dict:
+        """Results with files that no longer exist left out.
+
+        Nothing here updates the compare state when files are deleted or
+        moved -- the Qt window does that through its refresh/delete handlers,
+        and headless has neither -- so gone files are filtered at read time
+        (one stat per listed path). As on a Qt delete, a group that losing
+        members leaves with fewer than two is dropped; a group the engine
+        itself returned with one member is kept.
+        """
         cm = self._compare_manager
+        file_groups = {}
+        for index, group in cm.file_groups.items():
+            present = {path: score for path, score in group.items() if os.path.exists(path)}
+            if len(present) == len(group) or len(present) > 1:
+                file_groups[index] = present
         return {
             "has_compare": cm.has_compare(),
             "run_mode": self._compare_master.mode.name,
-            "file_groups": dict(cm.file_groups),
-            "files_matched": list(cm.files_matched),
+            "file_groups": file_groups,
+            "files_matched": [path for path in cm.files_matched if os.path.exists(path)],
         }
 
     # ------------------------------------------------------------------
@@ -457,6 +465,15 @@ class HeadlessMCPSession:
             _DEFAULT_IMAGE_GENERATION_TYPE, media_path,
             edit_suffix=edit_suffix, target_dir=target_dir,
         )
+
+    def _generate_for_callback(
+        self, media_path: Optional[str] = None, edit_suffix: Optional[str] = None,
+        suppress_toast: bool = False, target_dir: Optional[str] = None,
+    ) -> None:
+        """The run_image_generation action, in the keyword shape
+        AppActions._build_callbacks calls it with. suppress_toast is
+        display-only; there is no toast to suppress here."""
+        self.run_image_generation(edit_suffix, target_dir, media_path=media_path)
 
 
 def main(argv=None) -> int:

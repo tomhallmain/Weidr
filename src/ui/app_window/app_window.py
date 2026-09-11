@@ -631,6 +631,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             "set_marks_from_downstream_related_images": ts(self.file_marks_ctrl.set_marks_from_downstream_related_images),
             "run_compare": ts(self.search_ctrl.run_compare),
             "get_compare_mode": lambda: self.compare_manager.compare_mode,
+            "set_compare_mode": ts(self.compare_manager.set_compare_mode),
             # File navigation
             "go_to_file": ts(self.media_navigator.go_to_file),
             "go_to_file_by_index": ts(self.media_navigator.go_to_file_by_index),
@@ -639,6 +640,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             # File operations
             "delete": ts(self.file_ops_ctrl.handle_delete),
             "hide_current_media": ts(self.file_ops_ctrl.hide_current_media),
+            "hide_media": ts(self.file_ops_ctrl.hide_media),
             "request_media_blur": ts(self.media_frame.request_blur),
             "copy_media_path": ts(self.file_ops_ctrl.copy_media_path),
             "release_media_canvas": ts(self.release_media_canvas),

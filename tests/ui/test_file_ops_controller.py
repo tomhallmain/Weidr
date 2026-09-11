@@ -82,6 +82,20 @@ class TestFileOpsController:
 
         assert path in win.compare_manager.hidden_media
 
+    def test_hide_media_hides_without_navigating(self, window_with_dir, monkeypatch):
+        """The prevalidation/pipeline HIDE callback: the caller's skip loop
+        moves past the file, so hiding must not navigate as well."""
+        win, _ = window_with_dir
+        navigations = []
+        monkeypatch.setattr(win.media_navigator, "show_next_media", lambda *a, **k: navigations.append(True))
+        win.compare_manager.hidden_media.clear()
+
+        path = win.file_browser.current_file()
+        win.file_ops_ctrl.hide_media(path)
+
+        assert path in win.compare_manager.hidden_media
+        assert navigations == []
+
     def test_copy_media_path_puts_full_path_on_clipboard(
         self, window_with_dir, monkeypatch
     ):

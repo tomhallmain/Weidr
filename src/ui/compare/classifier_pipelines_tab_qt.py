@@ -458,7 +458,7 @@ class ClassifierPipelinesTab(QWidget):
                 directories,
                 generation_type=generation_type,
                 profile_name=profile_name,
-                hide_callback=self._app_actions.hide_current_media,
+                hide_callback=self._app_actions.hide_media,
                 notify_callback=self._app_actions.title_notify,
                 add_mark_callback=MarkedFiles.add_mark_if_not_present,
                 blur_callback=self._app_actions.request_media_blur,
@@ -546,7 +546,7 @@ class ClassifierPipelinesTab(QWidget):
         from files.marked_files import MarkedFiles
 
         callbacks = ActionCallbacks(
-            hide_callback=self._app_actions.hide_current_media,
+            hide_callback=self._app_actions.hide_media,
             notify_callback=self._app_actions.title_notify,
             add_mark_callback=MarkedFiles.add_mark_if_not_present,
             blur_callback=self._app_actions.request_media_blur,

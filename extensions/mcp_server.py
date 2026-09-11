@@ -183,13 +183,14 @@ def tool_descriptors() -> list:
             "name": "run_compare",
             "description": (
                 "Start a GROUP-mode compare/grouping run (results land in "
-                "compare_results' file_groups). run_mode=GROUP_COMPLEMENT (headless "
-                "sessions only, not with find_duplicates) then switches to the scanned "
-                "files no group contains, in browse-listing order, in compare_results' "
-                "files_matched; if every file was grouped, compare_results' run_mode "
-                "stays GROUP. Returns once the run is started, not once it has "
-                "finished -- poll the compare_status resource or call health_check to "
-                "find out when it's done."
+                "compare_results' file_groups) with the given compare mode; in an app "
+                "window this switches the window's compare mode, and is refused if it "
+                "runs a composite multi-mode setup. run_mode=GROUP_COMPLEMENT (not with "
+                "find_duplicates) then switches to the scanned files no group contains, "
+                "in browse-listing order, in compare_results' files_matched; if every "
+                "file was grouped, compare_results' run_mode stays GROUP. Returns once "
+                "the run is started, not once it has finished -- poll the "
+                "compare_status resource or call health_check to find out when it's done."
             ),
         },
         {
@@ -198,6 +199,7 @@ def tool_descriptors() -> list:
                 "Start a SEARCH-mode compare run for the given search_text and/or "
                 "search_media_path (positive) and search_text_negative and/or "
                 "negative_search_media_path (negative) -- at least one is required. "
+                "The compare mode is applied as for run_compare. "
                 "Results land in compare_results' files_matched. Returns once the run "
                 "is started, not once it has finished -- poll compare_status or call "
                 "health_check to find out when it's done."
@@ -362,7 +364,10 @@ class MCPServerExtension:
             index = arguments.get("index")
             if index is None:
                 raise MCPToolError("go_to_index needs an index")
-            found_path = session.go_to_index(int(index))
+            try:
+                found_path = session.go_to_index(int(index))
+            except ValueError as e:
+                raise MCPToolError(str(e))
             return {"found": found_path is not None, "path": found_path}
         if tool_name == "next_file":
             new_path = session.next_file()

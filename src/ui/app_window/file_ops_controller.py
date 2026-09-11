@@ -340,11 +340,20 @@ class FileOpsController:
     def hide_current_media(self, event=None, media_path: Optional[str] = None) -> None:
         """Hide the current media from the file list."""
         filepath = self._nav.get_active_media_filepath() if media_path is None else media_path
-        if filepath is not None and filepath not in self._cm.hidden_media:
-            self._cm.hidden_media.append(filepath)
+        if filepath is not None:
+            self.hide_media(filepath)
         if media_path is None:
             self._app.notification_ctrl.toast(_("Hid current media.\nTo unhide, press Shift+B."))
         self._nav.show_next_media()
+
+    def hide_media(self, media_path: str) -> None:
+        """Add *media_path* to the hidden list without navigating.
+
+        The prevalidation/pipeline HIDE callback: the caller's skip loop (or a
+        batch run, which wants no navigation) already moves past the file.
+        """
+        if media_path not in self._cm.hidden_media:
+            self._cm.hidden_media.append(media_path)
 
     def clear_hidden_media(self, event=None) -> None:
         """Clear the list of hidden media files."""

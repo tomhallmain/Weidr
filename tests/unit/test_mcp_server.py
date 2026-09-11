@@ -64,6 +64,8 @@ class _FakeSession:
 
     def go_to_index(self, index):
         self.calls.append(("go_to_index", index))
+        if index == 999:
+            raise ValueError("go_to_index only works while browsing, not in compare results")
         if index < 1:
             return None
         self.current_file = f"/base/index_{index}.png"
@@ -267,6 +269,11 @@ class TestDispatch:
         ext, _ = _extension()
         result = ext.dispatch("go_to_index", {"index": 3})
         assert result == {"found": True, "path": "/base/index_3.png"}
+
+    def test_go_to_index_wraps_value_error_as_tool_error(self):
+        ext, _ = _extension()
+        with pytest.raises(MCPToolError):
+            ext.dispatch("go_to_index", {"index": 999})
 
     def test_go_to_index_requires_index(self):
         ext, _ = _extension()

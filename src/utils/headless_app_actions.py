@@ -124,10 +124,11 @@ NEUTRAL_RETURN_ACTIONS: Dict[str, Any] = {
 # Not presentation: these navigate, mutate, persist, or report real state.
 # Must be supplied by the caller.
 #
-# Only two are actually reachable from the Qt-free packages, and both are
-# cheap to answer:
-#   get_base_dir        -- compare/compare_wrapper.py, files/marked_files.py
-#   is_compare_running  -- files/marked_files.py
+# Reachable from the Qt-free packages:
+#   get_base_dir         -- compare/compare_wrapper.py, files/marked_files.py
+#   is_compare_running   -- files/marked_files.py
+#   hide_media,          -- prevalidation/pipeline HIDE and GENERATE callbacks
+#   run_image_generation    (AppActions._build_callbacks)
 # The rest are called only from ui/, routed through this facade so a UI
 # component can reach AppWindow without importing it. No headless code path
 # reaches those, so leaving them unsupplied costs nothing -- they are listed
@@ -139,6 +140,7 @@ DOMAIN_ACTIONS = (
     "set_base_dir",
     "delete",
     "hide_current_media",
+    "hide_media",
     "store_info_cache",
     "is_compare_running",
     "run_image_generation",

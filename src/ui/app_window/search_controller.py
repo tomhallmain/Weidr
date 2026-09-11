@@ -299,10 +299,15 @@ class SearchController:
         self,
         compare_args: CompareArgs = CompareArgs(),
         find_duplicates: bool = False,
+        on_success: Optional[Callable[[], None]] = None,
     ) -> None:
-        """Entry point for running a comparison (debounced)."""
+        """Entry point for running a comparison (debounced).
+
+        *on_success* runs on the GUI thread once the run has finished without
+        raising or being cancelled.
+        """
         self._pending_compare = lambda: self._debounced_run_compare(
-            compare_args, find_duplicates
+            compare_args, find_duplicates, on_success
         )
         self._debouncer.schedule()
 
@@ -311,23 +316,44 @@ class SearchController:
         self.run_compare(compare_args=compare_args)
 
     def _debounced_run_compare(
-        self, compare_args: CompareArgs, find_duplicates: bool
+        self, compare_args: CompareArgs, find_duplicates: bool,
+        on_success: Optional[Callable[[], None]] = None,
     ) -> None:
         """Actually enqueue the compare after debounce."""
         if not self._validate_run():
             return
         compare_args.find_duplicates = find_duplicates
-        self._run_with_progress(self._run_compare, args=[compare_args])
+        self._run_with_progress(self._run_compare, args=[compare_args], on_success=on_success)
 
-    def _run_with_progress(self, exec_func: Callable, args: list[Any] = []) -> None:
-        """Run *exec_func* in the background while showing a progress bar."""
+    def _run_with_progress(
+        self, exec_func: Callable, args: list[Any] = [],
+        on_success: Optional[Callable[[], None]] = None,
+    ) -> None:
+        """Run *exec_func* in the background while showing a progress bar.
+
+        The runner's finished signal fires after errors and cancellations
+        too, so *on_success* is gated on *exec_func* having returned.
+        """
         from compare.base_compare import CompareCancelled
+
+        task, on_finished = exec_func, self._on_worker_finished
+        if on_success is not None:
+            returned = []
+
+            def task(*task_args):
+                exec_func(*task_args)
+                returned.append(True)
+
+            def on_finished():
+                self._on_worker_finished()
+                if returned:
+                    on_success()
 
         self._sidebar.start_progress_bar()
         self._runner.start(
-            exec_func,
+            task,
             args,
-            on_finished=self._on_worker_finished,
+            on_finished=on_finished,
             on_error=self._on_worker_error,
             on_progress=self._on_progress,
             cancelled_exceptions=(CompareCancelled,),

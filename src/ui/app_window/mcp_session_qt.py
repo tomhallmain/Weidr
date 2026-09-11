@@ -35,12 +35,15 @@ class QtWindowMCPSession:
     def get_current_file(self) -> Optional[str]:
         return self._actions.get_active_media_filepath()
 
+    # The window's alerts are modal: one opened by an MCP call blocks that call
+    # until a person dismisses it, so these avoid the paths that open one.
+
     def next_file(self) -> Optional[str]:
-        self._actions.show_next_media()
+        self._actions.show_next_media(show_alert=False)
         return self.get_current_file()
 
     def previous_file(self) -> Optional[str]:
-        self._actions.show_prev_media()
+        self._actions.show_prev_media(show_alert=False)
         return self.get_current_file()
 
     def get_index(self) -> "tuple[Optional[int], int]":
@@ -54,6 +57,11 @@ class QtWindowMCPSession:
         return self.get_current_file() if found else None
 
     def go_to_index(self, index: int) -> Optional[str]:
+        # MediaNavigator.go_to_file_by_index alerts on both of these.
+        if self._window.mode != Mode.BROWSE:
+            raise ValueError("go_to_index only works while browsing, not in compare results")
+        if not 1 <= index <= len(self._window.file_browser.get_files()):
+            return None
         found = self._actions.go_to_file_by_index(index)
         return self.get_current_file() if found else None
 
@@ -259,20 +267,49 @@ class QtWindowMCPSession:
             else config.embedding_similarity_threshold
         )
 
-    def run_compare(self, mode: str, find_duplicates: bool, run_mode: str = "GROUP") -> None:
-        # GROUP_COMPLEMENT is headless-only: here it would have to be entered
-        # after SearchController's worker finishes, which it offers no hook for.
-        if run_mode != Mode.GROUP.name:
+    def _prepare_compare(self, compare_mode: CompareMode) -> None:
+        """Point the window's CompareManager at *compare_mode* before a run.
+
+        CompareManager.run compares with its configured mode, not
+        CompareArgs.compare_mode. A single-mode window is switched the way
+        restoring a directory's saved compare mode switches it (and the window
+        saves it for the directory in turn). A composite setup is refused:
+        set_compare_mode would collapse it to one mode.
+        """
+        if self.is_compare_running():
+            raise ValueError("a compare is already running")
+        cm = self._window.compare_manager
+        if cm.is_composite_mode():
+            modes = ", ".join(sorted(m.name for m in cm.get_active_modes()))
             raise ValueError(
-                f"run_mode {run_mode} is not supported in an app window session; "
-                "run GROUP and use the window's View ungrouped files button"
+                f"the window runs a composite compare setup ({modes}); MCP compares "
+                "run one mode, so change the setup in the compare settings window first"
             )
+        if compare_mode != cm.compare_mode:
+            self._actions.set_compare_mode(compare_mode)
+
+    def _enter_complement_if_grouped(self) -> None:
+        # Runs on the GUI thread after a clean run. The mode check skips a run
+        # that ended outside GROUP mode.
+        if self._window.mode == Mode.GROUP:
+            self._window.compare_manager.enter_complement_mode()
+
+    def run_compare(self, mode: str, find_duplicates: bool, run_mode: str = "GROUP") -> None:
+        """*run_mode* GROUP_COMPLEMENT runs the same GROUP compare, then
+        enters the complement as the window's View ungrouped files button
+        does. That button exists only after a plain GROUP run, so
+        find_duplicates is refused with it.
+        """
+        complement = run_mode == Mode.GROUP_COMPLEMENT.name
+        if run_mode != Mode.GROUP.name and not complement:
+            raise ValueError(f"run_mode must be GROUP or GROUP_COMPLEMENT, not {run_mode}")
+        if complement and find_duplicates:
+            raise ValueError("run_mode GROUP_COMPLEMENT cannot be combined with find_duplicates")
         compare_mode = self._resolve_compare_mode(mode)
+        self._prepare_compare(compare_mode)
         # SearchController._run_compare overwrites CompareArgs.mode with the
-        # window's own self._app.mode before running, so the mode this call
-        # actually gets depends on that, not on what's set below -- set it
-        # explicitly first so a stale SEARCH mode from earlier UI activity
-        # doesn't leak into this run.
+        # window's own mode, so set it here too: a stale SEARCH mode from
+        # earlier UI activity must not leak into this run.
         self._actions.set_mode(Mode.GROUP)
         self._actions.run_compare(
             CompareArgs(
@@ -283,6 +320,7 @@ class QtWindowMCPSession:
                 compare_threshold=self._compare_threshold(compare_mode),
             ),
             find_duplicates=find_duplicates,
+            on_success=self._enter_complement_if_grouped if complement else None,
         )
 
     def run_search(
@@ -312,6 +350,7 @@ class QtWindowMCPSession:
         # Not a CompareArgs constructor parameter -- only settable as an
         # attribute after construction.
         compare_args.negative_search_media_path = negative_search_media_path
+        self._prepare_compare(compare_mode)
         # See run_compare's note: SearchController._run_compare reads the
         # window's own mode rather than trusting compare_args.mode, so it has
         # to be set here too.

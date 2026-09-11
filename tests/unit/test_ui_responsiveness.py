@@ -83,6 +83,9 @@ class TestQtFreedom:
     def test_package_imports_no_pyside6(self, package):
         offenders = []
         root = os.path.join(_src_root(), package)
+        # os.walk yields nothing for a missing path, so without this a moved
+        # package would make the test pass vacuously.
+        assert os.path.isdir(root), root
         for dirpath, _dirnames, filenames in os.walk(root):
             if "__pycache__" in dirpath:
                 continue

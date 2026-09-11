@@ -626,7 +626,7 @@ class SearchController:
         suppress_toast=True skips the completion toast; use for automated/batch
         contexts where title_notify already provides per-action feedback.
         """
-        from extensions.sd_runner_client import SDRunnerClient
+        from files.image_generation import request_image_generation
         from ui.image.media_details import MediaDetails
 
         if media_path is None:
@@ -642,23 +642,12 @@ class SearchController:
             if prompt_overrides is None:
                 return
 
-        sd_client = SDRunnerClient()
-
         def _do_run() -> None:
-            run_kwargs = {"append": modify_call}
-            if prompt_overrides is not None:
-                run_kwargs["positive_prompt"] = prompt_overrides[0]
-                run_kwargs["negative_prompt"] = prompt_overrides[1]
-            if edit_suffix is not None:
-                run_kwargs["edit_suffix"] = edit_suffix
-            if target_dir is not None:
-                run_kwargs["target_dir"] = target_dir
-            sd_client.run(_type, media_path, **run_kwargs)
+            request_image_generation(
+                _type, media_path, append=modify_call, prompt_overrides=prompt_overrides,
+                edit_suffix=edit_suffix, target_dir=target_dir,
+            )
             MediaDetails.previous_image_generation_adapter_path = media_path
-            from files.related_image import clear_generate_gate_cache, clear_base_stem_dir_cache
-            output_dir = os.path.dirname(media_path)
-            clear_generate_gate_cache(output_dir)
-            clear_base_stem_dir_cache(output_dir)
 
         worker = _CompareWorker(_do_run, [])
         if not suppress_toast:

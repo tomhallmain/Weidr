@@ -5,9 +5,13 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from PIL import Image
+from PIL.PngImagePlugin import PngInfo
 
 from files.file_action import FileAction
 from files.marked_files import MarkedFiles
+from utils.config import config
+from utils.translations import _
 from utils.utils import Utils
 
 
@@ -173,6 +177,56 @@ def test_is_transfer_running_aliases_is_performing_action():
         assert MarkedFiles.is_transfer_running() is True
     finally:
         MarkedFiles.is_performing_action = False
+
+
+def _patch_downstream(monkeypatch, result, calls=None):
+    def _lookup(media_path, base_dir, app_actions, force_refresh=False):
+        if calls is not None:
+            calls.append((media_path, base_dir, force_refresh))
+        return result
+    monkeypatch.setattr("files.related_image.get_downstream_related_images", _lookup)
+
+
+def test_set_marks_from_downstream_replaces_the_marks(monkeypatch):
+    MarkedFiles.file_marks = ["/dir/old.jpg"]
+    calls = []
+    _patch_downstream(monkeypatch, ["/other/a_1.png", "/other/a_2.png"], calls)
+
+    found, marks_set = MarkedFiles.set_marks_from_downstream_related_images(
+        "/dir/a.png", "/other", MagicMock()
+    )
+
+    assert marks_set is True
+    assert found == ["/other/a_1.png", "/other/a_2.png"]
+    assert MarkedFiles.file_marks == found
+    assert calls == [("/dir/a.png", "/other", True)]
+
+
+def test_set_marks_from_downstream_with_nothing_found_keeps_the_marks(monkeypatch):
+    MarkedFiles.file_marks = ["/dir/old.jpg"]
+    _patch_downstream(monkeypatch, None)
+
+    found, marks_set = MarkedFiles.set_marks_from_downstream_related_images(
+        "/dir/a.png", "/other", MagicMock()
+    )
+
+    assert (found, marks_set) == (None, False)
+    assert MarkedFiles.file_marks == ["/dir/old.jpg"]
+
+
+def test_set_marks_from_downstream_blocks_during_transfer(monkeypatch):
+    MarkedFiles.file_marks = ["/dir/old.jpg"]
+    _patch_downstream(monkeypatch, ["/other/a_1.png"])
+    MarkedFiles.is_performing_action = True
+    try:
+        found, marks_set = MarkedFiles.set_marks_from_downstream_related_images(
+            "/dir/a.png", "/other", MagicMock()
+        )
+    finally:
+        MarkedFiles.is_performing_action = False
+
+    assert (found, marks_set) == (["/other/a_1.png"], False)
+    assert MarkedFiles.file_marks == ["/dir/old.jpg"]
 
 
 # =======================================================================
@@ -516,3 +570,97 @@ def test_no_undo_when_all_file_ops_fail_before_cancel(
 
     assert len(undo_calls) == 0
     assert len(list(target.iterdir())) == 0
+
+
+# =======================================================================
+# Name collisions with files already in the target
+# =======================================================================
+
+
+@pytest.fixture()
+def _collision_config(monkeypatch, _isolated_transfer_state):
+    """A move onto an existing name fails instead of overwriting, deletes
+    are immediate (no send2trash dependency), failed files stay marked, and
+    there is no earlier action for the copy-then-move check to find."""
+    monkeypatch.setattr(config, "move_marks_overwrite_existing_file", False)
+    monkeypatch.setattr(config, "clear_marks_with_errors_after_move", False)
+    monkeypatch.setattr(config, "delete_instantly", True)
+    monkeypatch.setattr(config, "trash_folder", None)
+    monkeypatch.setattr(MarkedFiles, "gimp_opened_in_last_action", False)
+    FileAction.action_history.clear()
+
+
+def _move_marks(source, target, app_actions=None):
+    return MarkedFiles.move_marks_to_dir_static(
+        app_actions or _mock_app_actions(str(source)),
+        target_dir=str(target),
+        move_func=Utils.move_file,
+    )
+
+
+def test_identical_existing_file_deletes_the_source_and_unmarks_it(tmp_path, _collision_config):
+    source, target = tmp_path / "src", tmp_path / "dst"
+    [src_file] = _make_text_files(source, count=1)
+    target.mkdir()
+    (target / "file000.txt").write_bytes(b"data")
+    MarkedFiles.file_marks = [src_file]
+
+    assert _move_marks(source, target) == (True, True)
+
+    assert not os.path.exists(src_file)
+    assert (target / "file000.txt").read_bytes() == b"data"
+    # Deleted from the source, so not re-marked as a failed transfer.
+    assert MarkedFiles.file_marks == []
+
+
+def test_different_existing_file_keeps_the_source_marked(tmp_path, _collision_config):
+    source, target = tmp_path / "src", tmp_path / "dst"
+    [src_file] = _make_text_files(source, count=1)
+    target.mkdir()
+    (target / "file000.txt").write_bytes(b"other")
+    MarkedFiles.file_marks = [src_file]
+
+    assert _move_marks(source, target) == (True, True)
+
+    assert os.path.exists(src_file)
+    assert (target / "file000.txt").read_bytes() == b"other"
+    assert MarkedFiles.file_marks == [src_file]
+
+
+@pytest.mark.parametrize("approved", [True, False])
+def test_several_identical_existing_files_ask_once_for_the_batch(tmp_path, _collision_config, approved):
+    source, target = tmp_path / "src", tmp_path / "dst"
+    files = _make_text_files(source, count=2)
+    target.mkdir()
+    for path in files:
+        (target / os.path.basename(path)).write_bytes(b"data")
+    MarkedFiles.file_marks = files[:]
+    aa = _mock_app_actions(str(source))
+    aa.alert.return_value = approved
+
+    _move_marks(source, target, aa)
+
+    assert aa.alert.call_count == 1
+    assert aa.alert.call_args.args[0] == _("Delete Sources for Existing Files")
+    assert [os.path.exists(p) for p in files] == [not approved] * 2
+    assert MarkedFiles.file_marks == ([] if approved else files)
+
+
+def test_same_pixels_with_different_metadata_replaces_the_target(tmp_path, _collision_config):
+    source, target = tmp_path / "src", tmp_path / "dst"
+    source.mkdir()
+    target.mkdir()
+    src_file = source / "photo.png"
+    info = PngInfo()
+    info.add_text("note", "source copy")
+    Image.new("RGB", (4, 4), (10, 20, 30)).save(src_file, format="PNG", pnginfo=info)
+    Image.new("RGB", (4, 4), (10, 20, 30)).save(target / "photo.png", format="PNG")
+    source_bytes = src_file.read_bytes()
+    MarkedFiles.file_marks = [str(src_file)]
+
+    # Handling this entry removes it from the exceptions being iterated.
+    assert _move_marks(source, target) == (True, True)
+
+    assert not src_file.exists()
+    assert (target / "photo.png").read_bytes() == source_bytes
+    assert MarkedFiles.file_marks == []

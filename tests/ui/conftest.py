@@ -100,6 +100,8 @@ def ui_app_window_test_hygiene(monkeypatch):
     _reset_window_manager()
     monkeypatch.setattr(AppWindow, "_refocus_primary", lambda self: None)
     monkeypatch.setattr(AppWindow, "_restore_secondary_windows", lambda self: None)
+    # While patched, inspect.getsource(CacheController.start_periodic_store)
+    # returns this lambda; test the behavior, or parse the module file with ast.
     monkeypatch.setattr(CacheController, "start_periodic_store", lambda self: None)
     yield
     _reset_window_manager()

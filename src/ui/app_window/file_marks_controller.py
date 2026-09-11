@@ -406,18 +406,19 @@ class FileMarksController:
                 outcome="too_many_files", source=media_to_use, base_dir=base_dir)
             return
 
-        downstream_related_images = get_downstream_related_images(
-            media_to_use, base_dir, self._app.app_actions, force_refresh=True
+        downstream_related_images, marks_set = MarkedFiles.set_marks_from_downstream_related_images(
+            media_to_use, base_dir, self._app.app_actions, _("Set marks from related media")
         )
-        if downstream_related_images is not None:
-            if not MarkedFiles.guard_mark_mutation(
-                self._app.app_actions, _("Set marks from related media")
-            ):
-                self._notify_related_result(
-                    _("Cancelled: marks were not changed."), label,
-                    outcome="blocked", source=media_to_use, base_dir=base_dir)
-                return
-            MarkedFiles.file_marks = downstream_related_images
+        if downstream_related_images is None:
+            self._notify_related_result(
+                _("No downstream related images found in") + f"\n{base_dir}",
+                label, found=0, source=media_to_use, base_dir=base_dir,
+            )
+        elif not marks_set:
+            self._notify_related_result(
+                _("Cancelled: marks were not changed."), label,
+                outcome="blocked", source=media_to_use, base_dir=base_dir)
+        else:
             message = _("{0} file marks set").format(len(downstream_related_images))
             self._app.notification_ctrl.toast(message)
             self._notify_related_result(
@@ -427,11 +428,6 @@ class FileMarksController:
             )
             window.file_marks_ctrl.go_to_mark()
             window.media_frame.setFocus()
-        else:
-            self._notify_related_result(
-                _("No downstream related images found in") + f"\n{base_dir}",
-                label, found=0, source=media_to_use, base_dir=base_dir,
-            )
 
     @require_password(ProtectedActions.VIEW_MEDIA_DETAILS)
     def set_marks_from_downstream_related_images_all_windows(self, event=None) -> None:

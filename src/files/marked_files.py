@@ -175,6 +175,27 @@ class MarkedFiles():
         return True
 
     @staticmethod
+    def set_marks_from_downstream_related_images(media_path, base_dir, app_actions, action_label=None):
+        """Replace the marks with the files in *base_dir* derived from *media_path*.
+
+        Returns (downstream, marks_set). downstream is the files found, or None
+        when there are none; marks_set is False when nothing was found or a
+        transfer is running (guard_mark_mutation warns via app_actions), and
+        the marks are left alone in both cases.
+        """
+        from files.related_image import get_downstream_related_images
+
+        downstream = get_downstream_related_images(
+            media_path, base_dir, app_actions, force_refresh=True
+        )
+        if downstream is None:
+            return None, False
+        if not MarkedFiles.guard_mark_mutation(app_actions, action_label):
+            return downstream, False
+        MarkedFiles.file_marks = downstream
+        return downstream, True
+
+    @staticmethod
     def advance_mark_cursor(backward=False):
         """Move mark_cursor to the next (or previous) marked file.
 
@@ -695,7 +716,8 @@ class MarkedFiles():
             names_are_short = False
             matching_files = False
             content_matching_files = False
-            for marked_file, exc_tuple in exceptions.items():
+            # A copy: the content-match branch below deletes handled entries.
+            for marked_file, exc_tuple in list(exceptions.items()):
                 error_msg = exc_tuple[0]
                 target_filepath = exc_tuple[1]
                 logger.error(error_msg)
@@ -709,11 +731,16 @@ class MarkedFiles():
                             matching_files = True
                             logger.info(f"File hashes match: {marked_file} <> {target_filepath}")
                             if is_moving and marked_file != target_filepath:
+                                deleted = False
                                 if _batch_delete_approved is not None:
                                     if _batch_delete_approved:
-                                        MarkedFiles._auto_delete_source_file(marked_file, current_media, app_actions)
+                                        deleted = MarkedFiles._auto_delete_source_file(marked_file, current_media, app_actions)
                                 elif MarkedFiles._check_delete_source_file(marked_file, target_dir, target_filepath, app_actions):
-                                    MarkedFiles._auto_delete_source_file(marked_file, current_media, app_actions)
+                                    deleted = MarkedFiles._auto_delete_source_file(marked_file, current_media, app_actions)
+                                if deleted:
+                                    # Gone from the source, so it must not be re-marked
+                                    # below as a file that failed to transfer.
+                                    invalid_files.append(marked_file)
                         elif ImageOps.compare_image_content_without_exif(marked_file, target_filepath):
                             # Hash comparison failed, but check if image content is identical
                             # (different EXIF data but same visual content)
@@ -1050,22 +1077,28 @@ class MarkedFiles():
         marked_file: str,
         current_media: Optional[str] = None,
         app_actions=None,
-    ) -> None:
+    ) -> bool:
         """
         Auto-delete the source file after a move operation when the target file already exists.
         This simulates what would have happened if the move had succeeded.
+
+        Returns True if the source was deleted. delete_file_static alerts on a
+        failed delete itself.
         """
+        deleted = False
         try:
             if MarkedFiles._paths_match(current_media, marked_file):
                 app_actions.release_media_canvas()
-            MarkedFiles.delete_file_static(marked_file, app_actions)
-            if marked_file in MarkedFiles.file_marks:
-                MarkedFiles.file_marks.remove(marked_file)
-            app_actions.warn(_("Removed marked file from source: {0}").format(marked_file))
+            deleted = MarkedFiles.delete_file_static(marked_file, app_actions)
+            if deleted:
+                if marked_file in MarkedFiles.file_marks:
+                    MarkedFiles.file_marks.remove(marked_file)
+                app_actions.warn(_("Removed marked file from source: {0}").format(marked_file))
         except Exception as e:
             error_text = f"Failed to remove marked file from source: {marked_file} - {e}"
             logger.warning(error_text)
             app_actions.title_notify(error_text)
+        return deleted
 
     @staticmethod
     def _process_single_file_operation(

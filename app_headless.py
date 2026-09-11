@@ -29,6 +29,7 @@ from compare.compare_args import CompareArgs
 from compare.compare_manager import CompareManager
 from extensions.mcp_server import MCPServerExtension
 from files.file_browser import FileBrowser
+from files.image_generation import request_image_generation
 from files.marked_files import MarkedFiles
 from files.skip_aware_navigation import advance_past_skipped
 from utils.app_info_cache import app_info_cache
@@ -586,13 +587,11 @@ class HeadlessMCPSession:
         cursor position), so it has to be threaded through rather than
         assumed.
         """
-        from extensions.sd_runner_client import SDRunnerClient
-
         if media_path is None:
             media_path = self.get_current_file()
         if media_path is None:
             raise ValueError("no current file to generate from")
-        SDRunnerClient().run(
+        request_image_generation(
             _DEFAULT_IMAGE_GENERATION_TYPE, media_path,
             edit_suffix=edit_suffix, target_dir=target_dir,
         )

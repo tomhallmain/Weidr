@@ -134,6 +134,12 @@ NEUTRAL_RETURN_ACTIONS: Dict[str, Any] = {
 # reaches those, so leaving them unsupplied costs nothing -- they are listed
 # here rather than as no-ops because a caller that does wire one deserves a
 # named failure instead of a silent nothing.
+#
+# A caller supplying one reuses its Qt-free core, not the ui/ implementation:
+# files.image_generation.request_image_generation for run_image_generation,
+# MarkedFiles.set_marks_from_downstream_related_images for
+# set_marks_from_downstream_related_images, MarkedFiles.delete_file_static
+# for delete.
 DOMAIN_ACTIONS = (
     "get_active_media_filepath",
     "get_base_dir",

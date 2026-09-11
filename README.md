@@ -15,7 +15,7 @@ Run `app_qt.py` to start the PySide6 (Qt) UI. For more details, see [USAGE.md](h
 
 The core packages (`src/compare/`, `src/files/`, `src/image/`) contain no Qt imports, so a script or automated agent can import them directly and run comparisons, browse and navigate a directory, mark/move/delete files, run directory-wide conversions, and build and run classifier pipelines — with no window open and no `QApplication`. `src/utils/headless_app_actions.py` supplies the Qt-free stand-in for the UI callbacks the core expects. This is a library-level capability, not a command endpoint.
 
-Weidr also has a persistent, no-UI entry point (`app_headless.py`) and an MCP server (`extensions/mcp_server.py`) for driving either it or a live `app_qt.py` window from an external agent — see `docs/mcp-server-spec.md`.
+Weidr also has a persistent, no-UI entry point (`app_headless.py`) and an MCP server (`extensions/mcp_server.py`) for driving either it or a live `app_qt.py` window from an external agent. The server needs the optional `mcp` package and stays off until `mcp_server_port` is set in `configs/config.json`, or `--port` is passed to the headless entry point (`python app_headless.py --base-dir <dir> --port <port>`). It binds to loopback addresses only.
 
 Start from `scripts/agent_headless_demo.py`, which is both the worked example and the reference:
 

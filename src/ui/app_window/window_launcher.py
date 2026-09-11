@@ -1073,15 +1073,22 @@ class WindowLauncher:
     @require_password(ProtectedActions.RUN_PREVALIDATIONS)
     def toggle_prevalidations(self, event=None) -> None:
         """Toggle prevalidations on or off for the current base directory."""
+        self.set_prevalidations_running(not self._app.compare_manager.prevalidations_running)
+
+    def set_prevalidations_running(self, enabled: bool) -> None:
+        """Turn prevalidations on or off for the current base directory.
+
+        Carries no password gate of its own: toggle_prevalidations holds it
+        for the GUI, and the MCP session checks it before calling this.
+        """
         from utils.app_info_cache import app_info_cache
         base_dir = self._app.get_base_dir()
-        new_val = not self._app.compare_manager.prevalidations_running
         if base_dir:
-            app_info_cache.set(base_dir, "prevalidations_running", new_val)
-        self._app.compare_manager.set_prevalidations_running(new_val)
+            app_info_cache.set(base_dir, "prevalidations_running", enabled)
+        self._app.compare_manager.set_prevalidations_running(enabled)
         self._app.setWindowTitle(self._app.get_title_from_base_dir())
         self._app.notification_ctrl.toast(
-            _("Prevalidations now running") if new_val
+            _("Prevalidations now running") if enabled
             else _("Prevalidations turned off")
         )
 

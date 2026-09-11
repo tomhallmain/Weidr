@@ -394,6 +394,18 @@ class ImageGenerationType(Enum):
         raise Exception("Unhandled image generation type text: " + str(self))
 
     @staticmethod
+    def image_specific(mode: "ImageGenerationType") -> "ImageGenerationType":
+        """*mode* if it's one of the four image-specific modes, else CONTROL_NET."""
+        if mode in (
+            ImageGenerationType.REDO_PROMPT,
+            ImageGenerationType.TAKE_PROMPT,
+            ImageGenerationType.CONTROL_NET,
+            ImageGenerationType.IP_ADAPTER,
+        ):
+            return mode
+        return ImageGenerationType.CONTROL_NET
+
+    @staticmethod
     def get(name):
         if isinstance(name, ImageGenerationType):
             return name

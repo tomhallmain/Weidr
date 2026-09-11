@@ -52,6 +52,23 @@ class MCPToolError(Exception):
     """A request that cannot be honoured, reported to the client as-is."""
 
 
+# Tool -> the ProtectedActions values the GUI asks a password for on the
+# same route: the @require_password on the controller method, or on opening
+# the window the feature lives in (run_pipeline: the Pipelines tab's window,
+# reached via open_prevalidations_window). A gated tool is refused while any
+# of these is protected and a password is set. Nothing prompts over MCP;
+# removing the password lifts the refusal.
+PASSWORD_GATES = {
+    "delete_file": ("delete_media",),
+    "move_marks": ("run_file_actions",),
+    "run_compare": ("run_compares",),
+    "run_search": ("run_search", "run_compares"),
+    "run_image_generation": ("run_image_generation",),
+    "set_prevalidations_running": ("run_prevalidations",),
+    "run_pipeline": ("edit_prevalidations",),
+}
+
+
 def tool_descriptors() -> list:
     """The tool surface, as plain data.
 
@@ -77,11 +94,19 @@ def tool_descriptors() -> list:
         },
         {
             "name": "go_to_file",
-            "description": "Navigate to a file by name or path. Searches the current session first, opens it directly if it's a valid path on disk.",
+            "description": (
+                "Navigate to a file by name or path. Searches the current session first, "
+                "opens it directly if it's a valid path on disk. A file vetoed by a "
+                "prevalidation rule or the hidden list isn't shown: path stays the "
+                "current file."
+            ),
         },
         {
             "name": "go_to_index",
-            "description": "Navigate to a file by its 1-based position in the current browse listing.",
+            "description": (
+                "Navigate to a file by its 1-based position in the current browse "
+                "listing. A vetoed file isn't shown, as for go_to_file."
+            ),
         },
         {
             "name": "next_file",
@@ -231,6 +256,45 @@ def tool_descriptors() -> list:
             ),
         },
         {
+            "name": "find_trigger",
+            "description": (
+                "Scan a file (default: the current one) for the first sample a classifier "
+                "action or prevalidation (kind) triggers on, and report it; nothing is "
+                "moved or played. Video/GIF/PDF results give slot_index and a position "
+                "(ms or 0-based page); pass start_slot=slot_index+1 for the next trigger "
+                "(wrapped=true when the scan looped back). A still is one sample, and its "
+                "detail carries the classifier's ranked predictions even when it doesn't "
+                "match. sample_ratio (0-1] samples more densely. Can be slow: it runs the "
+                "action's models over each sample."
+            ),
+        },
+        {
+            "name": "list_trigger_actions",
+            "description": (
+                "The classifier actions and prevalidations find_trigger can use, by kind, "
+                "with the media types each applies to (null for all)."
+            ),
+        },
+        {
+            "name": "set_prevalidations_running",
+            "description": (
+                "Turn prevalidation rules on or off while browsing the current directory, "
+                "as the app's toggle does (saved per directory)."
+            ),
+        },
+        {
+            "name": "run_pipeline",
+            "description": (
+                "Run a classifier pipeline over every file in a directory profile's "
+                "directories, as the Pipelines tab's Run on Profile does. profile_name "
+                "defaults to the profile selected in that tab. Returns once started; read "
+                "the pipeline_status resource for progress and the final stats. A pipeline "
+                "with GENERATE actions is refused while SD Runner is unreachable unless "
+                "continue_without_sd_runner is true. See the pipelines and "
+                "directory_profiles resources for names."
+            ),
+        },
+        {
             "name": "health_check",
             "description": "Whether a session is available to drive, and whether a compare is currently running.",
         },
@@ -263,7 +327,10 @@ def resource_descriptors() -> list:
         {
             "name": "compare_status",
             "uri": "weidr://compare/status",
-            "description": "Whether a compare is running, and the active compare mode.",
+            "description": (
+                "Whether a compare is running, the active compare mode, and whether "
+                "prevalidation rules run while browsing this directory."
+            ),
         },
         {
             "name": "compare_results",
@@ -273,6 +340,28 @@ def resource_descriptors() -> list:
                 "for a GROUP-mode run, files_matched for a SEARCH-mode run (the "
                 "matches) or a GROUP_COMPLEMENT run (the ungrouped files). run_mode "
                 "names which of those the session is in. Empty if no compare has run yet."
+            ),
+        },
+        {
+            "name": "pipelines",
+            "uri": "weidr://pipelines",
+            "description": (
+                "Classifier pipelines run_pipeline can run: name, whether active, kind "
+                "(action or prevalidation) and the profile each last ran on, plus the "
+                "profile selected in the Pipelines tab."
+            ),
+        },
+        {
+            "name": "directory_profiles",
+            "uri": "weidr://profiles",
+            "description": "Directory profiles run_pipeline can target, with their directories.",
+        },
+        {
+            "name": "pipeline_status",
+            "uri": "weidr://pipelines/status",
+            "description": (
+                "The latest run_pipeline run: whether it's still running, its pipeline, "
+                "profile and directories, and once finished its stats and summary, or error."
             ),
         },
     ]
@@ -351,6 +440,15 @@ class MCPServerExtension:
         """Run one tool call and return what the client should see."""
         arguments = arguments or {}
         session = self._resolve_session()
+
+        gates = PASSWORD_GATES.get(tool_name)
+        if gates:
+            blocked = session.password_blocked(gates)
+            if blocked is not None:
+                raise MCPToolError(
+                    f"{tool_name} needs the '{blocked}' password, which can't be entered over "
+                    "MCP; it's refused while a password is set"
+                )
 
         if tool_name == "get_current_file":
             return {"path": session.get_current_file()}
@@ -482,6 +580,41 @@ class MCPServerExtension:
                 fps=arguments.get("fps"),
                 target_dir=arguments.get("target_dir"),
             )
+        if tool_name == "find_trigger":
+            action_name = arguments.get("action_name")
+            if not action_name:
+                raise MCPToolError("find_trigger needs an action_name")
+            sample_ratio = arguments.get("sample_ratio")
+            try:
+                return session.find_trigger(
+                    str(action_name),
+                    kind=str(arguments.get("kind") or "classifier_action"),
+                    media_path=arguments.get("media_path"),
+                    start_slot=int(arguments.get("start_slot") or 0),
+                    sample_ratio=float(sample_ratio) if sample_ratio is not None else None,
+                )
+            except ValueError as e:
+                raise MCPToolError(str(e))
+        if tool_name == "list_trigger_actions":
+            return session.list_trigger_actions()
+        if tool_name == "set_prevalidations_running":
+            enabled = arguments.get("enabled")
+            if enabled is None:
+                raise MCPToolError("set_prevalidations_running needs enabled")
+            session.set_prevalidations_running(bool(enabled))
+            return {"prevalidations_running": session.get_prevalidations_running()}
+        if tool_name == "run_pipeline":
+            pipeline_name = arguments.get("pipeline_name")
+            if not pipeline_name:
+                raise MCPToolError("run_pipeline needs a pipeline_name")
+            try:
+                return session.run_pipeline(
+                    str(pipeline_name),
+                    profile_name=arguments.get("profile_name") or None,
+                    continue_without_sd_runner=bool(arguments.get("continue_without_sd_runner", False)),
+                )
+            except ValueError as e:
+                raise MCPToolError(str(e))
         if tool_name == "health_check":
             return {"session_available": True, "compare_running": session.is_compare_running()}
         raise MCPToolError(f"unknown tool: {tool_name}")
@@ -499,9 +632,19 @@ class MCPServerExtension:
         if name == "marks":
             return {"marks": list(session.list_marks())}
         if name == "compare_status":
-            return {"running": session.is_compare_running(), "mode": session.get_compare_mode()}
+            return {
+                "running": session.is_compare_running(),
+                "mode": session.get_compare_mode(),
+                "prevalidations_running": session.get_prevalidations_running(),
+            }
         if name == "compare_results":
             return session.compare_results()
+        if name == "pipelines":
+            return session.list_pipelines()
+        if name == "directory_profiles":
+            return session.list_directory_profiles()
+        if name == "pipeline_status":
+            return session.pipeline_status()
         raise MCPToolError(f"unknown resource: {name}")
 
     # ------------------------------------------------------------------
@@ -696,6 +839,34 @@ class MCPServerExtension:
         ) -> dict:
             return self.dispatch("extract_peek_frames_batch", {
                 "k": k, "fps": fps, "target_dir": target_dir,
+            })
+
+        @server.tool(name="find_trigger", description=described["find_trigger"])
+        def find_trigger(
+            action_name: str, kind: str = "classifier_action", media_path: str | None = None,
+            start_slot: int = 0, sample_ratio: float | None = None,
+        ) -> dict:
+            return self.dispatch("find_trigger", {
+                "action_name": action_name, "kind": kind, "media_path": media_path,
+                "start_slot": start_slot, "sample_ratio": sample_ratio,
+            })
+
+        @server.tool(name="list_trigger_actions", description=described["list_trigger_actions"])
+        def list_trigger_actions() -> dict:
+            return self.dispatch("list_trigger_actions")
+
+        @server.tool(name="set_prevalidations_running", description=described["set_prevalidations_running"])
+        def set_prevalidations_running(enabled: bool) -> dict:
+            return self.dispatch("set_prevalidations_running", {"enabled": enabled})
+
+        @server.tool(name="run_pipeline", description=described["run_pipeline"])
+        def run_pipeline(
+            pipeline_name: str, profile_name: str | None = None,
+            continue_without_sd_runner: bool = False,
+        ) -> dict:
+            return self.dispatch("run_pipeline", {
+                "pipeline_name": pipeline_name, "profile_name": profile_name,
+                "continue_without_sd_runner": continue_without_sd_runner,
             })
 
         @server.tool(name="health_check", description=described["health_check"])

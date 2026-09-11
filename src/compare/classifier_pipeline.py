@@ -742,6 +742,25 @@ class PrevalidationPipeline(ClassifierPipeline):
                     self.profile = p
                     break
 
+    def resolve_profile(self) -> None:
+        """Point ``profile`` at the registered DirectoryProfile named by
+        ``profile_name``, if there is one; otherwise keep the profile held.
+
+        A held profile is the live link (see
+        ClassifierActionsManager.get_profile_usage). It survives an in-place
+        rename, which leaves ``profile_name`` stale until the next explicit
+        save, and it can be set with no ``profile_name`` at all. So this never
+        clears a profile or rewrites ``profile_name``. It only fills in a
+        profile a load left unresolved, or follows a save that named a
+        different one.
+        """
+        from files.directory_profile import DirectoryProfile
+        if not self.profile_name:
+            return
+        registered = DirectoryProfile.get_profile_by_name(self.profile_name)
+        if registered is not None:
+            self.profile = registered
+
     def to_dict(self) -> dict:
         d = super().to_dict()
         d["profile_name"] = self.profile_name
@@ -788,10 +807,19 @@ class ClassifierPipelines:
 
     @staticmethod
     def _rebuild_type_cache() -> None:
+        """Re-sort the pipelines by kind, and resolve prevalidation pipelines'
+        profiles. Every change to the pipeline list goes through here: load()
+        replaces the objects and editor saves swap them, and an unresolved
+        profile makes prevalidate_media treat a profile-scoped pipeline as
+        global."""
         pv: list["PrevalidationPipeline"] = []
         ac: list[ClassifierPipeline] = []
         for p in ClassifierPipelines.pipelines:
             if isinstance(p, PrevalidationPipeline):
+                try:
+                    p.resolve_profile()
+                except Exception:
+                    logger.exception("Failed to resolve profile for pipeline %r", p.name)
                 pv.append(p)
             else:
                 ac.append(p)

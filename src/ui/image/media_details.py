@@ -1743,14 +1743,7 @@ class MediaDetails(SmartWindow):
 
     @staticmethod
     def get_image_specific_generation_mode():
-        if MediaDetails.image_generation_mode in [
-            ImageGenerationType.REDO_PROMPT,
-            ImageGenerationType.TAKE_PROMPT,
-            ImageGenerationType.CONTROL_NET,
-            ImageGenerationType.IP_ADAPTER,
-        ]:
-            return MediaDetails.image_generation_mode
-        return ImageGenerationType.CONTROL_NET
+        return ImageGenerationType.image_specific(MediaDetails.image_generation_mode)
 
     # ── Tags ─────────────────────────────────────────────────────
 

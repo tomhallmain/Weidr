@@ -38,6 +38,7 @@ from compare.classifier_pipeline import (
     ClassifierPipelines,
     PrevalidationPipeline,
 )
+from compare.pipeline_profile_run import SELECTED_PROFILE_META_KEY, last_profile_meta_key
 from files.directory_profile import DirectoryProfile
 from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle
@@ -47,7 +48,7 @@ from utils.translations import _
 
 logger = get_logger("classifier_pipelines_tab_qt")
 
-_PROFILE_CACHE_KEY = "classifier_pipelines_profile"
+_PROFILE_CACHE_KEY = SELECTED_PROFILE_META_KEY
 
 
 class ClassifierPipelinesTab(QWidget):
@@ -407,7 +408,7 @@ class ClassifierPipelinesTab(QWidget):
         if disabled_note:
             details.append(disabled_note)
 
-        _last_profile_key = f"pipeline_last_profile:{pipeline.name}"
+        _last_profile_key = last_profile_meta_key(pipeline.name)
         last_profile = app_info_cache.get_meta(_last_profile_key, "")
         if last_profile and last_profile != profile_name:
             details.append(_("Last run on: {profile} (now switching to: {current})").format(

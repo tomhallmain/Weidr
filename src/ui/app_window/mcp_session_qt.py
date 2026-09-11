@@ -249,6 +249,28 @@ class QtWindowMCPSession:
         }
 
     # ------------------------------------------------------------------
+    # Seek to Trigger
+    #
+    # Report only: unlike the Seek to Trigger tab, this never moves the
+    # window's player, so both sessions give the same result for the same call.
+    # ------------------------------------------------------------------
+    def find_trigger(
+        self, action_name: str, kind: str = "classifier_action",
+        media_path: Optional[str] = None, start_slot: int = 0,
+        sample_ratio: Optional[float] = None,
+    ) -> dict:
+        from compare.trigger_scan import find_trigger
+
+        path = media_path or self.get_current_file()
+        if not path:
+            raise ValueError("no current file to scan")
+        return find_trigger(action_name, kind, path, start_slot=start_slot, sample_ratio=sample_ratio)
+
+    def list_trigger_actions(self) -> dict:
+        from compare.trigger_scan import list_trigger_actions
+        return list_trigger_actions()
+
+    # ------------------------------------------------------------------
     # Compare
     # ------------------------------------------------------------------
     def _resolve_compare_mode(self, mode: str) -> CompareMode:
@@ -356,6 +378,53 @@ class QtWindowMCPSession:
         # to be set here too.
         self._actions.set_mode(Mode.SEARCH)
         self._actions.run_compare(compare_args, find_duplicates=False)
+
+    def get_prevalidations_running(self) -> bool:
+        return self._window.compare_manager.prevalidations_running
+
+    def set_prevalidations_running(self, enabled: bool) -> None:
+        self._actions.set_prevalidations_running(enabled)
+
+    # ------------------------------------------------------------------
+    # Passwords
+    # ------------------------------------------------------------------
+    def password_blocked(self, action_names) -> Optional[str]:
+        from ui.auth.password_core import first_password_protected
+        from utils.constants import ProtectedActions
+
+        blocked = first_password_protected([ProtectedActions(name) for name in action_names])
+        return blocked.value if blocked is not None else None
+
+    # ------------------------------------------------------------------
+    # Classifier pipelines
+    # ------------------------------------------------------------------
+    def run_pipeline(
+        self, pipeline_name: str, profile_name: Optional[str] = None,
+        continue_without_sd_runner: bool = False,
+    ) -> dict:
+        from compare.pipeline_profile_run import pipeline_runs
+        from ui.image.media_details import MediaDetails
+
+        return pipeline_runs.start(
+            pipeline_name, profile_name,
+            continue_without_sd_runner=continue_without_sd_runner,
+            fallback_generation_type=MediaDetails.get_image_specific_generation_mode(),
+            hide_callback=self._actions.hide_media,
+            notify_callback=self._actions.title_notify,
+            blur_callback=self._actions.request_media_blur,
+        )
+
+    def pipeline_status(self) -> dict:
+        from compare.pipeline_profile_run import pipeline_runs
+        return pipeline_runs.status()
+
+    def list_pipelines(self) -> dict:
+        from compare.pipeline_profile_run import list_pipelines
+        return list_pipelines()
+
+    def list_directory_profiles(self) -> dict:
+        from compare.pipeline_profile_run import list_directory_profiles
+        return list_directory_profiles()
 
     def is_compare_running(self) -> bool:
         return self._actions.is_compare_running()

@@ -223,3 +223,111 @@ def test_compare_results_leave_out_files_that_no_longer_exist(tmp_path):
     # was a one-member group as the engine returned it and is kept.
     assert results["file_groups"] == {1: {c: 0.0, d: 0.2}, 2: {a: 0.0}}
     assert results["files_matched"] == [a]
+
+
+def test_load_persisted_classifier_state_restores_saved_rules():
+    from compare.classifier_action import ClassifierAction, Prevalidation
+
+    ClassifierActionsManager.prevalidations = [Prevalidation(name="HeadlessPv", positives=["cat"])]
+    ClassifierActionsManager.classifier_actions = [ClassifierAction(name="HeadlessCa", positives=["dog"])]
+    ClassifierActionsManager.store_prevalidations()
+    ClassifierActionsManager.store_classifier_actions()
+    ClassifierActionsManager.prevalidations = []
+    ClassifierActionsManager.classifier_actions = []
+    try:
+        app_headless.load_persisted_classifier_state()
+        assert [p.name for p in ClassifierActionsManager.prevalidations] == ["HeadlessPv"]
+        assert [a.name for a in ClassifierActionsManager.classifier_actions] == ["HeadlessCa"]
+    finally:
+        ClassifierActionsManager.classifier_actions = []
+
+
+def test_prevalidations_running_follows_the_saved_directory_setting(tmp_path):
+    from utils.app_info_cache import app_info_cache
+
+    on_dir, off_dir = tmp_path / "on", tmp_path / "off"
+    for directory in (on_dir, off_dir):
+        directory.mkdir()
+        _png(directory / "a.png")
+    app_info_cache.set(str(on_dir), "prevalidations_running", True)
+    app_info_cache.set(str(off_dir), "prevalidations_running", False)
+
+    session = app_headless.HeadlessMCPSession(str(off_dir))
+    assert session.get_prevalidations_running() is False
+    session.set_base_dir(str(on_dir))
+    assert session.get_prevalidations_running() is True
+
+
+def test_go_to_file_does_not_land_on_a_vetoed_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(app_headless.config, "prevalidate_on_direct_media_display", True)
+    session = _session(tmp_path)
+    session._compare_manager.set_prevalidations_running(False)  # the hidden list alone vetoes
+    a, b = session._file_browser.get_files()
+    session.go_to_index(1)
+    session._compare_manager.hidden_media.append(b)
+
+    assert session.go_to_file(b) == a
+    assert session.go_to_index(2) == a
+    assert session.get_current_file() == a
+
+
+def test_go_to_file_lands_on_a_vetoed_file_when_direct_display_checks_are_off(tmp_path, monkeypatch):
+    monkeypatch.setattr(app_headless.config, "prevalidate_on_direct_media_display", False)
+    session = _session(tmp_path)
+    a, b = session._file_browser.get_files()
+    session._compare_manager.hidden_media.append(b)
+
+    assert session.go_to_file(b) == b
+    assert session.get_current_file() == b
+
+
+def test_set_prevalidations_running_is_remembered_for_the_directory(tmp_path):
+    from utils.app_info_cache import app_info_cache
+
+    session = _session(tmp_path)
+    session.set_prevalidations_running(False)
+    assert session.get_prevalidations_running() is False
+    assert app_info_cache.get(str(tmp_path), "prevalidations_running") is False
+    session.set_base_dir(str(tmp_path))  # restores the directory's saved setting
+    assert session.get_prevalidations_running() is False
+
+
+def test_password_blocked_names_the_blocking_action(tmp_path, monkeypatch):
+    from ui.auth import password_core
+    from utils.constants import ProtectedActions
+
+    session = _session(tmp_path)
+    monkeypatch.setattr(password_core, "first_password_protected",
+                        lambda actions: ProtectedActions.DELETE_MEDIA)
+    assert session.password_blocked(["delete_media"]) == "delete_media"
+    monkeypatch.setattr(password_core, "first_password_protected", lambda actions: None)
+    assert session.password_blocked(["delete_media"]) is None
+
+
+def test_run_pipeline_uses_the_non_navigating_hide_and_the_persisted_generation_type(tmp_path, monkeypatch):
+    from compare import pipeline_profile_run
+    from utils.app_info_cache import app_info_cache
+    from utils.constants import ImageGenerationType
+
+    app_info_cache.set_meta("image_generation_mode", ImageGenerationType.IP_ADAPTER.value)
+    session = _session(tmp_path)
+    captured = {}
+    monkeypatch.setattr(pipeline_profile_run.pipeline_runs, "start",
+                        lambda name, profile, **kwargs: captured.update(kwargs, name=name, profile=profile))
+
+    session.run_pipeline("Sorter", "Photos", continue_without_sd_runner=True)
+
+    assert captured["name"] == "Sorter" and captured["profile"] == "Photos"
+    assert captured["continue_without_sd_runner"] is True
+    assert captured["fallback_generation_type"] == ImageGenerationType.IP_ADAPTER
+    assert captured["hide_callback"] == session._hide_media
+
+
+def test_persisted_generation_type_falls_back_to_control_net():
+    from utils.app_info_cache import app_info_cache
+    from utils.constants import ImageGenerationType
+
+    app_info_cache.set_meta("image_generation_mode", ImageGenerationType.RENOISER.value)
+    assert app_headless._persisted_image_generation_type() == ImageGenerationType.CONTROL_NET
+    app_info_cache.set_meta("image_generation_mode", "not a mode")
+    assert app_headless._persisted_image_generation_type() == ImageGenerationType.CONTROL_NET

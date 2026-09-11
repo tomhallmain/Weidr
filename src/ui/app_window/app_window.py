@@ -632,6 +632,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             "run_compare": ts(self.search_ctrl.run_compare),
             "get_compare_mode": lambda: self.compare_manager.compare_mode,
             "set_compare_mode": ts(self.compare_manager.set_compare_mode),
+            "set_prevalidations_running": ts(self.window_launcher.set_prevalidations_running),
             # File navigation
             "go_to_file": ts(self.media_navigator.go_to_file),
             "go_to_file_by_index": ts(self.media_navigator.go_to_file_by_index),

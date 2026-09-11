@@ -12,6 +12,7 @@ import sys
 import pytest
 
 from extensions.mcp_server import (
+    PASSWORD_GATES,
     MCPServerExtension,
     MCPToolError,
     resource_descriptors,
@@ -33,6 +34,9 @@ class _FakeSession:
         self.marks = ["/base/a.png", "/base/b.png"]
         self.compare_running = False
         self.compare_mode = "GROUP"
+        self.prevalidations_running = True
+        self.protected = set()
+        self.pipeline_runs = []
         self.has_compare_result = False
         self.run_mode = "BROWSE"
         self.file_groups = {}
@@ -173,6 +177,9 @@ class _FakeSession:
     def get_compare_mode(self):
         return self.compare_mode
 
+    def get_prevalidations_running(self):
+        return self.prevalidations_running
+
     def compare_results(self):
         return {
             "has_compare": self.has_compare_result,
@@ -183,6 +190,40 @@ class _FakeSession:
 
     def run_image_generation(self, edit_suffix, target_dir):
         self.calls.append(("run_image_generation", edit_suffix, target_dir))
+
+    def find_trigger(self, action_name, kind="classifier_action", media_path=None,
+                     start_slot=0, sample_ratio=None):
+        if action_name == "Missing":
+            raise ValueError("no classifier_action named 'Missing'")
+        self.calls.append(("find_trigger", action_name, kind, media_path, start_slot, sample_ratio))
+        return {"media_kind": "still", "matched": True, "detail": None}
+
+    def password_blocked(self, action_names):
+        return next((name for name in action_names if name in self.protected), None)
+
+    def set_prevalidations_running(self, enabled):
+        self.calls.append(("set_prevalidations_running", enabled))
+        self.prevalidations_running = enabled
+
+    def run_pipeline(self, pipeline_name, profile_name=None, continue_without_sd_runner=False):
+        if pipeline_name == "Missing":
+            raise ValueError("no pipeline named 'Missing'")
+        self.pipeline_runs.append((pipeline_name, profile_name, continue_without_sd_runner))
+        return {"status": "started", "pipeline": pipeline_name, "profile": profile_name or "Photos",
+                "directories": ["/p"], "warnings": []}
+
+    def pipeline_status(self):
+        return {"running": bool(self.pipeline_runs), "pipeline": None}
+
+    def list_pipelines(self):
+        return {"pipelines": [{"name": "Sorter", "is_active": True, "kind": "action",
+                               "last_profile": None}], "selected_profile": "Photos"}
+
+    def list_directory_profiles(self):
+        return {"profiles": [{"name": "Photos", "directories": ["/p"]}]}
+
+    def list_trigger_actions(self):
+        return {"classifier_actions": [{"name": "Cats", "applies_to_media_types": None}], "prevalidations": []}
 
 
 def _extension(session=None, **kwargs):
@@ -504,6 +545,98 @@ class TestDispatch:
         assert result == {"status": "started"}
         assert ("run_image_generation", "upscale", "/out") in session.calls
 
+    def test_find_trigger_passes_defaults(self):
+        ext, session = _extension()
+        result = ext.dispatch("find_trigger", {"action_name": "Cats"})
+        assert result == {"media_kind": "still", "matched": True, "detail": None}
+        assert ("find_trigger", "Cats", "classifier_action", None, 0, None) in session.calls
+
+    def test_find_trigger_passes_every_argument(self):
+        ext, session = _extension()
+        ext.dispatch("find_trigger", {
+            "action_name": "NoCats", "kind": "prevalidation", "media_path": "/base/v.mp4",
+            "start_slot": 4, "sample_ratio": 0.5,
+        })
+        assert ("find_trigger", "NoCats", "prevalidation", "/base/v.mp4", 4, 0.5) in session.calls
+
+    def test_find_trigger_requires_action_name(self):
+        ext, _ = _extension()
+        with pytest.raises(MCPToolError):
+            ext.dispatch("find_trigger", {})
+
+    def test_find_trigger_wraps_value_error_as_tool_error(self):
+        ext, _ = _extension()
+        with pytest.raises(MCPToolError):
+            ext.dispatch("find_trigger", {"action_name": "Missing"})
+
+    def test_list_trigger_actions(self):
+        ext, _ = _extension()
+        assert ext.dispatch("list_trigger_actions") == {
+            "classifier_actions": [{"name": "Cats", "applies_to_media_types": None}],
+            "prevalidations": [],
+        }
+
+    def test_set_prevalidations_running(self):
+        ext, session = _extension()
+        assert ext.dispatch("set_prevalidations_running", {"enabled": False}) == {
+            "prevalidations_running": False,
+        }
+        assert ("set_prevalidations_running", False) in session.calls
+
+    def test_set_prevalidations_running_requires_enabled(self):
+        ext, _ = _extension()
+        with pytest.raises(MCPToolError):
+            ext.dispatch("set_prevalidations_running", {})
+
+    def test_run_pipeline_passes_defaults(self):
+        ext, session = _extension()
+        result = ext.dispatch("run_pipeline", {"pipeline_name": "Sorter"})
+        assert result["status"] == "started"
+        assert session.pipeline_runs == [("Sorter", None, False)]
+
+    def test_run_pipeline_passes_every_argument(self):
+        ext, session = _extension()
+        ext.dispatch("run_pipeline", {
+            "pipeline_name": "Sorter", "profile_name": "Videos", "continue_without_sd_runner": True,
+        })
+        assert session.pipeline_runs == [("Sorter", "Videos", True)]
+
+    def test_run_pipeline_requires_pipeline_name(self):
+        ext, _ = _extension()
+        with pytest.raises(MCPToolError):
+            ext.dispatch("run_pipeline", {})
+
+    def test_run_pipeline_wraps_value_error_as_tool_error(self):
+        ext, _ = _extension()
+        with pytest.raises(MCPToolError):
+            ext.dispatch("run_pipeline", {"pipeline_name": "Missing"})
+
+    @pytest.mark.parametrize("tool_name, arguments", [
+        ("delete_file", {"path": "/base/a.png"}),
+        ("move_marks", {"target_dir": "/out"}),
+        ("run_compare", {"mode": "GROUP"}),
+        ("run_search", {"mode": "CLIP_EMBEDDING", "search_text": "cat"}),
+        ("run_image_generation", {}),
+        ("set_prevalidations_running", {"enabled": False}),
+        ("run_pipeline", {"pipeline_name": "Sorter"}),
+    ])
+    def test_gated_tool_is_refused_while_its_password_is_required(self, tool_name, arguments):
+        ext, session = _extension()
+        session.protected = set(PASSWORD_GATES[tool_name])
+        with pytest.raises(MCPToolError):
+            ext.dispatch(tool_name, arguments)
+        assert session.calls == []
+        assert session.pipeline_runs == []
+
+    def test_ungated_tool_ignores_protected_actions(self):
+        ext, session = _extension()
+        session.protected = {gate for gates in PASSWORD_GATES.values() for gate in gates}
+        assert ext.dispatch("next_file")["advanced"] is True
+
+    def test_password_gates_name_real_tools(self):
+        names = {t["name"] for t in tool_descriptors()}
+        assert set(PASSWORD_GATES) <= names
+
     def test_health_check(self):
         ext, session = _extension()
         session.compare_running = True
@@ -552,7 +685,10 @@ class TestReadResource:
         ext, session = _extension()
         session.compare_running = True
         session.compare_mode = "SEARCH"
-        assert ext.read_resource("compare_status") == {"running": True, "mode": "SEARCH"}
+        session.prevalidations_running = False
+        assert ext.read_resource("compare_status") == {
+            "running": True, "mode": "SEARCH", "prevalidations_running": False,
+        }
 
     def test_compare_results_empty_before_any_run(self):
         ext, _ = _extension()
@@ -572,6 +708,20 @@ class TestReadResource:
             "file_groups": {0: {"/base/a.png": 0.0, "/base/b.png": 0.12}},
             "files_matched": [],
         }
+
+    def test_pipelines(self):
+        ext, _ = _extension()
+        assert ext.read_resource("pipelines")["selected_profile"] == "Photos"
+
+    def test_directory_profiles(self):
+        ext, _ = _extension()
+        assert ext.read_resource("directory_profiles") == {
+            "profiles": [{"name": "Photos", "directories": ["/p"]}],
+        }
+
+    def test_pipeline_status(self):
+        ext, _ = _extension()
+        assert ext.read_resource("pipeline_status") == {"running": False, "pipeline": None}
 
     def test_unknown_resource_raises(self):
         ext, _ = _extension()

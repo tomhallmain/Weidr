@@ -417,16 +417,11 @@ class ClassifierActionsManager:
                     prevalidation.name,
                     e,
                 )
-        # Load ClassifierPipelines and resolve profile instances so they are
-        # ready for the pipeline execution loop in prevalidate_media().
+        # Load ClassifierPipelines (load() also resolves prevalidation
+        # pipelines' profiles) for the pipeline loop in prevalidate_media().
         try:
             from compare.classifier_pipeline import ClassifierPipelines
             ClassifierPipelines.load()
-            for _pipeline in ClassifierPipelines.get_prevalidation_pipelines():
-                try:
-                    _pipeline.update_profile_instance()
-                except Exception:
-                    pass
         except Exception:
             logger.exception("Failed to load ClassifierPipelines during post-init")
 

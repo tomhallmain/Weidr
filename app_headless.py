@@ -24,12 +24,14 @@ from typing import Optional
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
 
+from compare.classifier_actions_manager import ClassifierActionsManager
 from compare.compare_args import CompareArgs
 from compare.compare_manager import CompareManager
 from extensions.mcp_server import MCPServerExtension
 from files.file_browser import FileBrowser
 from files.marked_files import MarkedFiles
 from files.skip_aware_navigation import advance_past_skipped
+from utils.app_info_cache import app_info_cache
 from utils.background_runner import ThreadedTaskRunner
 from utils.config import config
 from utils.constants import CompareMode, ImageGenerationType, Mode
@@ -44,6 +46,34 @@ logger = get_logger("app_headless")
 # can select interactively. There's no interactive selection here, so this is
 # the only type headless generation requests use.
 _DEFAULT_IMAGE_GENERATION_TYPE = ImageGenerationType.CONTROL_NET
+
+
+def load_persisted_classifier_state() -> None:
+    """Load the saved prevalidation rules (with their lookaheads and directory
+    profiles), classifier actions and prevalidation result cache, in the order
+    the Qt app loads them at startup (CacheController.load_info_cache).
+
+    This is process-wide ClassifierActionsManager state shared by every
+    session, so main() calls it once rather than each session constructor.
+    Without it a headless process has no Prevalidation rules to run; only
+    prevalidation pipelines, which load lazily on first use.
+    """
+    ClassifierActionsManager.load_prevalidations()
+    ClassifierActionsManager.load_classifier_actions()
+    ClassifierActionsManager.load_prevalidation_file_cache_from_disk()
+
+
+def _persisted_image_generation_type() -> ImageGenerationType:
+    """The GUI's generation mode (persisted under "image_generation_mode",
+    as MediaDetails.load_image_generation_mode reads it), narrowed the way
+    MediaDetails.get_image_specific_generation_mode() narrows it."""
+    try:
+        mode = ImageGenerationType.get(app_info_cache.get_meta(
+            "image_generation_mode", default_val=ImageGenerationType.CONTROL_NET.value,
+        ))
+    except Exception:
+        mode = ImageGenerationType.CONTROL_NET
+    return ImageGenerationType.image_specific(mode)
 
 
 class _CompareMaster:
@@ -93,6 +123,67 @@ class HeadlessMCPSession:
             get_base_dir=lambda: self._base_dir,
             responsiveness=NullResponsiveness(),
         )
+        self._restore_prevalidations_running()
+
+    def _restore_prevalidations_running(self) -> None:
+        # The per-directory flag the Qt window's prevalidation toggle saves,
+        # restored the way AppWindow.set_base_dir restores it. Without this a
+        # directory where prevalidations were switched off in the GUI would
+        # run its MOVE/COPY/DELETE rules here.
+        self._compare_manager.set_prevalidations_running(app_info_cache.get(
+            self._base_dir, "prevalidations_running",
+            default_val=config.enable_prevalidations,
+        ))
+
+    def get_prevalidations_running(self) -> bool:
+        return self._compare_manager.prevalidations_running
+
+    def set_prevalidations_running(self, enabled: bool) -> None:
+        # Saved for the directory as WindowLauncher.set_prevalidations_running
+        # saves it, though only in this process's in-memory app_info_cache:
+        # the headless process doesn't write the cache back to disk.
+        app_info_cache.set(self._base_dir, "prevalidations_running", enabled)
+        self._compare_manager.set_prevalidations_running(enabled)
+
+    # ------------------------------------------------------------------
+    # Passwords
+    # ------------------------------------------------------------------
+    def password_blocked(self, action_names) -> Optional[str]:
+        from ui.auth.password_core import first_password_protected
+        from utils.constants import ProtectedActions
+
+        blocked = first_password_protected([ProtectedActions(name) for name in action_names])
+        return blocked.value if blocked is not None else None
+
+    # ------------------------------------------------------------------
+    # Classifier pipelines
+    # ------------------------------------------------------------------
+    def run_pipeline(
+        self, pipeline_name: str, profile_name: Optional[str] = None,
+        continue_without_sd_runner: bool = False,
+    ) -> dict:
+        from compare.pipeline_profile_run import pipeline_runs
+
+        return pipeline_runs.start(
+            pipeline_name, profile_name,
+            continue_without_sd_runner=continue_without_sd_runner,
+            fallback_generation_type=_persisted_image_generation_type(),
+            hide_callback=self._hide_media,
+            notify_callback=self._actions.title_notify,
+            blur_callback=self._actions.request_media_blur,
+        )
+
+    def pipeline_status(self) -> dict:
+        from compare.pipeline_profile_run import pipeline_runs
+        return pipeline_runs.status()
+
+    def list_pipelines(self) -> dict:
+        from compare.pipeline_profile_run import list_pipelines
+        return list_pipelines()
+
+    def list_directory_profiles(self) -> dict:
+        from compare.pipeline_profile_run import list_directory_profiles
+        return list_directory_profiles()
 
     # ------------------------------------------------------------------
     # Navigation
@@ -123,13 +214,33 @@ class HeadlessMCPSession:
         return index, len(files)
 
     def go_to_file(self, path: str) -> Optional[str]:
-        return self._file_browser.find(search_text=path, exact_match=True)
+        previous = self.get_current_file()
+        found = self._file_browser.find(search_text=path, exact_match=True)
+        return self._land_unless_suppressed(found, previous)
 
     def go_to_index(self, index: int) -> Optional[str]:
+        previous = self.get_current_file()
         try:
-            return self._file_browser.go_to_index(index)
+            found = self._file_browser.go_to_index(index)
         except ValueError:
             return None
+        return self._land_unless_suppressed(found, previous)
+
+    def _land_unless_suppressed(self, found: Optional[str], previous: Optional[str]) -> Optional[str]:
+        """Apply MediaNavigator._suppress_direct_display to a direct jump.
+
+        When prevalidate_on_direct_media_display is set, the requested file
+        goes through skip_media (rule side effects included). A vetoed file
+        isn't landed on: the cursor goes back and the previous file is
+        returned, the way the Qt window keeps showing the previous file.
+        """
+        if found is None or not config.prevalidate_on_direct_media_display:
+            return found
+        if not self._compare_manager.skip_media(found):
+            return found
+        if previous is not None:
+            self._file_browser.go_to_file(previous)
+        return previous
 
     # ------------------------------------------------------------------
     # Directory
@@ -140,6 +251,7 @@ class HeadlessMCPSession:
     def set_base_dir(self, path: str) -> None:
         self._base_dir = path
         self._file_browser.set_directory(path)
+        self._restore_prevalidations_running()
 
     # ------------------------------------------------------------------
     # Marks / file operations
@@ -311,6 +423,25 @@ class HeadlessMCPSession:
             "failed": result.failed,
             "skipped": result.skipped,
         }
+
+    # ------------------------------------------------------------------
+    # Seek to Trigger (report only; there is no player to move)
+    # ------------------------------------------------------------------
+    def find_trigger(
+        self, action_name: str, kind: str = "classifier_action",
+        media_path: Optional[str] = None, start_slot: int = 0,
+        sample_ratio: Optional[float] = None,
+    ) -> dict:
+        from compare.trigger_scan import find_trigger
+
+        path = media_path or self.get_current_file()
+        if not path:
+            raise ValueError("no current file to scan")
+        return find_trigger(action_name, kind, path, start_slot=start_slot, sample_ratio=sample_ratio)
+
+    def list_trigger_actions(self) -> dict:
+        from compare.trigger_scan import list_trigger_actions
+        return list_trigger_actions()
 
     # ------------------------------------------------------------------
     # Compare
@@ -489,6 +620,7 @@ def main(argv=None) -> int:
     if not os.path.isdir(args.base_dir):
         parser.error(f"not a directory: {args.base_dir}")
 
+    load_persisted_classifier_state()
     session = HeadlessMCPSession(args.base_dir)
     server = MCPServerExtension(
         session_resolver=lambda: session,

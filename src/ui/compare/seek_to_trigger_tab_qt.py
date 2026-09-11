@@ -76,28 +76,17 @@ class SeekToTriggerWorker(QThread):
         self._sample_ratio = sample_ratio
 
     def run(self) -> None:
+        from compare.trigger_scan import scan_for_trigger
+
         try:
-            result = self._action.find_first_trigger_slot(
-                self._media_path, start_slot=self._start_slot,
-                sample_ratio=self._sample_ratio,
+            scan = scan_for_trigger(
+                self._action, self._media_path,
+                start_slot=self._start_slot, sample_ratio=self._sample_ratio,
             )
-            if result is None and self._start_slot > 0:
-                # Wrap around: retry from the beginning so a single-trigger
-                # video loops back to the same frame on repeated clicks.
-                result = self._action.find_first_trigger_slot(
-                    self._media_path, start_slot=0, sample_ratio=self._sample_ratio,
-                )
-            if result is not None:
-                self.found.emit(result)
-            elif not is_classifier_dynamic_media_path(self._media_path):
-                # One slot, and it didn't match. Report what the classifier saw
-                # anyway; for a still that is the useful part of the result.
-                self.not_found.emit(1, self._action.describe_image_prediction(self._media_path))
+            if scan.result is not None:
+                self.found.emit(scan.result)
             else:
-                from image.frame_cache import FrameCache
-                stats = FrameCache.get_dynamic_media_stats(self._media_path)
-                planned = getattr(stats, "total_items", 0) or 0
-                self.not_found.emit(planned, None)
+                self.not_found.emit(scan.samples_scanned, scan.no_match_detail)
         except Exception as exc:
             logger.exception("SeekToTriggerWorker failed for %s", self._media_path)
             self.error.emit(str(exc))

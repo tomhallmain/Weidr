@@ -205,3 +205,16 @@ class PasswordManager:
         except Exception as e:
             logger.error(f"Error clearing password: {e}")
             return False 
+
+def first_password_protected(actions):
+    """The first of *actions* that can't run without entering a password, or None.
+
+    An action needs one only while it's flagged protected and a password is
+    configured: with no password set, the GUI's prompt lets it through. Flags
+    are checked first, so the keychain is read only when an action is flagged.
+    """
+    config = get_security_config()
+    flagged = [action for action in actions if config.is_action_protected(action.value)]
+    if flagged and PasswordManager.is_security_configured():
+        return flagged[0]
+    return None

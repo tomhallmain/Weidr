@@ -65,6 +65,17 @@ class Config:
         # Screenshots
         "screenshot_directory":                None,
         "save_screenshot_to_same_dir":         bool,
+        # PEEK frame detection
+        "enable_peek_frame_detection":         bool,
+        "peek_device":                         str,
+        "peek_default_k":                      int,
+        "peek_default_fps":                    float,
+        "peek_max_candidate_frames":           int,
+        "peek_max_frames_per_media":           int,
+        "peek_minutes_per_extra_frame":        float,
+        "peek_max_video_duration_seconds":     int,
+        "peek_output_directory":               None,
+        "peek_save_to_same_dir":               bool,
         # Prevalidation (dynamic media)
         "enable_prevalidations":               bool,
         "prevalidate_on_direct_media_display": bool,
@@ -132,6 +143,21 @@ class Config:
         self.fill_canvas = False
         self.screenshot_directory = None
         self.save_screenshot_to_same_dir = True
+        # PEEK frame detection (optional dependency -- see image/peek_frame_selector.py).
+        self.enable_peek_frame_detection = False
+        self.peek_device = "auto"
+        self.peek_default_k = 4
+        self.peek_default_fps = 2.0
+        # Starting points, not tuned against real use yet.
+        self.peek_max_candidate_frames = 300
+        self.peek_max_frames_per_media = 12
+        # One extra extracted frame per this many minutes of video, on top of
+        # peek_default_k, before peek_max_frames_per_media caps the total.
+        self.peek_minutes_per_extra_frame = 2.0
+        # Extraction is refused above this duration (0 disables the check).
+        self.peek_max_video_duration_seconds = 600
+        self.peek_output_directory = None
+        self.peek_save_to_same_dir = True
         self.browse_recursive = False
         self.sidebar_visible = True
         self.image_tagging_enabled = True
@@ -295,6 +321,8 @@ class Config:
                             "locale",
                             "log_level",
                             "screenshot_directory",
+                            "peek_device",
+                            "peek_output_directory",
                             "default_main_window_size",
                             "default_secondary_window_size",
                             "clip_model",
@@ -319,6 +347,8 @@ class Config:
                             "escape_backslash_filepaths",
                             "fill_canvas",
                             "save_screenshot_to_same_dir",
+                            "enable_peek_frame_detection",
+                            "peek_save_to_same_dir",
                             "enable_images",
                             "enable_videos",
                             "enable_audio",
@@ -371,6 +401,10 @@ class Config:
                             "dynamic_media_max_sample_pages",
                             "dynamic_media_max_sample_duration_seconds",
                             "dynamic_media_max_sample_size_mb",
+                            "peek_default_k",
+                            "peek_max_candidate_frames",
+                            "peek_max_frames_per_media",
+                            "peek_max_video_duration_seconds",
                             "compare_embedding_dynamic_media_max_samples",
                             "vjepa2_num_frames",
                             "sd_runner_client_port",
@@ -387,6 +421,8 @@ class Config:
                             "large_image_promotion_available_ram_fraction",
                             "compare_embedding_dynamic_media_sample_ratio",
                             "compare_embedding_clap_max_duration_seconds",
+                            "peek_default_fps",
+                            "peek_minutes_per_extra_frame",
                             "slideshow_dynamic_video_max_seconds",
                             "slideshow_dynamic_gif_max_seconds")
 

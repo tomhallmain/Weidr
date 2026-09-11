@@ -191,6 +191,24 @@ def tool_descriptors() -> list:
             ),
         },
         {
+            "name": "extract_peek_frames",
+            "description": (
+                "Run PEEK frame detection on the current (or given) video/GIF file and "
+                "write its most essential frames as PNGs (each tagged related_image back "
+                "at the source file). Requires the optional peek dependency; requires "
+                "media_path (or the current file) to be a video or GIF under the "
+                "configured duration limit."
+            ),
+        },
+        {
+            "name": "extract_peek_frames_batch",
+            "description": (
+                "Run PEEK frame detection over every video/GIF in the current directory "
+                "scope, writing each file's most essential frames as PNGs (each tagged "
+                "related_image back at its source). Requires the optional peek dependency."
+            ),
+        },
+        {
             "name": "health_check",
             "description": "Whether a session is available to drive, and whether a compare is currently running.",
         },
@@ -407,6 +425,22 @@ class MCPServerExtension:
                 arguments.get("edit_suffix"), arguments.get("target_dir"),
             )
             return {"status": "started"}
+        if tool_name == "extract_peek_frames":
+            try:
+                return session.extract_peek_frames(
+                    media_path=arguments.get("media_path"),
+                    k=arguments.get("k"),
+                    fps=arguments.get("fps"),
+                    target_dir=arguments.get("target_dir"),
+                )
+            except ValueError as e:
+                raise MCPToolError(str(e))
+        if tool_name == "extract_peek_frames_batch":
+            return session.extract_peek_frames_batch(
+                k=arguments.get("k"),
+                fps=arguments.get("fps"),
+                target_dir=arguments.get("target_dir"),
+            )
         if tool_name == "health_check":
             return {"session_available": True, "compare_running": session.is_compare_running()}
         raise MCPToolError(f"unknown tool: {tool_name}")
@@ -591,6 +625,23 @@ class MCPServerExtension:
             return self.dispatch(
                 "run_image_generation", {"edit_suffix": edit_suffix, "target_dir": target_dir},
             )
+
+        @server.tool(name="extract_peek_frames", description=described["extract_peek_frames"])
+        def extract_peek_frames(
+            media_path: str | None = None, k: int | None = None,
+            fps: float | None = None, target_dir: str | None = None,
+        ) -> dict:
+            return self.dispatch("extract_peek_frames", {
+                "media_path": media_path, "k": k, "fps": fps, "target_dir": target_dir,
+            })
+
+        @server.tool(name="extract_peek_frames_batch", description=described["extract_peek_frames_batch"])
+        def extract_peek_frames_batch(
+            k: int | None = None, fps: float | None = None, target_dir: str | None = None,
+        ) -> dict:
+            return self.dispatch("extract_peek_frames_batch", {
+                "k": k, "fps": fps, "target_dir": target_dir,
+            })
 
         @server.tool(name="health_check", description=described["health_check"])
         def health_check() -> dict:

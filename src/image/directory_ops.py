@@ -18,6 +18,7 @@ from __future__ import annotations
 import os
 import shutil
 from dataclasses import dataclass, field
+from typing import Optional
 
 from utils.config import config
 from utils.logging_setup import get_logger
@@ -378,4 +379,75 @@ def strip_video_metadata(
         except Exception as e:
             result.failed += 1
             logger.warning("Copy without metadata failed for %s: %s", filepath, e)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# PEEK frame extraction (see image/peek_frame_selector.py for the actual
+# per-file model call and frame-write mechanics)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class PeekExtractionSurvey:
+    """Which files a PEEK extraction run would act on.
+
+    eligible_files -- video + GIF (image.peek_frame_selector.is_peek_eligible_media_path).
+    ineligible_count -- other dynamic media (e.g. PDF) present in *files* but
+    structurally out of scope for PEEK's video-codec-based decode.
+    """
+
+    eligible_files: list = field(default_factory=list)
+    ineligible_count: int = 0
+
+    def has_nothing_to_do(self) -> bool:
+        return not self.eligible_files
+
+
+@dataclass
+class PeekExtractionResult:
+    extracted: int = 0        # files that produced at least one written frame
+    frames_written: int = 0
+    failed: int = 0
+    skipped: int = 0          # produced zero frames without raising (e.g. PEEK found nothing to select)
+
+
+def survey_peek_extraction(files) -> PeekExtractionSurvey:
+    """Classify *files* for a PEEK extraction run without touching anything."""
+    from image.peek_frame_selector import is_peek_eligible_media_path
+    from utils.media_utils import is_classifier_dynamic_media_path
+
+    survey = PeekExtractionSurvey()
+    for filepath in files:
+        if is_peek_eligible_media_path(filepath):
+            survey.eligible_files.append(filepath)
+        elif is_classifier_dynamic_media_path(filepath):
+            survey.ineligible_count += 1
+    return survey
+
+
+def extract_peek_frames_for_directory(
+    survey: PeekExtractionSurvey,
+    k: Optional[int] = None,
+    fps: Optional[float] = None,
+    target_dir: Optional[str] = None,
+) -> PeekExtractionResult:
+    """Run PEEK extraction over every file in *survey*, aggregating counts.
+
+    Each file is independent: one failing (missing dependency, decode error)
+    does not stop the rest -- it is counted in ``failed`` and logged.
+    """
+    from image.peek_frame_selector import extract_peek_frames
+
+    result = PeekExtractionResult()
+    for filepath in survey.eligible_files:
+        try:
+            outcome = extract_peek_frames(filepath, k=k, fps=fps, target_dir=target_dir)
+            if outcome.frames_written:
+                result.extracted += 1
+                result.frames_written += len(outcome.frames_written)
+            else:
+                result.skipped += 1
+        except Exception as e:
+            result.failed += 1
+            logger.warning("PEEK extraction failed for %s: %s", filepath, e)
     return result

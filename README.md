@@ -168,6 +168,20 @@ A matching node can fire any of the standard actions — skip, hide, notify, blu
 
 ---
 
+## PEEK Frame Detection
+
+[PEEK](https://github.com/momentslab/peek) is a query-free video-frame selector: given a video or GIF, it scores candidate frames and picks the most essential ones, with no text prompt needed. Weidr uses it to extract those frames as PNGs, either from the currently displayed video/GIF or in a batch across every eligible file in the current directory (right-click menu, or the `extract_peek_frames`/`extract_peek_frames_batch` MCP tools). Each extracted frame is tagged with a `related_image` pointer back at its source file, so it shows up in the related-image window like any other derived image. Longer videos get proportionally more extracted frames (`peek_minutes_per_extra_frame`), and videos over `peek_max_video_duration_seconds` (10 minutes by default) are skipped as unreliable to extract from.
+
+This is an optional feature, off by default (`enable_peek_frame_detection` in config). It requires the `peek` package, installed separately:
+
+```
+pip install git+https://github.com/momentslab/peek
+```
+
+PEEK's pretrained weights (downloaded automatically from Hugging Face on first use) are licensed **CC-BY-NC-SA-4.0 (non-commercial)**; the PEEK code itself is Apache-2.0.
+
+---
+
 ## Limitations
 
 **NOTE** - It is not currently possible to undo or modify a delete action, however unless the delete folder is explicitly set to null in the config it is likely the deleted items will be saved in a trash folder before being fully removed.

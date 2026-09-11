@@ -12,7 +12,7 @@ import subprocess
 import sys
 from typing import TYPE_CHECKING, Optional
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QThread, QTimer, Signal
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from ui.auth.password_utils import require_password
@@ -32,6 +32,31 @@ if TYPE_CHECKING:
 logger = get_logger("file_ops_controller")
 
 _RANDOMIZE_FILENAMES_LOG_BASENAME = "randomize_filenames.log"
+
+
+class _PeekExtractionWorker(QThread):
+    """Runs one PEEK extraction call off the UI thread.
+
+    PEEK inference is a model forward pass over potentially many candidate
+    frames -- the same cost profile as SeekToTriggerWorker's classifier
+    scan (ui/compare/seek_to_trigger_tab_qt.py), not a cheap file op like
+    the other directory-wide actions in this controller.
+    """
+
+    succeeded = Signal(dict)
+    failed = Signal(str)
+
+    def __init__(self, run, parent=None):
+        super().__init__(parent)
+        self._run = run
+
+    def run(self) -> None:
+        try:
+            result = self._run()
+        except Exception as exc:
+            self.failed.emit(str(exc))
+            return
+        self.succeeded.emit(result)
 
 
 class FileOpsController:
@@ -54,6 +79,7 @@ class FileOpsController:
 
         # Periodic file-check timer
         self._file_check_timer: Optional[QTimer] = None
+        self._peek_worker: Optional[_PeekExtractionWorker] = None
 
     # ==================================================================
     # Periodic file check
@@ -976,6 +1002,119 @@ class FileOpsController:
             self._app.app_actions.warn(
                 _("Finished: {0} succeeded, {1} failed").format(result.written, result.failed)
             )
+
+    # ==================================================================
+    # PEEK frame detection
+    # ==================================================================
+    def _on_peek_failed(self, message: str) -> None:
+        self._app.app_actions.warn(_("PEEK extraction failed: {0}").format(message))
+
+    def _on_peek_current_media_done(self, result: dict) -> None:
+        count = len(result.get("frames_written", []))
+        if count > 0:
+            self._app.refresh()
+            self._app.notification_ctrl.toast(_("Extracted {0} PEEK frame(s)").format(count))
+        else:
+            self._app.app_actions.warn(_("PEEK found no frames to extract"))
+
+    def extract_peek_frames_from_current_media(self, event=None) -> None:
+        """Run PEEK frame detection on the currently displayed video/GIF."""
+        from image.peek_frame_selector import extract_peek_frames, is_peek_eligible_media_path
+
+        if not config.enable_peek_frame_detection:
+            return
+        if self._app.is_compare_running():
+            self._app.app_actions.warn(compare_running_warn(_("extract PEEK frames")))
+            return
+
+        filepath = self._nav.get_active_media_filepath()
+        if not filepath or not is_peek_eligible_media_path(filepath):
+            self._app.app_actions.warn(_("Not a video or GIF file"))
+            return
+
+        if self._peek_worker is not None and self._peek_worker.isRunning():
+            self._app.app_actions.warn(_("A PEEK extraction is already running"))
+            return
+
+        def _run():
+            outcome = extract_peek_frames(filepath)
+            return {"frames_written": outcome.frames_written}
+
+        self._app.notification_ctrl.toast(
+            _("Extracting PEEK frames from {0}…").format(os.path.basename(filepath))
+        )
+        self._peek_worker = _PeekExtractionWorker(_run, parent=self._app)
+        self._peek_worker.succeeded.connect(self._on_peek_current_media_done)
+        self._peek_worker.failed.connect(self._on_peek_failed)
+        self._peek_worker.start()
+
+    def _on_peek_directory_done(self, result: dict) -> None:
+        if result["frames_written"] > 0:
+            self._app.refresh()
+        if result["failed"] == 0:
+            self._app.notification_ctrl.toast(
+                _("Extracted {0} PEEK frame(s) from {1} file(s)").format(
+                    result["frames_written"], result["extracted"]
+                )
+            )
+        else:
+            self._app.app_actions.warn(
+                _("Finished: {0} file(s) extracted, {1} failed").format(
+                    result["extracted"], result["failed"]
+                )
+            )
+
+    def extract_peek_frames_from_directory(self, event=None) -> None:
+        """For each eligible video/GIF in the current directory scope, run PEEK
+        frame detection and write its most essential frames as PNGs."""
+        from image import directory_ops
+
+        if not config.enable_peek_frame_detection:
+            return
+        if self._app.is_compare_running():
+            self._app.app_actions.warn(compare_running_warn(_("extract PEEK frames")))
+            return
+
+        base_dir = self._app.get_base_dir()
+        if not base_dir or not os.path.isdir(base_dir):
+            self._app.app_actions.warn(_("No valid base directory"))
+            return
+
+        if self._peek_worker is not None and self._peek_worker.isRunning():
+            self._app.app_actions.warn(_("A PEEK extraction is already running"))
+            return
+
+        self._app.app_actions.refresh(file_check=False)
+        files = self._fb.get_files_sorted_for_operation(
+            sort_by=SortBy.CREATION_TIME,
+            sort=Sort.ASC,
+        )
+        survey = directory_ops.survey_peek_extraction(files)
+        if survey.has_nothing_to_do():
+            self._app.notification_ctrl.toast(_("No video or GIF files found in this directory scope"))
+            return
+
+        if not self._app.app_actions.alert(
+            _("Extract PEEK frames (directory)"),
+            _(
+                "Run PEEK frame detection on each eligible file and write its most "
+                "essential frames as PNGs.\n\nDirectory:\n{0}\n\nFiles to process: {1}"
+            ).format(base_dir, len(survey.eligible_files)),
+            kind="askyesno",
+        ):
+            return
+
+        def _run():
+            result = directory_ops.extract_peek_frames_for_directory(survey)
+            return {
+                "extracted": result.extracted, "frames_written": result.frames_written,
+                "failed": result.failed, "skipped": result.skipped,
+            }
+
+        self._peek_worker = _PeekExtractionWorker(_run, parent=self._app)
+        self._peek_worker.succeeded.connect(self._on_peek_directory_done)
+        self._peek_worker.failed.connect(self._on_peek_failed)
+        self._peek_worker.start()
 
     def open_image_in_gimp(self, event=None) -> None:
         """Open the current image in GIMP."""

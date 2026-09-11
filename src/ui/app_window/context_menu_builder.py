@@ -264,6 +264,12 @@ class ContextMenuBuilder:
                 lambda: app.file_ops_ctrl.mute_current_video_audio_at_playback_position(),
             )
 
+        if config.enable_peek_frame_detection and media_type in (MediaType.VIDEO, MediaType.GIF):
+            menu.addAction(
+                _("Extract PEEK frames from this file…"),
+                lambda: app.file_ops_ctrl.extract_peek_frames_from_current_media(),
+            )
+
         menu.addAction(
             _("Convert directory images to JPG"),
             lambda: app.file_ops_ctrl.convert_directory_images_to_jpg(),
@@ -277,10 +283,15 @@ class ContextMenuBuilder:
                 _("Convert directory SVGs to PNG"),
                 lambda: app.file_ops_ctrl.convert_directory_svg_to_png(),
             )
-        if config.enable_videos: 
+        if config.enable_videos:
             menu.addAction(
                 _("Save copies of all videos in directory without metadata"),
                 lambda: app.file_ops_ctrl.copy_directory_videos_without_metadata(),
+            )
+        if config.enable_peek_frame_detection:
+            menu.addAction(
+                _("Extract PEEK frames from directory…"),
+                lambda: app.file_ops_ctrl.extract_peek_frames_from_directory(),
             )
 
         menu.addSeparator()

@@ -185,6 +185,43 @@ class QtWindowMCPSession:
             self._actions.refresh()
         return {"written": result.written, "failed": result.failed}
 
+    def extract_peek_frames(
+        self, media_path: Optional[str] = None, k: Optional[int] = None,
+        fps: Optional[float] = None, target_dir: Optional[str] = None,
+    ) -> dict:
+        from image.peek_frame_selector import extract_peek_frames
+
+        path = media_path or self.get_current_file()
+        if not path:
+            raise ValueError("no current file to extract frames from")
+        try:
+            outcome = extract_peek_frames(path, k=k, fps=fps, target_dir=target_dir)
+        except RuntimeError as e:
+            raise ValueError(str(e))
+        if outcome.frames_written:
+            self._actions.refresh()
+        return {"media_path": path, "frames_written": outcome.frames_written}
+
+    def extract_peek_frames_batch(
+        self, k: Optional[int] = None, fps: Optional[float] = None,
+        target_dir: Optional[str] = None,
+    ) -> dict:
+        from image import directory_ops
+
+        files = self._window.file_browser.get_files()
+        survey = directory_ops.survey_peek_extraction(files)
+        result = directory_ops.extract_peek_frames_for_directory(
+            survey, k=k, fps=fps, target_dir=target_dir,
+        )
+        if result.frames_written > 0:
+            self._actions.refresh()
+        return {
+            "extracted": result.extracted,
+            "frames_written": result.frames_written,
+            "failed": result.failed,
+            "skipped": result.skipped,
+        }
+
     # ------------------------------------------------------------------
     # Compare
     # ------------------------------------------------------------------

@@ -19,6 +19,12 @@ requests>=2.28.0  # Required by surya-ocr at runtime but missing from its declar
 # Full instructions: https://github.com/open-quantum-safe/liboqs-python/blob/main/README.md
 git+https://github.com/open-quantum-safe/liboqs-python.git
 
+# PEEK frame selection for image/peek_frame_selector.py. Downloads pretrained
+# weights from Hugging Face on first use (momentslab/peek, CC-BY-NC-SA-4.0 --
+# non-commercial, see README). Installed from GitHub, not PyPI, since an
+# unrelated "peek" package also exists on PyPI.
+git+https://github.com/momentslab/peek
+
 # macOS (OS X): Foundation/Cocoa for optional keychain and native integration.
 # Not required for basic keyring usage (utils/encryptor.py works without it).
 pyobjc-framework-Cocoa; sys_platform == 'darwin'

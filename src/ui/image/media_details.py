@@ -22,7 +22,7 @@ from PIL import Image
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QGuiApplication, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QComboBox, QGridLayout, QLabel, QLineEdit, QMessageBox,
+    QComboBox, QGridLayout, QLabel, QLineEdit,
     QPushButton, QScrollArea, QVBoxLayout, QWidget, QDialog,
     QDialogButtonBox,
 )
@@ -1271,6 +1271,10 @@ class MediaDetails(SmartWindow):
             QDialogButtonBox.StandardButton.Ok
             | QDialogButtonBox.StandardButton.Cancel
         )
+        # Qt supplies its own labels for standard buttons and no QTranslator is
+        # installed, so they arrive in English regardless of the app locale.
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText(_("OK"))
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText(_("Cancel"))
         layout.addWidget(buttons)
 
         def _apply_from_input() -> None:

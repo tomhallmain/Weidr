@@ -230,25 +230,23 @@ def scale_dims(
     max_dims: tuple[int, int],
     maximize: bool = False,
 ) -> tuple[int, int]:
-    """Return (width, height) to fit *dims* inside *max_dims*. If *maximize*, fill when smaller."""
-    x, y = dims[0], dims[1]
-    max_x, max_y = max_dims[0], max_dims[1]
-    if x <= max_x and y <= max_y:
-        if maximize:
-            if x < max_x:
-                return (int(x * max_y / y), max_y)
-            if y < max_y:
-                return (max_x, int(y * max_x / x))
+    """Return (width, height) to fit *dims* inside *max_dims*. If *maximize*, fill when smaller.
+
+    Only the smaller of the two axis ratios keeps the result inside the box:
+    growing to meet one side alone overflows the other whenever the source
+    aspect ratio is more extreme than the box's. Degenerate input (a zero or
+    negative dimension) yields the box rather than dividing by zero, and each
+    returned dimension is at least 1 so an extreme ratio cannot collapse a
+    side to nothing.
+    """
+    x, y = int(dims[0]), int(dims[1])
+    max_x, max_y = max(1, int(max_dims[0])), max(1, int(max_dims[1]))
+    if x <= 0 or y <= 0:
+        return (max_x, max_y)
+    scale = min(max_x / x, max_y / y)
+    if scale >= 1 and not maximize:
         return (x, y)
-    if x <= max_x:
-        return (int(x * max_y / y), max_y)
-    if y <= max_y:
-        return (max_x, int(y * max_x / x))
-    x_scale = max_x / x
-    y_scale = max_y / y
-    if x_scale < y_scale:
-        return (int(x * x_scale), int(y * x_scale))
-    return (int(x * y_scale), int(y * y_scale))
+    return (max(1, int(x * scale)), max(1, int(y * scale)))
 
 
 def large_image_dim_threshold() -> int:

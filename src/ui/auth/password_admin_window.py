@@ -13,13 +13,13 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QFrame,
     QWidget,
-    QMessageBox,
     QScrollArea,
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
 from lib.multi_display_qt import SmartWindow, display_manager
+from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle
 from ui.auth.password_core import PasswordManager, get_security_config
 from ui.auth.password_utils import require_password
@@ -112,7 +112,7 @@ class PasswordChangeDialog(QDialog):
             if hasattr(self.app_actions, "toast"):
                 self.app_actions.toast(_("Password changed successfully."))
             else:
-                QMessageBox.information(
+                qt_alert(
                     self, _("Info"), _("Password changed successfully.")
                 )
             self.accept()
@@ -125,7 +125,7 @@ class PasswordChangeDialog(QDialog):
                 _("Administration Error"), message, kind="error"
             )
         else:
-            QMessageBox.critical(self, _("Error"), message)
+            qt_alert(self, _("Error"), message, kind="error")
 
 
 class PasswordAdminWindow(SmartWindow):
@@ -396,7 +396,6 @@ class PasswordAdminWindow(SmartWindow):
     @require_password(ProtectedActions.ACCESS_ADMIN)
     def reset_to_defaults(self):
         """Reset all settings to their default values."""
-        from lib.qt_alert import qt_alert
         if not qt_alert(
             self,
             _("Reset to Defaults"),
@@ -422,7 +421,6 @@ class PasswordAdminWindow(SmartWindow):
 
     def set_to_current(self):
         """Restore settings to their current saved state."""
-        from lib.qt_alert import qt_alert
         if not qt_alert(
             self,
             _("Set to Current"),
@@ -489,7 +487,6 @@ class PasswordAdminWindow(SmartWindow):
     @require_password(ProtectedActions.ACCESS_ADMIN)
     def remove_password(self):
         """Remove the current password."""
-        from lib.qt_alert import qt_alert
         if not qt_alert(
             self,
             _("Remove Password"),
@@ -532,9 +529,9 @@ class PasswordAdminWindow(SmartWindow):
                 self.app_actions.toast(message)
         else:
             if error:
-                QMessageBox.critical(self, _("Error"), message)
+                qt_alert(self, _("Error"), message, kind="error")
             else:
-                QMessageBox.information(self, _("Info"), message)
+                qt_alert(self, _("Info"), message)
 
     @require_password(ProtectedActions.ACCESS_ADMIN)
     def export_cache_as_json(self):

@@ -6,10 +6,11 @@ infrastructure. The public entry
 point is ``check_startup_password_required(callback)``.
 """
 
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QMessageBox
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
+from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle
 from ui.auth.password_core import PasswordManager, get_security_config
 from ui.auth.password_session_manager import PasswordSessionManager
@@ -119,7 +120,7 @@ class StartupPasswordDialog(QDialog):
             self.result = True
             self.accept()
         else:
-            QMessageBox.critical(self, _("Error"), _("Incorrect password"))
+            qt_alert(self, _("Error"), _("Incorrect password"), kind="error")
             self.password_entry.clear()
             self.password_entry.setFocus()
 

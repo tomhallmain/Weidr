@@ -180,3 +180,23 @@ class TestShowMediaSingleFrameStream:
         media_frame.show_media(video_path)
 
         assert show_video_calls == [(video_path, False)], show_video_calls
+
+
+def test_fill_canvas_keeps_an_animation_inside_the_frame(
+    media_frame, show_media_files, qtbot
+):
+    """Growing a landscape animation to meet the box on height alone overflowed
+    its width -- a 32x24 GIF in a 300x300 frame scaled to 400x300, cropping the
+    animation with no way to reach the rest of it."""
+    path = show_media_files["gif"]
+    media_frame.resize(300, 300)
+    media_frame.show_media(path)
+    _wait_animated_displayed(media_frame, qtbot)
+
+    media_frame.set_fill_canvas(True)
+
+    scaled = media_frame._gif_movie.scaledSize()
+    assert scaled.width() <= media_frame.width()
+    assert scaled.height() <= media_frame.height()
+    # Aspect ratio of the source is preserved (32x24).
+    assert scaled.width() == pytest.approx(scaled.height() * 32 / 24, abs=2)

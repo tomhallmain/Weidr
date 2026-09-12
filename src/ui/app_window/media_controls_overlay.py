@@ -19,6 +19,7 @@ from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, Signal
 from PySide6.QtGui import QPainter, QColor
 
 from ui.app_style import AppStyle
+from utils.translations import _
 
 
 SLIDER_MAX = 1000
@@ -29,6 +30,8 @@ FADE_OUT_MS = 500
 OVERLAY_HEIGHT = 44
 MUTE_ICON = "\U0001F507"
 UNMUTE_ICON = "\U0001F50A"
+PLAY_ICON = "\u25B6"
+PAUSE_ICON = "\u275A\u275A"
 
 
 def _fmt_time(ms: int) -> str:
@@ -99,7 +102,7 @@ class MediaControlsOverlay(QWidget):
         layout.setContentsMargins(12, 6, 12, 6)
         layout.setSpacing(8)
 
-        self._play_pause_btn = QPushButton("\u25B6", self)
+        self._play_pause_btn = QPushButton(PLAY_ICON, self)
         self._play_pause_btn.setFixedSize(32, 32)
         self._play_pause_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._play_pause_btn.clicked.connect(self._on_play_pause)
@@ -131,11 +134,12 @@ class MediaControlsOverlay(QWidget):
         )
         layout.addWidget(self._total_label)
 
-        self._mute_btn = QPushButton("Mute", self)
+        # Text and tooltip are both set by _refresh_mute_button() during
+        # _apply_child_styles(), which runs immediately after this method.
+        self._mute_btn = QPushButton(MUTE_ICON, self)
         self._mute_btn.setFixedSize(44, 28)
         self._mute_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._mute_btn.clicked.connect(self._on_mute_toggle)
-        self._mute_btn.setToolTip("Toggle mute")
         layout.addWidget(self._mute_btn)
 
         self._volume_slider = QSlider(Qt.Orientation.Horizontal, self)
@@ -146,7 +150,7 @@ class MediaControlsOverlay(QWidget):
         self._volume_slider.valueChanged.connect(self._on_volume_changed)
         layout.addWidget(self._volume_slider)
 
-        self._no_seek_label = QLabel("\u26A0 No seek index", self)
+        self._no_seek_label = QLabel("\u26A0 " + _("No seek index"), self)
         self._no_seek_label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         self._no_seek_label.hide()
         layout.addWidget(self._no_seek_label)
@@ -207,20 +211,20 @@ class MediaControlsOverlay(QWidget):
 
     def set_paused(self, paused: bool):
         self._is_paused = paused
-        self._play_pause_btn.setText("\u25B6" if paused else "\u275A\u275A")
+        self._play_pause_btn.setText(PLAY_ICON if paused else PAUSE_ICON)
 
     def on_track_changed(self):
         self._seek_slider.setValue(0)
         self._elapsed_label.setText("0:00")
         self._total_label.setText("0:00")
         self._is_paused = False
-        self._play_pause_btn.setText("\u275A\u275A")
+        self._play_pause_btn.setText(PAUSE_ICON)
         self._has_track = True
 
     def on_playback_stopped(self):
         self._has_track = False
         self._is_paused = False
-        self._play_pause_btn.setText("\u25B6")
+        self._play_pause_btn.setText(PLAY_ICON)
         self._seek_slider.setValue(0)
         self._elapsed_label.setText("0:00")
         self._total_label.setText("0:00")
@@ -248,7 +252,7 @@ class MediaControlsOverlay(QWidget):
         self._no_seek_label.setVisible(bool(active))
         self._seek_slider.setEnabled(not active)
         self._seek_slider.setToolTip(
-            "Seeking unavailable — container has no seek index" if active else ""
+            _("Seeking unavailable — container has no seek index") if active else ""
         )
 
     def show_overlay(self):
@@ -326,7 +330,7 @@ class MediaControlsOverlay(QWidget):
 
     def _refresh_mute_button(self):
         self._mute_btn.setText(UNMUTE_ICON if self._is_muted else MUTE_ICON)
-        self._mute_btn.setToolTip("Unmute" if self._is_muted else "Mute")
+        self._mute_btn.setToolTip(_("Unmute") if self._is_muted else _("Mute"))
 
     def enterEvent(self, event):  # noqa: N802
         super().enterEvent(event)

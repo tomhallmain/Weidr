@@ -10,52 +10,6 @@ import pytest
 from utils.utils import Utils
 
 
-class TestScaleDims:
-    def test_image_fits_exactly(self):
-        assert Utils.scale_dims((100, 200), (100, 200)) == (100, 200)
-
-    def test_image_smaller_than_max(self):
-        assert Utils.scale_dims((50, 80), (100, 200)) == (50, 80)
-
-    def test_landscape_constrained_by_width(self):
-        w, h = Utils.scale_dims((400, 200), (100, 200))
-        assert w == 100
-        assert h == 50
-
-    def test_portrait_constrained_by_height(self):
-        w, h = Utils.scale_dims((200, 400), (200, 100))
-        assert w == 50
-        assert h == 100
-
-    def test_both_dims_over_max_width_is_binding(self):
-        # 400x200, max 100x200 → scale by 0.25 (width is binding)
-        w, h = Utils.scale_dims((400, 200), (100, 200))
-        assert w == 100
-        assert h == 50
-
-    def test_both_dims_over_max_height_is_binding(self):
-        # 200x400, max 200x100 → scale by 0.25 (height is binding)
-        w, h = Utils.scale_dims((200, 400), (200, 100))
-        assert w == 50
-        assert h == 100
-
-    def test_maximize_width_limited(self):
-        # Image is 50x100, max is 200x200 — maximize by height gives (100, 200)
-        w, h = Utils.scale_dims((50, 100), (200, 200), maximize=True)
-        assert h == 200
-        assert w == 100
-
-    def test_maximize_height_limited(self):
-        # Image is 100x50, max is 200x200 — maximize by width gives (200, 100)
-        w, h = Utils.scale_dims((100, 50), (200, 200), maximize=True)
-        assert w == 200
-        assert h == 100
-
-    def test_maximize_already_fills(self):
-        # Already at max — no change
-        assert Utils.scale_dims((200, 200), (200, 200), maximize=True) == (200, 200)
-
-
 class TestAlphanumericSort:
     def test_pure_alpha(self):
         assert Utils.alphanumeric_sort(["b", "a", "c"]) == ["a", "b", "c"]

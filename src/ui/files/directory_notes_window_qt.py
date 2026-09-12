@@ -16,12 +16,13 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QDialog, QFileDialog, QFrame, QGridLayout,
-    QHBoxLayout, QLabel, QMessageBox, QPlainTextEdit,
+    QHBoxLayout, QLabel, QPlainTextEdit,
     QPushButton, QScrollArea, QVBoxLayout, QWidget,
 )
 
 from files.directory_notes import DirectoryNotes
 from lib.multi_display_qt import SmartDialog
+from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle
 from utils.app_actions import AppActions
 from utils.translations import _
@@ -413,15 +414,16 @@ class DirectoryNotesWindow(SmartDialog):
                 exported = DirectoryNotes.export_to_text(self._base_dir, path)
                 self._app_actions.toast(_("Exported notes to: {0}").format(exported))
             except Exception as e:
-                QMessageBox.critical(self, _("Export Error"),
-                                     _("Failed to export notes: {0}").format(str(e)))
+                qt_alert(self, _("Export Error"),
+                         _("Failed to export notes: {0}").format(str(e)),
+                         kind="error")
 
     def generate_file_list(self) -> None:
         """Export marked files as a JSON list (file_paths.json format)."""
         from utils.config import config
         marked_files = DirectoryNotes.get_marked_files(self._base_dir)
         if not marked_files:
-            QMessageBox.information(
+            qt_alert(
                 self, _("No Marked Files"), _("There are no marked files to export.")
             )
             return
@@ -441,17 +443,17 @@ class DirectoryNotesWindow(SmartDialog):
                     )
                 )
             except Exception as e:
-                QMessageBox.critical(
+                qt_alert(
                     self, _("Export Error"),
                     _("Failed to generate file list: {0}").format(str(e)),
+                    kind="error",
                 )
 
     def set_as_runtime_marks(self) -> None:
         """Load directory-notes marked files into the runtime MarkedFiles marks."""
-        from lib.qt_alert import qt_alert
         marked_files = DirectoryNotes.get_marked_files(self._base_dir)
         if not marked_files:
-            QMessageBox.information(
+            qt_alert(
                 self, _("No Marked Files"), _("There are no marked files to set as marks.")
             )
             return
@@ -503,7 +505,6 @@ class DirectoryNotesWindow(SmartDialog):
         if not path:
             return
         try:
-            from lib.qt_alert import qt_alert
             recursive = qt_alert(
                 self,
                 _("Import Options"),
@@ -522,13 +523,14 @@ class DirectoryNotesWindow(SmartDialog):
                 if len(not_found) > 10:
                     msg += "\n" + _("... and {0} more").format(len(not_found) - 10)
 
-            QMessageBox.information(self, _("Import Complete"), msg)
+            qt_alert(self, _("Import Complete"), msg)
             self._app_actions.toast(_("Imported {0} marked files").format(added))
             self._refresh()
         except Exception as e:
-            QMessageBox.critical(
+            qt_alert(
                 self, _("Import Error"),
                 _("Failed to import from text file: {0}").format(str(e)),
+                kind="error",
             )
 
     def import_from_json_file(self) -> None:
@@ -552,13 +554,14 @@ class DirectoryNotesWindow(SmartDialog):
                 if len(invalid_paths) > 10:
                     msg += "\n" + _("... and {0} more").format(len(invalid_paths) - 10)
 
-            QMessageBox.information(self, _("Import Complete"), msg)
+            qt_alert(self, _("Import Complete"), msg)
             self._app_actions.toast(_("Imported {0} marked files").format(added))
             self._refresh()
         except Exception as e:
-            QMessageBox.critical(
+            qt_alert(
                 self, _("Import Error"),
                 _("Failed to import from JSON file: {0}").format(str(e)),
+                kind="error",
             )
 
     # ==================================================================

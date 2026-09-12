@@ -50,11 +50,14 @@ def qt_alert(
     kind: str = "info",
     yes_text: Optional[str] = None,
     no_text: Optional[str] = None,
+    default_no: bool = False,
 ):
     """Show a Qt message box. kind: info, warning, error, askokcancel, askyesno, askyesnocancel.
 
     *yes_text* and *no_text* override the Yes/No button labels for the
     askyesno and askyesnocancel kinds; they are ignored otherwise.
+    *default_no* focuses No instead of Yes on those kinds, so that Enter on a
+    destructive prompt declines it.
     """
     overrides = {}
     if yes_text:
@@ -73,7 +76,7 @@ def qt_alert(
         box = _make_box(
             parent, QMessageBox.Icon.Question, title, message,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.Yes,
+            QMessageBox.StandardButton.No if default_no else QMessageBox.StandardButton.Yes,
             overrides=overrides,
         )
         return box.exec() == QMessageBox.StandardButton.Yes
@@ -81,7 +84,7 @@ def qt_alert(
         box = _make_box(
             parent, QMessageBox.Icon.Question, title, message,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Yes,
+            QMessageBox.StandardButton.No if default_no else QMessageBox.StandardButton.Yes,
             overrides=overrides,
         )
         return box.exec()

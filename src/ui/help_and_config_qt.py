@@ -13,11 +13,12 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import (
     QCheckBox, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit,
-    QMessageBox, QPushButton, QScrollArea, QSizePolicy, QTabWidget,
+    QPushButton, QScrollArea, QSizePolicy, QTabWidget,
     QVBoxLayout, QWidget,
 )
 
 from lib.multi_display_qt import SmartDialog
+from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle
 from utils.config import config
 from utils.translations import _, format_shortcut
@@ -705,22 +706,24 @@ class HelpAndConfig(SmartDialog):
         try:
             errors = config.apply_and_persist(raw)
         except Exception as exc:
-            QMessageBox.critical(
+            qt_alert(
                 self,
                 _("Save Failed"),
                 _("Could not write config file:\n\n") + str(exc),
+                kind="error",
             )
             return
 
         if errors:
-            QMessageBox.warning(
+            qt_alert(
                 self,
                 _("Config Validation Error"),
                 _("Fix these fields before saving:\n\n") + "\n".join(errors),
+                kind="warning",
             )
             return
 
-        QMessageBox.information(
+        qt_alert(
             self,
             _("Config Saved"),
             _("Settings saved successfully.\n\n"

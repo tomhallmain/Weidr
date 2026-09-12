@@ -600,7 +600,9 @@ class FileOpsController:
                      len(survey.candidates), survey.already_within, survey.to_scale),
             kind="askokcancel",
         )
-        if choice != QMessageBox.StandardButton.Ok:
+        # askokcancel answers with a bool, unlike the askyesnocancel prompts
+        # elsewhere in this class that answer with a QMessageBox.StandardButton.
+        if not choice:
             return
 
         result = directory_ops.scale_images(survey)

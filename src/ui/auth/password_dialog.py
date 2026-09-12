@@ -10,12 +10,12 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QCheckBox,
-    QMessageBox,
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
 from lib.multi_display_qt import SmartDialog
+from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle
 from ui.auth.password_core import PasswordManager
 from ui.auth.password_session_manager import PasswordSessionManager
@@ -301,10 +301,11 @@ class PasswordDialog(SmartDialog):
         if self.check_password(password):
             self.cancel(result=True)
         else:
-            QMessageBox.critical(
+            qt_alert(
                 self,
                 _("Error"),
                 _("Incorrect password"),
+                kind="error",
             )
             self.password_entry.clear()
             self.password_entry.setFocus()

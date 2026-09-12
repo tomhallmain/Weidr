@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QMessageBox,
     QPlainTextEdit,
     QPushButton,
     QTabWidget,
@@ -30,6 +29,7 @@ from image.image_classifier_manager import image_classifier_manager
 from image.image_classifier_model_config import ImageClassifierModelConfig
 from image.suggested_classifier_models import SUGGESTED_CLASSIFIER_MODELS, SuggestedClassifierModel
 from lib.multi_display_qt import SmartDialog
+from lib.qt_alert import qt_alert
 from utils.config import config
 from utils.constants import HfHubModelTask, HfHubSortDirection, HfHubSortOption
 from utils.logging_setup import get_logger
@@ -283,10 +283,11 @@ class _InstalledModelEditDialog(SmartDialog):
         categories = [c.strip() for c in (self._categories_edit.text() or "").split(",") if c.strip()]
         backend = (self._backend_combo.currentText() or "auto").strip()
         if not model_name or not model_location or not categories:
-            QMessageBox.warning(
+            qt_alert(
                 self,
                 _("Missing fields"),
                 _("Model name, model file path, and at least one category are required."),
+                kind="warning",
             )
             return
         model_details: dict[str, Any] = {
@@ -308,10 +309,11 @@ class _InstalledModelEditDialog(SmartDialog):
         if raw_shape:
             parsed_shape = ImageClassifierModelConfig.parse_input_shape(raw_shape)
             if parsed_shape is None:
-                QMessageBox.warning(
+                qt_alert(
                     self,
                     _("Invalid input shape"),
                     _("Use two positive integers, for example 224, 224 or 384x384."),
+                    kind="warning",
                 )
                 return
             model_details["input_shape"] = [parsed_shape[0], parsed_shape[1]]
@@ -340,7 +342,7 @@ class _InstalledModelEditDialog(SmartDialog):
         try:
             normalized = ImageClassifierModelConfig.from_dict(model_details, logger=logger)
         except Exception as e:
-            QMessageBox.warning(self, _("Invalid model configuration"), str(e))
+            qt_alert(self, _("Invalid model configuration"), str(e), kind="warning")
             return
         self._save_callback(normalized.to_dict(), self._initial_name)
         self.close()

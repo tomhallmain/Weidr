@@ -15,13 +15,14 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFrame, QHBoxLayout,
-    QLabel, QLineEdit, QMessageBox, QPushButton, QScrollArea,
+    QLabel, QLineEdit, QPushButton, QScrollArea,
     QVBoxLayout, QWidget,
 )
 
 from compare.compare_history import CompareHistory
 from compare.compare_manager import CompareManager, CombinationLogic
 from lib.multi_display_qt import SmartDialog
+from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle
 from ui.compare.add_instance_dialog_qt import AddInstanceDialog, MAX_INSTANCES
 from ui.compare.filter_builder_panel_qt import FilterBuilderPanel
@@ -669,17 +670,17 @@ class CompareSettingsWindow(SmartDialog):
     # Reset to default
     # ------------------------------------------------------------------
     def _on_reset_to_default(self) -> None:
-        reply = QMessageBox.question(
+        confirmed = qt_alert(
             self,
             _("Reset to Default"),
             _(
                 "Reset all compare settings to a single CLIP Embedding instance "
                 "with no filters?\n\nThis will clear all current instances and filters."
             ),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
+            kind="askyesno",
+            default_no=True,
         )
-        if reply != QMessageBox.StandardButton.Yes:
+        if not confirmed:
             return
         self._compare_manager.reset_to_default()
         self._filter_panel.set_filter(None)

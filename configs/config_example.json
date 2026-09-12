@@ -23,6 +23,7 @@
   "fill_canvas": false,
   "screenshot_directory": null,
   "save_screenshot_to_same_dir": true,
+  "preview_random_edits": true,
   "enable_peek_frame_detection": false,
   "peek_device": "auto",
   "peek_default_k": 4,

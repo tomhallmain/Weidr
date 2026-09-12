@@ -1,17 +1,23 @@
 """
-Fill-preview confirmation dialog for PySide6.
+Preview-and-confirm dialog for PySide6.
 
-Shows a candidate box / background-box fill already composited into the
-target image, letting the user reroll (regenerate the random fill and
-refresh the preview) before accepting or cancelling -- without a full
-settings window.
+Shows a candidate result already rendered to a file and lets the user reroll
+(regenerate it and refresh the preview) before accepting or cancelling --
+without a full settings window. Used for box / background-box fills and for
+the random image edits (modify / scramble), where every run produces something
+different and seeing one candidate before it is written is the point.
+
+Callers supply the title, the hint line, any extra buttons and any checkboxes;
+nothing here interprets them, so this module stays free of app domain
+knowledge like the rest of lib/.
 """
 
-from typing import Callable, Optional
+from typing import Callable, Optional, Sequence, Tuple
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication, QKeySequence, QPixmap, QShortcut
 from PySide6.QtWidgets import (
+    QCheckBox,
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -25,26 +31,31 @@ from utils.translations import _
 _MAX_PREVIEW_FRACTION = 0.7  # fraction of available screen size used as a cap
 
 
-def show_fill_preview_dialog(
+def show_preview_confirm_dialog(
     master: Optional[QWidget],
     preview_path: str,
     on_reroll: Callable[[], None],
-    on_solid: Callable[[tuple], None],
+    *,
+    title: str,
+    hint: str,
+    extra_buttons: Sequence[Tuple[str, Callable[[], None]]] = (),
+    toggles: Sequence[Tuple[str, bool, Callable[[bool], None]]] = (),
 ) -> bool:
     """
-    Show a preview of the fill about to be painted into an image, with the
-    option to reroll (regenerate the fill and refresh the preview), switch to
-    a plain black or white fill, or accept/cancel.
+    Show *preview_path* -- which must already exist and hold the candidate
+    result -- with the option to reroll, accept or cancel.
 
-    *preview_path* must already exist and contain the candidate result.
-    *on_reroll* regenerates the fill and rewrites *preview_path* in place;
-    *on_solid* does the same but with a plain ``(r, g, b)`` color instead of a
-    fresh random fill. This function reloads *preview_path* after either.
+    *on_reroll* regenerates the candidate and rewrites *preview_path* in place.
+    *extra_buttons* are ``(label, callback)`` pairs placed before Cancel/Accept;
+    *toggles* are ``(label, initial_value, on_toggled)`` triples shown as
+    checkboxes above the button row. The preview is reloaded after a reroll, an
+    extra button or a toggle: none of them can change an already-rendered
+    result in place, so each one re-renders.
 
     Returns True if the user accepted, False if they cancelled.
     """
     dialog = QDialog(master)
-    dialog.setWindowTitle(_("Preview Fill"))
+    dialog.setWindowTitle(title)
     dialog.setModal(True)
 
     layout = QVBoxLayout(dialog)
@@ -55,7 +66,7 @@ def show_fill_preview_dialog(
     image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
     layout.addWidget(image_label)
 
-    hint_label = QLabel(_("Enter to accept, Escape to cancel, R to reroll a different fill"))
+    hint_label = QLabel(hint)
     hint_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
     layout.addWidget(hint_label)
 
@@ -86,14 +97,6 @@ def show_fill_preview_dialog(
         on_reroll()
         _load_preview()
 
-    def _handle_black() -> None:
-        on_solid((0, 0, 0))
-        _load_preview()
-
-    def _handle_white() -> None:
-        on_solid((255, 255, 255))
-        _load_preview()
-
     def _handle_accept() -> None:
         _accepted[0] = True
         dialog.accept()
@@ -102,6 +105,19 @@ def show_fill_preview_dialog(
         _accepted[0] = False
         dialog.reject()
 
+    for toggle_label, toggle_initial, on_toggled in toggles:
+        checkbox = QCheckBox(toggle_label)
+        checkbox.setChecked(bool(toggle_initial))
+
+        # callback bound as a default argument: the loop variable would
+        # otherwise be read at click time, when it holds the last toggle.
+        def _handle_toggled(checked: bool, callback=on_toggled) -> None:
+            callback(bool(checked))
+            _load_preview()
+
+        checkbox.toggled.connect(_handle_toggled)
+        layout.addWidget(checkbox)
+
     btn_layout = QHBoxLayout()
     btn_layout.addStretch()
 
@@ -109,13 +125,15 @@ def show_fill_preview_dialog(
     reroll_btn.clicked.connect(_handle_reroll)
     btn_layout.addWidget(reroll_btn)
 
-    black_btn = QPushButton(_("Black"))
-    black_btn.clicked.connect(_handle_black)
-    btn_layout.addWidget(black_btn)
+    for button_label, on_clicked in extra_buttons:
+        extra_btn = QPushButton(button_label)
 
-    white_btn = QPushButton(_("White"))
-    white_btn.clicked.connect(_handle_white)
-    btn_layout.addWidget(white_btn)
+        def _handle_extra(_checked=False, callback=on_clicked) -> None:
+            callback()
+            _load_preview()
+
+        extra_btn.clicked.connect(_handle_extra)
+        btn_layout.addWidget(extra_btn)
 
     cancel_btn = QPushButton(_("Cancel"))
     cancel_btn.clicked.connect(_handle_cancel)
@@ -136,3 +154,27 @@ def show_fill_preview_dialog(
     dialog.adjustSize()
     dialog.exec()
     return _accepted[0]
+
+
+def show_fill_preview_dialog(
+    master: Optional[QWidget],
+    preview_path: str,
+    on_reroll: Callable[[], None],
+    on_solid: Callable[[tuple], None],
+) -> bool:
+    """
+    The fill flavour of the dialog: adds plain black/white fills to the
+    reroll/accept/cancel set.
+
+    *on_solid* regenerates the fill with a plain ``(r, g, b)`` colour instead
+    of a fresh random one, rewriting *preview_path* the way *on_reroll* does.
+    """
+    return show_preview_confirm_dialog(
+        master, preview_path, on_reroll,
+        title=_("Preview Fill"),
+        hint=_("Enter to accept, Escape to cancel, R to reroll a different fill"),
+        extra_buttons=(
+            (_("Black"), lambda: on_solid((0, 0, 0))),
+            (_("White"), lambda: on_solid((255, 255, 255))),
+        ),
+    )

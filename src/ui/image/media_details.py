@@ -40,6 +40,7 @@ from image.video_ops import VideoOps
 from image.smart_crop import Cropper
 from lib.multi_display_qt import SmartWindow
 from ui.app_style import AppStyle
+from ui.image.edit_preview import preview_and_confirm_op, preview_enabled
 from ui.image.metadata_viewer_window_qt import MetadataViewerWindow
 from ui.image.ocr_text_window_qt import OCRTextWindow
 from ui.image.temp_media_window import TempMediaWindow
@@ -1002,6 +1003,22 @@ class MediaDetails(SmartWindow):
                     app_actions=self._app_actions,
                 )
 
+    def _run_random_edit(
+        self, source_path: str, op, *, suffix: str, title: str
+    ) -> Optional[str]:
+        """Run a random edit, previewing it first unless previews are off.
+
+        Returns the path written, or None when the user cancelled the preview
+        -- nothing is written in that case, so the caller returns too.
+        """
+        if not preview_enabled():
+            return op(source_path)
+        return preview_and_confirm_op(
+            self._parent_ref, self._app_actions, source_path,
+            lambda out_path: op(source_path, output_path=out_path),
+            suffix=suffix, title=title,
+        )
+
     # ── Image manipulation actions ────────────────────────────────
 
     def rotate_image(self, right: bool = False) -> None:
@@ -1056,7 +1073,19 @@ class MediaDetails(SmartWindow):
     def randomly_modify_image(
         image_path: str, app_actions, master=None
     ) -> None:
-        new_filepath = ImageOps.randomly_modify_image(image_path)
+        if preview_enabled():
+            new_filepath = preview_and_confirm_op(
+                master, app_actions, image_path,
+                lambda out_path: ImageOps.randomly_modify_image(
+                    image_path, output_path=out_path
+                ),
+                suffix=ImageOps.RANDOM_EDIT_SUFFIX,
+                title=_("Preview Random Modification"),
+            )
+            if new_filepath is None:
+                return
+        else:
+            new_filepath = ImageOps.randomly_modify_image(image_path)
         app_actions.refresh()
         if os.path.exists(new_filepath):
             FileAction.add_image_op_action(
@@ -1074,14 +1103,24 @@ class MediaDetails(SmartWindow):
 
     def scramble_image(self) -> None:
         source_path = self._editable_image_path()
-        new_filepath = ImageOps.scramble_image(source_path)
+        new_filepath = self._run_random_edit(
+            source_path, ImageOps.scramble_image,
+            suffix=ImageOps.SCRAMBLE_SUFFIX, title=_("Preview Scramble"),
+        )
+        if new_filepath is None:
+            return
         self._handle_action_result(
             new_filepath, _("Scrambled image"), op=ImageOps.scramble_image, source_path=source_path
         )
 
     def _scramble_image_and_mark(self) -> None:
         source_path = self._editable_image_path()
-        new_filepath = ImageOps.scramble_image(source_path)
+        new_filepath = self._run_random_edit(
+            source_path, ImageOps.scramble_image,
+            suffix=ImageOps.SCRAMBLE_SUFFIX, title=_("Preview Scramble"),
+        )
+        if new_filepath is None:
+            return
         self.close_windows()
         self._app_actions.refresh()
         if new_filepath and os.path.exists(new_filepath):
@@ -1095,7 +1134,12 @@ class MediaDetails(SmartWindow):
 
     def semi_scramble_image(self) -> None:
         source_path = self._editable_image_path()
-        new_filepath = ImageOps.semi_scramble_image(source_path)
+        new_filepath = self._run_random_edit(
+            source_path, ImageOps.semi_scramble_image,
+            suffix=ImageOps.SEMI_SCRAMBLE_SUFFIX, title=_("Preview Semi-Scramble"),
+        )
+        if new_filepath is None:
+            return
         self._handle_action_result(
             new_filepath, _("Semi-scrambled image"),
             op=ImageOps.semi_scramble_image, source_path=source_path,
@@ -1310,7 +1354,13 @@ class MediaDetails(SmartWindow):
 
     def _random_modification_and_mark(self) -> None:
         source_path = self._editable_image_path()
-        new_filepath = ImageOps.randomly_modify_image(source_path)
+        new_filepath = self._run_random_edit(
+            source_path, ImageOps.randomly_modify_image,
+            suffix=ImageOps.RANDOM_EDIT_SUFFIX,
+            title=_("Preview Random Modification"),
+        )
+        if new_filepath is None:
+            return
         self.close_windows()
         self._app_actions.refresh()
         if new_filepath and os.path.exists(new_filepath):

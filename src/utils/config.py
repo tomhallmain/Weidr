@@ -59,6 +59,8 @@ class Config:
         "clear_marks_with_errors_after_move":  bool,
         "move_marks_overwrite_existing_file":  bool,
         "file_actions_history_max":            int,
+        # Image edits
+        "preview_random_edits":                bool,
         # File check
         "file_check_interval_seconds":         int,
         "file_check_skip_if_n_files_over":     int,
@@ -143,6 +145,9 @@ class Config:
         self.fill_canvas = False
         self.screenshot_directory = None
         self.save_screenshot_to_same_dir = True
+        # Preview a random edit (modify / scramble) and let the user reroll it
+        # before anything is written; False runs the edit and writes at once.
+        self.preview_random_edits = True
         # PEEK frame detection (optional dependency -- see image/peek_frame_selector.py).
         self.enable_peek_frame_detection = False
         self.peek_device = "auto"
@@ -347,6 +352,7 @@ class Config:
                             "escape_backslash_filepaths",
                             "fill_canvas",
                             "save_screenshot_to_same_dir",
+                            "preview_random_edits",
                             "enable_peek_frame_detection",
                             "peek_save_to_same_dir",
                             "enable_images",

@@ -24,6 +24,15 @@ ensure_pillow_plugins_registered()
 class ImageOps:
     COLORS = ["red", "green", "blue", "yellow", "purple", "orange", "black", "white", "gray", "pink", "brown"]
     TEXTURE_DRAW_TYPES = ["perlin", "gaussian", "gradient", "cellular"]
+
+    # Output suffixes for the random edits. Shared with the UI's preview flow,
+    # which writes an accepted candidate to the same destination the op picks
+    # for itself. Each op resolves them through Utils.unique_sibling_path, so
+    # running one twice against the same source never overwrites the first
+    # result -- as the box / background-box edits already behaved.
+    RANDOM_EDIT_SUFFIX = "_edit"
+    SCRAMBLE_SUFFIX = "_scramble"
+    SEMI_SCRAMBLE_SUFFIX = "_semi_scramble"
     
     # Class-level cache for GEGL validation
     _gegl_validation_cache = None
@@ -1147,7 +1156,12 @@ class ImageOps:
         cv2.imwrite(new_filepath, result)
 
     @staticmethod
-    def randomly_modify_image(image_path):
+    def randomly_modify_image(image_path, output_path=None):
+        """Apply one to four random modifications and save the result.
+
+        Writes to *output_path* when given, else to a ``_edit`` sibling.
+        Returns the output path.
+        """
         try:
             im = PIL.Image.open(image_path)
         except Exception as e:
@@ -1210,7 +1224,10 @@ class ImageOps:
                     im.close()
                     im = temp_im
 
-            new_filepath = ImageOps.new_filepath(image_path, append_part="_edit")
+            from utils.utils import Utils
+            new_filepath = output_path or Utils.unique_sibling_path(
+                image_path, ImageOps.RANDOM_EDIT_SUFFIX
+            )
             im.save(new_filepath)
             im.close()
             return new_filepath
@@ -1359,7 +1376,8 @@ class ImageOps:
                 elif strategy == "strip_shuffle":
                     arr = ImageOps._strip_shuffle_array(arr)
 
-            dest = output_path or ImageOps.new_filepath(image_path, append_part="_scramble")
+            from utils.utils import Utils
+            dest = output_path or Utils.unique_sibling_path(image_path, ImageOps.SCRAMBLE_SUFFIX)
             result_img = PIL.Image.fromarray(arr)
             save_kwargs: dict = {}
             if os.path.splitext(dest)[1].lower() in (".jpg", ".jpeg"):
@@ -1497,8 +1515,9 @@ class ImageOps:
                         arr, y0, x0, y1, x1, random.randint(min_blk, max_blk)
                     )
 
-            dest = output_path or ImageOps.new_filepath(
-                image_path, append_part="_semi_scramble"
+            from utils.utils import Utils
+            dest = output_path or Utils.unique_sibling_path(
+                image_path, ImageOps.SEMI_SCRAMBLE_SUFFIX
             )
             result_img = PIL.Image.fromarray(arr)
             save_kwargs: dict = {}

@@ -93,6 +93,8 @@ class Config:
         "dynamic_media_max_sample_pages":      int,
         "dynamic_media_max_sample_duration_seconds": int,
         "dynamic_media_max_sample_size_mb":    int,
+        # Directory load
+        "enable_file_metadata_cache":          bool,
         # Large images
         "large_image_dim_threshold_px":        int,
         "large_image_preview_overscan":        float,
@@ -200,6 +202,7 @@ class Config:
         self.slideshow_dynamic_pdf_max_pages = -1
         self.file_check_interval_seconds = 10
         self.file_check_skip_if_n_files_over = 5000
+        self.enable_file_metadata_cache = False
         self.large_image_dim_threshold_px = 5000
         self.large_image_preview_overscan = 1.5
         self.large_image_preview_max_dim = 4096
@@ -414,6 +417,7 @@ class Config:
                             "enable_prevalidations",
                             "prevalidate_on_direct_media_display",
                             "show_negative_prompt",
+                            "enable_file_metadata_cache",
                             "large_image_enable_hq_idle_downscale",
                             "large_image_enable_full_res_promotion",
                             "media_volume_use_eq")

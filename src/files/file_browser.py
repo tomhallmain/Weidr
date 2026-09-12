@@ -6,7 +6,7 @@ from random import choice, randint, shuffle
 import re
 import threading
 from time import sleep
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import uuid
 
 from files.sortable_file import SortableFile
@@ -81,6 +81,12 @@ class FileBrowser:
         self._files_cache = {}
         self._files = []
         self.filepaths = []
+        # DirEntry per path from the most recent synchronous scan, so
+        # SortableFile can take stat data from the enumeration that already
+        # produced it. Only populated while _get_sortable_files is driving the
+        # scan, and dropped as soon as it has consumed them.
+        self._scan_dir_entries: Dict[str, os.DirEntry] = {}
+        self._capture_scan_entries = False
         self.sort_by = sort_by
         self.sort = Sort.ASC
         self.file_cursor = -1
@@ -815,14 +821,22 @@ class FileBrowser:
             return self._files
 
         files = []
-        self._gather_files(files)
+        self._scan_dir_entries = {}
+        self._capture_scan_entries = True
+        try:
+            self._gather_files(files)
+        finally:
+            self._capture_scan_entries = False
 
         # NOTE using a cache may result in incorrect sorting on refresh if files were renamed to the same as a previous file
         def cache_fileinfo(f):
-            sortable_file = SortableFile(f)
+            sortable_file = SortableFile(f, dir_entry=self._scan_dir_entries.get(f))
             self._files_cache[f] = sortable_file
             return sortable_file
-        self._files = [self._files_cache[f] if f in self._files_cache else cache_fileinfo(f) for f in files]
+        try:
+            self._files = [self._files_cache[f] if f in self._files_cache else cache_fileinfo(f) for f in files]
+        finally:
+            self._scan_dir_entries = {}
         return self._files
 
     def get_files(self) -> List[str]:
@@ -910,7 +924,7 @@ class FileBrowser:
         Until loading completes, "first/last" reflects that subset only.
         """
         allowed_extensions = set(config.file_types)
-        batch: List[str] = []
+        batch: List[Tuple[str, Optional[os.DirEntry]]] = []
         to_scan = [self.directory]
         seen_paths = set(self.filepaths)
         # The seed path was inserted verbatim and may differ in string form
@@ -938,7 +952,7 @@ class FileBrowser:
                                         and entry.name == seed_basename
                                         and os.path.normcase(os.path.normpath(entry.path)) == norm_seed):
                                     continue
-                                batch.append(entry.path)
+                                batch.append((entry.path, entry))
                                 seen_paths.add(entry.path)
                                 self._incremental_files_discovered += 1
                                 if len(batch) >= self._incremental_batch_size:
@@ -953,14 +967,14 @@ class FileBrowser:
             self._merge_incremental_batch(batch)
         self.is_incremental_loading = False
 
-    def _merge_incremental_batch(self, batch: List[str]) -> None:
+    def _merge_incremental_batch(self, batch: List[Tuple[str, Optional[os.DirEntry]]]) -> None:
         if len(batch) == 0:
             return
-        for path in batch:
+        for path, dir_entry in batch:
             if path in self._files_cache:
                 sf = self._files_cache[path]
             else:
-                sf = SortableFile(path)
+                sf = SortableFile(path, dir_entry=dir_entry)
                 self._files_cache[path] = sf
             self._files.append(sf)
         self.filepaths = self.get_sorted_files(list(self._files))
@@ -1130,6 +1144,8 @@ class FileBrowser:
                                     ext = os.path.splitext(entry.name)[1].lower()
                                     if ext in allowed_extensions:
                                         files.append(entry.path)
+                                        if self._capture_scan_entries:
+                                            self._scan_dir_entries[entry.path] = entry
                     except PermissionError:
                         logger.warning(f"Permission denied: {current_dir}")
 

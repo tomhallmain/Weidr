@@ -54,7 +54,9 @@ class CacheController:
             from compare.embedding_seed import EmbeddingSeed
             from files.auto_sort_confirmation import AutoSortConfirmation
             from files.file_interceptor_rules_manager import FileInterceptorRulesManager
+            from files.file_metadata_cache import file_metadata_cache
 
+            file_metadata_cache.load()
             MarkedFiles.load_target_dirs()
             RecentDirectories.load_recent_directories()
             FileAction.load_actions()
@@ -163,6 +165,11 @@ class CacheController:
         from compare.classifier_actions_manager import ClassifierActionsManager
 
         ClassifierActionsManager.store_prevalidation_file_cache_to_disk()
+        # Must precede the has_changes check: this is what marks the info cache
+        # changed when only file metadata was collected this interval.
+        from files.file_metadata_cache import file_metadata_cache
+
+        file_metadata_cache.store()
         if app_info_cache.has_changes:
             logger.info("Storing app info cache")
             app_info_cache.store()

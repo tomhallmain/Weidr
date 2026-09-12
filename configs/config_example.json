@@ -52,6 +52,7 @@
   "slideshow_dynamic_pdf_max_pages": -1,
   "file_check_interval_seconds": 10,
   "file_check_skip_if_n_files_over": 5000,
+  "enable_file_metadata_cache": false,
   "large_image_dim_threshold_px": 5000,
   "large_image_preview_overscan": 1.5,
   "large_image_preview_max_dim": 4096,

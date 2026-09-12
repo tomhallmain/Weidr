@@ -29,6 +29,7 @@ from compare.compare_args import CompareArgs
 from compare.compare_manager import CompareManager
 from extensions.mcp_server import MCPServerExtension
 from files.file_browser import FileBrowser
+from files.file_metadata_cache import file_metadata_cache
 from files.image_generation import request_image_generation
 from files.marked_files import MarkedFiles
 from files.skip_aware_navigation import advance_past_skipped
@@ -659,6 +660,9 @@ def main(argv=None) -> int:
     if not os.path.isdir(args.base_dir):
         parser.error(f"not a directory: {args.base_dir}")
 
+    # Before the session builds a FileBrowser, which starts constructing
+    # SortableFile objects against this cache immediately.
+    file_metadata_cache.load()
     load_persisted_classifier_state()
     session = HeadlessMCPSession(args.base_dir)
     server = MCPServerExtension(
@@ -671,7 +675,11 @@ def main(argv=None) -> int:
         return 1
 
     logger.info("Serving MCP for %s", args.base_dir)
-    started = server.start()
+    try:
+        started = server.start()
+    finally:
+        file_metadata_cache.store()
+        app_info_cache.store()
     return 0 if started else 1
 
 

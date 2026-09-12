@@ -1,5 +1,6 @@
 """Unit tests for files/file_browser.py — gather, extensions, recursive, sort."""
 
+from datetime import datetime
 import json
 import os
 import time
@@ -8,6 +9,7 @@ import pytest
 from PIL import Image
 
 from files.file_browser import FileBrowser
+from files.sortable_file import SortableFile
 from utils.config import config
 from utils.constants import Sort, SortBy
 from utils.utils import Utils
@@ -505,3 +507,165 @@ class TestExplicitFileList:
         sorted_files = fb._get_sorted_files_for_sort_type(fb.get_files(), SortBy.CREATION_TIME)
 
         assert {sf.full_file_path for sf in sorted_files} == {a, b}
+
+
+def _png_entries(directory):
+    with os.scandir(directory) as it:
+        return [e for e in it if e.is_file() and e.name.endswith(".png")]
+
+
+class TestScanStatReuse:
+    """The scan already holds a DirEntry per file, so SortableFile takes its
+    stat data from there rather than looking the same path up again.
+
+    Windows fills a DirEntry from the directory enumeration, so this drops the
+    per-file stat syscall outright; elsewhere it is the same call either way.
+    What is asserted here holds on both: the DirEntry is handed over, and the
+    metadata that comes back matches a plain stat.
+    """
+
+    @staticmethod
+    def _record_constructions(monkeypatch):
+        """Replace file_browser's SortableFile with a recording wrapper.
+
+        file_browser binds the name at module level, so patching it there
+        intercepts every construction the browser makes.
+        """
+        import files.file_browser as fb_mod
+
+        real = fb_mod.SortableFile
+        calls = []
+
+        def _recorder(path, dir_entry=None):
+            calls.append((path, dir_entry))
+            return real(path, dir_entry=dir_entry)
+
+        monkeypatch.setattr(fb_mod, "SortableFile", _recorder)
+        return calls
+
+    def test_a_scanned_file_carries_its_dir_entry(self, browser_tree, monkeypatch):
+        calls = self._record_constructions(monkeypatch)
+
+        fb = FileBrowser(browser_tree, recursive=False)
+        fb.set_directory(browser_tree)
+
+        assert calls, "no SortableFile was constructed"
+        for path, dir_entry in calls:
+            assert dir_entry is not None, f"no DirEntry supplied for {path}"
+            assert dir_entry.path == path
+
+    def test_metadata_matches_a_plain_stat(self, browser_tree):
+        fb = FileBrowser(browser_tree, recursive=False)
+        fb.set_directory(browser_tree)
+
+        assert fb._files
+        for sortable in fb._files:
+            stat_obj = os.stat(sortable.full_file_path)
+            assert sortable.size == stat_obj.st_size
+            assert sortable.mtime.timestamp() == pytest.approx(stat_obj.st_mtime)
+
+    def test_the_entries_are_dropped_after_the_load(self, browser_tree):
+        """Holding a DirEntry per file past the load would keep the whole
+        directory listing alive for as long as the browser."""
+        fb = FileBrowser(browser_tree, recursive=True)
+        fb.set_directory(browser_tree)
+
+        assert fb._scan_dir_entries == {}
+        assert fb._capture_scan_entries is False
+
+    def test_a_cached_file_is_not_rebuilt_on_refresh(self, browser_tree, monkeypatch):
+        """The within-session cache still short-circuits construction, so a
+        file already loaded is not stat'd again by either route."""
+        fb = FileBrowser(browser_tree, recursive=False)
+        fb.set_directory(browser_tree)
+
+        calls = self._record_constructions(monkeypatch)
+        fb.refresh()
+
+        assert calls == []
+
+    def test_a_filtered_load_still_works_without_dir_entries(
+        self, browser_tree, monkeypatch
+    ):
+        """The filter branches resolve paths by glob, which yields no DirEntry;
+        those constructions fall back to a plain stat."""
+        calls = self._record_constructions(monkeypatch)
+
+        fb = FileBrowser(browser_tree, recursive=False)
+        fb.set_filter("aaa")
+        fb.refresh()
+
+        assert [os.path.basename(p) for p in fb.get_files()] == ["aaa.png"]
+        assert calls and all(dir_entry is None for _path, dir_entry in calls)
+        assert fb._files[0].size == os.stat(fb._files[0].full_file_path).st_size
+
+
+class TestIncrementalBatchStatReuse:
+    def test_a_batch_carries_the_dir_entry_for_each_path(self, browser_tree):
+        fb = FileBrowser(browser_tree, recursive=False)
+        fb._files = []
+        fb._files_cache = {}
+        entries = _png_entries(browser_tree)
+
+        fb._merge_incremental_batch([(e.path, e) for e in entries])
+
+        assert len(fb._files) == len(entries)
+        for sortable in fb._files:
+            assert sortable.size == os.stat(sortable.full_file_path).st_size
+
+    def test_a_path_already_cached_is_reused(self, browser_tree):
+        fb = FileBrowser(browser_tree, recursive=False)
+        fb._files = []
+        fb._files_cache = {}
+        entry = next(e for e in _png_entries(browser_tree) if e.name == "aaa.png")
+
+        fb._merge_incremental_batch([(entry.path, entry)])
+        first = fb._files[0]
+        fb._files = []
+        fb._merge_incremental_batch([(entry.path, entry)])
+
+        assert fb._files[0] is first
+
+
+class TestSortableFileDirEntry:
+    def test_a_dir_entry_and_a_bare_path_agree(self, browser_tree):
+        entry = next(e for e in _png_entries(browser_tree) if e.name == "aaa.png")
+
+        from_entry = SortableFile(entry.path, dir_entry=entry)
+        from_path = SortableFile(entry.path)
+
+        assert from_entry.size == from_path.size
+        assert from_entry.mtime == from_path.mtime
+        assert from_entry.ctime == from_path.ctime
+        assert from_entry == from_path
+
+    def test_a_dir_entry_whose_stat_fails_falls_back_to_zero(self, browser_tree):
+        """A file deleted between enumeration and construction must not abort
+        the whole load."""
+
+        class _BrokenEntry:
+            def __init__(self, path):
+                self.path = path
+
+            def stat(self):
+                raise OSError("gone")
+
+        target = os.path.join(browser_tree, "aaa.png")
+        sortable = SortableFile(target, dir_entry=_BrokenEntry(target))
+
+        assert sortable.size == 0
+        assert sortable.mtime == datetime.fromtimestamp(0)
+        assert sortable.ctime == datetime.fromtimestamp(0)
+
+    def test_every_attribute_the_bare_path_sets_is_still_set(self, browser_tree):
+        """suffix in particular is consulted lazily by get_suffix()."""
+        entry = next(e for e in _png_entries(browser_tree) if e.name == "aaa.png")
+
+        sortable = SortableFile(entry.path, dir_entry=entry)
+
+        assert sortable.suffix is None
+        assert sortable.get_suffix() == ""
+        assert sortable.basename == "aaa.png"
+        assert sortable.extension == ".png"
+        assert sortable.related_image_path is None
+        assert sortable.tags == []

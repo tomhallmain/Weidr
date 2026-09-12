@@ -25,5 +25,13 @@ class ImageEditConfiguration:
         # Texture-based drawing configuration
         self.texture_draw_probability = 0.6  # Probability of using texture-based drawing vs solid colors
 
+        # Fill palette matching: draw fill colours from the source image's own
+        # chromatic profile instead of at random. The preview dialog can
+        # override the switch for a session without persisting it.
+        self.fill_palette_match_enabled = False
+        self.fill_palette_mode = "sampled"  # sampled | complementary | analogous
+        self.fill_palette_strength = 1.0  # 0 = fully random, 1 = fully on-palette
+        self.fill_palette_color_quantize_bits = 5
+
     def set_from_dict(self, config: dict):
         self.__dict__.update(config)

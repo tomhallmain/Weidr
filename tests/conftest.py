@@ -236,6 +236,15 @@ def reset_app_globals():
         except Exception:
             pass
 
+        # FillPalette — session override of the fill-matching switch; it is
+        # deliberately process-wide and not persisted, so only a reset here
+        # keeps one test's toggle out of the next one.
+        try:
+            from image.fill_palette import FillPalette
+            FillPalette.reset_session_match_enabled()
+        except Exception:
+            pass
+
         # FrameCache — clear in-memory dicts only; leave temp dir intact
         try:
             from image.frame_cache import FrameCache

@@ -17,6 +17,7 @@ from extensions.gimp.gimp_gegl_client import GimpGeglClient
 
 logger = get_logger("image_ops")
 
+from image.fill_palette import FillPalette
 from utils.pillow_plugins import ensure_pillow_plugins_registered
 ensure_pillow_plugins_registered()
 
@@ -97,20 +98,29 @@ class ImageOps:
             return ""
 
     @staticmethod
-    def generate_box_fill_image(width: int, height: int, use_texture: bool | None = None):
+    def generate_box_fill_image(width: int, height: int, use_texture: bool | None = None, palette=None):
         """Return an opaque RGB fill for a box overlay: solid random color or a
         random noise pattern, chosen the same way as the random-draw texture feature.
 
         *use_texture* forces the branch (True: pattern, False: solid color); when
         None (default) it is chosen randomly via ``config.image_edit_configuration.texture_draw_probability``.
+
+        *palette*, when given, supplies the colour instead of a random one, so
+        the fill belongs with the image it lands in (image/fill_palette.py).
         """
         if use_texture is None:
             use_texture = random.random() < config.image_edit_configuration.texture_draw_probability
         if use_texture:
             texture_type = random.choice(ImageOps.TEXTURE_DRAW_TYPES)
-            texture = ImageOps.generate_noise_texture(width, height, texture_type, use_random_color=True)
+            if palette is not None:
+                texture = ImageOps.generate_noise_texture(
+                    width, height, texture_type, background_color=palette.color()
+                )
+            else:
+                texture = ImageOps.generate_noise_texture(width, height, texture_type, use_random_color=True)
             return PIL.Image.fromarray(texture)
-        return PIL.Image.new("RGB", (width, height), ImageOps.get_random_color())
+        fill_color = palette.color() if palette is not None else ImageOps.get_random_color()
+        return PIL.Image.new("RGB", (width, height), fill_color)
 
     @staticmethod
     def draw_box_at_rect(image_path: str, left: int, upper: int, right: int, lower: int,
@@ -132,6 +142,8 @@ class ImageOps:
             from utils.utils import Utils
             new_path = output_path if output_path else Utils.unique_sibling_path(image_path, "_box")
             width, height = right - left, lower - upper
+            # Once for the file, not once per frame.
+            palette = FillPalette.for_image_if_enabled(image_path)
             with Image.open(image_path) as img:
                 n_frames = getattr(img, "n_frames", 1)
                 if n_frames > 1:
@@ -139,7 +151,7 @@ class ImageOps:
                     frames, durations = [], []
                     for frame in ImageSequence.Iterator(img):
                         frame_rgba = frame.convert("RGBA")
-                        frame_fill = fill_image if fill_image is not None else ImageOps.generate_box_fill_image(width, height)
+                        frame_fill = fill_image if fill_image is not None else ImageOps.generate_box_fill_image(width, height, palette=palette)
                         frame_rgba.paste(frame_fill, (left, upper))
                         frames.append(frame_rgba)
                         durations.append(frame.info.get("duration", 100))
@@ -154,7 +166,11 @@ class ImageOps:
                     )
                 else:
                     out = img.convert("RGB")
-                    out.paste(fill_image if fill_image is not None else ImageOps.generate_box_fill_image(width, height), (left, upper))
+                    out.paste(
+                        fill_image if fill_image is not None
+                        else ImageOps.generate_box_fill_image(width, height, palette=palette),
+                        (left, upper),
+                    )
                     out.save(new_path)
             return new_path
         except Exception as e:
@@ -179,6 +195,8 @@ class ImageOps:
             from PIL import ImageSequence
             from utils.utils import Utils
             new_path = output_path if output_path else Utils.unique_sibling_path(image_path, "_bgbox")
+            # Once for the file, not once per frame.
+            palette = FillPalette.for_image_if_enabled(image_path)
             with Image.open(image_path) as img:
                 n_frames = getattr(img, "n_frames", 1)
                 if n_frames > 1:
@@ -187,7 +205,7 @@ class ImageOps:
                     for frame in ImageSequence.Iterator(img):
                         frame_rgba = frame.convert("RGBA")
                         w, h = frame_rgba.size
-                        frame_fill = fill_image if fill_image is not None else ImageOps.generate_box_fill_image(w, h)
+                        frame_fill = fill_image if fill_image is not None else ImageOps.generate_box_fill_image(w, h, palette=palette)
                         out = frame_fill.convert("RGBA")
                         out.paste(frame_rgba.crop((left, upper, right, lower)), (left, upper))
                         frames.append(out)
@@ -207,7 +225,10 @@ class ImageOps:
                     # .copy() -- out is pasted into below, and fill_image may be a
                     # caller-owned object (e.g. reused for a later "accept" call
                     # after this renders a preview); never mutate the caller's copy.
-                    out = (fill_image if fill_image is not None else ImageOps.generate_box_fill_image(w, h)).copy()
+                    out = (
+                        fill_image if fill_image is not None
+                        else ImageOps.generate_box_fill_image(w, h, palette=palette)
+                    ).copy()
                     out.paste(src.crop((left, upper, right, lower)), (left, upper))
                     out.save(new_path)
             return new_path
@@ -296,6 +317,8 @@ class ImageOps:
             from PIL import ImageSequence
             from utils.utils import Utils
             new_path = output_path if output_path else Utils.unique_sibling_path(image_path, "_box")
+            # Once for the file, not once per frame.
+            palette = FillPalette.for_image_if_enabled(image_path)
             with Image.open(image_path) as img:
                 n_frames = getattr(img, "n_frames", 1)
                 if n_frames > 1:
@@ -304,7 +327,7 @@ class ImageOps:
                     for frame in ImageSequence.Iterator(img):
                         frame_rgba = frame.convert("RGBA")
                         mask = ImageOps._polygon_mask(frame_rgba.size, points)
-                        frame_fill = fill_image if fill_image is not None else ImageOps.generate_box_fill_image(*frame_rgba.size)
+                        frame_fill = fill_image if fill_image is not None else ImageOps.generate_box_fill_image(*frame_rgba.size, palette=palette)
                         fill = frame_fill.convert("RGBA")
                         frames.append(Image.composite(fill, frame_rgba, mask))
                         durations.append(frame.info.get("duration", 100))
@@ -320,7 +343,7 @@ class ImageOps:
                 else:
                     src = img.convert("RGB")
                     mask = ImageOps._polygon_mask(src.size, points)
-                    fill = fill_image if fill_image is not None else ImageOps.generate_box_fill_image(*src.size)
+                    fill = fill_image if fill_image is not None else ImageOps.generate_box_fill_image(*src.size, palette=palette)
                     Image.composite(fill, src, mask).save(new_path)
             return new_path
         except Exception as e:
@@ -347,6 +370,8 @@ class ImageOps:
             from PIL import ImageSequence
             from utils.utils import Utils
             new_path = output_path if output_path else Utils.unique_sibling_path(image_path, "_bgbox")
+            # Once for the file, not once per frame.
+            palette = FillPalette.for_image_if_enabled(image_path)
             with Image.open(image_path) as img:
                 n_frames = getattr(img, "n_frames", 1)
                 if n_frames > 1:
@@ -356,7 +381,7 @@ class ImageOps:
                         frame_rgba = frame.convert("RGBA")
                         mask = ImageOps._polygon_mask(frame_rgba.size, points)
                         inverted_mask = mask.point(lambda p: 255 - p)
-                        frame_fill = fill_image if fill_image is not None else ImageOps.generate_box_fill_image(*frame_rgba.size)
+                        frame_fill = fill_image if fill_image is not None else ImageOps.generate_box_fill_image(*frame_rgba.size, palette=palette)
                         fill = frame_fill.convert("RGBA")
                         frames.append(Image.composite(fill, frame_rgba, inverted_mask))
                         durations.append(frame.info.get("duration", 100))
@@ -373,7 +398,7 @@ class ImageOps:
                     src = img.convert("RGB")
                     mask = ImageOps._polygon_mask(src.size, points)
                     inverted_mask = mask.point(lambda p: 255 - p)
-                    fill = fill_image if fill_image is not None else ImageOps.generate_box_fill_image(*src.size)
+                    fill = fill_image if fill_image is not None else ImageOps.generate_box_fill_image(*src.size, palette=palette)
                     Image.composite(fill, src, inverted_mask).save(new_path)
             return new_path
         except Exception as e:
@@ -741,7 +766,7 @@ class ImageOps:
         return random.choice(texture_types)
 
     @staticmethod
-    def _rotate_image_partial(image, angle=90, center=None, scale=1.0, use_texture=True):
+    def _rotate_image_partial(image, angle=90, center=None, scale=1.0, use_texture=True, palette=None):
         # grab the dimensions of the image
         (h, w) = image.shape[:2]
         # if the center is None, initialize it as the center of the image
@@ -751,7 +776,12 @@ class ImageOps:
         if use_texture:
             # Create a background texture
             texture_type = ImageOps.get_random_texture_type()
-            background_texture = ImageOps.generate_noise_texture(w, h, texture_type, use_random_color=True)
+            if palette is not None:
+                background_texture = ImageOps.generate_noise_texture(
+                    w, h, texture_type, background_color=palette.color()
+                )
+            else:
+                background_texture = ImageOps.generate_noise_texture(w, h, texture_type, use_random_color=True)
             
             # Perform rotation with transparent border (we'll handle the background ourselves)
             M = cv2.getRotationMatrix2D(center, angle, scale)
@@ -1169,6 +1199,9 @@ class ImageOps:
             raise
         try:
             cfg = config.image_edit_configuration
+            # One palette for the whole run: every drawn shape, texture and
+            # rotation background then belongs with this image.
+            palette = FillPalette.for_image_if_enabled(image_path)
             # Each entry: (weight, stable_sort_index, name)
             candidates = [
                 (cfg.random_rotation_chance, 0, "rotate"),
@@ -1200,7 +1233,7 @@ class ImageOps:
                     cv2_image = ImageOps.pil_to_cv2(im)
                     angle_diff = int(random.random() * 55)
                     angle = angle_diff if random.random() > 0.5 else 360 - angle_diff
-                    cv2_image = ImageOps._rotate_image_partial(cv2_image, angle=angle)
+                    cv2_image = ImageOps._rotate_image_partial(cv2_image, angle=angle, palette=palette)
                     im.close()
                     im = ImageOps.cv2_to_pil(cv2_image)
                 elif name == "flip":
@@ -1218,7 +1251,7 @@ class ImageOps:
                     im.close()
                     im = temp_im
                 elif name == "draw":
-                    ImageOps._random_draw(im)
+                    ImageOps._random_draw(im, palette)
                 elif name == "crop":
                     temp_im = ImageOps._random_crop_and_upscale(im)
                     im.close()
@@ -1550,54 +1583,68 @@ class ImageOps:
             raise
 
     @staticmethod
-    def _random_draw(image):
+    def _random_draw(image, palette=None):
         draw = ImageDraw.Draw(image)
         for i in range(random.randint(1, 5)):
             # Decide whether to use texture-based drawing based on configuration
             use_texture = random.random() < config.image_edit_configuration.texture_draw_probability
-            
+
             if use_texture:
                 # Use texture-based drawing methods
                 choice = random.randint(0, 3)
                 if choice == 0:
-                    ImageOps._texture_arc(image, draw)
+                    ImageOps._texture_arc(image, draw, palette)
                 elif choice == 1:
-                    ImageOps._texture_line(image, draw)
+                    ImageOps._texture_line(image, draw, palette)
                 elif choice == 2:
-                    ImageOps._texture_chord(image, draw)
+                    ImageOps._texture_chord(image, draw, palette)
                 elif choice == 3:
-                    ImageOps._texture_shape(image, draw)
+                    ImageOps._texture_shape(image, draw, palette)
             else:
                 # Use traditional solid color drawing methods
                 choice = random.randint(0, 2)
                 if choice == 0:
-                    ImageOps._arc(image, draw)
+                    ImageOps._arc(image, draw, palette)
                 elif choice == 1:
-                    ImageOps._line(image, draw)
+                    ImageOps._line(image, draw, palette)
                 elif choice == 2:
-                    ImageOps._chord(image, draw)
+                    ImageOps._chord(image, draw, palette)
 
     @staticmethod
-    def _color():
+    def _color(palette=None):
+        if palette is not None:
+            return palette.color()
         return random.choice(ImageOps.COLORS)
+
+    @staticmethod
+    def _texture_patch(width, height, texture_type, palette=None):
+        """A texture patch for a drawn shape.
+
+        Without a palette the generator picks its own per-type default colour,
+        which is what this path has always done.
+        """
+        return ImageOps.generate_noise_texture(
+            width, height, texture_type,
+            background_color=(palette.color() if palette is not None else None),
+        )
 
     @staticmethod
     def _opacity():
         return random.uniform(0.5, 1.0)
 
     @staticmethod
-    def _line(image, image_draw):
+    def _line(image, image_draw, palette=None):
         if random.randint(0, 1) == 0:
             for i in range(0, 100, 20):
-                image_draw.line((i, 0) + image.size, width=random.randint(2, 20), fill=ImageOps._color())
+                image_draw.line((i, 0) + image.size, width=random.randint(2, 20), fill=ImageOps._color(palette))
         else:
             points = []
             for i in range(random.randint(2, 4)):
                 points.append((random.randint(0, image.size[0]), random.randint(0, image.size[1])))
-            image_draw.line(points, width=random.randint(2, 40), fill=ImageOps._color(), joint="curve")
+            image_draw.line(points, width=random.randint(2, 40), fill=ImageOps._color(palette), joint="curve")
 
     @staticmethod
-    def _arc(image, image_draw):
+    def _arc(image, image_draw, palette=None):
         for i in range(random.randint(1, 5)):
             start = random.randint(0, image.size[0])
             end = random.randint(start, image.size[0])            
@@ -1606,10 +1653,10 @@ class ImageOps:
             start1 = random.randint(0, image.size[1])
             end1 = random.randint(start1, image.size[1])
             bounds = (start0, start1, end0, end1)
-            image_draw.arc(bounds, start=start, end=end, fill=ImageOps._color(), width=random.randint(2, 40))
+            image_draw.arc(bounds, start=start, end=end, fill=ImageOps._color(palette), width=random.randint(2, 40))
 
     @staticmethod
-    def _chord(image, image_draw):
+    def _chord(image, image_draw, palette=None):
         for i in range(random.randint(1, 5)):
             start = random.randint(0, image.size[0])
             end = random.randint(start, image.size[0])            
@@ -1618,10 +1665,10 @@ class ImageOps:
             start1 = random.randint(0, image.size[1])
             end1 = random.randint(start1, image.size[1])
             bounds = (start0, start1, end0, end1)
-            image_draw.chord(bounds, start=start, end=end, fill=ImageOps._color(), outline=ImageOps._color(), width=random.randint(2, 40))
+            image_draw.chord(bounds, start=start, end=end, fill=ImageOps._color(palette), outline=ImageOps._color(palette), width=random.randint(2, 40))
 
     @staticmethod
-    def _texture_line(image, image_draw):
+    def _texture_line(image, image_draw, palette=None):
         """Draw lines with texture-based patterns instead of solid colors."""
         if random.randint(0, 1) == 0:
             # Parallel lines with texture variation
@@ -1629,7 +1676,7 @@ class ImageOps:
                 # Generate a small texture patch for this line segment
                 texture_type = random.choice(ImageOps.TEXTURE_DRAW_TYPES)
                 line_width = random.randint(2, 20)
-                texture_patch = ImageOps.generate_noise_texture(line_width * 2, line_width * 2, texture_type)
+                texture_patch = ImageOps._texture_patch(line_width * 2, line_width * 2, texture_type, palette)
                 
                 # Convert texture to PIL Image and resize
                 texture_img = PIL.Image.fromarray(texture_patch)
@@ -1652,7 +1699,7 @@ class ImageOps:
             
             line_width = random.randint(2, 40)
             texture_type = random.choice(ImageOps.TEXTURE_DRAW_TYPES)
-            texture_patch = ImageOps.generate_noise_texture(line_width * 3, line_width * 3, texture_type)
+            texture_patch = ImageOps._texture_patch(line_width * 3, line_width * 3, texture_type, palette)
             
             # Convert texture to PIL Image
             texture_img = PIL.Image.fromarray(texture_patch)
@@ -1669,7 +1716,7 @@ class ImageOps:
             texture_img.close()
 
     @staticmethod
-    def _texture_arc(image, image_draw):
+    def _texture_arc(image, image_draw, palette=None):
         """Draw arcs with texture-based patterns."""
         for i in range(random.randint(1, 5)):
             start = random.randint(0, image.size[0])
@@ -1682,7 +1729,7 @@ class ImageOps:
             
             arc_width = random.randint(2, 40)
             texture_type = random.choice(ImageOps.TEXTURE_DRAW_TYPES)
-            texture_patch = ImageOps.generate_noise_texture(arc_width * 2, arc_width * 2, texture_type)
+            texture_patch = ImageOps._texture_patch(arc_width * 2, arc_width * 2, texture_type, palette)
             
             # Convert texture to PIL Image
             texture_img = PIL.Image.fromarray(texture_patch)
@@ -1699,7 +1746,7 @@ class ImageOps:
             texture_img.close()
 
     @staticmethod
-    def _texture_chord(image, image_draw):
+    def _texture_chord(image, image_draw, palette=None):
         """Draw chords with texture-based patterns."""
         for i in range(random.randint(1, 5)):
             start = random.randint(0, image.size[0])
@@ -1712,7 +1759,7 @@ class ImageOps:
             
             chord_width = random.randint(2, 40)
             texture_type = random.choice(ImageOps.TEXTURE_DRAW_TYPES)
-            texture_patch = ImageOps.generate_noise_texture(chord_width * 2, chord_width * 2, texture_type)
+            texture_patch = ImageOps._texture_patch(chord_width * 2, chord_width * 2, texture_type, palette)
             
             # Convert texture to PIL Image
             texture_img = PIL.Image.fromarray(texture_patch)
@@ -1729,7 +1776,7 @@ class ImageOps:
             texture_img.close()
 
     @staticmethod
-    def _texture_shape(image, image_draw):
+    def _texture_shape(image, image_draw, palette=None):
         """Draw various shapes with texture-based patterns."""
         shape_type = random.choice(['rectangle', 'ellipse', 'polygon'])
         
@@ -1742,7 +1789,7 @@ class ImageOps:
             bounds = (x0, y0, x1, y1)
             
             texture_type = random.choice(ImageOps.TEXTURE_DRAW_TYPES)
-            texture_patch = ImageOps.generate_noise_texture(x1-x0, y1-y0, texture_type)
+            texture_patch = ImageOps._texture_patch(x1-x0, y1-y0, texture_type, palette)
             
             # Convert texture to PIL Image
             texture_img = PIL.Image.fromarray(texture_patch)
@@ -1767,7 +1814,7 @@ class ImageOps:
             bounds = (x0, y0, x1, y1)
             
             texture_type = random.choice(ImageOps.TEXTURE_DRAW_TYPES)
-            texture_patch = ImageOps.generate_noise_texture(x1-x0, y1-y0, texture_type)
+            texture_patch = ImageOps._texture_patch(x1-x0, y1-y0, texture_type, palette)
             
             # Convert texture to PIL Image
             texture_img = PIL.Image.fromarray(texture_patch)
@@ -1797,7 +1844,7 @@ class ImageOps:
             max_y = max(p[1] for p in points)
             
             texture_type = random.choice(ImageOps.TEXTURE_DRAW_TYPES)
-            texture_patch = ImageOps.generate_noise_texture(max_x-min_x, max_y-min_y, texture_type)
+            texture_patch = ImageOps._texture_patch(max_x-min_x, max_y-min_y, texture_type, palette)
             
             # Convert texture to PIL Image
             texture_img = PIL.Image.fromarray(texture_patch)

@@ -166,7 +166,7 @@ class TestPreviewAndConfirmFill:
         )
         monkeypatch.setattr(
             "lib.fill_preview_dialog_qt.show_fill_preview_dialog",
-            lambda master, preview_path, on_reroll, on_solid: True,
+            lambda master, preview_path, on_reroll, on_solid, **kwargs: True,
         )
         rendered = []
         result = launcher._preview_and_confirm_fill(
@@ -186,7 +186,7 @@ class TestPreviewAndConfirmFill:
         )
         monkeypatch.setattr(
             "lib.fill_preview_dialog_qt.show_fill_preview_dialog",
-            lambda master, preview_path, on_reroll, on_solid: False,
+            lambda master, preview_path, on_reroll, on_solid, **kwargs: False,
         )
         result = launcher._preview_and_confirm_fill(
             str(tmp_path / "source.png"), (10, 10), lambda fill, out_path: None,
@@ -201,7 +201,7 @@ class TestPreviewAndConfirmFill:
             MagicMock(side_effect=fills),
         )
 
-        def fake_dialog(master, preview_path, on_reroll, on_solid):
+        def fake_dialog(master, preview_path, on_reroll, on_solid, **kwargs):
             on_reroll()  # simulate one reroll click before accepting
             return True
 
@@ -224,7 +224,7 @@ class TestPreviewAndConfirmFill:
             MagicMock(return_value=object()),  # the initial random fill; not asserted on here
         )
 
-        def fake_dialog(master, preview_path, on_reroll, on_solid):
+        def fake_dialog(master, preview_path, on_reroll, on_solid, **kwargs):
             on_solid((0, 0, 0))  # simulate clicking "Black"
             return True
 
@@ -251,7 +251,7 @@ class TestPreviewAndConfirmFill:
         )
         captured_path = []
 
-        def fake_dialog(master, preview_path, on_reroll, on_solid):
+        def fake_dialog(master, preview_path, on_reroll, on_solid, **kwargs):
             captured_path.append(preview_path)
             with open(preview_path, "wb") as f:
                 f.write(b"x")
@@ -286,7 +286,7 @@ class TestRunStaticRectActionPreviewFill:
         )
         monkeypatch.setattr(
             "lib.fill_preview_dialog_qt.show_fill_preview_dialog",
-            lambda master, preview_path, on_reroll, on_solid: True,
+            lambda master, preview_path, on_reroll, on_solid, **kwargs: True,
         )
         media_path = str(tmp_path / "photo.png")
         open(media_path, "w").close()
@@ -326,7 +326,7 @@ class TestRunStaticRectActionPreviewFill:
     def test_cancel_does_not_save(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
             "lib.fill_preview_dialog_qt.show_fill_preview_dialog",
-            lambda master, preview_path, on_reroll, on_solid: False,
+            lambda master, preview_path, on_reroll, on_solid, **kwargs: False,
         )
         media_path = str(tmp_path / "photo.png")
         open(media_path, "w").close()
@@ -362,12 +362,12 @@ class TestRunStaticRectActionPreviewFill:
     def test_fill_covers_full_image_uses_full_image_size_for_background_box(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
             "lib.fill_preview_dialog_qt.show_fill_preview_dialog",
-            lambda master, preview_path, on_reroll, on_solid: True,
+            lambda master, preview_path, on_reroll, on_solid, **kwargs: True,
         )
         gen_calls = []
         monkeypatch.setattr(
             "image.image_ops.ImageOps.generate_box_fill_image",
-            lambda w, h, use_texture=None: gen_calls.append((w, h)) or object(),
+            lambda w, h, use_texture=None, palette=None: gen_calls.append((w, h)) or object(),
         )
         media_path = str(tmp_path / "photo.png")
         open(media_path, "w").close()
@@ -407,7 +407,7 @@ class TestRunStaticPolygonActionPreviewFill:
         )
         monkeypatch.setattr(
             "lib.fill_preview_dialog_qt.show_fill_preview_dialog",
-            lambda master, preview_path, on_reroll, on_solid: True,
+            lambda master, preview_path, on_reroll, on_solid, **kwargs: True,
         )
         media_path = str(tmp_path / "photo.png")
         open(media_path, "w").close()

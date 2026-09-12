@@ -73,7 +73,7 @@ class TestDrawBackgroundBoxStaticImage:
         Image.new("RGB", (50, 50), color=(0, 0, 0)).save(src)
         monkeypatch.setattr(
             ImageOps, "generate_box_fill_image",
-            staticmethod(lambda w, h, use_texture=None: Image.new("RGB", (w, h), (200, 100, 50))),
+            staticmethod(lambda w, h, use_texture=None, palette=None: Image.new("RGB", (w, h), (200, 100, 50))),
         )
         result = ImageOps.draw_background_box_at_rect(src, 10, 10, 30, 30)
         with Image.open(result) as out:

@@ -40,7 +40,7 @@ from image.video_ops import VideoOps
 from image.smart_crop import Cropper
 from lib.multi_display_qt import SmartWindow
 from ui.app_style import AppStyle
-from ui.image.edit_preview import preview_and_confirm_op, preview_enabled
+from ui.image.edit_preview import palette_toggle, preview_and_confirm_op, preview_enabled
 from ui.image.metadata_viewer_window_qt import MetadataViewerWindow
 from ui.image.ocr_text_window_qt import OCRTextWindow
 from ui.image.temp_media_window import TempMediaWindow
@@ -1004,7 +1004,7 @@ class MediaDetails(SmartWindow):
                 )
 
     def _run_random_edit(
-        self, source_path: str, op, *, suffix: str, title: str
+        self, source_path: str, op, *, suffix: str, title: str, toggles=()
     ) -> Optional[str]:
         """Run a random edit, previewing it first unless previews are off.
 
@@ -1016,7 +1016,7 @@ class MediaDetails(SmartWindow):
         return preview_and_confirm_op(
             self._parent_ref, self._app_actions, source_path,
             lambda out_path: op(source_path, output_path=out_path),
-            suffix=suffix, title=title,
+            suffix=suffix, title=title, toggles=toggles,
         )
 
     # ── Image manipulation actions ────────────────────────────────
@@ -1081,6 +1081,9 @@ class MediaDetails(SmartWindow):
                 ),
                 suffix=ImageOps.RANDOM_EDIT_SUFFIX,
                 title=_("Preview Random Modification"),
+                # Its drawn shapes and textures consume a fill palette; the
+                # scramble ops shuffle pixels and never pick a colour.
+                toggles=(palette_toggle(),),
             )
             if new_filepath is None:
                 return
@@ -1358,6 +1361,7 @@ class MediaDetails(SmartWindow):
             source_path, ImageOps.randomly_modify_image,
             suffix=ImageOps.RANDOM_EDIT_SUFFIX,
             title=_("Preview Random Modification"),
+            toggles=(palette_toggle(),),
         )
         if new_filepath is None:
             return

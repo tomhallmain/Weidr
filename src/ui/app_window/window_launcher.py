@@ -599,28 +599,44 @@ class WindowLauncher:
         """
         import tempfile
         from PIL import Image
+        from image.fill_palette import FillPalette
         from image.image_ops import ImageOps
         from lib.fill_preview_dialog_qt import show_fill_preview_dialog
 
         ext = os.path.splitext(source_path)[1] or ".png"
         preview_path = os.path.join(tempfile.gettempdir(), "weidr_fill_preview" + ext)
 
-        fill_holder = [ImageOps.generate_box_fill_image(*fill_size)]
+        # Built once per toggle state rather than per reroll: reading it means
+        # decoding the source, and rerolling is the one thing done repeatedly.
+        palette_holder = [FillPalette.for_image_if_enabled(source_path)]
+        fill_holder = [ImageOps.generate_box_fill_image(*fill_size, palette=palette_holder[0])]
 
         def _render():
             render_fn(fill_holder[0], preview_path)
 
         def _reroll():
-            fill_holder[0] = ImageOps.generate_box_fill_image(*fill_size)
+            fill_holder[0] = ImageOps.generate_box_fill_image(*fill_size, palette=palette_holder[0])
             _render()
 
         def _set_solid(color: tuple):
             fill_holder[0] = Image.new("RGB", fill_size, color)
             _render()
 
+        def _on_palette_toggled(checked: bool):
+            FillPalette.set_session_match_enabled(checked)
+            palette_holder[0] = FillPalette.for_image_if_enabled(source_path)
+            # A rendered fill cannot be recoloured in place, so show a new one.
+            _reroll()
+
+        palette_toggle = (
+            _("Match image palette"), FillPalette.match_enabled(), _on_palette_toggled,
+        )
+
         _render()
         try:
-            accepted = show_fill_preview_dialog(self._app, preview_path, _reroll, _set_solid)
+            accepted = show_fill_preview_dialog(
+                self._app, preview_path, _reroll, _set_solid, toggles=(palette_toggle,)
+            )
         finally:
             try:
                 os.remove(preview_path)

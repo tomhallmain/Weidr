@@ -161,6 +161,7 @@ def show_fill_preview_dialog(
     preview_path: str,
     on_reroll: Callable[[], None],
     on_solid: Callable[[tuple], None],
+    toggles: Sequence[Tuple[str, bool, Callable[[bool], None]]] = (),
 ) -> bool:
     """
     The fill flavour of the dialog: adds plain black/white fills to the
@@ -168,6 +169,7 @@ def show_fill_preview_dialog(
 
     *on_solid* regenerates the fill with a plain ``(r, g, b)`` colour instead
     of a fresh random one, rewriting *preview_path* the way *on_reroll* does.
+    A toggle's callback must re-render too, for the same reason.
     """
     return show_preview_confirm_dialog(
         master, preview_path, on_reroll,
@@ -177,4 +179,5 @@ def show_fill_preview_dialog(
             (_("Black"), lambda: on_solid((0, 0, 0))),
             (_("White"), lambda: on_solid((255, 255, 255))),
         ),
+        toggles=toggles,
     )

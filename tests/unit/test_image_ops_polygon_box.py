@@ -157,7 +157,7 @@ class TestDrawBoxAtPolygonStaticImage:
         Image.new("RGB", (50, 50), color=(0, 0, 0)).save(src)
         monkeypatch.setattr(
             ImageOps, "generate_box_fill_image",
-            staticmethod(lambda w, h, use_texture=None: Image.new("RGB", (w, h), (200, 100, 50))),
+            staticmethod(lambda w, h, use_texture=None, palette=None: Image.new("RGB", (w, h), (200, 100, 50))),
         )
         result = ImageOps.draw_box_at_polygon(src, _TRIANGLE)
         with Image.open(result) as out:
@@ -218,7 +218,7 @@ class TestDrawBackgroundBoxAtPolygonStaticImage:
         Image.new("RGB", (50, 50), color=(0, 0, 0)).save(src)
         monkeypatch.setattr(
             ImageOps, "generate_box_fill_image",
-            staticmethod(lambda w, h, use_texture=None: Image.new("RGB", (w, h), (200, 100, 50))),
+            staticmethod(lambda w, h, use_texture=None, palette=None: Image.new("RGB", (w, h), (200, 100, 50))),
         )
         result = ImageOps.draw_background_box_at_polygon(src, _TRIANGLE)
         with Image.open(result) as out:

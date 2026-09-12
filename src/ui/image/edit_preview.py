@@ -32,6 +32,21 @@ def preview_enabled() -> bool:
     return bool(config.preview_random_edits)
 
 
+def palette_toggle() -> Tuple[str, bool, Callable[[bool], None]]:
+    """The "Match image palette" checkbox, for ops that consume a fill palette.
+
+    Its value is session state on FillPalette, shared by every window and
+    never persisted; the next start follows the configured value again.
+    """
+    from image.fill_palette import FillPalette
+
+    return (
+        _("Match image palette"),
+        FillPalette.match_enabled(),
+        FillPalette.set_session_match_enabled,
+    )
+
+
 def _remove_preview(path: str) -> None:
     if os.path.isfile(path):
         try:
@@ -87,6 +102,14 @@ def preview_and_confirm_op(
         # A failed reroll leaves the previous candidate on screen.
         _render()
 
+    def _rendering(on_toggled: Callable[[bool], None]) -> Callable[[bool], None]:
+        """Re-render after a toggle: a rendered result cannot be changed in
+        place, so the setting only shows once the op runs again."""
+        def _handle(checked: bool) -> None:
+            on_toggled(checked)
+            _render()
+        return _handle
+
     if not _render():
         return None
 
@@ -95,7 +118,10 @@ def preview_and_confirm_op(
             master, preview_path, _reroll,
             title=title,
             hint=_("Enter to accept, Escape to cancel, R to reroll a different result"),
-            toggles=toggles,
+            toggles=tuple(
+                (label, initial, _rendering(on_toggled))
+                for label, initial, on_toggled in toggles
+            ),
         )
         if not accepted:
             return None

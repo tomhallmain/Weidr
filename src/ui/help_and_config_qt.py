@@ -513,6 +513,82 @@ class HelpAndConfig(SmartDialog):
             _("Stable Diffusion Prompt Reader Location"), str(config.sd_prompt_reader_loc or ""),
         )
 
+        # ==============================================================
+        # Media Edits tab
+        #
+        # Frame extraction and the random image edits, which had no rows
+        # anywhere despite being registered fields. The Save button on the
+        # Config tab collects every widget on both tabs.
+        # ==============================================================
+        _start_tab(_("Media Edits"))
+
+        self._add_sub_section_title(_("Frame Extraction"))
+        self._cb_frames_use_first = self._add_checkbox_row(
+            _("Extract the First Frame"), config.frame_extraction_use_first_frame,
+        )
+        self._cb_frames_use_last = self._add_checkbox_row(
+            _("Extract the Last Frame"), config.frame_extraction_use_last_frame,
+        )
+        self._cb_frames_use_trigger = self._add_checkbox_row(
+            _("Extract the Triggering Frame"), config.frame_extraction_use_trigger,
+        )
+        self._le_frames_trigger_action = self._add_entry_row(
+            _("Trigger Action Name (blank = skip that strategy)"),
+            str(config.frame_extraction_trigger_action or ""),
+        )
+        self._le_frames_trigger_kind = self._add_entry_row(
+            _("Trigger Kind (classifier_action or prevalidation)"),
+            str(config.frame_extraction_trigger_kind),
+        )
+        self._cb_frames_skip_duplicates = self._add_checkbox_row(
+            _("Skip Frames Already Extracted"), config.frame_extraction_skip_duplicate_frames,
+        )
+        self._le_frames_last_lookback = self._add_entry_row(
+            _("Last Frame Lookback (sec)"),
+            str(config.frame_extraction_last_frame_lookback_seconds),
+        )
+        self._le_frames_output_directory = self._add_entry_row(
+            _("Frame Output Directory"), str(config.peek_output_directory or ""),
+        )
+        self._cb_frames_save_same_dir = self._add_checkbox_row(
+            _("Save Frames to Same Directory"), config.peek_save_to_same_dir,
+        )
+
+        self._add_sub_section_title(_("Frame Extraction (PEEK)"))
+        self._cb_enable_peek = self._add_checkbox_row(
+            _("Enable PEEK Frame Detection (needs the optional peek package)"),
+            config.enable_peek_frame_detection,
+        )
+        self._le_peek_device = self._add_entry_row(
+            _("PEEK Device (auto, cpu, cuda)"), str(config.peek_device),
+        )
+        self._le_peek_default_k = self._add_entry_row(
+            _("PEEK Frames per Media"), str(config.peek_default_k),
+        )
+        self._le_peek_default_fps = self._add_entry_row(
+            _("PEEK Candidate Sample Rate (fps)"), str(config.peek_default_fps),
+        )
+        self._le_peek_max_candidates = self._add_entry_row(
+            _("PEEK Max Candidate Frames"), str(config.peek_max_candidate_frames),
+        )
+        self._le_peek_max_frames = self._add_entry_row(
+            _("PEEK Max Frames Written per Media"), str(config.peek_max_frames_per_media),
+        )
+        self._le_peek_minutes_per_extra = self._add_entry_row(
+            _("PEEK Minutes per Extra Frame (0 = flat count)"),
+            str(config.peek_minutes_per_extra_frame),
+        )
+        self._le_peek_max_duration = self._add_entry_row(
+            _("PEEK Max Video Duration (sec, 0 = no limit)"),
+            str(config.peek_max_video_duration_seconds),
+        )
+
+        self._add_sub_section_title(_("Random Image Edits"))
+        self._cb_preview_random_edits = self._add_checkbox_row(
+            _("Preview Random Edits Before Writing (modify / scramble)"),
+            config.preview_random_edits,
+        )
+
         # -- Save button (outside scroll area, always visible) -----------
         save_bar = QWidget()
         save_bar.setStyleSheet(
@@ -561,6 +637,14 @@ class HelpAndConfig(SmartDialog):
             ("_cb_prevalidate_direct_display", "prevalidate_on_direct_media_display"),
             ("_cb_large_hq_downscale",         "large_image_enable_hq_idle_downscale"),
             ("_cb_large_full_promotion",       "large_image_enable_full_res_promotion"),
+            # Media Edits tab
+            ("_cb_frames_use_first",           "frame_extraction_use_first_frame"),
+            ("_cb_frames_use_last",            "frame_extraction_use_last_frame"),
+            ("_cb_frames_use_trigger",         "frame_extraction_use_trigger"),
+            ("_cb_frames_skip_duplicates",     "frame_extraction_skip_duplicate_frames"),
+            ("_cb_frames_save_same_dir",       "peek_save_to_same_dir"),
+            ("_cb_enable_peek",                "enable_peek_frame_detection"),
+            ("_cb_preview_random_edits",       "preview_random_edits"),
         ]
         entry_fields: list[tuple[str, str]] = [
             ("_le_font_size",                    "font_size"),
@@ -598,6 +682,18 @@ class HelpAndConfig(SmartDialog):
             ("_le_gimp_exe",                     "gimp_exe_loc"),
             ("_le_gimp_locale",                  "gimp_locale"),
             ("_le_sd_prompt_reader",             "sd_prompt_reader_loc"),
+            # Media Edits tab
+            ("_le_frames_trigger_action",        "frame_extraction_trigger_action"),
+            ("_le_frames_trigger_kind",          "frame_extraction_trigger_kind"),
+            ("_le_frames_last_lookback",         "frame_extraction_last_frame_lookback_seconds"),
+            ("_le_frames_output_directory",      "peek_output_directory"),
+            ("_le_peek_device",                  "peek_device"),
+            ("_le_peek_default_k",               "peek_default_k"),
+            ("_le_peek_default_fps",             "peek_default_fps"),
+            ("_le_peek_max_candidates",          "peek_max_candidate_frames"),
+            ("_le_peek_max_frames",              "peek_max_frames_per_media"),
+            ("_le_peek_minutes_per_extra",       "peek_minutes_per_extra_frame"),
+            ("_le_peek_max_duration",            "peek_max_video_duration_seconds"),
         ]
 
         raw: dict[str, object] = {}

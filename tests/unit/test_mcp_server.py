@@ -75,6 +75,41 @@ class _FakeSession:
         self.current_file = f"/base/index_{index}.png"
         return self.current_file
 
+    def extract_frames(
+        self, strategy=None, media_path=None, k=None, fps=None, target_dir=None,
+        action_name=None, kind=None, start_slot=0, sample_ratio=None,
+    ):
+        path = media_path or self.current_file
+        if strategy == "nonsense":
+            raise ValueError(f"Unknown frame extraction strategy: {strategy}")
+        self.calls.append(("extract_frames", strategy, path, action_name))
+        # None means every enabled strategy ran; name the frames for whichever
+        # was asked for so a test can tell the two apart.
+        return {
+            "media_path": path,
+            "frames_written": [f"{path}_{strategy or 'all'}.png"],
+            "duplicates_skipped": 0,
+            "errors": [],
+        }
+
+    def extract_frames_batch(
+        self, strategy=None, k=None, fps=None, target_dir=None,
+        action_name=None, kind=None, start_slot=0, sample_ratio=None,
+    ):
+        self.calls.append(("extract_frames_batch", strategy, action_name))
+        return {
+            "extracted": 2, "frames_written": 3, "failed": 0,
+            "skipped": 1, "duplicates_skipped": 1,
+        }
+
+    def extract_peek_frames(self, media_path=None, k=None, fps=None, target_dir=None):
+        return self.extract_frames(
+            "peek", media_path=media_path, k=k, fps=fps, target_dir=target_dir,
+        )
+
+    def extract_peek_frames_batch(self, k=None, fps=None, target_dir=None):
+        return self.extract_frames_batch("peek", k=k, fps=fps, target_dir=target_dir)
+
     def get_base_dir(self):
         return self.base_dir
 
@@ -727,6 +762,85 @@ class TestReadResource:
         ext, _ = _extension()
         with pytest.raises(MCPToolError):
             ext.read_resource("not_a_real_resource")
+
+
+# ---------------------------------------------------------------------------
+# Frame extraction tools
+# ---------------------------------------------------------------------------
+
+class TestFrameExtractionTools:
+    def test_strategy_and_current_file_reach_the_session(self):
+        ext, session = _extension()
+
+        result = ext.dispatch("extract_frames", {"strategy": "first"})
+
+        assert ("extract_frames", "first", session.current_file, None) in session.calls
+        assert result["frames_written"] == [f"{session.current_file}_first.png"]
+        assert result["duplicates_skipped"] == 0
+
+    def test_no_strategy_means_every_enabled_one(self):
+        """The normal call: one pass, nothing to pick per file."""
+        ext, session = _extension()
+
+        result = ext.dispatch("extract_frames", {})
+
+        assert session.calls[-1][1] is None
+        assert result["frames_written"] == [f"{session.current_file}_all.png"]
+
+    def test_trigger_arguments_are_passed_through(self):
+        ext, session = _extension()
+
+        ext.dispatch("extract_frames", {
+            "strategy": "trigger", "action_name": "Rotate check",
+            "kind": "prevalidation", "start_slot": 3, "sample_ratio": 0.5,
+        })
+
+        assert ("extract_frames", "trigger", session.current_file, "Rotate check") in session.calls
+
+    def test_an_explicit_media_path_wins(self):
+        ext, session = _extension()
+
+        ext.dispatch("extract_frames", {"strategy": "last", "media_path": "/base/other.mp4"})
+
+        assert ("extract_frames", "last", "/base/other.mp4", None) in session.calls
+
+    def test_a_bad_strategy_is_reported_as_a_tool_error(self):
+        ext, _ = _extension()
+
+        with pytest.raises(MCPToolError):
+            ext.dispatch("extract_frames", {"strategy": "nonsense"})
+
+    def test_batch_returns_the_run_counts(self):
+        ext, session = _extension()
+
+        result = ext.dispatch("extract_frames_batch", {"strategy": "first"})
+
+        assert ("extract_frames_batch", "first", None) in session.calls
+        assert result == {
+            "extracted": 2, "frames_written": 3, "failed": 0,
+            "skipped": 1, "duplicates_skipped": 1,
+        }
+
+    def test_the_peek_tools_still_work(self):
+        """The names the surface started with, now strategy='peek'."""
+        ext, session = _extension()
+
+        single = ext.dispatch("extract_peek_frames", {})
+        batch = ext.dispatch("extract_peek_frames_batch", {})
+
+        assert single["frames_written"] == [f"{session.current_file}_peek.png"]
+        assert batch["extracted"] == 2
+
+    def test_both_new_tools_are_declared(self):
+        names = [t["name"] for t in tool_descriptors()]
+        assert "extract_frames" in names
+        assert "extract_frames_batch" in names
+
+    def test_frame_extraction_needs_no_password(self):
+        """Its GUI route is ungated, so the tools are too."""
+        from extensions.mcp_server import PASSWORD_GATES
+        assert "extract_frames" not in PASSWORD_GATES
+        assert "extract_frames_batch" not in PASSWORD_GATES
 
 
 # ---------------------------------------------------------------------------

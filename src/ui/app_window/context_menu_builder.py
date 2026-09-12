@@ -14,6 +14,7 @@ from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QMenu
 
 from files.directory_notes import DirectoryNotes
+from image.frame_extraction import enabled_strategies
 from ui.files.marked_file_mover_qt import MarkedFiles
 from utils.config import config
 from utils.constants import MediaType
@@ -264,10 +265,10 @@ class ContextMenuBuilder:
                 lambda: app.file_ops_ctrl.mute_current_video_audio_at_playback_position(),
             )
 
-        if config.enable_peek_frame_detection and media_type in (MediaType.VIDEO, MediaType.GIF):
+        if media_type in (MediaType.VIDEO, MediaType.GIF) and enabled_strategies():
             menu.addAction(
-                _("Extract PEEK frames from this file…"),
-                lambda: app.file_ops_ctrl.extract_peek_frames_from_current_media(),
+                _("Extract frames from this file…"),
+                lambda: app.file_ops_ctrl.extract_frames_from_current_media(),
             )
 
         menu.addAction(
@@ -288,10 +289,10 @@ class ContextMenuBuilder:
                 _("Save copies of all videos in directory without metadata"),
                 lambda: app.file_ops_ctrl.copy_directory_videos_without_metadata(),
             )
-        if config.enable_peek_frame_detection:
+        if enabled_strategies():
             menu.addAction(
-                _("Extract PEEK frames from directory…"),
-                lambda: app.file_ops_ctrl.extract_peek_frames_from_directory(),
+                _("Extract frames from directory…"),
+                lambda: app.file_ops_ctrl.extract_frames_from_directory(),
             )
 
         menu.addSeparator()

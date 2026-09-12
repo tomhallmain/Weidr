@@ -78,6 +78,13 @@ class Config:
         "peek_max_video_duration_seconds":     int,
         "peek_output_directory":               None,
         "peek_save_to_same_dir":               bool,
+        "frame_extraction_last_frame_lookback_seconds": float,
+        "frame_extraction_skip_duplicate_frames": bool,
+        "frame_extraction_use_first_frame":     bool,
+        "frame_extraction_use_last_frame":      bool,
+        "frame_extraction_use_trigger":         bool,
+        "frame_extraction_trigger_action":      None,
+        "frame_extraction_trigger_kind":        str,
         # Prevalidation (dynamic media)
         "enable_prevalidations":               bool,
         "prevalidate_on_direct_media_display": bool,
@@ -163,6 +170,24 @@ class Config:
         self.peek_max_video_duration_seconds = 600
         self.peek_output_directory = None
         self.peek_save_to_same_dir = True
+        # How far back from the end the "last frame" strategy seeks before
+        # decoding forward to the final frame. Seeking to the duration itself
+        # lands past every frame.
+        self.frame_extraction_last_frame_lookback_seconds = 2.0
+        # Don't write a frame that was already extracted from the same file by
+        # an earlier run or a different strategy.
+        self.frame_extraction_skip_duplicate_frames = True
+        # Which strategies one "extract frames" run uses. They all run in the
+        # same pass and share the duplicate check, so a frame two of them pick
+        # is written once; switch off whichever are not wanted. PEEK joins in
+        # when enable_peek_frame_detection is on and the package is installed.
+        self.frame_extraction_use_first_frame = True
+        self.frame_extraction_use_last_frame = True
+        self.frame_extraction_use_trigger = True
+        # The action the trigger strategy scans for. Unset, that strategy is
+        # skipped rather than asking -- a run never stops to be configured.
+        self.frame_extraction_trigger_action = None
+        self.frame_extraction_trigger_kind = "classifier_action"
         self.browse_recursive = False
         self.sidebar_visible = True
         self.image_tagging_enabled = True
@@ -354,6 +379,13 @@ class Config:
                             "save_screenshot_to_same_dir",
                             "preview_random_edits",
                             "enable_peek_frame_detection",
+                            "frame_extraction_skip_duplicate_frames",
+                            "frame_extraction_use_first_frame",
+                            "frame_extraction_use_last_frame",
+                            "frame_extraction_use_trigger",
+                            "frame_extraction_use_first_frame",
+                            "frame_extraction_use_last_frame",
+                            "frame_extraction_use_trigger",
                             "peek_save_to_same_dir",
                             "enable_images",
                             "enable_videos",
@@ -429,6 +461,7 @@ class Config:
                             "compare_embedding_clap_max_duration_seconds",
                             "peek_default_fps",
                             "peek_minutes_per_extra_frame",
+                            "frame_extraction_last_frame_lookback_seconds",
                             "slideshow_dynamic_video_max_seconds",
                             "slideshow_dynamic_gif_max_seconds")
 

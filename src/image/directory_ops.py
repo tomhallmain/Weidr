@@ -18,7 +18,7 @@ from __future__ import annotations
 import os
 import shutil
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Callable, Optional
 
 from utils.config import config
 from utils.logging_setup import get_logger
@@ -383,17 +383,17 @@ def strip_video_metadata(
 
 
 # ---------------------------------------------------------------------------
-# PEEK frame extraction (see image/peek_frame_selector.py for the actual
-# per-file model call and frame-write mechanics)
+# Frame extraction (see image/frame_extraction.py for the per-file strategy
+# dispatch and the frame-write mechanics)
 # ---------------------------------------------------------------------------
 
 @dataclass
-class PeekExtractionSurvey:
-    """Which files a PEEK extraction run would act on.
+class FrameExtractionSurvey:
+    """Which files a frame-extraction run would act on.
 
-    eligible_files -- video + GIF (image.peek_frame_selector.is_peek_eligible_media_path).
+    eligible_files -- video + GIF (image.frame_extraction.is_frame_extraction_eligible).
     ineligible_count -- other dynamic media (e.g. PDF) present in *files* but
-    structurally out of scope for PEEK's video-codec-based decode.
+    structurally out of scope for a codec-based frame decode.
     """
 
     eligible_files: list = field(default_factory=list)
@@ -404,44 +404,76 @@ class PeekExtractionSurvey:
 
 
 @dataclass
-class PeekExtractionResult:
-    extracted: int = 0        # files that produced at least one written frame
+class FrameExtractionResult:
+    extracted: int = 0            # files that produced at least one written frame
     frames_written: int = 0
     failed: int = 0
-    skipped: int = 0          # produced zero frames without raising (e.g. PEEK found nothing to select)
+    skipped: int = 0              # produced no frames without raising (nothing selected, nothing triggered)
+    duplicates_skipped: int = 0   # frames already extracted from the same file
+    cancelled: bool = False       # a progress callback stopped the run early
 
 
-def survey_peek_extraction(files) -> PeekExtractionSurvey:
-    """Classify *files* for a PEEK extraction run without touching anything."""
-    from image.peek_frame_selector import is_peek_eligible_media_path
+def survey_frame_extraction(files) -> FrameExtractionSurvey:
+    """Classify *files* for a frame-extraction run without touching anything."""
+    from image.frame_extraction import is_frame_extraction_eligible
     from utils.media_utils import is_classifier_dynamic_media_path
 
-    survey = PeekExtractionSurvey()
+    survey = FrameExtractionSurvey()
     for filepath in files:
-        if is_peek_eligible_media_path(filepath):
+        if is_frame_extraction_eligible(filepath):
             survey.eligible_files.append(filepath)
         elif is_classifier_dynamic_media_path(filepath):
             survey.ineligible_count += 1
     return survey
 
 
-def extract_peek_frames_for_directory(
-    survey: PeekExtractionSurvey,
+def extract_frames_for_directory(
+    survey: FrameExtractionSurvey,
+    strategy: Optional[str] = None,
     k: Optional[int] = None,
     fps: Optional[float] = None,
     target_dir: Optional[str] = None,
-) -> PeekExtractionResult:
-    """Run PEEK extraction over every file in *survey*, aggregating counts.
+    action_name: Optional[str] = None,
+    kind: Optional[str] = None,
+    start_slot: int = 0,
+    sample_ratio: Optional[float] = None,
+    progress_callback: Optional[Callable[[int, int], object]] = None,
+) -> FrameExtractionResult:
+    """Extract frames from every file in *survey*, aggregating counts.
 
-    Each file is independent: one failing (missing dependency, decode error)
-    does not stop the rest -- it is counted in ``failed`` and logged.
+    *strategy* left None runs every enabled strategy over each file in one
+    pass, which is what the UI and a plain tool call do; naming one runs only
+    that.
+
+    Each file is independent: one failing (a missing dependency, a decode
+    error, an action that cannot run) does not stop the rest -- it is counted
+    in ``failed`` and logged.
+
+    *progress_callback* is called after each file with (files_done, total).
+    Returning exactly ``False`` stops the run and sets ``cancelled``; every
+    other return value continues, including the ``None`` a callback that only
+    refreshes a widget gives back, so reporting progress cannot abort a run by
+    accident.
     """
-    from image.peek_frame_selector import extract_peek_frames
+    from image.frame_extraction import extract_frames, extract_frames_all
 
-    result = PeekExtractionResult()
-    for filepath in survey.eligible_files:
+    result = FrameExtractionResult()
+    total = len(survey.eligible_files)
+    for files_done, filepath in enumerate(survey.eligible_files, start=1):
         try:
-            outcome = extract_peek_frames(filepath, k=k, fps=fps, target_dir=target_dir)
+            if strategy is None:
+                outcome = extract_frames_all(
+                    filepath, k=k, fps=fps, target_dir=target_dir,
+                    action_name=action_name, kind=kind,
+                    start_slot=start_slot, sample_ratio=sample_ratio,
+                )
+            else:
+                outcome = extract_frames(
+                    filepath, strategy, k=k, fps=fps, target_dir=target_dir,
+                    action_name=action_name, kind=kind or "classifier_action",
+                    start_slot=start_slot, sample_ratio=sample_ratio,
+                )
+            result.duplicates_skipped += outcome.duplicates_skipped
             if outcome.frames_written:
                 result.extracted += 1
                 result.frames_written += len(outcome.frames_written)
@@ -449,5 +481,8 @@ def extract_peek_frames_for_directory(
                 result.skipped += 1
         except Exception as e:
             result.failed += 1
-            logger.warning("PEEK extraction failed for %s: %s", filepath, e)
+            logger.warning("Frame extraction failed for %s: %s", filepath, e)
+        if progress_callback is not None and progress_callback(files_done, total) is False:
+            result.cancelled = True
+            break
     return result

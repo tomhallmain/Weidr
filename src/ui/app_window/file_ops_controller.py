@@ -10,10 +10,11 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import threading
 from typing import TYPE_CHECKING, Optional
 
-from PySide6.QtCore import QThread, QTimer, Signal
-from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtCore import Qt, QThread, QTimer, Signal
+from PySide6.QtWidgets import QApplication, QMessageBox, QProgressDialog
 
 from ui.auth.password_utils import require_password
 from utils.config import config
@@ -34,17 +35,21 @@ logger = get_logger("file_ops_controller")
 _RANDOMIZE_FILENAMES_LOG_BASENAME = "randomize_filenames.log"
 
 
-class _PeekExtractionWorker(QThread):
-    """Runs one PEEK extraction call off the UI thread.
+class _FrameExtractionWorker(QThread):
+    """Runs one frame-extraction call off the UI thread.
 
-    PEEK inference is a model forward pass over potentially many candidate
-    frames -- the same cost profile as SeekToTriggerWorker's classifier
-    scan (ui/compare/seek_to_trigger_tab_qt.py), not a cheap file op like
-    the other directory-wide actions in this controller.
+    Extraction can be a model forward pass over many candidate frames (PEEK's
+    scoring, a trigger scan) -- the same cost profile as SeekToTriggerWorker's
+    classifier scan (ui/compare/seek_to_trigger_tab_qt.py), not a cheap file
+    op like the other directory-wide actions in this controller.
+
+    The run callable is handed an emit function to report (files_done, total)
+    with; a single-file run ignores it, having nothing to count.
     """
 
     succeeded = Signal(dict)
     failed = Signal(str)
+    progress = Signal(int, int)
 
     def __init__(self, run, parent=None):
         super().__init__(parent)
@@ -52,7 +57,7 @@ class _PeekExtractionWorker(QThread):
 
     def run(self) -> None:
         try:
-            result = self._run()
+            result = self._run(self.progress.emit)
         except Exception as exc:
             self.failed.emit(str(exc))
             return
@@ -79,7 +84,8 @@ class FileOpsController:
 
         # Periodic file-check timer
         self._file_check_timer: Optional[QTimer] = None
-        self._peek_worker: Optional[_PeekExtractionWorker] = None
+        self._frame_worker: Optional[_FrameExtractionWorker] = None
+        self._frame_progress: Optional[QProgressDialog] = None
 
     # ==================================================================
     # Periodic file check
@@ -1013,75 +1019,126 @@ class FileOpsController:
             )
 
     # ==================================================================
-    # PEEK frame detection
+    # Frame extraction
+    #
+    # One action per scope, running every enabled strategy in a single pass
+    # (image/frame_extraction.py): nothing to pick per file or per directory,
+    # and a frame two strategies both land on is written once.
     # ==================================================================
-    def _on_peek_failed(self, message: str) -> None:
-        self._app.app_actions.warn(_("PEEK extraction failed: {0}").format(message))
+    def _close_frame_progress(self) -> None:
+        if self._frame_progress is not None:
+            self._frame_progress.close()
+            self._frame_progress = None
 
-    def _on_peek_current_media_done(self, result: dict) -> None:
+    def _on_frames_failed(self, message: str) -> None:
+        self._close_frame_progress()
+        self._app.app_actions.stop_progress_bar()
+        self._app.app_actions.warn(_("Frame extraction failed: {0}").format(message))
+
+    def _on_frames_progress(self, files_done: int, total: int) -> None:
+        if self._frame_progress is None:
+            return
+        self._frame_progress.setValue(files_done)
+        if self._frame_progress.wasCanceled():
+            # The current file finishes either way -- a decode is not
+            # interruptible mid-frame -- so say so rather than look stuck.
+            self._frame_progress.setLabelText(_("Finishing the current file…"))
+
+    def _report_strategy_errors(self, errors) -> None:
+        """A strategy that could not run is worth saying once, not per file."""
+        for message in dict.fromkeys(errors or []):
+            self._app.app_actions.warn(_("Frame extraction: {0}").format(message))
+
+    def _on_frames_current_media_done(self, result: dict) -> None:
+        self._app.app_actions.stop_progress_bar()
         count = len(result.get("frames_written", []))
+        duplicates = result.get("duplicates_skipped", 0)
+        self._report_strategy_errors(result.get("errors"))
         if count > 0:
             self._app.refresh()
-            self._app.notification_ctrl.toast(_("Extracted {0} PEEK frame(s)").format(count))
+            if duplicates:
+                self._app.notification_ctrl.toast(
+                    _("Extracted {0} frame(s); {1} already extracted").format(count, duplicates)
+                )
+            else:
+                self._app.notification_ctrl.toast(_("Extracted {0} frame(s)").format(count))
+        elif duplicates:
+            self._app.notification_ctrl.toast(_("Every frame was already extracted"))
         else:
-            self._app.app_actions.warn(_("PEEK found no frames to extract"))
+            self._app.app_actions.warn(_("No frames were extracted"))
 
-    def extract_peek_frames_from_current_media(self, event=None) -> None:
-        """Run PEEK frame detection on the currently displayed video/GIF."""
-        from image.peek_frame_selector import extract_peek_frames, is_peek_eligible_media_path
+    def extract_frames_from_current_media(self, event=None) -> None:
+        """Extract frames from the currently displayed video/GIF."""
+        from image.frame_extraction import (
+            enabled_strategies, extract_frames_all, is_frame_extraction_eligible,
+        )
 
-        if not config.enable_peek_frame_detection:
+        if not enabled_strategies():
+            self._app.app_actions.warn(_("No frame extraction strategies are enabled"))
             return
         if self._app.is_compare_running():
-            self._app.app_actions.warn(compare_running_warn(_("extract PEEK frames")))
+            self._app.app_actions.warn(compare_running_warn(_("extract frames")))
             return
 
         filepath = self._nav.get_active_media_filepath()
-        if not filepath or not is_peek_eligible_media_path(filepath):
+        if not filepath or not is_frame_extraction_eligible(filepath):
             self._app.app_actions.warn(_("Not a video or GIF file"))
             return
 
-        if self._peek_worker is not None and self._peek_worker.isRunning():
-            self._app.app_actions.warn(_("A PEEK extraction is already running"))
+        if self._frame_worker is not None and self._frame_worker.isRunning():
+            self._app.app_actions.warn(_("A frame extraction is already running"))
             return
 
-        def _run():
-            outcome = extract_peek_frames(filepath)
-            return {"frames_written": outcome.frames_written}
+        def _run(_emit_progress):
+            outcome = extract_frames_all(filepath)
+            return {
+                "frames_written": outcome.frames_written,
+                "duplicates_skipped": outcome.duplicates_skipped,
+                "errors": outcome.errors,
+            }
 
         self._app.notification_ctrl.toast(
-            _("Extracting PEEK frames from {0}…").format(os.path.basename(filepath))
+            _("Extracting frames from {0}…").format(os.path.basename(filepath))
         )
-        self._peek_worker = _PeekExtractionWorker(_run, parent=self._app)
-        self._peek_worker.succeeded.connect(self._on_peek_current_media_done)
-        self._peek_worker.failed.connect(self._on_peek_failed)
-        self._peek_worker.start()
+        # Indeterminate: one file's strategies report no count of their own.
+        self._app.app_actions.start_progress_bar()
+        self._frame_worker = _FrameExtractionWorker(_run, parent=self._app)
+        self._frame_worker.succeeded.connect(self._on_frames_current_media_done)
+        self._frame_worker.failed.connect(self._on_frames_failed)
+        self._frame_worker.start()
 
-    def _on_peek_directory_done(self, result: dict) -> None:
+    def _on_frames_directory_done(self, result: dict) -> None:
+        self._close_frame_progress()
         if result["frames_written"] > 0:
             self._app.refresh()
-        if result["failed"] == 0:
-            self._app.notification_ctrl.toast(
-                _("Extracted {0} PEEK frame(s) from {1} file(s)").format(
-                    result["frames_written"], result["extracted"]
-                )
+        self._report_strategy_errors(result.get("errors"))
+        summary = _("Extracted {0} frame(s) from {1} file(s)").format(
+            result["frames_written"], result["extracted"]
+        )
+        if result.get("duplicates_skipped"):
+            summary += "\n" + _("{0} frame(s) were already extracted").format(
+                result["duplicates_skipped"]
             )
+        if result.get("cancelled"):
+            summary += "\n" + _("Cancelled before the rest of the files")
+        if result["failed"] == 0:
+            self._app.notification_ctrl.toast(summary)
         else:
             self._app.app_actions.warn(
-                _("Finished: {0} file(s) extracted, {1} failed").format(
-                    result["extracted"], result["failed"]
-                )
+                summary + "\n" + _("{0} file(s) failed").format(result["failed"])
             )
 
-    def extract_peek_frames_from_directory(self, event=None) -> None:
-        """For each eligible video/GIF in the current directory scope, run PEEK
-        frame detection and write its most essential frames as PNGs."""
+    def extract_frames_from_directory(self, event=None) -> None:
+        """Extract frames from every eligible video/GIF in the directory scope."""
         from image import directory_ops
+        from image.frame_extraction import enabled_strategies
 
-        if not config.enable_peek_frame_detection:
+        strategies = enabled_strategies()
+        if not strategies:
+            self._app.app_actions.warn(_("No frame extraction strategies are enabled"))
             return
         if self._app.is_compare_running():
-            self._app.app_actions.warn(compare_running_warn(_("extract PEEK frames")))
+            self._app.app_actions.warn(compare_running_warn(_("extract frames")))
             return
 
         base_dir = self._app.get_base_dir()
@@ -1089,8 +1146,8 @@ class FileOpsController:
             self._app.app_actions.warn(_("No valid base directory"))
             return
 
-        if self._peek_worker is not None and self._peek_worker.isRunning():
-            self._app.app_actions.warn(_("A PEEK extraction is already running"))
+        if self._frame_worker is not None and self._frame_worker.isRunning():
+            self._app.app_actions.warn(_("A frame extraction is already running"))
             return
 
         self._app.app_actions.refresh(file_check=False)
@@ -1098,32 +1155,56 @@ class FileOpsController:
             sort_by=SortBy.CREATION_TIME,
             sort=Sort.ASC,
         )
-        survey = directory_ops.survey_peek_extraction(files)
+        survey = directory_ops.survey_frame_extraction(files)
         if survey.has_nothing_to_do():
             self._app.notification_ctrl.toast(_("No video or GIF files found in this directory scope"))
             return
 
+        total = len(survey.eligible_files)
         if not self._app.app_actions.alert(
-            _("Extract PEEK frames (directory)"),
+            _("Extract frames (directory)"),
             _(
-                "Run PEEK frame detection on each eligible file and write its most "
-                "essential frames as PNGs.\n\nDirectory:\n{0}\n\nFiles to process: {1}"
-            ).format(base_dir, len(survey.eligible_files)),
+                "Extract frames from each eligible file using every enabled "
+                "strategy ({0}).\n\nDirectory:\n{1}\n\nFiles to process: {2}"
+            ).format(", ".join(strategies), base_dir, total),
             kind="askyesno",
         ):
             return
 
-        def _run():
-            result = directory_ops.extract_peek_frames_for_directory(survey)
+        progress = QProgressDialog(
+            _("Extracting frames from {0} file(s)…").format(total),
+            _("Cancel"), 0, total, self._app,
+        )
+        progress.setWindowTitle(_("Frame Extraction"))
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setValue(0)
+        cancelled = threading.Event()
+        progress.canceled.connect(cancelled.set)
+        self._frame_progress = progress
+
+        def _run(emit_progress):
+            def _on_file(files_done, file_total):
+                emit_progress(files_done, file_total)
+                # Only an explicit False stops the run; see
+                # directory_ops.extract_frames_for_directory.
+                return False if cancelled.is_set() else None
+
+            result = directory_ops.extract_frames_for_directory(
+                survey, progress_callback=_on_file,
+            )
             return {
                 "extracted": result.extracted, "frames_written": result.frames_written,
                 "failed": result.failed, "skipped": result.skipped,
+                "duplicates_skipped": result.duplicates_skipped,
+                "cancelled": result.cancelled,
             }
 
-        self._peek_worker = _PeekExtractionWorker(_run, parent=self._app)
-        self._peek_worker.succeeded.connect(self._on_peek_directory_done)
-        self._peek_worker.failed.connect(self._on_peek_failed)
-        self._peek_worker.start()
+        self._frame_worker = _FrameExtractionWorker(_run, parent=self._app)
+        self._frame_worker.progress.connect(self._on_frames_progress)
+        self._frame_worker.succeeded.connect(self._on_frames_directory_done)
+        self._frame_worker.failed.connect(self._on_frames_failed)
+        self._frame_worker.start()
 
     def open_image_in_gimp(self, event=None) -> None:
         """Open the current image in GIMP."""

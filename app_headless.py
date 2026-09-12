@@ -388,33 +388,57 @@ class HeadlessMCPSession:
             self._file_browser.refresh()
         return {"written": result.written, "failed": result.failed}
 
-    def extract_peek_frames(
-        self, media_path: Optional[str] = None, k: Optional[int] = None,
-        fps: Optional[float] = None, target_dir: Optional[str] = None,
+    def extract_frames(
+        self, strategy: Optional[str] = None, media_path: Optional[str] = None,
+        k: Optional[int] = None, fps: Optional[float] = None,
+        target_dir: Optional[str] = None, action_name: Optional[str] = None,
+        kind: Optional[str] = None, start_slot: int = 0,
+        sample_ratio: Optional[float] = None,
     ) -> dict:
-        from image.peek_frame_selector import extract_peek_frames
+        """*strategy* left out runs every enabled strategy in one pass."""
+        from image.frame_extraction import extract_frames, extract_frames_all
 
         path = media_path or self.get_current_file()
         if not path:
             raise ValueError("no current file to extract frames from")
         try:
-            outcome = extract_peek_frames(path, k=k, fps=fps, target_dir=target_dir)
+            if strategy is None:
+                outcome = extract_frames_all(
+                    path, k=k, fps=fps, target_dir=target_dir,
+                    action_name=action_name, kind=kind,
+                    start_slot=start_slot, sample_ratio=sample_ratio,
+                )
+            else:
+                outcome = extract_frames(
+                    path, strategy, k=k, fps=fps, target_dir=target_dir,
+                    action_name=action_name, kind=kind or "classifier_action",
+                    start_slot=start_slot, sample_ratio=sample_ratio,
+                )
         except RuntimeError as e:
             raise ValueError(str(e))
         if outcome.frames_written:
             self._file_browser.refresh()
-        return {"media_path": path, "frames_written": outcome.frames_written}
+        return {
+            "media_path": path,
+            "frames_written": outcome.frames_written,
+            "duplicates_skipped": outcome.duplicates_skipped,
+            "errors": outcome.errors,
+        }
 
-    def extract_peek_frames_batch(
-        self, k: Optional[int] = None, fps: Optional[float] = None,
-        target_dir: Optional[str] = None,
+    def extract_frames_batch(
+        self, strategy: Optional[str] = None, k: Optional[int] = None,
+        fps: Optional[float] = None, target_dir: Optional[str] = None,
+        action_name: Optional[str] = None, kind: Optional[str] = None,
+        start_slot: int = 0, sample_ratio: Optional[float] = None,
     ) -> dict:
         from image import directory_ops
 
         files = self._file_browser.get_files()
-        survey = directory_ops.survey_peek_extraction(files)
-        result = directory_ops.extract_peek_frames_for_directory(
-            survey, k=k, fps=fps, target_dir=target_dir,
+        survey = directory_ops.survey_frame_extraction(files)
+        result = directory_ops.extract_frames_for_directory(
+            survey, strategy, k=k, fps=fps, target_dir=target_dir,
+            action_name=action_name, kind=kind,
+            start_slot=start_slot, sample_ratio=sample_ratio,
         )
         if result.frames_written > 0:
             self._file_browser.refresh()
@@ -423,7 +447,23 @@ class HeadlessMCPSession:
             "frames_written": result.frames_written,
             "failed": result.failed,
             "skipped": result.skipped,
+            "duplicates_skipped": result.duplicates_skipped,
         }
+
+    # The PEEK-only names the tool surface started with, kept working.
+    def extract_peek_frames(
+        self, media_path: Optional[str] = None, k: Optional[int] = None,
+        fps: Optional[float] = None, target_dir: Optional[str] = None,
+    ) -> dict:
+        return self.extract_frames(
+            "peek", media_path=media_path, k=k, fps=fps, target_dir=target_dir,
+        )
+
+    def extract_peek_frames_batch(
+        self, k: Optional[int] = None, fps: Optional[float] = None,
+        target_dir: Optional[str] = None,
+    ) -> dict:
+        return self.extract_frames_batch("peek", k=k, fps=fps, target_dir=target_dir)
 
     # ------------------------------------------------------------------
     # Seek to Trigger (report only; there is no player to move)

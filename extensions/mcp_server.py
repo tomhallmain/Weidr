@@ -256,6 +256,28 @@ def tool_descriptors() -> list:
             ),
         },
         {
+            "name": "extract_frames",
+            "description": (
+                "Write frames of the current (or given) video/GIF as PNGs, each tagged "
+                "related_image back at the source. With no strategy, every enabled "
+                "strategy runs in one pass, which is the normal call. Naming one runs "
+                "only it: 'first' and 'last' take the ends and need no model, 'peek' "
+                "scores candidates with the optional peek model (k, fps), 'trigger' "
+                "takes the frame a classifier action or prevalidation fires on "
+                "(action_name, kind, start_slot, sample_ratio). A frame two strategies "
+                "both pick is written once; the count comes back as duplicates_skipped, "
+                "and a strategy that could not run is named in errors."
+            ),
+        },
+        {
+            "name": "extract_frames_batch",
+            "description": (
+                "Run extract_frames over every video/GIF in the current directory "
+                "scope, returning per-run counts. One file failing does not stop the "
+                "rest."
+            ),
+        },
+        {
             "name": "find_trigger",
             "description": (
                 "Scan a file (default: the current one) for the first sample a classifier "
@@ -580,6 +602,28 @@ class MCPServerExtension:
                 fps=arguments.get("fps"),
                 target_dir=arguments.get("target_dir"),
             )
+        if tool_name in ("extract_frames", "extract_frames_batch"):
+            sample_ratio = arguments.get("sample_ratio")
+            strategy = arguments.get("strategy")
+            shared = {
+                # No strategy means every enabled one, in a single pass.
+                "strategy": str(strategy) if strategy else None,
+                "k": arguments.get("k"),
+                "fps": arguments.get("fps"),
+                "target_dir": arguments.get("target_dir"),
+                "action_name": arguments.get("action_name"),
+                "kind": str(arguments.get("kind")) if arguments.get("kind") else None,
+                "start_slot": int(arguments.get("start_slot") or 0),
+                "sample_ratio": float(sample_ratio) if sample_ratio is not None else None,
+            }
+            try:
+                if tool_name == "extract_frames_batch":
+                    return session.extract_frames_batch(**shared)
+                return session.extract_frames(
+                    media_path=arguments.get("media_path"), **shared,
+                )
+            except ValueError as e:
+                raise MCPToolError(str(e))
         if tool_name == "find_trigger":
             action_name = arguments.get("action_name")
             if not action_name:
@@ -839,6 +883,33 @@ class MCPServerExtension:
         ) -> dict:
             return self.dispatch("extract_peek_frames_batch", {
                 "k": k, "fps": fps, "target_dir": target_dir,
+            })
+
+        @server.tool(name="extract_frames", description=described["extract_frames"])
+        def extract_frames(
+            strategy: str | None = None, media_path: str | None = None,
+            k: int | None = None, fps: float | None = None,
+            target_dir: str | None = None, action_name: str | None = None,
+            kind: str | None = None, start_slot: int = 0,
+            sample_ratio: float | None = None,
+        ) -> dict:
+            return self.dispatch("extract_frames", {
+                "strategy": strategy, "media_path": media_path, "k": k, "fps": fps,
+                "target_dir": target_dir, "action_name": action_name, "kind": kind,
+                "start_slot": start_slot, "sample_ratio": sample_ratio,
+            })
+
+        @server.tool(name="extract_frames_batch", description=described["extract_frames_batch"])
+        def extract_frames_batch(
+            strategy: str | None = None, k: int | None = None, fps: float | None = None,
+            target_dir: str | None = None, action_name: str | None = None,
+            kind: str | None = None, start_slot: int = 0,
+            sample_ratio: float | None = None,
+        ) -> dict:
+            return self.dispatch("extract_frames_batch", {
+                "strategy": strategy, "k": k, "fps": fps, "target_dir": target_dir,
+                "action_name": action_name, "kind": kind,
+                "start_slot": start_slot, "sample_ratio": sample_ratio,
             })
 
         @server.tool(name="find_trigger", description=described["find_trigger"])

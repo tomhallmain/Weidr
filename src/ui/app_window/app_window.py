@@ -281,6 +281,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         self.media_frame.play_pause_requested.connect(self.toggle_media_play_pause)
         self.media_frame.volume_requested.connect(self.set_media_volume)
         self.media_frame.mute_requested.connect(self.toggle_media_mute)
+        self.media_frame.speed_requested.connect(self.set_media_playback_rate)
 
         self.masonry_browser = MasonryBrowser(parent=self)
         self._media_stack.addWidget(self.masonry_browser)  # index 1 — ViewMode.MASONRY
@@ -1377,6 +1378,14 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
     def toggle_media_mute(self, event=None) -> None:
         """Toggle VLC mute state."""
         self.media_frame.toggle_mute()
+
+    def set_media_playback_rate(self, rate: float) -> None:
+        """Set VLC playback speed (1.0 = normal speed)."""
+        self.media_frame.set_playback_rate(rate)
+
+    def get_media_playback_rate(self) -> float:
+        """Return the current VLC playback speed."""
+        return self.media_frame.get_playback_rate()
 
     def set_media_mute(self, muted: bool) -> None:
         """Set VLC mute state explicitly."""

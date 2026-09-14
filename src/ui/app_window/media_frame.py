@@ -25,7 +25,7 @@ from PySide6.QtGui import QBrush, QColor, QImage, QPixmap, QImageReader, QPainte
 from lib.blur_overlay_qt import BlurOverlay
 from lib.zoomable_graphics_view_qt import ZoomableGraphicsView
 from ui.app_style import AppStyle
-from ui.app_window.media_controls_overlay import MediaControlsOverlay, OVERLAY_HEIGHT
+from ui.app_window.media_controls_overlay import MediaControlsOverlay, OVERLAY_HEIGHT, SPEED_OPTIONS
 from utils.config import config
 from utils.logging_setup import get_logger
 from image.frame_cache import FrameCache, has_imported_pypdfium2, has_imported_pyppeteer
@@ -144,6 +144,7 @@ class MediaFrame(QFrame):
     play_pause_requested = Signal()
     volume_requested = Signal(int)
     mute_requested = Signal()
+    speed_requested = Signal(float)
 
     def __init__(self, parent=None, fill_canvas=False):
         super().__init__(parent)
@@ -218,12 +219,14 @@ class MediaFrame(QFrame):
             self._vlc_eq = None
             self.vlc_media = None
         self._hung_stop_thread: threading.Thread | None = None
+        self._last_known_rate: float = 1.0
 
         self._controls_overlay = MediaControlsOverlay(self)
         self._controls_overlay.seek_requested.connect(self.seek_requested.emit)
         self._controls_overlay.play_pause_requested.connect(self.play_pause_requested.emit)
         self._controls_overlay.volume_changed.connect(self.volume_requested.emit)
         self._controls_overlay.mute_toggled.connect(self.mute_requested.emit)
+        self._controls_overlay.speed_changed.connect(self.speed_requested.emit)
 
         self._blur_overlay = BlurOverlay(self)
         self._blur_overlay.attach(self)
@@ -488,6 +491,7 @@ class MediaFrame(QFrame):
         self._gif_label.hide()
         self._placeholder_label.hide()
         self._controls_overlay.set_audio_controls_visible(True)
+        self._controls_overlay.set_speed_control_visible(True)
         self.media_displayed = True
 
     def _can_promote_large_image(self, source_dims: tuple[int, int]) -> bool:
@@ -727,6 +731,7 @@ class MediaFrame(QFrame):
         # Re-apply scaling once the event loop processes layout updates.
         QTimer.singleShot(0, self._update_gif_scale_mode)
         self._controls_overlay.set_audio_controls_visible(False)
+        self._controls_overlay.set_speed_control_visible(False)
         self._image = None
         self._video_ui = None
         self._current_pixmap = None
@@ -880,6 +885,7 @@ class MediaFrame(QFrame):
                 self._placeholder_label.setText(_("Audio: ") + os.path.basename(path))
                 self._placeholder_label.show()
         self._controls_overlay.set_audio_controls_visible(True)
+        self._controls_overlay.set_speed_control_visible(True)
         # VLC renders into the native window handle and may set a busy cursor
         # at the OS level.  Force an arrow cursor so the user doesn't see a
         # spinner while a video is simply playing.
@@ -887,6 +893,7 @@ class MediaFrame(QFrame):
         self.on_track_changed()
         self._controls_overlay.set_no_seek_index(not has_cues)
         self._sync_overlay_volume_state(force=True)
+        self._apply_playback_rate()
         self._playback_timer.start()
 
     def ensure_video_frame(self):
@@ -939,6 +946,7 @@ class MediaFrame(QFrame):
         if isinstance(self._video_ui, VideoUI):
             self._controls_overlay.set_no_seek_index(not self._video_ui.has_cues)
         self._sync_overlay_volume_state(force=True)
+        self._apply_playback_rate()
         self._playback_timer.start()
 
     def closeEvent(self, event):
@@ -1404,6 +1412,25 @@ class MediaFrame(QFrame):
             return bool(self.vlc_media_player.audio_get_mute())
         return self._last_known_muted
 
+    def set_playback_rate(self, rate: float):
+        """Set VLC playback speed. Unlike volume, libvlc's rate is tied to the
+        current input rather than the player, so it must be reapplied to each
+        newly loaded media (see _apply_playback_rate)."""
+        bounded = max(SPEED_OPTIONS[0], min(float(rate), SPEED_OPTIONS[-1]))
+        self._last_known_rate = bounded
+        if _VLC_AVAILABLE and self.vlc_media_player:
+            self.vlc_media_player.set_rate(bounded)
+        self._controls_overlay.set_speed_state(bounded)
+
+    def get_playback_rate(self) -> float:
+        return self._last_known_rate
+
+    def _apply_playback_rate(self):
+        """Reapply the last-selected playback speed to the current input."""
+        if _VLC_AVAILABLE and self.vlc_media_player:
+            self.vlc_media_player.set_rate(self._last_known_rate)
+        self._controls_overlay.set_speed_state(self._last_known_rate)
+
     def clear(self):
         self._pending_blur_path = None
         self._blur_overlay.hide_blur()
@@ -1424,6 +1451,7 @@ class MediaFrame(QFrame):
         self._placeholder_label.setText("")
         self._placeholder_label.hide()
         self._controls_overlay.set_audio_controls_visible(True)
+        self._controls_overlay.set_speed_control_visible(True)
         self._controls_overlay.set_no_seek_index(False)
         self._controls_overlay.dismiss()
 
@@ -1471,6 +1499,7 @@ class MediaFrame(QFrame):
         self._pixmap_item.setPixmap(QPixmap())
         self.media_displayed = False
         self._controls_overlay.set_audio_controls_visible(True)
+        self._controls_overlay.set_speed_control_visible(True)
         self._controls_overlay.dismiss()
 
     def focus(self, refresh_media=False):

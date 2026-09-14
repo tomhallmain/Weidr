@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QLabel,
     QSlider,
+    QComboBox,
     QSizePolicy,
 )
 from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, Signal
@@ -24,6 +25,8 @@ from utils.translations import _
 
 SLIDER_MAX = 1000
 VOLUME_MAX = 100
+SPEED_OPTIONS = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
+DEFAULT_SPEED = 1.0
 AUTOHIDE_MS = 3000
 FADE_IN_MS = 200
 FADE_OUT_MS = 500
@@ -54,6 +57,7 @@ class MediaControlsOverlay(QWidget):
     play_pause_requested = Signal()
     volume_changed = Signal(int)
     mute_toggled = Signal()
+    speed_changed = Signal(float)
 
     def __init__(self, parent: QWidget):
         super().__init__(
@@ -134,6 +138,16 @@ class MediaControlsOverlay(QWidget):
         )
         layout.addWidget(self._total_label)
 
+        self._speed_combo = QComboBox(self)
+        self._speed_combo.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._speed_combo.setToolTip(_("Playback speed"))
+        self._speed_combo.setFixedWidth(60)
+        for rate in SPEED_OPTIONS:
+            self._speed_combo.addItem(f"{rate:g}x", rate)
+        self._speed_combo.setCurrentIndex(SPEED_OPTIONS.index(DEFAULT_SPEED))
+        self._speed_combo.currentIndexChanged.connect(self._on_speed_changed)
+        layout.addWidget(self._speed_combo)
+
         # Text and tooltip are both set by _refresh_mute_button() during
         # _apply_child_styles(), which runs immediately after this method.
         self._mute_btn = QPushButton(MUTE_ICON, self)
@@ -193,6 +207,14 @@ class MediaControlsOverlay(QWidget):
         self._volume_slider.setStyleSheet(slider_style)
         self._refresh_mute_button()
 
+        self._speed_combo.setStyleSheet(
+            f"QComboBox {{"
+            f"  background: transparent; color: {AppStyle.FG_COLOR};"
+            f"  border: 1px solid {AppStyle.BORDER_COLOR}; border-radius: 4px;"
+            f"  font-size: 11px; padding: 2px 4px;"
+            f"}}"
+        )
+
         self._no_seek_label.setStyleSheet(
             "color: #f0b429; font-size: 11px; background: transparent; border: none;"
         )
@@ -246,6 +268,20 @@ class MediaControlsOverlay(QWidget):
         self._mute_btn.setEnabled(is_visible)
         self._volume_slider.setVisible(is_visible)
         self._volume_slider.setEnabled(is_visible)
+
+    def set_speed_state(self, rate: float):
+        idx = self._speed_combo.findData(float(rate))
+        if idx < 0:
+            idx = self._speed_combo.findData(DEFAULT_SPEED)
+        self._speed_combo.blockSignals(True)
+        self._speed_combo.setCurrentIndex(idx)
+        self._speed_combo.blockSignals(False)
+
+    def set_speed_control_visible(self, visible: bool):
+        """Show/hide the speed control (used for media VLC cannot vary the rate of)."""
+        is_visible = bool(visible)
+        self._speed_combo.setVisible(is_visible)
+        self._speed_combo.setEnabled(is_visible)
 
     def set_no_seek_index(self, active: bool):
         """Show a warning and disable the seek slider for files with no Cues index."""
@@ -327,6 +363,12 @@ class MediaControlsOverlay(QWidget):
     def _on_mute_toggle(self):
         self._restart_autohide()
         self.mute_toggled.emit()
+
+    def _on_speed_changed(self, index: int):
+        self._restart_autohide()
+        rate = self._speed_combo.itemData(index)
+        if rate is not None:
+            self.speed_changed.emit(float(rate))
 
     def _refresh_mute_button(self):
         self._mute_btn.setText(UNMUTE_ICON if self._is_muted else MUTE_ICON)

@@ -15,10 +15,12 @@ from PySide6.QtWidgets import QWidget
 
 from ui.app_window.media_controls_overlay import (
     MediaControlsOverlay,
+    DEFAULT_SPEED,
     MUTE_ICON,
     PAUSE_ICON,
     PLAY_ICON,
     SLIDER_MAX,
+    SPEED_OPTIONS,
     UNMUTE_ICON,
     VOLUME_MAX,
     _fmt_time,
@@ -214,6 +216,35 @@ class TestVolume:
         assert overlay._is_muted is False
 
 
+class TestSpeed:
+    def test_defaults_to_normal_speed(self, overlay):
+        assert overlay._speed_combo.currentData() == DEFAULT_SPEED
+
+    def test_picking_a_speed_emits_the_rate(self, overlay):
+        received = []
+        overlay.speed_changed.connect(received.append)
+
+        idx = SPEED_OPTIONS.index(2.0)
+        overlay._speed_combo.setCurrentIndex(idx)
+
+        assert received == [2.0]
+
+    def test_setting_the_state_does_not_echo_back_a_change(self, overlay):
+        """MediaFrame pushes its own rate in; treating that as user input
+        would loop."""
+        received = []
+        overlay.speed_changed.connect(received.append)
+
+        overlay.set_speed_state(1.5)
+
+        assert overlay._speed_combo.currentData() == 1.5
+        assert received == []
+
+    def test_an_unknown_rate_falls_back_to_normal_speed(self, overlay):
+        overlay.set_speed_state(3.0)
+        assert overlay._speed_combo.currentData() == DEFAULT_SPEED
+
+
 class TestControlsForTheMediaInHand:
     def test_audio_controls_can_be_hidden(self, overlay):
         """Media with no audio track -- an animated image -- has nothing for
@@ -233,6 +264,21 @@ class TestControlsForTheMediaInHand:
         assert overlay._mute_btn.isHidden() is False
         assert overlay._volume_slider.isEnabled() is True
         assert overlay._volume_slider.isHidden() is False
+
+    def test_speed_control_can_be_hidden(self, overlay):
+        """VLC's rate has nothing to act on for media without a variable
+        playback rate."""
+        overlay.set_speed_control_visible(False)
+
+        assert overlay._speed_combo.isEnabled() is False
+        assert overlay._speed_combo.isHidden() is True
+
+    def test_speed_control_comes_back(self, overlay):
+        overlay.set_speed_control_visible(False)
+        overlay.set_speed_control_visible(True)
+
+        assert overlay._speed_combo.isEnabled() is True
+        assert overlay._speed_combo.isHidden() is False
 
     def test_a_file_without_a_seek_index_disables_seeking(self, overlay):
         """A slider that still moved would silently do nothing -- a Cues-less

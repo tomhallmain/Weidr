@@ -42,7 +42,7 @@ Keybinding map  (■ = bound  · = free | cols: Shift | Ctrl | Ctrl+Shift)
              Home/End/PgUp/PgDown ■ (bare), Backspace ■ (Shift),
              Delete ■ (Shift + Ctrl+Shift), Escape ■ (bare + Shift),
              Return ■ (Ctrl + Ctrl+Shift + Ctrl+Alt),
-             Tab ■ (Ctrl + Ctrl+Shift), F1/F11 ■, Y ■ (Alt)
+             Tab ■ (Ctrl + Ctrl+Shift), F1/F11 ■, Y ■ (Alt), Space ■ (bare)
 """
 
 from __future__ import annotations
@@ -245,6 +245,11 @@ class KeyBindingManager:
         # connect their returnPressed signals to the appropriate set_search_*
         # methods (see SidebarPanel), matching the Tkinter version where
         # <Return> was only bound on the entry widgets.
+
+        # ==============================================================
+        # Video playback
+        # ==============================================================
+        self._bind("Space", app.toggle_media_play_pause)
 
         # ==============================================================
         # Slideshow

@@ -146,6 +146,9 @@ class TestShortcutRegistration:
         assert _has_shortcut(km, "Ctrl+Shift+P"), "Interactive Crop shortcut not registered"
         assert _has_shortcut(km, "Ctrl+Shift+B"), "Interactive Box shortcut not registered"
 
+    def test_space_shortcut_present(self, window):
+        assert _has_shortcut(window.key_binding_mgr, "Space")
+
 
 # ---------------------------------------------------------------------------
 # TestGuardIntegration — full Qt path: keyClick + AwareEntry focus state
@@ -233,6 +236,30 @@ class TestViewShortcuts:
         assert not window.fullscreen
         qtbot.keyClick(window, Qt.Key.Key_F, Qt.KeyboardModifier.ShiftModifier)
         assert window.fullscreen
+
+
+# ---------------------------------------------------------------------------
+# TestVideoPlaybackShortcuts — Space (play/pause)
+# ---------------------------------------------------------------------------
+
+class TestVideoPlaybackShortcuts:
+    """Space is bound directly to app.toggle_media_play_pause (a bound method
+    captured once at bind time, unlike the lambda-wrapped digit shortcuts), so
+    monkeypatching must target the fresh lookup inside its body --
+    self.media_frame.video_toggle_pause() -- rather than the outer method."""
+
+    def test_space_calls_video_toggle_pause(self, window, qtbot, monkeypatch):
+        calls = []
+        monkeypatch.setattr(window.media_frame, "video_toggle_pause", lambda: calls.append(True))
+        qtbot.keyClick(window, Qt.Key.Key_Space)
+        assert calls == [True]
+
+    def test_space_is_suppressed_when_entry_has_focus(self, window, qtbot, monkeypatch):
+        calls = []
+        monkeypatch.setattr(window.media_frame, "video_toggle_pause", lambda: calls.append(True))
+        monkeypatch.setattr(AwareEntry, "an_entry_has_focus", True)
+        qtbot.keyClick(window, Qt.Key.Key_Space)
+        assert calls == [], "Space should be suppressed while an entry has focus"
 
 
 # ---------------------------------------------------------------------------

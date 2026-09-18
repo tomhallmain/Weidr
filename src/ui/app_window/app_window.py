@@ -1040,6 +1040,32 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             time_in_seconds=12,
         )
 
+    def apply_recursive_toggle(self, is_recursive: bool) -> None:
+        """Apply a user toggle of the recursive checkbox to the current directory.
+
+        The rescan can run as an incremental load, which returns with an empty
+        list and fills it from a background thread; the status tick then shows
+        the first file once one arrives.
+        """
+        self.file_browser.set_recursive(is_recursive)
+        self.warn_if_prevalidations_hide_subdirectory_media()
+        if self.mode != Mode.BROWSE:
+            return
+        if self.file_browser.is_incremental_loading:
+            self.media_navigator.clear_media()
+            self._start_incremental_status_updates()
+            return
+        if not self.file_browser.has_files():
+            self.media_navigator.clear_media()
+            recursive_str = "" if is_recursive else _(" (try setting recursive to True)")
+            self.notification_ctrl.toast(
+                _("No files found for current browsing settings.") + recursive_str
+            )
+        elif self.media_path:
+            self.media_navigator.show_next_media()
+        self.notification_ctrl.set_label_state()
+        self._sync_media_empty_directory_message()
+
     def _start_base_dir_load_spinner(self) -> None:
         """Show the sidebar loading spinner for base-directory scan/load."""
         self._base_dir_load_spinner_active = True

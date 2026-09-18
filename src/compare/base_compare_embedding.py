@@ -224,6 +224,13 @@ class BaseCompareEmbedding(BaseCompare):
         Members not found in compare_data.files_found (e.g. since removed)
         are silently skipped; a group left with no resolvable members is omitted.
         '''
+        if len(self.compare_data.files_found) != len(self._file_embeddings):
+            # Indexes into _file_embeddings would point at the wrong files.
+            logger.error(
+                "Skipping group centroids: files_found (%d) and file_embeddings (%d) are out of sync",
+                len(self.compare_data.files_found), len(self._file_embeddings),
+            )
+            return {}
         path_to_index = {p: i for i, p in enumerate(self.compare_data.files_found)}
         centroids = {}
         for group_index, members in self.compare_result.file_groups.items():
@@ -858,8 +865,6 @@ class BaseCompareEmbedding(BaseCompare):
         readded_indexes = []
         for f in filepaths:
             if f not in self.compare_data.files_found:
-                readded_indexes.append(len(self.compare_data.files_found))
-                self.compare_data.files_found.append(f)
                 try:
                     embedding = self.compute_embedding_for_path(
                         f, self.image_embeddings_func,
@@ -868,7 +873,12 @@ class BaseCompareEmbedding(BaseCompare):
                 except OSError as e:
                     logger.error(f"Error generating embedding from file {f}: {e}")
                     continue
-                self.file_embeddings_dict[f] = embedding
+                if embedding is None:
+                    continue
+                # files_found and _file_embeddings are index-aligned, so both
+                # grow together or not at all.
+                readded_indexes.append(len(self.compare_data.files_found))
+                self.compare_data.files_found.append(f)
                 self._file_embeddings = np.vstack((self._file_embeddings, [embedding]))
                 if self.verbose:
                     logger.info(f"Readded file to compare: {f}")

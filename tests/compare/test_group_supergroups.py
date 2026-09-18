@@ -155,6 +155,40 @@ class TestComputeGroupCentroids:
         assert centroids[0] == pytest.approx(_unit([1.0, 0.0]))
         assert centroids[1] == pytest.approx(_unit([0.0, 1.0]))
 
+    def test_out_of_sync_embeddings_yield_no_centroids(self, tmp_path):
+        """More files_found entries than embedding rows would index past the
+        array (or onto the wrong rows), so no centroids are produced."""
+        compare = _make_compare(tmp_path)
+        _seed(
+            compare,
+            {"/a.jpg": [1.0, 0.0], "/b.jpg": [0.0, 1.0]},
+            {0: {"/a.jpg": 0.0, "/b.jpg": 0.0, "/c.jpg": 0.0}},
+        )
+        compare.compare_data.files_found.append("/c.jpg")
+        assert compare.compute_group_centroids() == {}
+
+
+class TestReaddFiles:
+    def test_readded_file_extends_files_found_and_embeddings_together(self, tmp_path, monkeypatch):
+        compare = _make_compare(tmp_path)
+        _seed(compare, {"/a.jpg": [1.0, 0.0]}, {})
+        monkeypatch.setattr(compare, "compute_embedding_for_path", lambda *a, **k: [0.0, 1.0])
+        compare.readd_files(["/b.jpg", "/c.jpg"])
+        assert compare.compare_data.files_found == ["/a.jpg", "/b.jpg", "/c.jpg"]
+        assert len(compare._file_embeddings) == 3
+
+    def test_failed_embedding_adds_nothing(self, tmp_path, monkeypatch):
+        compare = _make_compare(tmp_path)
+        _seed(compare, {"/a.jpg": [1.0, 0.0]}, {})
+
+        def fail(*_a, **_k):
+            raise OSError("unreadable")
+
+        monkeypatch.setattr(compare, "compute_embedding_for_path", fail)
+        compare.readd_files(["/b.jpg"])
+        assert compare.compare_data.files_found == ["/a.jpg"]
+        assert len(compare._file_embeddings) == 1
+
 
 # ---------------------------------------------------------------------------
 # BaseCompareEmbedding.compute_supergroups

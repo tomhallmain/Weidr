@@ -1754,6 +1754,12 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
     # Lifecycle
     # ------------------------------------------------------------------
     _closing = False  # guard against recursive closeEvent
+    _close_confirmed = False  # quit already confirmed for this close attempt
+
+    def _confirm_quit(self) -> bool:
+        """Ask the user to confirm quitting the whole application."""
+        from lib.qt_alert import qt_alert
+        return qt_alert(self, _("Confirm Quit"), _("Would you like to quit the application?"), kind="askokcancel")
 
     def on_closing(self) -> None:
         """
@@ -1823,6 +1829,13 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         if self._closing:
             event.accept()
             return
+        # Closing the primary window quits the application (see below), so it
+        # gets the same confirmation as Ctrl+Q.
+        if not self.is_secondary() and not self._close_confirmed:
+            if not self._confirm_quit():
+                event.ignore()
+                return
+            self._close_confirmed = True
         if MarkedFiles.is_performing_action:
             # A marks transfer is running on the main thread.  Cancel it so the
             # loop exits on its next iteration, then re-attempt close once the
@@ -1852,10 +1865,9 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         on it (which stores all caches), then terminates the app.
         """
         from PySide6.QtWidgets import QApplication
-        from lib.qt_alert import qt_alert
 
         # logger.info(f"quit() invoked from window id={self.window_id} (is_secondary={self.is_secondary()})")
-        if qt_alert(self, _("Confirm Quit"), _("Would you like to quit the application?"), kind="askokcancel"):
+        if self._confirm_quit():
             logger.warning("Exiting application")
             primary = WindowManager.get_primary()
             if primary:

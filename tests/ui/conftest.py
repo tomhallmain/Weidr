@@ -66,6 +66,19 @@ def ui_block_alert_dialogs(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def ui_auto_confirm_quit(monkeypatch):
+    """Answer the primary window's quit confirmation without a dialog.
+
+    pytest-qt close()s every qtbot.addWidget() window before fixture teardown
+    runs, which reaches AppWindow.closeEvent; a real dialog there would block
+    the run. Tests of the confirmation itself override _confirm_quit on the
+    instance.
+    """
+    from ui.app_window.app_window import AppWindow
+    monkeypatch.setattr(AppWindow, "_confirm_quit", lambda self: True)
+
+
+@pytest.fixture(autouse=True)
 def ui_qt_media_cleanup_after_test():
     """Sweep MediaFrame/VLC/Qt widgets after each UI test so pytest exits cleanly."""
     yield

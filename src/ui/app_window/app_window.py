@@ -196,6 +196,12 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         self._suppress_file_check_refresh_until = 0.0
         self._incremental_status_timer: Optional[QTimer] = None
         self._base_dir_load_spinner_active = False
+        # Directories this window already showed the recursive-prevalidation
+        # warning for, so reloading one does not repeat it.
+        self._recursive_prevalidation_warned_dirs: Set[str] = set()
+        # True while set_base_dir syncs the recursive checkbox; base_dir still
+        # names the previous directory at that point.
+        self._syncing_recursive_check = False
         self._startup_media_path: Optional[str] = media_path
         # Show-new-media slideshow queue: files discovered by the periodic
         # file-check while the mode is active, shown one per tick.
@@ -906,7 +912,11 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
 
             if recursive != self.file_browser.recursive:
                 self.file_browser.set_recursive(recursive)
-                self.sidebar_panel.recursive_check.setChecked(recursive)
+                self._syncing_recursive_check = True
+                try:
+                    self.sidebar_panel.recursive_check.setChecked(recursive)
+                finally:
+                    self._syncing_recursive_check = False
 
             if sort_by_text:
                 try:
@@ -989,11 +999,46 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         self.setWindowTitle(self.get_title_from_base_dir(overwrite=True))
         self._apply_directory_title_bar_color(new_dir)
         RecentDirectories.set_recent_directory(new_dir)
+        self.warn_if_prevalidations_hide_subdirectory_media()
 
         # Return focus to the main canvas so global shortcuts work without Escape
         # after navigating via the base-directory entry field.
         if QApplication.focusWidget() is self.sidebar_panel.set_base_dir_box:
             self.refocus()
+
+    def warn_if_prevalidations_hide_subdirectory_media(self) -> None:
+        """Warn once per directory when recursive browsing is on, the directory
+        has subdirectories, and an active MOVE/COPY prevalidation applies here.
+
+        Prevalidations skip every matching file, including files a MOVE/COPY
+        rule already placed in a subdirectory, so those stay hidden in every
+        mode until prevalidations are turned off for this directory.
+        """
+        if self._syncing_recursive_check:
+            return
+        base_dir = self.get_base_dir()
+        if (not base_dir
+                or base_dir in self._recursive_prevalidation_warned_dirs
+                or not self.file_browser.recursive
+                or not self.compare_manager.prevalidations_running):
+            return
+        from compare.classifier_actions_manager import ClassifierActionsManager
+        if not ClassifierActionsManager.has_move_prevalidation_for_base_dir(base_dir):
+            return
+        try:
+            with os.scandir(base_dir) as entries:
+                has_subdirs = any(e.is_dir(follow_symlinks=False) for e in entries)
+        except OSError:
+            return
+        if not has_subdirs:
+            return
+        self._recursive_prevalidation_warned_dirs.add(base_dir)
+        self.app_actions.warn(
+            _("Prevalidations with a move/copy rule are active while browsing recursively. "
+              "Matching media in subdirectories, including media a rule already moved there, "
+              "will be skipped. Turn off prevalidations to view it."),
+            time_in_seconds=12,
+        )
 
     def _start_base_dir_load_spinner(self) -> None:
         """Show the sidebar loading spinner for base-directory scan/load."""

@@ -468,3 +468,55 @@ class TestPrevalidateSkipPaths:
 
             assert result is None
             assert eval_calls == 0
+
+
+class TestHasMovePrevalidationForBaseDir:
+    """has_move_prevalidation_for_base_dir applies prevalidate_media's gates."""
+
+    def _move(self, target: str = "/some/target") -> Prevalidation:
+        pv = _always_match_prevalidation("move", ClassifierActionType.MOVE)
+        pv.action_modifier = target
+        return pv
+
+    def test_active_move_prevalidation_detected(self):
+        with _isolated_prevalidations([self._move()]):
+            assert ClassifierActionsManager.has_move_prevalidation_for_base_dir("/browse")
+
+    def test_copy_prevalidation_detected(self):
+        pv = _always_match_prevalidation("copy", ClassifierActionType.COPY)
+        pv.action_modifier = "/some/target"
+        with _isolated_prevalidations([pv]):
+            assert ClassifierActionsManager.has_move_prevalidation_for_base_dir("/browse")
+
+    def test_non_move_prevalidation_ignored(self):
+        with _isolated_prevalidations([_always_match_prevalidation("hide", ClassifierActionType.HIDE)]):
+            assert not ClassifierActionsManager.has_move_prevalidation_for_base_dir("/browse")
+
+    def test_inactive_move_prevalidation_ignored(self):
+        pv = self._move()
+        pv.is_active = False
+        with _isolated_prevalidations([pv]):
+            assert not ClassifierActionsManager.has_move_prevalidation_for_base_dir("/browse")
+
+    def test_move_into_base_dir_ignored(self):
+        with _isolated_prevalidations([self._move(target="/browse")]):
+            assert not ClassifierActionsManager.has_move_prevalidation_for_base_dir("/browse")
+
+    def test_excluded_base_dir_ignored(self):
+        with _isolated_prevalidations([self._move()]):
+            ClassifierActionsManager.directories_to_exclude.append("/browse")
+            assert not ClassifierActionsManager.has_move_prevalidation_for_base_dir("/browse")
+
+    def test_profile_gate_resolved_by_name_before_init(self):
+        profile = DirectoryProfile(name="move_gate_prof", directories=["/browse"])
+        pv = self._move()
+        pv.profile_name = "move_gate_prof"
+        pv.profile = None
+        saved_profiles = DirectoryProfile.directory_profiles[:]
+        DirectoryProfile.directory_profiles.append(profile)
+        try:
+            with _isolated_prevalidations([pv]):
+                assert ClassifierActionsManager.has_move_prevalidation_for_base_dir("/browse")
+                assert not ClassifierActionsManager.has_move_prevalidation_for_base_dir("/elsewhere")
+        finally:
+            DirectoryProfile.directory_profiles[:] = saved_profiles

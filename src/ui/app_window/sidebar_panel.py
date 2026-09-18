@@ -586,6 +586,7 @@ class SidebarPanel(QWidget):
         """Handle recursive checkbox toggle."""
         is_recursive = state == Qt.CheckState.Checked.value
         self._app.file_browser.set_recursive(is_recursive)
+        self._app.warn_if_prevalidations_hide_subdirectory_media()
         if self._app.mode == Mode.BROWSE and self._app.media_path:
             self._app.media_navigator.show_next_media()
         if self._app.mode == Mode.BROWSE:

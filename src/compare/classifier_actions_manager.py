@@ -616,6 +616,30 @@ class ClassifierActionsManager:
         return prevalidation_action
 
     @staticmethod
+    def has_move_prevalidation_for_base_dir(base_dir: str) -> bool:
+        """True when an active MOVE/COPY prevalidation would run while browsing
+        *base_dir*, applying the same gates as prevalidate_media().
+
+        Media already inside such a rule's target (or any subdirectory where it
+        matches) is skipped when browsing recursively. Safe to call before the
+        lazy prevalidation init: the profile is resolved by name here.
+        """
+        if base_dir in ClassifierActionsManager.directories_to_exclude:
+            return False
+        for prevalidation in ClassifierActionsManager.prevalidations:
+            if not (prevalidation.is_active and prevalidation.can_run and prevalidation.is_move_action()):
+                continue
+            if prevalidation.action_modifier == base_dir:
+                continue
+            profile = prevalidation.profile
+            if profile is None and prevalidation.profile_name:
+                profile = DirectoryProfile.get_profile_by_name(prevalidation.profile_name)
+            if profile is not None and base_dir not in profile.directories:
+                continue
+            return True
+        return False
+
+    @staticmethod
     def advise_media(media_path: str, base_dir: Optional[str] = None) -> tuple[Optional[ClassifierActionType], Optional[str]]:
         """Dry-run prevalidations for a file shown outside the current browsing
         context (related image / temp media canvas).

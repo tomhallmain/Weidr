@@ -129,3 +129,43 @@ class TestValidateAndFindGimpStoresResolvedPath:
             cfg.validate_and_find_gimp()
         assert cfg.gimp_exe_loc == RESOLVED
         assert cfg._build_persisted_config_dict()["gimp_exe_loc"] == "gimp-3.0"
+
+
+class TestGimpVersionProbeExecutable:
+    """On Windows, GIMP 3.2's GUI exe prints --version to its own console window,
+    leaving captured stdout empty; the gimp-console sibling is probed instead."""
+
+    def test_windows_prefers_console_sibling(self, cfg, tmp_path, monkeypatch):
+        monkeypatch.setattr(_cfg_module.sys, "platform", "win32")
+        gui = tmp_path / "gimp-3.2.exe"
+        console = tmp_path / "gimp-console-3.2.exe"
+        gui.write_text("")
+        console.write_text("")
+        assert cfg.gimp_version_probe_executable(str(gui)) == str(console)
+
+    def test_windows_without_console_sibling_keeps_gui_exe(self, cfg, tmp_path, monkeypatch):
+        monkeypatch.setattr(_cfg_module.sys, "platform", "win32")
+        gui = tmp_path / "gimp-3.2.exe"
+        gui.write_text("")
+        assert cfg.gimp_version_probe_executable(str(gui)) == str(gui)
+
+    def test_non_windows_is_unchanged(self, cfg, tmp_path, monkeypatch):
+        monkeypatch.setattr(_cfg_module.sys, "platform", "linux")
+        gui = tmp_path / "gimp-3.2"
+        (tmp_path / "gimp-console-3.2").write_text("")
+        assert cfg.gimp_version_probe_executable(str(gui)) == str(gui)
+
+    def test_validation_probes_console_but_keeps_gui_path(self, cfg, tmp_path, monkeypatch):
+        monkeypatch.setattr(_cfg_module.sys, "platform", "win32")
+        gui = tmp_path / "gimp-3.2.exe"
+        console = tmp_path / "gimp-console-3.2.exe"
+        gui.write_text("")
+        console.write_text("")
+        cfg.gimp_exe_loc = str(gui)
+        version = type("R", (), {"returncode": 0,
+                                 "stdout": "GNU Image Manipulation Program version 3.2.6\n"})()
+        with patch("utils.config.subprocess.run", return_value=version) as run:
+            cfg.validate_and_find_gimp()
+        assert cfg.gimp_exe_loc == str(gui)
+        assert all(call.args[0][0] == str(console) for call in run.call_args_list)
+        assert cfg.gimp_gegl_enabled is True

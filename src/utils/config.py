@@ -565,6 +565,26 @@ class Config:
             return os.path.abspath(gimp_path)
         return shutil.which(gimp_path)
 
+    @staticmethod
+    def gimp_version_probe_executable(executable_path):
+        """Return the executable to run for a captured ``--version`` check.
+
+        On Windows, GIMP 3.2's GUI build (gimp-X.Y.exe) prints ``--version`` to a
+        console window of its own, so captured stdout is empty and a valid
+        install fails validation.  The console build next to it
+        (gimp-console-X.Y.exe) prints to stdout; use that when it exists.  This
+        is only for probing -- GIMP is still launched through the GUI build.
+        """
+        if sys.platform != "win32" or not executable_path:
+            return executable_path
+        directory, name = os.path.split(executable_path)
+        lower = name.lower()
+        if lower.startswith("gimp-") and not lower.startswith("gimp-console-"):
+            console_path = os.path.join(directory, "gimp-console-" + name[len("gimp-"):])
+            if os.path.isfile(console_path):
+                return console_path
+        return executable_path
+
     def _is_valid_gimp_installation(self, gimp_path):
         """Check if a GIMP installation is valid and executable."""
         try:
@@ -573,7 +593,7 @@ class Config:
                 return False
 
             # Test if the executable can be run (version check)
-            result = subprocess.run([executable_path, "--version"], 
+            result = subprocess.run([self.gimp_version_probe_executable(executable_path), "--version"],
                                   capture_output=True, text=True, timeout=10)
             if result.returncode == 0 and "GNU Image Manipulation Program" in result.stdout:
                 logger.debug("GIMP validation successful")
@@ -661,7 +681,7 @@ class Config:
                 return False
 
             # Test if the executable can be run (version check)
-            result = subprocess.run([executable_path, "--version"], 
+            result = subprocess.run([self.gimp_version_probe_executable(executable_path), "--version"],
                                   capture_output=True, text=True, timeout=10)
             if result.returncode != 0:
                 return False

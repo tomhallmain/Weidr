@@ -1,8 +1,13 @@
 import hashlib
+import io
 import os
+import shutil
 import sys
 import tempfile
+import threading
 import asyncio
+import zipfile
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Dict, Iterator, List, Optional, Tuple
 
@@ -59,7 +64,16 @@ except ImportError:
 from utils.config import config
 from utils.logging_setup import get_logger
 from utils.constants import CompareMediaType
-from utils.media_utils import is_video_path_by_extension
+from utils.media_utils import is_epub_path, is_paged_document_path, is_video_path_by_extension
+from image.epub_document import (
+    EpubError,
+    document_only_wraps_image,
+    is_url_inside,
+    read_cover_bytes,
+    read_epub_info,
+    safe_extract,
+    viewport_size,
+)
 
 logger = get_logger("frame_cache")
 
@@ -84,8 +98,9 @@ def _configure_stream_threading(stream) -> None:
 @dataclass
 class MediaStats:
     """Lightweight metadata stored in :attr:`FrameCache.media_stats_cache` per media path."""
+    # "pdf" means paged (a PDF, or an ePub read through its derived PDF).
     media_type: str = "other"               # "video", "gif", "pdf", or "other"
-    total_items: Optional[int] = None       # total frames (video/GIF) or pages (PDF)
+    total_items: Optional[int] = None       # total frames (video/GIF) or pages (PDF/ePub)
     duration_seconds: Optional[float] = None
     fps: Optional[float] = None
     frames_are_pseudostatic: Optional[bool] = None  # None = not yet tested
@@ -95,8 +110,8 @@ class MediaStats:
 @dataclass
 class SeekPosition:
     """A resolved seek target derived from a TriggerFrameResult."""
-    kind: str   # "ms" for video/GIF, "page" for PDF
-    value: int  # milliseconds (video/GIF) or 0-based page number (PDF)
+    kind: str   # "ms" for video/GIF, "page" for PDF/ePub
+    value: int  # milliseconds (video/GIF) or 0-based page number (PDF/ePub)
 
 
 def _stats_media_type_for_sampled_video_path(media_path: str) -> str:
@@ -111,6 +126,167 @@ _VIDEO_SAMPLE_CACHE_REV = "pyav2_gif_dynamic"
 # Small gaps (e.g. 1-2 frames past end-of-stream) are normal and silenced; large gaps
 # (e.g. 19/20 from a buffer-deadlock video) are worth surfacing.
 _SAMPLING_WARN_MISSING_RATIO = 0.5
+
+
+# Page geometry of reflowable ePub text in the derived PDF. ePub page numbers
+# depend on these, so changing them renumbers every ePub's pages.
+_EPUB_PAGE_FORMAT = "A5"
+_EPUB_PAGE_MARGIN = "12mm"
+_EPUB_NAVIGATION_TIMEOUT_MS = 60000
+_ZERO_MARGINS = {"top": "0", "right": "0", "bottom": "0", "left": "0"}
+
+_EPUB_COVER_HTML = """<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+@page { margin: 0; }
+html, body { margin: 0; height: 100%; background: #fff; }
+body { display: flex; align-items: center; justify-content: center; }
+img { max-width: 100%; max-height: 100%; }
+</style></head><body><img src="cover.jpg"></body></html>
+"""
+
+
+def _installed_browser_candidates() -> List[str]:
+    """Usual install locations of Chrome, Edge and Chromium on this platform."""
+    if sys.platform == "win32":
+        roots = [os.environ.get(k) for k in ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA")]
+        rel_paths = (
+            ("Google", "Chrome", "Application", "chrome.exe"),
+            ("Microsoft", "Edge", "Application", "msedge.exe"),
+            ("Chromium", "Application", "chrome.exe"),
+        )
+        return [os.path.join(root, *rel) for rel in rel_paths for root in roots if root]
+    if sys.platform == "darwin":
+        return [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+            "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        ]
+    names = ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "microsoft-edge")
+    return [p for p in (shutil.which(n) for n in names) if p]
+
+
+def find_chromium_executable() -> Optional[str]:
+    """Browser for pyppeteer to launch, or None to let pyppeteer use its own Chromium.
+
+    Order: ``config.chromium_exe_loc``; pyppeteer's already-downloaded Chromium
+    (None); an installed Chrome, Edge or Chromium; else None, which makes
+    pyppeteer download its pinned Chromium revision. That download fails when
+    the revision is gone from Google's snapshot storage.
+    """
+    configured = (getattr(config, "chromium_exe_loc", None) or "").strip()
+    if configured:
+        resolved = configured if os.path.isfile(configured) else shutil.which(configured)
+        if resolved:
+            return resolved
+        logger.warning("chromium_exe_loc does not name an executable: %s", configured)
+    try:
+        from pyppeteer.chromium_downloader import check_chromium
+        if check_chromium():
+            return None
+    except Exception:
+        pass
+    for candidate in _installed_browser_candidates():
+        if os.path.isfile(candidate):
+            return candidate
+    return None
+
+
+async def _launch_browser(**options):
+    """pyppeteer ``launch`` using :func:`find_chromium_executable`."""
+    executable = find_chromium_executable()
+    if executable:
+        options["executablePath"] = executable
+    try:
+        return await launch(**options)
+    except Exception as e:
+        raise RuntimeError(
+            f"Could not start Chromium ({e}). Set chromium_exe_loc in config.json "
+            f"to a Chrome, Edge or Chromium executable."
+        ) from e
+
+
+@dataclass
+class _EpubRenderJob:
+    url: str
+    pdf_options: dict
+    viewport: Optional[Tuple[int, int]] = None
+
+
+async def _block_requests_outside(page, allowed_root: str):
+    """Let only ``data:`` URLs and ``file://`` URLs under *allowed_root* load; fail the rest.
+
+    Uses the CDP Fetch domain through its own session. pyppeteer's
+    ``page.setRequestInterception`` sends ``Network.setRequestInterception``,
+    which current Chrome and Edge no longer have; it is used only when
+    ``Fetch.enable`` fails. Returns the session, which must stay referenced.
+    """
+    session = await page.target.createCDPSession()
+
+    async def _on_paused(event: dict) -> None:
+        request_id = event.get("requestId")
+        url = (event.get("request") or {}).get("url", "")
+        try:
+            if is_url_inside(url, allowed_root):
+                await session.send("Fetch.continueRequest", {"requestId": request_id})
+            else:
+                await session.send(
+                    "Fetch.failRequest", {"requestId": request_id, "errorReason": "BlockedByClient"}
+                )
+        except Exception as e:
+            logger.debug("ePub request filter error for %s: %s", url, e)
+
+    session.on("Fetch.requestPaused", lambda event: asyncio.ensure_future(_on_paused(event)))
+    try:
+        await session.send("Fetch.enable", {"patterns": [{"urlPattern": "*"}]})
+        return session
+    except Exception as e:
+        logger.debug("Fetch.enable unavailable (%s); using Network request interception", e)
+
+    await page.setRequestInterception(True)
+
+    async def _filter(request) -> None:
+        try:
+            if is_url_inside(request.url, allowed_root):
+                await request.continue_()
+            else:
+                await request.abort()
+        except Exception as e:
+            logger.debug("ePub request filter error for %s: %s", request.url, e)
+
+    page.on("request", lambda request: asyncio.ensure_future(_filter(request)))
+    return session
+
+
+async def _render_epub_documents(jobs: List[_EpubRenderJob], allowed_root: str) -> List[str]:
+    """Print each job's document to PDF with one headless Chromium instance.
+
+    JavaScript is off and every request outside *allowed_root* is aborted, so
+    remote trackers and fonts are neither fetched nor able to stall ``load``.
+    A document that fails to render is skipped. Returns the PDF paths written.
+    """
+    # Signal handlers can only be installed from the main thread, and the
+    # build can run on a worker thread.
+    browser = await _launch_browser(
+        headless=True, handleSIGINT=False, handleSIGTERM=False, handleSIGHUP=False
+    )
+    try:
+        page = await browser.newPage()
+        await page.setJavaScriptEnabled(False)
+        filter_session = await _block_requests_outside(page, allowed_root)  # noqa: F841 -- keeps the session alive
+
+        written: List[str] = []
+        for job in jobs:
+            try:
+                width, height = job.viewport or (800, 600)
+                await page.setViewport({"width": width, "height": height})
+                await page.goto(job.url, {"waitUntil": "load", "timeout": _EPUB_NAVIGATION_TIMEOUT_MS})
+                await page.pdf(job.pdf_options)
+                written.append(job.pdf_options["path"])
+            except Exception as e:
+                logger.warning("Skipping ePub document %s: %s", job.url, e)
+        return written
+    finally:
+        await browser.close()
 
 
 def _stable_media_path_hash(media_path: str) -> str:
@@ -479,6 +655,13 @@ class FrameCache:
     cache: Dict[str, str] = {}  # Maps media_path to cached image path
     sampled_cache: Dict[str, List[str]] = {}  # Maps media_path|sample_ratio to sampled frame paths
     media_stats_cache: Dict[str, MediaStats] = {}  # Maps media_path to lightweight stats
+    epub_pdf_cache: Dict[str, str] = {}  # Maps ePub path to its derived PDF
+    epub_failures: Dict[str, str] = {}  # Maps ePub path to why it can't be paged (DRM, broken, render failure)
+    _epub_build_locks: Dict[str, threading.Lock] = {}
+    _epub_build_locks_guard = threading.Lock()
+    # PDFium is not thread-safe, and an ePub build merges its PDF on a worker
+    # thread while the UI thread may be rendering other pages.
+    pdfium_lock = threading.RLock()
 
     @classmethod
     def _write_cv2_jpeg(cls, frame: np.ndarray, path: str) -> Optional[str]:
@@ -532,7 +715,8 @@ class FrameCache:
     @classmethod
     def get_image_path(cls, media_path: str) -> str:
         """
-        Get the image path for a media file. If it's a video/GIF/PDF/SVG/HTML, extracts the first frame.
+        Get the image path for a media file. If it's a video/GIF/PDF/ePub/SVG/HTML, extracts the first frame
+        (an ePub's cover).
         Otherwise returns the original path.
 
         Args:
@@ -560,6 +744,15 @@ class FrameCache:
                     return cls.get_first_frame(media_path, CompareMediaType.PDF)
                 else:
                     raise ImportError("Unable to extract PDF frame: pypdfium2 is not installed")
+            else:
+                return media_path
+
+        if is_epub_path(media_path):
+            if config.enable_epubs:
+                if has_imported_pypdfium2 and has_imported_pyppeteer:
+                    return cls.get_first_frame(media_path, CompareMediaType.EPUB)
+                else:
+                    raise ImportError("Unable to render ePub: pyppeteer and pypdfium2 are required")
             else:
                 return media_path
 
@@ -607,6 +800,8 @@ class FrameCache:
         try:
             if media_type == CompareMediaType.PDF:
                 cls._extract_pdf_frame(media_path)
+            elif media_type == CompareMediaType.EPUB:
+                cls._extract_epub_frame(media_path)
             elif media_type == CompareMediaType.SVG:
                 cls._extract_svg_frame(media_path)
             elif media_type == CompareMediaType.HTML:
@@ -615,8 +810,16 @@ class FrameCache:
                 cls._extract_video_frame(media_path)
         except Exception as e:
             logger.error(f"Error extracting frame from {media_path}: {str(e)}")
-            # Fallback to original path if extraction fails
-            cls.cache[media_path] = media_path
+            if media_type == CompareMediaType.EPUB:
+                # Image loaders can't read an .epub, so it must not stand in for its own frame.
+                try:
+                    cls.cache[media_path] = cls._epub_fallback_frame(media_path)
+                except Exception as fallback_error:
+                    logger.error(f"Error writing ePub placeholder for {media_path}: {fallback_error}")
+                    cls.cache[media_path] = media_path
+            else:
+                # Fallback to original path if extraction fails
+                cls.cache[media_path] = media_path
 
     @classmethod
     def get_pdf_page(cls, pdf_path: str, page_index: int) -> str:
@@ -625,24 +828,39 @@ class FrameCache:
         Caches in the temp directory; repeated calls for the same page are instant.
         Also populates ``media_stats_cache`` with the total page count and, for
         page 0, updates ``cls.cache[pdf_path]`` so masonry thumbnails stay current.
+
+        *pdf_path* may be an ePub: pages are read from its derived PDF (built on
+        first use, see :meth:`get_epub_pdf`), and every cache stays keyed by the
+        ePub path. An ePub that can't be paged has one page, its cover or a
+        placeholder.
         """
+        source_pdf = pdf_path
+        if is_epub_path(pdf_path):
+            try:
+                source_pdf = cls.get_epub_pdf(pdf_path)
+            except EpubError:
+                if page_index != 0:
+                    raise IndexError(f"Page {page_index} out of range for {pdf_path} (1 page)")
+                return cls._epub_fallback_frame(pdf_path)
         mh = _stable_media_path_hash(pdf_path)
         page_path = os.path.join(cls.temporary_directory.name, f"{mh}_page_{page_index}.jpg")
         if os.path.isfile(page_path):
             if pdf_path not in cls.media_stats_cache:
-                pdf = pdfium.PdfDocument(pdf_path)
-                cls.media_stats_cache[pdf_path] = MediaStats(media_type="pdf", total_items=len(pdf))
+                with cls.pdfium_lock:
+                    pdf = pdfium.PdfDocument(source_pdf)
+                    cls.media_stats_cache[pdf_path] = MediaStats(media_type="pdf", total_items=len(pdf))
             if page_index == 0:
                 cls.cache[pdf_path] = page_path
             return page_path
-        pdf = pdfium.PdfDocument(pdf_path)
-        n_pages = len(pdf)
-        if n_pages == 0:
-            raise ValueError(f"PDF has no pages: {pdf_path}")
-        if page_index >= n_pages:
-            raise IndexError(f"Page {page_index} out of range for {pdf_path} ({n_pages} pages)")
-        cls.media_stats_cache[pdf_path] = MediaStats(media_type="pdf", total_items=n_pages)
-        image = pdf[page_index].render(scale=4, fill_color=(255, 255, 255, 255)).to_pil()
+        with cls.pdfium_lock:
+            pdf = pdfium.PdfDocument(source_pdf)
+            n_pages = len(pdf)
+            if n_pages == 0:
+                raise ValueError(f"PDF has no pages: {pdf_path}")
+            if page_index >= n_pages:
+                raise IndexError(f"Page {page_index} out of range for {pdf_path} ({n_pages} pages)")
+            cls.media_stats_cache[pdf_path] = MediaStats(media_type="pdf", total_items=n_pages)
+            image = pdf[page_index].render(scale=4, fill_color=(255, 255, 255, 255)).to_pil()
         resolved = cls._write_pil_image(image, page_path, quality=95)
         if resolved is None:
             raise OSError(f"Could not write PDF page {page_index} for {pdf_path}")
@@ -659,6 +877,304 @@ class FrameCache:
         except Exception as e:
             logger.error(f"Error processing PDF {pdf_path}: {str(e)}")
             raise
+
+    # ------------------------------------------------------------------
+    # ePub
+    # ------------------------------------------------------------------
+    @classmethod
+    def _extract_epub_frame(cls, epub_path: str) -> None:
+        """Cache an ePub's first frame: its cover image straight from the archive,
+        or, with no usable cover, page 0 of the full derived-PDF build."""
+        logger.info(f"Extracting first page from ePub: {epub_path}")
+        try:
+            cover = cls._extract_epub_cover(epub_path)
+        except EpubError:
+            cls.cache[epub_path] = cls._epub_fallback_frame(epub_path)
+            return
+        if cover is not None:
+            cls.cache[epub_path] = cover
+            return
+        cls.get_pdf_page(epub_path, 0)
+
+    @classmethod
+    def get_epub_cover_path(cls, epub_path: str) -> Optional[str]:
+        """The cached first frame of *epub_path*, or its cover extracted from the
+        archive. None when neither exists yet. Never starts a derived-PDF build."""
+        cached = cls.cache.get(epub_path)
+        if cached and cached != epub_path and os.path.isfile(cached):
+            return cached
+        try:
+            cover = cls._extract_epub_cover(epub_path)
+        except EpubError:
+            return cls._epub_fallback_frame(epub_path)
+        if cover is not None:
+            cls.cache[epub_path] = cover
+        return cover
+
+    @classmethod
+    def _extract_epub_cover(cls, epub_path: str) -> Optional[str]:
+        """Write the ePub's cover image as a JPEG in the temp directory and return it.
+
+        Returns None when the book has no cover, the cover is encrypted, or PIL
+        can't decode it. Also records DRM (see :meth:`_record_epub_failure`) so no
+        build is attempted. Raises :class:`EpubError` for an unreadable archive.
+        """
+        mh = _stable_media_path_hash(epub_path)
+        cover_path = os.path.join(cls.temporary_directory.name, f"{mh}_epub_cover.jpg")
+        if os.path.isfile(cover_path):
+            return os.path.abspath(cover_path)
+        try:
+            with zipfile.ZipFile(epub_path) as zf:
+                info = read_epub_info(zf)
+                data = read_cover_bytes(zf, info)
+        except (zipfile.BadZipFile, OSError, EpubError) as e:
+            cls._record_epub_failure(epub_path, str(e) or type(e).__name__)
+            raise EpubError(str(e)) from e
+        if info.drm:
+            cls._record_epub_failure(epub_path, "DRM-protected")
+        if data is None:
+            return None
+        try:
+            from PIL import Image
+            with Image.open(io.BytesIO(data)) as img:
+                img.load()
+                if img.mode in ("RGBA", "LA", "P"):
+                    rgba = img.convert("RGBA")
+                    rgb = Image.new("RGB", rgba.size, (255, 255, 255))
+                    rgb.paste(rgba, mask=rgba.split()[-1])
+                else:
+                    rgb = img.convert("RGB")
+        except Exception as e:
+            logger.warning("Could not decode ePub cover image for %s: %s", epub_path, e)
+            return None
+        return cls._write_pil_image(rgb, cover_path, quality=95)
+
+    @classmethod
+    def _epub_fallback_frame(cls, epub_path: str) -> str:
+        """First frame for an ePub whose pages can't be rendered: the cached frame,
+        else the cover, else a placeholder raster. Never builds the derived PDF."""
+        cached = cls.cache.get(epub_path)
+        if cached and cached != epub_path and os.path.isfile(cached):
+            return cached
+        try:
+            cover = cls._extract_epub_cover(epub_path)
+        except EpubError:
+            cover = None
+        frame = cover if cover is not None else cls._epub_placeholder(epub_path)
+        cls.cache[epub_path] = frame
+        return frame
+
+    @classmethod
+    def _epub_placeholder(cls, epub_path: str) -> str:
+        """A blank book-page raster for an ePub with nothing renderable."""
+        mh = _stable_media_path_hash(epub_path)
+        path = os.path.join(cls.temporary_directory.name, f"{mh}_epub_placeholder.jpg")
+        if os.path.isfile(path):
+            return os.path.abspath(path)
+        from PIL import Image, ImageDraw
+        img = Image.new("RGB", (620, 874), (236, 236, 236))
+        draw = ImageDraw.Draw(img)
+        draw.rectangle([30, 30, 589, 843], outline=(170, 170, 170), width=4)
+        draw.text((296, 430), "ePub", fill=(120, 120, 120))
+        resolved = cls._write_pil_image(img, path, quality=90)
+        if resolved is None:
+            raise OSError(f"Could not write ePub placeholder for {epub_path}")
+        return resolved
+
+    @classmethod
+    def _record_epub_failure(cls, epub_path: str, reason: str) -> None:
+        """Mark *epub_path* as unpageable for this session: one page, no build attempts."""
+        if epub_path not in cls.epub_failures:
+            logger.warning("ePub can't be paged, showing cover or placeholder only: %s (%s)", epub_path, reason)
+        cls.epub_failures[epub_path] = reason
+        cls.media_stats_cache[epub_path] = MediaStats(media_type="pdf", total_items=1)
+
+    @classmethod
+    def is_epub_unpageable(cls, epub_path: str) -> bool:
+        return epub_path in cls.epub_failures
+
+    @classmethod
+    def get_cached_epub_pdf(cls, epub_path: str) -> Optional[str]:
+        """The derived PDF of *epub_path* if already built this session, else None."""
+        pdf_path = cls.epub_pdf_cache.get(epub_path)
+        if pdf_path and os.path.isfile(pdf_path):
+            return pdf_path
+        return None
+
+    @classmethod
+    def _epub_build_lock(cls, epub_path: str) -> threading.Lock:
+        with cls._epub_build_locks_guard:
+            lock = cls._epub_build_locks.get(epub_path)
+            if lock is None:
+                lock = threading.Lock()
+                cls._epub_build_locks[epub_path] = lock
+            return lock
+
+    @classmethod
+    def get_epub_pdf(cls, epub_path: str) -> str:
+        """Return the PDF rendered from *epub_path*, building it on first use.
+
+        The build renders the whole book with headless Chromium, so it can take
+        a while; concurrent callers for the same book wait for one build. Raises
+        :class:`EpubError` when the book can't be paged; that outcome is kept for
+        the session, so later calls fail fast.
+        """
+        cached = cls.get_cached_epub_pdf(epub_path)
+        if cached:
+            return cached
+        with cls._epub_build_lock(epub_path):
+            cached = cls.get_cached_epub_pdf(epub_path)
+            if cached:
+                return cached
+            if epub_path in cls.epub_failures:
+                raise EpubError(cls.epub_failures[epub_path])
+            try:
+                pdf_path, n_pages = cls._build_epub_pdf(epub_path)
+            except Exception as e:
+                cls._record_epub_failure(epub_path, str(e) or type(e).__name__)
+                if isinstance(e, EpubError):
+                    raise
+                raise EpubError(str(e)) from e
+            cls.epub_pdf_cache[epub_path] = pdf_path
+            cls.media_stats_cache[epub_path] = MediaStats(media_type="pdf", total_items=n_pages)
+            return pdf_path
+
+    @classmethod
+    def _build_epub_pdf(cls, epub_path: str) -> Tuple[str, int]:
+        """Extract *epub_path*, print its cover and spine to PDF, and merge them
+        into ``<hash>_from_epub.pdf``. Returns ``(pdf_path, page_count)``."""
+        if not (has_imported_pyppeteer and has_imported_pypdfium2):
+            raise EpubError("ePub rendering requires pyppeteer and pypdfium2")
+        logger.info(f"Rendering ePub to PDF: {epub_path}")
+        mh = _stable_media_path_hash(epub_path)
+        out_pdf = os.path.join(cls.temporary_directory.name, f"{mh}_from_epub.pdf")
+        work_dir = os.path.join(cls.temporary_directory.name, f"{mh}_epub")
+        shutil.rmtree(work_dir, ignore_errors=True)
+        book_dir = os.path.join(work_dir, "book")
+        parts_dir = os.path.join(work_dir, "parts")
+        os.makedirs(book_dir)
+        os.makedirs(parts_dir)
+        try:
+            try:
+                with zipfile.ZipFile(epub_path) as zf:
+                    info = read_epub_info(zf)
+                    if info.drm:
+                        raise EpubError("DRM-protected")
+                    safe_extract(zf, book_dir)
+            except (zipfile.BadZipFile, OSError) as e:
+                raise EpubError(str(e)) from e
+
+            jobs: List[_EpubRenderJob] = []
+            reflow_options = {
+                "format": _EPUB_PAGE_FORMAT,
+                "printBackground": True,
+                "margin": {side: _EPUB_PAGE_MARGIN for side in ("top", "right", "bottom", "left")},
+            }
+            one_page_options = {
+                "format": _EPUB_PAGE_FORMAT,
+                "printBackground": True,
+                "margin": dict(_ZERO_MARGINS),
+                "pageRanges": "1",
+            }
+
+            spine = list(info.spine)
+            cover = cls._extract_epub_cover(epub_path)
+            if cover is not None:
+                shutil.copyfile(cover, os.path.join(work_dir, "cover.jpg"))
+                cover_html = os.path.join(work_dir, "cover.html")
+                with open(cover_html, "w", encoding="utf-8") as f:
+                    f.write(_EPUB_COVER_HTML)
+                jobs.append(_EpubRenderJob(
+                    url=Path(cover_html).as_uri(),
+                    pdf_options={**one_page_options, "path": os.path.join(parts_dir, "0000_cover.pdf")},
+                ))
+                first_text = cls._read_epub_document(book_dir, spine[0].name)
+                if first_text is not None and document_only_wraps_image(
+                    first_text, spine[0].name, info.cover_image_name
+                ):
+                    spine = spine[1:]
+
+            for i, item in enumerate(spine, start=1):
+                doc_path = cls._epub_member_path(book_dir, item.name)
+                if doc_path is None or not os.path.isfile(doc_path):
+                    logger.warning("ePub spine document missing from archive: %s in %s", item.name, epub_path)
+                    continue
+                part = os.path.join(parts_dir, f"{i:04d}.pdf")
+                viewport = None
+                if item.fixed_layout:
+                    text = cls._read_epub_document(book_dir, item.name)
+                    viewport = viewport_size(text) if text is not None else None
+                if viewport is not None:
+                    options = {
+                        "width": f"{viewport[0]}px",
+                        "height": f"{viewport[1]}px",
+                        "printBackground": True,
+                        "margin": dict(_ZERO_MARGINS),
+                        "pageRanges": "1",
+                        "path": part,
+                    }
+                elif item.fixed_layout:
+                    options = {**one_page_options, "path": part}
+                else:
+                    options = {**reflow_options, "path": part}
+                jobs.append(_EpubRenderJob(url=Path(doc_path).as_uri(), pdf_options=options, viewport=viewport))
+
+            if not jobs:
+                raise EpubError("No renderable documents in spine")
+
+            loop = asyncio.new_event_loop()
+            try:
+                parts = loop.run_until_complete(_render_epub_documents(jobs, work_dir))
+            finally:
+                loop.close()
+
+            with cls.pdfium_lock:
+                merged = pdfium.PdfDocument.new()
+                try:
+                    for part in parts:
+                        src = pdfium.PdfDocument(part)
+                        try:
+                            merged.import_pages(src)
+                        finally:
+                            src.close()
+                    n_pages = len(merged)
+                    if n_pages == 0:
+                        raise EpubError("Render produced no pages")
+                    merged.save(out_pdf)
+                finally:
+                    merged.close()
+            return out_pdf, n_pages
+        finally:
+            shutil.rmtree(work_dir, ignore_errors=True)
+
+    @staticmethod
+    def _epub_member_path(book_dir: str, name: str) -> Optional[str]:
+        """Extracted path of archive member *name*, or None when an OPF href
+        resolves outside the book (e.g. ``../x``)."""
+        root = os.path.realpath(book_dir)
+        path = os.path.realpath(os.path.join(root, *name.split("/")))
+        if not path.startswith(root + os.sep):
+            return None
+        return path
+
+    @classmethod
+    def _read_epub_document(cls, book_dir: str, name: str) -> Optional[str]:
+        path = cls._epub_member_path(book_dir, name)
+        if path is None:
+            return None
+        try:
+            with open(path, "r", encoding="utf-8", errors="replace") as f:
+                return f.read()
+        except OSError:
+            return None
+
+    @classmethod
+    def _paged_document_fallback(cls, media_path: str) -> str:
+        """What sampling yields when a PDF/ePub gives no pages: the PDF path itself
+        (loaders can read it), or an ePub's cover or placeholder."""
+        if is_epub_path(media_path):
+            return cls._epub_fallback_frame(media_path)
+        return media_path
 
     @classmethod
     def _extract_svg_frame(cls, svg_path: str) -> None:
@@ -699,7 +1215,7 @@ class FrameCache:
             
             # Convert HTML to PDF using Pyppeteer
             async def convert_html_to_pdf():
-                browser = await launch(headless=True)
+                browser = await _launch_browser(headless=True)
                 page = await browser.newPage()
                 
                 # Read the HTML file
@@ -832,7 +1348,7 @@ class FrameCache:
         max_samples: Optional[int] = None,
     ) -> Tuple[int, Iterator[str]]:
         """
-        Lazily produce sampled frame paths for video/GIF/PDF (or a single still path).
+        Lazily produce sampled frame paths for video/GIF/PDF/ePub (or a single still path).
 
         Returns ``(planned_slot_count, iterator)``. *planned_slot_count* is the number
         of sampling slots (``len(frame_indices)`` or ``1`` for fallback), used for
@@ -854,7 +1370,7 @@ class FrameCache:
         media_path_lower = media_path.lower()
         is_video = config.enable_videos and is_video_path_by_extension(media_path)
         is_gif = config.enable_gifs and media_path_lower.endswith(".gif")
-        is_pdf = media_path_lower.endswith(".pdf") and config.enable_pdfs and has_imported_pypdfium2
+        is_pdf = is_paged_document_path(media_path) and has_imported_pypdfium2
         if not is_video and not is_gif and not is_pdf:
             p = cls.get_image_path(media_path)
             return 1, iter([p])
@@ -925,7 +1441,7 @@ class FrameCache:
     @classmethod
     def get_frame_samples(cls, media_path: str, sample_ratio: float = 0.1) -> List[str]:
         """
-        Get sampled frame image paths for dynamic media (currently video/GIF/PDF).
+        Get sampled frame image paths for dynamic media (currently video/GIF/PDF/ePub).
 
         Materializes :meth:`stream_frame_samples` (full decode). Falls back to
         ``get_image_path`` when sampling is not applicable or fails.
@@ -935,9 +1451,9 @@ class FrameCache:
         media_path_lower = media_path.lower()
         is_video = config.enable_videos and is_video_path_by_extension(media_path)
         is_gif = config.enable_gifs and media_path_lower.endswith(".gif")
-        is_pdf = media_path_lower.endswith(".pdf") and config.enable_pdfs and has_imported_pypdfium2
+        is_pdf = is_paged_document_path(media_path) and has_imported_pypdfium2
         if len(sampled_paths) == 0 and (is_video or is_gif or is_pdf):
-            sampled_paths = [media_path]
+            sampled_paths = [cls._paged_document_fallback(media_path) if is_pdf else media_path]
             try:
                 ratio = float(sample_ratio)
             except Exception:
@@ -1498,8 +2014,10 @@ class FrameCache:
     ) -> Tuple[int, Iterator[str]]:
         pdf = None
         try:
-            pdf = pdfium.PdfDocument(pdf_path)
-            total_pages = len(pdf)
+            source_pdf = cls.get_epub_pdf(pdf_path) if is_epub_path(pdf_path) else pdf_path
+            with cls.pdfium_lock:
+                pdf = pdfium.PdfDocument(source_pdf)
+                total_pages = len(pdf)
             cls.media_stats_cache[pdf_path] = MediaStats(
                 media_type="pdf", total_items=total_pages
             )
@@ -1518,8 +2036,9 @@ class FrameCache:
                     pass
 
             def gen_open_fail() -> Iterator[str]:
-                cls.sampled_cache[cache_key] = [pdf_path]
-                yield pdf_path
+                fallback = cls._paged_document_fallback(pdf_path)
+                cls.sampled_cache[cache_key] = [fallback]
+                yield fallback
 
             return 1, gen_open_fail()
 
@@ -1530,8 +2049,9 @@ class FrameCache:
                 pass
 
             def gen_no_pages() -> Iterator[str]:
-                cls.sampled_cache[cache_key] = [pdf_path]
-                yield pdf_path
+                fallback = cls._paged_document_fallback(pdf_path)
+                cls.sampled_cache[cache_key] = [fallback]
+                yield fallback
 
             return 1, gen_no_pages()
 
@@ -1544,8 +2064,9 @@ class FrameCache:
             completed = False
             try:
                 for page_index in page_indices:
-                    page = pdf_ref[page_index]
-                    image = page.render(scale=4, fill_color=(255, 255, 255, 255)).to_pil()
+                    with cls.pdfium_lock:
+                        page = pdf_ref[page_index]
+                        image = page.render(scale=4, fill_color=(255, 255, 255, 255)).to_pil()
                     page_path = os.path.join(
                         cls.temporary_directory.name,
                         f"{media_hash}_sample_page_{page_index}.jpg",
@@ -1561,14 +2082,16 @@ class FrameCache:
                     accumulated.append(resolved)
                     yield resolved
                 if len(accumulated) == 0:
-                    accumulated.append(pdf_path)
-                    yield pdf_path
+                    fallback = cls._paged_document_fallback(pdf_path)
+                    accumulated.append(fallback)
+                    yield fallback
                 completed = True
             except Exception as e:
                 logger.warning(f"Error extracting sampled PDF pages from {pdf_path}: {e}")
             finally:
                 try:
-                    pdf_ref.close()
+                    with cls.pdfium_lock:
+                        pdf_ref.close()
                 except Exception:
                     pass
                 if completed:
@@ -1638,12 +2161,15 @@ class FrameCache:
         """
         temp_path = cls.cache.pop(media_path, None)
         cls.media_stats_cache.pop(media_path, None)
-        if delete_temp_file and temp_path and os.path.isfile(temp_path):
-            try:
-                os.remove(temp_path)
-                logger.debug(f"Removed cached temp file: {temp_path}")
-            except OSError as e:
-                logger.warning(f"Could not remove cached temp file {temp_path}: {e}")
+        cls.epub_failures.pop(media_path, None)
+        epub_pdf = cls.epub_pdf_cache.pop(media_path, None)
+        for path in (temp_path, epub_pdf):
+            if delete_temp_file and path and path != media_path and os.path.isfile(path):
+                try:
+                    os.remove(path)
+                    logger.debug(f"Removed cached temp file: {path}")
+                except OSError as e:
+                    logger.warning(f"Could not remove cached temp file {path}: {e}")
         sampled_keys = [k for k in cls.sampled_cache.keys() if k.startswith(f"{media_path}|")]
         for key in sampled_keys:
             sampled_paths = cls.sampled_cache.pop(key, [])
@@ -1661,6 +2187,8 @@ class FrameCache:
         cls.cache.clear()
         cls.sampled_cache.clear()
         cls.media_stats_cache.clear()
+        cls.epub_pdf_cache.clear()
+        cls.epub_failures.clear()
 
     @classmethod
     def cleanup(cls) -> None:

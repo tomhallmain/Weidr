@@ -412,6 +412,7 @@ class SearchController:
         args.include_videos = config.enable_videos
         args.include_gifs = config.enable_gifs
         args.include_pdfs = config.enable_pdfs
+        args.include_epubs = config.enable_epubs
         args.listener = ProgressListener(update_func=self.display_progress)
         args.app_actions = self._app.app_actions
 

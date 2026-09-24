@@ -17,7 +17,7 @@ from utils.utils import Utils
 logger = get_logger("base_compare")
 
 
-def gather_files(base_dir=".", exts=config.image_types, recursive=True, include_videos=False, include_gifs=False, include_pdfs=False):
+def gather_files(base_dir=".", exts=config.image_types, recursive=True, include_videos=False, include_gifs=False, include_pdfs=False, include_epubs=False):
     files = []
     recursive_str = "**/" if recursive else ""
     exts = exts[:]
@@ -41,6 +41,11 @@ def gather_files(base_dir=".", exts=config.image_types, recursive=True, include_
         exts.append('.pdf')
     elif not include_pdfs and '.pdf' in exts:
         exts.remove('.pdf')
+
+    if include_epubs and '.epub' not in exts:
+        exts.append('.epub')
+    elif not include_epubs and '.epub' in exts:
+        exts.remove('.epub')
     
     for ext in exts:
         pattern = os.path.join(base_dir, recursive_str + "*" + ext)
@@ -238,7 +243,8 @@ class BaseCompare:
         elif self.gather_files_func:
             exts = config.image_types
             self.files = self.gather_files_func(
-                base_dir=self.base_dir, exts=exts, recursive=self.args.recursive, include_videos=self.args.include_videos, include_gifs=self.args.include_gifs, include_pdfs=self.args.include_pdfs)
+                base_dir=self.base_dir, exts=exts, recursive=self.args.recursive, include_videos=self.args.include_videos, include_gifs=self.args.include_gifs, include_pdfs=self.args.include_pdfs,
+                include_epubs=getattr(self.args, "include_epubs", False))
         else:
             raise Exception("No gather files function found.")
         self.files.sort()

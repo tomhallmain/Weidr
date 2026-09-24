@@ -35,6 +35,7 @@ from utils.media_utils import (
     is_animated_image_candidate,
     is_audio_for_display,
     is_large_image_dims,
+    is_paged_document_path,
     is_video_for_display,
     is_video_path_by_extension,
     is_video_container_signature,
@@ -796,7 +797,7 @@ class MediaFrame(QFrame):
             return
         self._video_ui = None
         self.imscale = 1.0
-        if path.lower().endswith('.pdf') and has_imported_pypdfium2:
+        if (path.lower().endswith('.pdf') or is_paged_document_path(path)) and has_imported_pypdfium2:
             if self._pdf_viewer is None:
                 from ui.app_window.pdf_page_viewer import PdfPageViewer
                 self._pdf_viewer = PdfPageViewer(self)
@@ -819,12 +820,12 @@ class MediaFrame(QFrame):
             self._show_placeholder(_("Unable to display this file: ") + os.path.basename(path))
 
     def pdf_navigate(self, delta: int) -> None:
-        """Forward a page-turn request to the active PDF viewer, if any."""
+        """Forward a page-turn request to the active PDF/ePub viewer, if any."""
         if self._pdf_viewer is not None:
             self._pdf_viewer.navigate(delta)
 
     def pdf_current_page_path(self) -> str | None:
-        """Return the JPEG path of the currently displayed PDF page, or None."""
+        """Return the JPEG path of the currently displayed PDF/ePub page, or None."""
         if self._pdf_viewer is not None:
             return self._pdf_viewer.current_jpeg_path()
         return None

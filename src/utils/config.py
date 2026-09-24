@@ -109,6 +109,7 @@ class Config:
         "gimp_exe_loc":                        None,
         "gimp_locale":                         None,
         "sd_prompt_reader_loc":                None,
+        "chromium_exe_loc":                    None,
     }
 
     @staticmethod
@@ -261,6 +262,7 @@ class Config:
         self.enable_videos = True
         self.enable_gifs = True
         self.enable_pdfs = False
+        self.enable_epubs = False
         self.enable_svgs = False  # SVG support is disabled by default
         self.enable_html = True
         self.directories_to_search_for_related_images = []
@@ -314,6 +316,9 @@ class Config:
         # Unset by default: GIMP inherits Weidr's own resolved locale (self.locale /
         # os.environ["LANG"]) unless a GIMP-specific locale is explicitly configured.
         self.gimp_locale = None
+        # Chrome/Edge/Chromium for HTML and ePub rendering; unset = auto-detect
+        # (see image.frame_cache.find_chromium_executable).
+        self.chromium_exe_loc = None
         self._gimp_validated = False  # Cache for GIMP validation result
         self.gimp_gegl_enabled = True  # Will be overridden if GIMP 3 not available
         self.gimp_gegl_timeout = 60  # Timeout for GIMP operations in seconds
@@ -338,6 +343,7 @@ class Config:
 
         if dict_set:
             self.set_values(None, "trash_folder", "gimp_locale")
+            self.chromium_exe_loc = self.dict.get("chromium_exe_loc") or None
             self.set_values(list,
                             "image_types",
                             "video_types",
@@ -395,6 +401,7 @@ class Config:
                             "enable_audio",
                             "enable_gifs",
                             "enable_pdfs",
+                            "enable_epubs",
                             "enable_svgs",
                             "enable_html",
                             "print_settings",
@@ -977,6 +984,8 @@ class Config:
             self.file_types.append(".gif")
         if self.enable_pdfs:
             self.file_types.append(".pdf")
+        if self.enable_epubs:
+            self.file_types.append(".epub")
         if self.enable_svgs:
             self.file_types.append(".svg")
         if self.enable_html:

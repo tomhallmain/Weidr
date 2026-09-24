@@ -443,6 +443,7 @@ class CompareMediaType(Enum):
     GIF = "gif"
     VIDEO = "video"
     PDF = "pdf"
+    EPUB = "epub"
     SVG = "svg"
     HTML = "html"
     AUDIO = "audio"
@@ -459,6 +460,8 @@ class CompareMediaType(Enum):
             return _("Video")
         elif self == CompareMediaType.PDF:
             return _("PDF")
+        elif self == CompareMediaType.EPUB:
+            return _("ePub")
         elif self == CompareMediaType.SVG:
             return _("SVG")
         elif self == CompareMediaType.HTML:
@@ -499,7 +502,7 @@ class CompareMediaType(Enum):
         )
 
     def is_interactive_crop_supported(self) -> bool:
-        """True for types that support interactive crop (image, GIF, video, PDF, SVG)."""
+        """True for types that support interactive crop (image, GIF, video, PDF, ePub, SVG)."""
         return self not in (
             CompareMediaType.AUDIO,
             CompareMediaType.HTML,
@@ -508,13 +511,13 @@ class CompareMediaType(Enum):
 
     def is_freeform_selection_supported(self) -> bool:
         """True for types that support freeform (click-to-add-points polygon)
-        box / background-box selection (image, GIF, PDF, SVG). Video is
+        box / background-box selection (image, GIF, PDF, ePub, SVG). Video is
         rectangle-selection only for now."""
         return self.is_interactive_crop_supported() and not self.is_video()
 
     def supports_embedding_capture(self) -> bool:
         """True for types compare.embedding_capture.compute_media_embedding can
-        produce an embedding for (image, GIF, video, PDF, SVG) -- gates the
+        produce an embedding for (image, GIF, video, PDF, ePub, SVG) -- gates the
         "Add Current Media to Embedding Seed Library" context-menu action."""
         return self not in (
             CompareMediaType.AUDIO,

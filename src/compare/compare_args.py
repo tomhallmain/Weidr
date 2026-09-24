@@ -33,6 +33,7 @@ class CompareArgs:
         self.include_videos = config.enable_videos
         self.include_gifs = config.enable_gifs
         self.include_pdfs = config.enable_pdfs
+        self.include_epubs = config.enable_epubs
         self.match_dims = False
         self.verbose = True
         self.use_matrix_comparison = use_matrix_comparison

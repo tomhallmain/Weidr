@@ -21,9 +21,11 @@ When per-type caps are non-zero (see ``utils.config``):
   (total GIF timeline length). Static single-frame GIFs keep interval-based
   behavior.
 
-- **PDF:** single raster page in the viewer. **N > 0:** dwell
-  ``slideshow_interval_seconds * N`` (reading budget). **N <= 0:** use the
-  normal slideshow interval only (no extra dwell rule).
+- **PDF / ePub:** single raster page in the viewer. **N > 0:** dwell
+  ``slideshow_interval_seconds * N`` (reading budget). **N < 0:** dwell for the
+  intrinsic page count; an ePub whose PDF isn't built yet counts as one page,
+  since a slideshow tick must not wait on a whole-book render. **N == 0:** use
+  the normal slideshow interval only (no extra dwell rule).
 """
 
 from __future__ import annotations
@@ -33,7 +35,12 @@ from typing import Any
 
 from utils.audio_media import is_audio_for_display
 from utils.config import config
-from utils.media_utils import get_pdf_page_count, is_video_for_display
+from utils.media_utils import (
+    get_pdf_page_count,
+    is_epub_path,
+    is_paged_document_path,
+    is_video_for_display,
+)
 
 # VLC duration/time can lag slightly behind the true end.
 _SLIDESHOW_END_TOLERANCE_MS = 250
@@ -50,12 +57,15 @@ def _pdf_effective_page_budget(path: str, pages_cfg: int) -> int:
     Pages used for dwell = interval * budget.
 
     * pages_cfg > 0: fixed N
-    * pages_cfg < 0: intrinsic page count from disk (0 if unreadable)
+    * pages_cfg < 0: intrinsic page count from disk (0 if unreadable); 1 for
+      an ePub whose derived PDF isn't built, which is never built from here
     * pages_cfg == 0: no PDF dwell rule (caller should not use poll for PDF)
     """
     if pages_cfg > 0:
         return pages_cfg
     if pages_cfg < 0:
+        if is_epub_path(path):
+            return get_pdf_page_count(path, build=False) or 1
         return get_pdf_page_count(path)
     return 0
 
@@ -76,7 +86,7 @@ def skip_classic_slideshow_primary_tick(media_frame: Any, path: str | None) -> b
         )():
             return True
         return False
-    if path.lower().endswith(".pdf") and config.enable_pdfs:
+    if is_paged_document_path(path):
         pages_cfg = int(config.slideshow_dynamic_pdf_max_pages)
         return _pdf_effective_page_budget(path, pages_cfg) > 0
     g_cap = float(config.slideshow_dynamic_gif_max_seconds)
@@ -108,7 +118,7 @@ def slideshow_poll_should_run(media_frame: Any, path: str | None) -> bool:
         )():
             return True
         return False
-    if path.lower().endswith(".pdf") and config.enable_pdfs:
+    if is_paged_document_path(path):
         pages_cfg = int(config.slideshow_dynamic_pdf_max_pages)
         return _pdf_effective_page_budget(path, pages_cfg) > 0
     g_cap = float(config.slideshow_dynamic_gif_max_seconds)
@@ -170,7 +180,7 @@ def should_advance_slideshow_poll(
         return (now - started_monotonic) >= (total_ms / 1000.0)
 
     pages_cfg = int(config.slideshow_dynamic_pdf_max_pages)
-    if path.lower().endswith(".pdf") and config.enable_pdfs:
+    if is_paged_document_path(path):
         eff = _pdf_effective_page_budget(path, pages_cfg)
         if eff <= 0:
             return False

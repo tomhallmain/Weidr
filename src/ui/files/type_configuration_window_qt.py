@@ -45,6 +45,7 @@ class TypeConfigurationWindow(SmartDialog):
         CompareMediaType.VIDEO: _("Video files (MP4, AVI, etc.) - First frame will be extracted"),
         CompareMediaType.GIF: _("Animated GIF files - First frame will be extracted"),
         CompareMediaType.PDF: _("PDF documents - First page will be extracted"),
+        CompareMediaType.EPUB: _("ePub e-books - Cover and pages will be rendered"),
         CompareMediaType.SVG: _("Vector graphics - Will be converted to raster image"),
         CompareMediaType.HTML: _("HTML files - Will be rendered and converted to image"),
         CompareMediaType.AUDIO: _(
@@ -57,6 +58,11 @@ class TypeConfigurationWindow(SmartDialog):
             "available": has_imported_pypdfium2,
             "package": "pypdfium2",
             "description": _("PDF support requires pypdfium2 package"),
+        },
+        CompareMediaType.EPUB: {
+            "available": has_imported_pyppeteer and has_imported_pypdfium2,
+            "package": "pyppeteer pypdfium2",
+            "description": _("ePub support requires pyppeteer and pypdfium2 packages"),
         },
         CompareMediaType.SVG: {
             "available": has_imported_cairosvg,
@@ -124,6 +130,7 @@ class TypeConfigurationWindow(SmartDialog):
             CompareMediaType.VIDEO: config.enable_videos,
             CompareMediaType.GIF: config.enable_gifs,
             CompareMediaType.PDF: config.enable_pdfs,
+            CompareMediaType.EPUB: config.enable_epubs,
             CompareMediaType.SVG: config.enable_svgs,
             CompareMediaType.HTML: config.enable_html,
             CompareMediaType.AUDIO: config.enable_audio,
@@ -248,6 +255,7 @@ class TypeConfigurationWindow(SmartDialog):
             CompareMediaType.VIDEO: config.enable_videos,
             CompareMediaType.GIF: config.enable_gifs,
             CompareMediaType.PDF: config.enable_pdfs,
+            CompareMediaType.EPUB: config.enable_epubs,
             CompareMediaType.SVG: config.enable_svgs,
             CompareMediaType.HTML: config.enable_html,
             CompareMediaType.AUDIO: config.enable_audio,
@@ -324,6 +332,12 @@ class TypeConfigurationWindow(SmartDialog):
                     config.file_types.append(".pdf")
                 elif not enabled and ".pdf" in config.file_types:
                     config.file_types.remove(".pdf")
+            elif media_type == CompareMediaType.EPUB:
+                config.enable_epubs = enabled
+                if enabled and ".epub" not in config.file_types:
+                    config.file_types.append(".epub")
+                elif not enabled and ".epub" in config.file_types:
+                    config.file_types.remove(".epub")
             elif media_type == CompareMediaType.SVG:
                 config.enable_svgs = enabled
                 if enabled and ".svg" not in config.file_types:

@@ -20,8 +20,9 @@ import pytest
 from PySide6.QtWidgets import QApplication
 
 from image.frame_cache import FrameCache
-from ui.app_window.pdf_page_viewer import PdfPageViewer
+from ui.app_window.pdf_page_viewer import PdfPageViewer, _EpubBuildWorker
 from utils.constants import MediaType
+from utils.translations import _
 
 
 # ---------------------------------------------------------------------------
@@ -209,6 +210,96 @@ class TestMediaFramePdfDelegation:
             media_frame.show_media("image.png")
 
         mock_viewer.deactivate.assert_called()
+
+
+# ---------------------------------------------------------------------------
+# ePub: cover first, derived-PDF build in the background
+# ---------------------------------------------------------------------------
+
+@contextmanager
+def _epub_not_built(cover="/tmp/cover.jpg", unpageable=False):
+    """FrameCache state for an ePub whose derived PDF isn't built; the worker never starts."""
+    with patch.object(FrameCache, "get_cached_epub_pdf", return_value=None), \
+         patch.object(FrameCache, "is_epub_unpageable", return_value=unpageable), \
+         patch.object(FrameCache, "get_epub_cover_path", return_value=cover), \
+         patch.object(_EpubBuildWorker, "start") as start:
+        yield start
+
+
+class TestPdfPageViewerEpub:
+    def test_show_displays_cover_and_starts_build(self, media_frame):
+        viewer = _make_viewer(media_frame)
+        with _epub_not_built() as start:
+            viewer.show("book.epub")
+        start.assert_called_once()
+        media_frame._show_image_in_view.assert_called_once_with("/tmp/cover.jpg")
+        assert viewer.is_building
+        assert not viewer.is_active
+        assert viewer._label.text() == _("Page {0} / …").format(1)
+
+    def test_navigation_while_building_is_queued_and_applied(self, media_frame):
+        path = "book.epub"
+        viewer = _make_viewer(media_frame)
+        with _epub_not_built():
+            viewer.show(path)
+        viewer.navigate(1)
+        viewer.navigate(1)
+
+        stats = MagicMock()
+        stats.total_items = 5
+        with patch.object(FrameCache, "get_pdf_page", return_value="/tmp/p2.jpg") as get_page, \
+             patch.object(FrameCache, "media_stats_cache", {path: stats}):
+            viewer._on_epub_build_finished(path)
+
+        get_page.assert_called_once_with(path, 2)
+        assert viewer._page_index == 2
+        assert not viewer.is_building
+        assert viewer.is_active
+
+    def test_queued_navigation_clamped_to_page_count(self, media_frame):
+        path = "book.epub"
+        viewer = _make_viewer(media_frame)
+        with _epub_not_built():
+            viewer.show(path)
+        for _i in range(4):
+            viewer.navigate(1)
+
+        stats = MagicMock()
+        stats.total_items = 2
+        with patch.object(FrameCache, "get_pdf_page", return_value="/tmp/p1.jpg") as get_page, \
+             patch.object(FrameCache, "media_stats_cache", {path: stats}):
+            viewer._on_epub_build_finished(path)
+
+        get_page.assert_called_once_with(path, 1)
+
+    def test_result_discarded_after_moving_to_another_file(self, media_frame):
+        path = "book.epub"
+        viewer = _make_viewer(media_frame)
+        with _epub_not_built():
+            viewer.show(path)
+        viewer.deactivate()  # MediaFrame.show_media does this for the next file
+
+        with patch.object(FrameCache, "get_pdf_page") as get_page:
+            viewer._on_epub_build_finished(path)
+
+        get_page.assert_not_called()
+
+    def test_unpageable_epub_renders_directly(self, media_frame):
+        path = "book.epub"
+        viewer = _make_viewer(media_frame)
+        with _epub_not_built(unpageable=True) as start, \
+             _mock_frame_cache(path, "/tmp/cover.jpg", 1):
+            viewer.show(path)
+        start.assert_not_called()
+        assert not viewer.is_building
+        assert viewer.current_jpeg_path() == "/tmp/cover.jpg"
+
+    def test_missing_cover_shows_rendering_placeholder(self, media_frame):
+        viewer = _make_viewer(media_frame)
+        media_frame._show_placeholder = MagicMock()
+        with _epub_not_built(cover=None):
+            viewer.show("book.epub")
+        media_frame._show_placeholder.assert_called_once_with(_("Rendering ePub…"))
 
 
 # ---------------------------------------------------------------------------

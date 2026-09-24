@@ -15,6 +15,7 @@ from utils.constants import (
     ProtectedActions,
     SortBy,
 )
+from utils.translations import _
 
 
 class TestCompareMode:
@@ -88,6 +89,14 @@ class TestSortBy:
 
 
 class TestCompareMediaType:
+    def test_epub_translation(self):
+        assert CompareMediaType.EPUB.get_translation() == _("ePub")
+
+    def test_epub_supports_page_edits_and_embedding(self):
+        assert CompareMediaType.EPUB.is_interactive_crop_supported()
+        assert CompareMediaType.EPUB.supports_embedding_capture()
+        assert CompareMediaType.EPUB.supports_raster_image_details()
+
     def test_video_is_video(self):
         assert CompareMediaType.VIDEO.is_video() is True
 

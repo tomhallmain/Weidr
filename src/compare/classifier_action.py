@@ -1353,7 +1353,7 @@ class ClassifierAction:
                     except Exception as e:
                         logger.error(f"Error rotating video at {image_path} for classifier action {self.name}: {e}")
                 else:
-                    # SVG/HTML/PDF can't be rotated in their own format -- render a
+                    # SVG/HTML/PDF/ePub can't be rotated in their own format -- render a
                     # raster stand-in (reusing the existing FrameCache extraction
                     # used for classification) and write the rotated result as a
                     # new sibling file next to the real source. Never touches the

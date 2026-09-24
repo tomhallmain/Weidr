@@ -166,7 +166,7 @@ class MediaDetails(SmartWindow):
             else None
         )
         media_ext = os.path.splitext(self._media_path)[1].lower()
-        self._show_temp_path = media_ext in {".svg", ".pdf", ".html", ".htm"} and self._temp_path is not None
+        self._show_temp_path = media_ext in {".svg", ".pdf", ".epub", ".html", ".htm"} and self._temp_path is not None
         self._app_actions = app_actions
         self._do_refresh = do_refresh
         self._take_focus = take_focus
@@ -735,7 +735,7 @@ class MediaDetails(SmartWindow):
             else None
         )
         media_ext = os.path.splitext(self._media_path)[1].lower()
-        self._show_temp_path = media_ext in {".svg", ".pdf", ".html", ".htm"} and self._temp_path is not None
+        self._show_temp_path = media_ext in {".svg", ".pdf", ".epub", ".html", ".htm"} and self._temp_path is not None
         old_supports_raster = self.media_type.supports_raster_image_details()
         self.media_type = get_media_type_for_path(self._media_path)
         self.setWindowTitle(self._window_title_for_media_type())

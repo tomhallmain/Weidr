@@ -8,6 +8,7 @@ import pypdfium2 as pdfium
 
 from image.frame_cache import FrameCache
 from utils.logging_setup import get_logger
+from utils.media_utils import get_paged_document_pdf, is_epub_path, is_paged_document_path
 from utils.translations import _
 logger = get_logger("pdf_creator")
 
@@ -163,7 +164,8 @@ class PDFCreator:
         """
         Create a visual diff PDF from exactly two marked files.
 
-        Non-PDF files are converted into temporary one-page PDFs first.
+        Non-PDF files are converted into temporary one-page PDFs first. An ePub
+        is diffed through its derived PDF, so the whole book is compared.
         """
         if not file_paths or len(file_paths) != 2:
             app_actions.alert(
@@ -215,6 +217,18 @@ class PDFCreator:
             for idx, path in enumerate((file_a, file_b), start=1):
                 if path.lower().endswith(".pdf"):
                     pdf_inputs.append(path)
+                    continue
+                if is_epub_path(path) and is_paged_document_path(path):
+                    try:
+                        pdf_inputs.append(get_paged_document_pdf(path))
+                    except Exception as e:
+                        logger.error("Could not render ePub for diff %s: %s", path, e)
+                        app_actions.alert(
+                            _("Error"),
+                            _("Failed to render ePub for diff: {0}").format(path),
+                            kind="error",
+                        )
+                        return False
                     continue
 
                 temp_pdf = os.path.join(tmp_dir, f"converted_{idx}.pdf")

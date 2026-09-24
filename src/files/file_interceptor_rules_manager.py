@@ -281,7 +281,7 @@ class FileInterceptorRulesManager:
     def _convert_to_jpg(filepath: str) -> Optional[str]:
         """Write a JPG next to *filepath* and return it.
 
-        SVG/HTML/PDF cannot be read as rasters directly, so the already-rendered
+        SVG/HTML/PDF/ePub cannot be read as rasters directly, so the already-rendered
         frame is converted instead and the result written beside the real source
         rather than beside the temp render. Video is not convertible here.
         An already-JPG source is a no-op: the rule exists to produce a JPG, and
@@ -297,7 +297,9 @@ class FileInterceptorRulesManager:
 
         source_for_raster = filepath
         output_base = filepath
-        if media_type in (CompareMediaType.SVG, CompareMediaType.HTML, CompareMediaType.PDF):
+        if media_type in (
+            CompareMediaType.SVG, CompareMediaType.HTML, CompareMediaType.PDF, CompareMediaType.EPUB,
+        ):
             true_source_path, frame_path = resolve_rendered_frame_source(filepath)
             if true_source_path is None or frame_path is None:
                 logger.warning(f"Could not render a raster frame to convert: {filepath}")

@@ -37,6 +37,7 @@ _SELECTABLE_MEDIA_TYPES = [
     CompareMediaType.GIF,
     CompareMediaType.VIDEO,
     CompareMediaType.PDF,
+    CompareMediaType.EPUB,
     CompareMediaType.SVG,
     CompareMediaType.HTML,
     CompareMediaType.AUDIO,

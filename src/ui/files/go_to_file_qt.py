@@ -413,6 +413,8 @@ class GoToFile(SmartDialog):
                 filters.append(f"{_('GIF files')} (*.gif)")
             if config.enable_pdfs:
                 filters.append(f"{_('PDF files')} (*.pdf)")
+            if config.enable_epubs:
+                filters.append(f"{_('ePub files')} (*.epub)")
             if config.enable_svgs:
                 filters.append(f"{_('SVG files')} (*.svg)")
             if config.enable_html:

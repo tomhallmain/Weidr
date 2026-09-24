@@ -33,7 +33,7 @@ from lib.file_invalidation_cache import (
 )
 from utils.app_info_cache import app_info_cache
 from utils.config import config
-from utils.media_utils import is_video_path_by_extension
+from utils.media_utils import is_paged_document_path, is_video_path_by_extension
 from utils.constants import ClassifierActionType
 from utils.logging_setup import get_logger
 from utils.translations import _
@@ -440,7 +440,7 @@ class ClassifierActionsManager:
         return (
             (config.enable_videos and is_video_path_by_extension(path))
             or (config.enable_gifs and path_lower.endswith(".gif"))
-            or (config.enable_pdfs and path_lower.endswith(".pdf"))
+            or is_paged_document_path(path)
         )
 
     @staticmethod

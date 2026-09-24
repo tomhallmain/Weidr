@@ -31,6 +31,8 @@ DEFAULT_VIDEO_EXTENSIONS = (
 # Matroska/WebM containers where VLC stop() may hang without a Cues index.
 MATROSKA_EXTENSIONS = frozenset({".webm", ".mkv", ".mka", ".mks"})
 
+EPUB_EXTENSION = ".epub"
+
 # Extensions that may use QMovie when Qt reports animation (see MediaFrame).
 ANIMATED_IMAGE_SUFFIXES = (
     ".gif", ".webp", ".apng", ".jpg", ".jpeg", ".jpe", ".jfif",
@@ -119,11 +121,11 @@ def is_video_for_display(path: str) -> bool:
 
 def get_media_type_for_path(path: str) -> MediaType:
     """
-    Classify *path* by suffix and config flags (videos, GIF, PDF, SVG, HTML).
+    Classify *path* by suffix and config flags (videos, GIF, PDF, ePub, SVG, HTML).
 
     Returns :data:`~utils.constants.MediaType.UNCONFIGURED` when *path* is missing or
     not a string, when a video extension is present but videos are disabled, or when
-    the suffix matches GIF/PDF/SVG/HTML but that category is disabled in config.
+    the suffix matches GIF/PDF/ePub/SVG/HTML but that category is disabled in config.
 
     Otherwise returns a concrete type; generic raster/unknown extensions map to ``IMAGE``.
     """
@@ -150,6 +152,11 @@ def get_media_type_for_path(path: str) -> MediaType:
     if lower.endswith(".pdf"):
         if config.enable_pdfs:
             return MediaType.PDF
+        return MediaType.UNCONFIGURED
+
+    if lower.endswith(EPUB_EXTENSION):
+        if getattr(config, "enable_epubs", False):
+            return MediaType.EPUB
         return MediaType.UNCONFIGURED
 
     if lower.endswith(".svg"):
@@ -193,23 +200,71 @@ def _pdf_page_count_cached(path: str, mtime_ns: int) -> int:
         import pypdfium2 as pdfium  # type: ignore[import-untyped]
     except ImportError:
         return 0
+    from image.frame_cache import FrameCache
     try:
-        pdf = pdfium.PdfDocument(path)
-        try:
-            return max(0, len(pdf))
-        finally:
-            close = getattr(pdf, "close", None)
-            if callable(close):
-                close()
+        with FrameCache.pdfium_lock:
+            pdf = pdfium.PdfDocument(path)
+            try:
+                return max(0, len(pdf))
+            finally:
+                close = getattr(pdf, "close", None)
+                if callable(close):
+                    close()
     except Exception:
         return 0
 
 
-def get_pdf_page_count(path: str) -> int:
-    """Page count for a PDF file, or 0 if missing/unreadable (callers gate on config flags)."""
-    if not path or not path.lower().endswith(".pdf"):
+def is_epub_path(path: str) -> bool:
+    """True if *path* has an ePub suffix (config flags not checked)."""
+    return bool(path) and path.lower().endswith(EPUB_EXTENSION)
+
+
+def is_paged_document_path(path: str) -> bool:
+    """True for a PDF or ePub path whose type is enabled in config.
+
+    Both go through the same page-based flows (page viewer, page sampling,
+    page dwell); an ePub is paged through a PDF rendered from it, see
+    :func:`get_paged_document_pdf`.
+    """
+    if not path:
+        return False
+    lower = path.lower()
+    if lower.endswith(".pdf"):
+        return bool(config.enable_pdfs)
+    if lower.endswith(EPUB_EXTENSION):
+        return bool(getattr(config, "enable_epubs", False))
+    return False
+
+
+def get_paged_document_pdf(path: str, build: bool = True) -> str | None:
+    """The PDF to read pages of *path* from: *path* itself for a PDF, the derived
+    PDF for an ePub.
+
+    Building an ePub's PDF renders the whole book and can take a while; with
+    ``build=False`` an ePub whose PDF isn't built yet gives None. Raises
+    :class:`~image.epub_document.EpubError` when the ePub can't be paged (DRM,
+    broken archive, render failure).
+    """
+    if not is_epub_path(path):
+        return path
+    from image.frame_cache import FrameCache
+    if build:
+        return FrameCache.get_epub_pdf(path)
+    return FrameCache.get_cached_epub_pdf(path)
+
+
+def get_pdf_page_count(path: str, build: bool = True) -> int:
+    """Page count for a PDF or ePub, or 0 if missing/unreadable (callers gate on
+    config flags). ``build=False`` gives 0 for an ePub whose PDF isn't built yet."""
+    if not path or not (path.lower().endswith(".pdf") or is_epub_path(path)):
         return 0
     if not os.path.isfile(path):
+        return 0
+    try:
+        path = get_paged_document_pdf(path, build=build)
+    except Exception:
+        return 0
+    if not path or not os.path.isfile(path):
         return 0
     try:
         mtime_ns = int(os.stat(path).st_mtime_ns)
@@ -306,7 +361,7 @@ def get_image_dimensions(path: str) -> tuple[int, int] | None:
 
 
 def is_classifier_dynamic_media_path(path: str) -> bool:
-    """True when *path* is an existing video, GIF, or PDF file with that type enabled in config."""
+    """True when *path* is an existing video, GIF, PDF or ePub file with that type enabled in config."""
     if not path or not os.path.isfile(path):
         return False
     lower = path.lower()
@@ -314,9 +369,7 @@ def is_classifier_dynamic_media_path(path: str) -> bool:
         return True
     if config.enable_gifs and lower.endswith(".gif"):
         return True
-    if config.enable_pdfs and lower.endswith(".pdf"):
-        return True
-    return False
+    return is_paged_document_path(path)
 
 
 # ---------------------------------------------------------------------------
@@ -328,9 +381,10 @@ def is_classifier_dynamic_media_path(path: str) -> bool:
 #   - GIF/video: reach run_action with their real source path (both count as
 #     dynamic media). GIF rotated frame-by-frame via PIL (duration/loop kept);
 #     video via ffmpeg transpose filter, re-encoded to H.264.
-#   - PDF/SVG/HTML: can't rotate in their own format, so a rendered raster
+#   - PDF/ePub/SVG/HTML: can't rotate in their own format, so a rendered raster
 #     stand-in is rotated instead; the source document is never touched. PDF
-#     is dynamic media and renders its first page on demand. SVG/HTML are
+#     and ePub are dynamic media and render their first page (an ePub's
+#     cover) on demand. SVG/HTML are
 #     not dynamic media, so by the time they reach run_action the path has
 #     already been substituted with a FrameCache temp render by an unrelated
 #     classification fallback -- resolve_rendered_frame_source() below
@@ -362,11 +416,11 @@ def is_frame_cache_path(image_path: str) -> bool:
 
 
 def resolve_rendered_frame_source(image_path: str) -> tuple[str | None, str | None]:
-    """For SVG/HTML/PDF -- which can't be rotated (or otherwise raster-edited) in
-    their own format -- resolve ``(true_source_path, rendered_frame_path)``.
+    """For SVG/HTML/PDF/ePub -- which can't be rotated (or otherwise raster-edited)
+    in their own format -- resolve ``(true_source_path, rendered_frame_path)``.
 
-    PDF reaches classifier action dispatch with its own real path (PDF is
-    "dynamic" media, see :func:`is_classifier_dynamic_media_path`), so the frame
+    PDF and ePub reach classifier action dispatch with their own real path (both
+    are "dynamic" media, see :func:`is_classifier_dynamic_media_path`), so the frame
     is fetched on demand via FrameCache. SVG/HTML are not "dynamic": by the time
     a match reaches action dispatch, the path has already been substituted with
     a FrameCache-extracted temp render (see ClassifierAction.run_on_media_path's
@@ -378,7 +432,7 @@ def resolve_rendered_frame_source(image_path: str) -> tuple[str | None, str | No
     from image.frame_cache import FrameCache
 
     lower = image_path.lower()
-    if lower.endswith((".pdf", ".svg", ".html", ".htm")):
+    if lower.endswith((".pdf", EPUB_EXTENSION, ".svg", ".html", ".htm")):
         try:
             frame_path = FrameCache.get_image_path(image_path)
         except Exception as e:
@@ -415,9 +469,9 @@ def parse_rotation_label(label: str) -> int | None:
 
 
 def rotated_sibling_output_path(true_source_path: str, frame_path: str) -> str:
-    """Collision-safe output path for a rotated SVG/HTML/PDF render: same
+    """Collision-safe output path for a rotated SVG/HTML/PDF/ePub render: same
     directory and stem as the real source, but the rendered frame's own raster
-    extension (e.g. .png for SVG, .jpg for PDF/HTML), with a "_rot" suffix --
+    extension (e.g. .png for SVG, .jpg for PDF/ePub/HTML), with a "_rot" suffix --
     never the source's own (non-raster) extension."""
     from utils.utils import Utils
 

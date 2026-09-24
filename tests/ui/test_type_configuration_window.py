@@ -130,6 +130,29 @@ class TestTypeConfigurationApplyLogic:
         for ext in config.image_types:
             assert ext in config.file_types
 
+    def test_apply_changes_toggles_epub_and_its_extension(self):
+        config.enable_epubs = False
+        config.file_types = [e for e in config.file_types if e != ".epub"]
+
+        TypeConfigurationWindow._pending_changes = {CompareMediaType.EPUB: True}
+        TypeConfigurationWindow.apply_changes()
+        assert config.enable_epubs is True
+        assert ".epub" in config.file_types
+
+        TypeConfigurationWindow._original_config = {CompareMediaType.EPUB: True}
+        TypeConfigurationWindow._pending_changes = {CompareMediaType.EPUB: False}
+        TypeConfigurationWindow.apply_changes()
+        assert config.enable_epubs is False
+        assert ".epub" not in config.file_types
+
+    def test_epub_description_and_dependencies(self):
+        assert TypeConfigurationWindow.MEDIA_TYPE_DESCRIPTIONS[CompareMediaType.EPUB] == _tr(
+            "ePub e-books - Cover and pages will be rendered"
+        )
+        dep = TypeConfigurationWindow.DEPENDENCY_INFO[CompareMediaType.EPUB]
+        assert dep["description"] == _tr("ePub support requires pyppeteer and pypdfium2 packages")
+        assert "pyppeteer" in dep["package"] and "pypdfium2" in dep["package"]
+
     def test_audio_has_description(self):
         desc = TypeConfigurationWindow.MEDIA_TYPE_DESCRIPTIONS[CompareMediaType.AUDIO]
         assert isinstance(desc, str) and len(desc) > 0

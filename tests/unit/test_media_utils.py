@@ -6,7 +6,10 @@ from utils.config import config
 from utils.constants import MediaType
 from utils.media_utils import (
     get_media_type_for_path,
+    get_paged_document_pdf,
     is_animated_image_candidate,
+    is_classifier_dynamic_media_path,
+    is_paged_document_path,
     is_large_image_dims,
     scale_dims,
 )
@@ -18,6 +21,8 @@ from utils.media_utils import (
         ("enable_videos", ".mp4", MediaType.VIDEO, MediaType.UNCONFIGURED),
         ("enable_gifs", ".gif", MediaType.GIF, MediaType.UNCONFIGURED),
         ("enable_pdfs", ".pdf", MediaType.PDF, MediaType.UNCONFIGURED),
+        ("enable_epubs", ".epub", MediaType.EPUB, MediaType.UNCONFIGURED),
+        ("enable_epubs", ".EPUB", MediaType.EPUB, MediaType.UNCONFIGURED),
         ("enable_svgs", ".svg", MediaType.SVG, MediaType.UNCONFIGURED),
         ("enable_html", ".html", MediaType.HTML, MediaType.UNCONFIGURED),
         ("enable_audio", ".mp3", MediaType.AUDIO, MediaType.UNCONFIGURED),
@@ -110,3 +115,37 @@ def test_get_media_type_plain_image_when_enabled(monkeypatch, tmp_path):
 
     monkeypatch.setattr(config, "enable_pdfs", False)
     assert get_media_type_for_path(path) == MediaType.IMAGE
+
+
+class TestPagedDocumentPath:
+    @pytest.mark.parametrize("name", ["book.epub", "BOOK.EPUB"])
+    def test_epub_follows_its_flag(self, monkeypatch, name):
+        monkeypatch.setattr(config, "enable_epubs", True)
+        assert is_paged_document_path(name)
+        monkeypatch.setattr(config, "enable_epubs", False)
+        assert not is_paged_document_path(name)
+
+    def test_pdf_follows_its_flag_only(self, monkeypatch):
+        monkeypatch.setattr(config, "enable_epubs", False)
+        monkeypatch.setattr(config, "enable_pdfs", True)
+        assert is_paged_document_path("doc.pdf")
+        monkeypatch.setattr(config, "enable_pdfs", False)
+        monkeypatch.setattr(config, "enable_epubs", True)
+        assert not is_paged_document_path("doc.pdf")
+
+    @pytest.mark.parametrize("name", ["a.png", "a.html", "a.mp4", "", None])
+    def test_other_paths_are_not_paged(self, monkeypatch, name):
+        monkeypatch.setattr(config, "enable_pdfs", True)
+        monkeypatch.setattr(config, "enable_epubs", True)
+        assert not is_paged_document_path(name)
+
+    def test_pdf_is_its_own_paged_pdf(self):
+        assert get_paged_document_pdf("/x/doc.pdf") == "/x/doc.pdf"
+
+    def test_epub_is_classifier_dynamic_media(self, monkeypatch, tmp_path):
+        path = tmp_path / "book.epub"
+        path.write_bytes(b"x")
+        monkeypatch.setattr(config, "enable_epubs", True)
+        assert is_classifier_dynamic_media_path(str(path))
+        monkeypatch.setattr(config, "enable_epubs", False)
+        assert not is_classifier_dynamic_media_path(str(path))

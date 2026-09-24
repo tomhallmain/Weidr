@@ -1505,8 +1505,8 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
     def _copy_cached_media_to_clipboard(self, media_path: str) -> tuple[bool, str]:
         """Copy the FrameCache raster for *media_path* to the system clipboard.
 
-        For PDFs, prefers the currently displayed page JPEG over the page-0 cache
-        entry so that Shift+S captures whatever page the user is viewing.
+        For PDFs and ePubs, prefers the currently displayed page JPEG over the
+        page-0 cache entry so that Shift+S captures whatever page the user is viewing.
         """
         from PySide6.QtGui import QGuiApplication, QImageReader
 
@@ -1530,7 +1530,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         return True, ""
 
     def take_media_screenshot(self, event=None) -> None:
-        """Save screenshot for time-based media, or copy cached raster for PDF/SVG/HTML."""
+        """Save screenshot for time-based media, or copy cached raster for PDF/ePub/SVG/HTML."""
         from utils.constants import MediaType
         from utils.media_utils import get_media_type_for_path
 
@@ -1570,7 +1570,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             return
 
         media_type = get_media_type_for_path(active_path)
-        if media_type in (MediaType.PDF, MediaType.SVG, MediaType.HTML):
+        if media_type in (MediaType.PDF, MediaType.EPUB, MediaType.SVG, MediaType.HTML):
             ok, error = self._copy_cached_media_to_clipboard(active_path)
             if not ok:
                 self.notification_ctrl.alert(
@@ -1583,7 +1583,7 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             return
 
         self.app_actions.warn(
-            _("Screenshots are available for videos, animated GIFs, and PDF/SVG/HTML files.")
+            _("Screenshots are available for videos, animated GIFs, and PDF/ePub/SVG/HTML files.")
         )
 
     # ------------------------------------------------------------------

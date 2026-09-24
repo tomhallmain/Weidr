@@ -110,6 +110,7 @@
   "enable_audio": true,
   "enable_gifs": true,
   "enable_pdfs": true,
+  "enable_epubs": false,
   "enable_svgs": true,
   "enable_html": true,
   "directories_to_search_for_related_images": [    
@@ -205,6 +206,7 @@
   "mcp_server_token": "",
   "gimp_exe_loc": "gimp-3.0",
   "gimp_locale": null,
+  "chromium_exe_loc": null,
   "image_edit_configuration": {
     "random_rotation_chance": 0.5,
     "random_flip_chance": 0.5,

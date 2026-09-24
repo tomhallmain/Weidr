@@ -513,6 +513,10 @@ class HelpAndConfig(SmartDialog):
         self._le_sd_prompt_reader = self._add_entry_row(
             _("Stable Diffusion Prompt Reader Location"), str(config.sd_prompt_reader_loc or ""),
         )
+        self._le_chromium_exe = self._add_entry_row(
+            _("Chrome/Edge/Chromium Executable for HTML and ePub (blank = auto-detect)"),
+            str(config.chromium_exe_loc or ""),
+        )
 
         # ==============================================================
         # Media Edits tab
@@ -683,6 +687,7 @@ class HelpAndConfig(SmartDialog):
             ("_le_gimp_exe",                     "gimp_exe_loc"),
             ("_le_gimp_locale",                  "gimp_locale"),
             ("_le_sd_prompt_reader",             "sd_prompt_reader_loc"),
+            ("_le_chromium_exe",                 "chromium_exe_loc"),
             # Media Edits tab
             ("_le_frames_trigger_action",        "frame_extraction_trigger_action"),
             ("_le_frames_trigger_kind",          "frame_extraction_trigger_kind"),

@@ -6,7 +6,7 @@ Prevalidation), scans it using the action's own settings, finds the first frame
 that satisfies the action's full threshold condition, and seeks the media player
 to that position.
 
-Dynamic media (video, GIF, PDF) is sampled frame-by-frame. A still image is a
+Dynamic media (video, GIF, PDF, ePub) is sampled frame-by-frame. A still image is a
 single-slot scan with nothing to seek to; it is supported for the trigger
 detail it reports — the classifier's ranked predictions. For a still those are
 reported whether or not the action triggered, so a non-match still says what

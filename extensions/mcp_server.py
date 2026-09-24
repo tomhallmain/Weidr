@@ -282,7 +282,7 @@ def tool_descriptors() -> list:
             "description": (
                 "Scan a file (default: the current one) for the first sample a classifier "
                 "action or prevalidation (kind) triggers on, and report it; nothing is "
-                "moved or played. Video/GIF/PDF results give slot_index and a position "
+                "moved or played. Video/GIF/PDF/ePub results give slot_index and a position "
                 "(ms or 0-based page); pass start_slot=slot_index+1 for the next trigger "
                 "(wrapped=true when the scan looped back). A still is one sample, and its "
                 "detail carries the classifier's ranked predictions even when it doesn't "

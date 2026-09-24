@@ -24,10 +24,10 @@ from utils.config import config
 from utils.constants import CompareMode
 
 
-def gather_audio_files(base_dir=".", exts=None, recursive=True, include_videos=False, include_gifs=False, include_pdfs=False):
+def gather_audio_files(base_dir=".", exts=None, recursive=True, include_videos=False, include_gifs=False, include_pdfs=False, include_epubs=False):
     """gather_files_func override: audio files only, never the image_types
     default -- CLAP has no notion of processing an image file, unlike the
-    video/GIF/PDF flags on the other embedding modes, which add to an image
+    video/GIF/PDF/ePub flags on the other embedding modes, which add to an image
     file set that a visual model can still process every member of."""
     return gather_files(base_dir=base_dir, exts=config.audio_types, recursive=recursive)
 

@@ -44,9 +44,9 @@ except ImportError:
 def is_frame_extraction_eligible(path: str) -> bool:
     """True for an existing video or GIF file -- something with real frames.
 
-    Not the same set as ``is_classifier_dynamic_media_path`` (video/GIF/PDF):
-    a PDF is paginated rather than framed and has no codec to decode, so it is
-    never eligible here regardless of that flag.
+    Not the same set as ``is_classifier_dynamic_media_path`` (video/GIF/PDF/ePub):
+    a PDF or ePub is paginated rather than framed and has no codec to decode, so
+    it is never eligible here regardless of that flag.
     """
     if not path or not os.path.isfile(path):
         return False

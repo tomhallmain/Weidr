@@ -493,7 +493,7 @@ class WindowLauncher:
             return None
 
         # -------------------------------------------------------------------
-        # Static media (image, animated GIF, SVG, PDF): QGraphicsView selection modes
+        # Static media (image, animated GIF, SVG, PDF, ePub): QGraphicsView selection modes
         # -------------------------------------------------------------------
         if is_animated_gif:
             media_frame.pause_video_if_playing()
@@ -508,8 +508,8 @@ class WindowLauncher:
             media_frame._show_image_in_view(tmp_frame)
             source_path = media_path
         else:
-            # For PDFs, use the currently displayed page rather than always page 0.
-            if media_type == MediaType.PDF:
+            # For PDFs and ePubs, use the currently displayed page rather than always page 0.
+            if media_type in (MediaType.PDF, MediaType.EPUB):
                 source_path = (self._app.media_frame.pdf_current_page_path()
                                or FrameCache.get_image_path(media_path))
             else:
@@ -532,7 +532,7 @@ class WindowLauncher:
         apply_fn=None,
     ) -> None:
         """Shared tail for crop/box/background-box/freeform actions on static media:
-        fix up the SVG/PDF sibling extension if needed, then open the result or
+        fix up the SVG/PDF/ePub sibling extension if needed, then open the result or
         report failure. *new_path* is whatever apply_fn returned.
 
         *apply_fn* is the image_ops function that produced *new_path* -- pass
@@ -544,13 +544,13 @@ class WindowLauncher:
         from utils.constants import MediaType
         from utils.utils import Utils
 
-        if media_type in (MediaType.SVG, MediaType.PDF) and new_path and os.path.exists(new_path):
-            # SVG/PDF sources are rendered to a raster image for editing (PDF's
-            # rendered page is JPEG, SVG's is PNG -- see pdf_current_page_path /
+        if media_type in (MediaType.SVG, MediaType.PDF, MediaType.EPUB) and new_path and os.path.exists(new_path):
+            # SVG/PDF/ePub sources are rendered to a raster image for editing (a
+            # PDF/ePub page is JPEG, SVG's is PNG -- see pdf_current_page_path /
             # FrameCache.get_image_path), and apply_fn writes a real image file
             # in that same format. os.replace() below is a plain rename, not a
             # re-encode, so the sibling must keep apply_fn's actual output
-            # extension -- not adopt the original .pdf/.svg extension, which
+            # extension -- not adopt the original .pdf/.epub/.svg extension, which
             # would just mislabel that image as a format it isn't (PDFium then
             # rejects it with a "Data format error" when trying to open it).
             image_ext = os.path.splitext(new_path)[1] or ".png"
@@ -564,7 +564,7 @@ class WindowLauncher:
 
         if new_path and os.path.exists(new_path):
             if apply_fn is not None:
-                # Recorded against media_path, not source_path: for SVG/PDF the
+                # Recorded against media_path, not source_path: for SVG/PDF/ePub the
                 # op ran on a rendered raster that the user never sees, and the
                 # history is more useful pointing at the file they acted on.
                 from files.file_action import FileAction

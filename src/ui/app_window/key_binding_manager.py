@@ -25,21 +25,21 @@ the AppWindow's wheelEvent / contextMenuEvent overrides.
 Keybinding map  (■ = bound  · = free | cols: Shift | Ctrl | Ctrl+Shift)
 
     A  ■ ■ ·   N  ■ ■ ■
-    B  ■ ■ ·   O  ■ · ·
+    B  ■ ■ ■   O  ■ · ·
     C  ■ ■ ■   P  ■ ■ ■
     D  ■ ■ ■   Q  ■ ■ ·
-    E  ■ ■ ■   R  ■ ■ ·
+    E  ■ ■ ■   R  ■ ■ ■
     F  ■ ■ ·   S  ■ ■ ■
     G  ■ ■ ■   T  ■ ■ ■
     H  ■ ■ ·   U  ■ · ·
-    I  ■ ■ ·   V  ■ ■ ·
+    I  ■ ■ ■   V  ■ ■ ·
     J  ■ ■ ·   W  ■ ■ ·
     K  ■ ■ ■   X  · ■ ·
-    L  ■ ■ ·   Y  ■ ■ ■
+    L  ■ ■ ■   Y  ■ ■ ■
     M  ■ ■ ■   Z  ■ ■ ·
 
     Special: 0-9 ■ (bare + Shift), Left/Right ■ (bare + Shift + Ctrl+Shift),
-             Home/End/PgUp/PgDown ■ (bare), Backspace ■ (Shift),
+             Up/Down/Home/End/PgUp/PgDown ■ (bare), Backspace ■ (Shift),
              Delete ■ (Shift + Ctrl+Shift), Escape ■ (bare + Shift),
              Return ■ (Ctrl + Ctrl+Shift + Ctrl+Alt),
              Tab ■ (Ctrl + Ctrl+Shift), F1/F11 ■, Y ■ (Alt), Space ■ (bare)
@@ -352,6 +352,7 @@ class KeyBindingManager:
         )
         self._bind("Ctrl+Shift+P", app.window_launcher.interactive_crop, guarded=False)
         self._bind("Ctrl+Shift+B", app.window_launcher.interactive_box, guarded=False)
+        self._bind("Ctrl+Shift+R", app.window_launcher.reapply_last_selection, guarded=False)
 
         # ==============================================================
         # Search presets / mode

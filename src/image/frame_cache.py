@@ -65,6 +65,7 @@ from utils.config import config
 from utils.logging_setup import get_logger
 from utils.constants import CompareMediaType
 from utils.media_utils import is_epub_path, is_paged_document_path, is_video_path_by_extension
+from utils.translations import _
 from image.epub_document import (
     EpubError,
     document_only_wraps_image,
@@ -217,8 +218,8 @@ async def _block_requests_outside(page, allowed_root: str):
 
     Uses the CDP Fetch domain through its own session. pyppeteer's
     ``page.setRequestInterception`` sends ``Network.setRequestInterception``,
-    which current Chrome and Edge no longer have; it is used only when
-    ``Fetch.enable`` fails. Returns the session, which must stay referenced.
+    which current Chrome and Edge reject as an unknown method; it is used only
+    when ``Fetch.enable`` fails. Returns the session, which must stay referenced.
     """
     session = await page.target.createCDPSession()
 
@@ -752,7 +753,7 @@ class FrameCache:
                 if has_imported_pypdfium2 and has_imported_pyppeteer:
                     return cls.get_first_frame(media_path, CompareMediaType.EPUB)
                 else:
-                    raise ImportError("Unable to render ePub: pyppeteer and pypdfium2 are required")
+                    raise ImportError(_("Unable to render ePub: pyppeteer and pypdfium2 are required"))
             else:
                 return media_path
 
@@ -975,7 +976,7 @@ class FrameCache:
         img = Image.new("RGB", (620, 874), (236, 236, 236))
         draw = ImageDraw.Draw(img)
         draw.rectangle([30, 30, 589, 843], outline=(170, 170, 170), width=4)
-        draw.text((296, 430), "ePub", fill=(120, 120, 120))
+        draw.text((296, 430), _("ePub"), fill=(120, 120, 120))
         resolved = cls._write_pil_image(img, path, quality=90)
         if resolved is None:
             raise OSError(f"Could not write ePub placeholder for {epub_path}")

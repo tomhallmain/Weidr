@@ -196,6 +196,9 @@ class HelpAndConfig(SmartDialog):
             "Shift+S": _("Capture screenshot or copy PDF/SVG/HTML image"),
             "Shift+Delete\nMouse Wheel Click": _("Delete media (or marked file group if marks window selected)"),
             "Ctrl+Shift+Delete": _("Delete current base directory and all contents"),
+            "Ctrl+Shift+P": _("Interactive crop"),
+            "Ctrl+Shift+B": _("Interactive box"),
+            "Ctrl+Shift+R": _("Reapply last crop/box selection to current media"),
         }, col_0_width)
 
         self._add_sub_section_title(_("Prevalidation"))

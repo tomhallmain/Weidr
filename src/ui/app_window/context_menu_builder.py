@@ -15,6 +15,7 @@ from PySide6.QtWidgets import QMenu
 
 from files.directory_notes import DirectoryNotes
 from image.frame_extraction import enabled_strategies
+from image.selection_reapply import LastSelection
 from ui.files.marked_file_mover_qt import MarkedFiles
 from utils.config import config
 from utils.constants import MediaType
@@ -156,6 +157,17 @@ class ContextMenuBuilder:
             menu.addAction(
                 _("Interactive Background Box (Freeform)…"),
                 lambda: app.window_launcher.interactive_background_box_freeform(),
+            )
+        if media_type.is_interactive_crop_supported():
+            stored_selection = LastSelection.get()
+            reapply_action = menu.addAction(
+                _("Reapply Last Selection: {0}").format(stored_selection.kind.get_translation())
+                if stored_selection is not None
+                else _("Reapply Last Selection"),
+                lambda: app.window_launcher.reapply_last_selection(),
+            )
+            reapply_action.setEnabled(
+                stored_selection is not None and media_type.is_freeform_selection_supported()
             )
 
         menu.addSeparator()

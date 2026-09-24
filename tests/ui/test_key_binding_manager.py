@@ -145,6 +145,7 @@ class TestShortcutRegistration:
         km = window.key_binding_mgr
         assert _has_shortcut(km, "Ctrl+Shift+P"), "Interactive Crop shortcut not registered"
         assert _has_shortcut(km, "Ctrl+Shift+B"), "Interactive Box shortcut not registered"
+        assert _has_shortcut(km, "Ctrl+Shift+R"), "Reapply last selection shortcut not registered"
 
     def test_space_shortcut_present(self, window):
         assert _has_shortcut(window.key_binding_mgr, "Space")

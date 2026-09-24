@@ -25,8 +25,7 @@ MAX_ENTRY_COUNT = 20000
 MAX_COVER_BYTES = 64 * 1024 * 1024
 _COPY_CHUNK_BYTES = 1024 * 1024
 
-# Font obfuscation (IDPF, Adobe) scrambles embedded fonts only. It is common in
-# publisher ePubs and is not DRM.
+# Font obfuscation (IDPF, Adobe) scrambles embedded fonts only; it is not DRM.
 FONT_OBFUSCATION_ALGORITHMS = frozenset({
     "http://www.idpf.org/2008/embedding",
     "http://ns.adobe.com/pdf/enc#RC",

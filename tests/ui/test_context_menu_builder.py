@@ -77,6 +77,7 @@ _INTERACTIVE_BG_BOX     = _("Interactive Background Box…")
 _INTERACTIVE_CROP_FREEFORM   = _("Interactive Crop (Freeform)…")
 _INTERACTIVE_BOX_FREEFORM    = _("Interactive Box (Freeform)…")
 _INTERACTIVE_BG_BOX_FREEFORM = _("Interactive Background Box (Freeform)…")
+_REAPPLY_SELECTION = _("Reapply Last Selection")
 
 _SET_RELATED  = _("Set Marked File as Related Image of Current")
 
@@ -189,3 +190,45 @@ class TestSetAsRelatedImageMenuItem:
         MarkedFiles.file_marks = ["/dir/marked.png"]
         actions = _build_menu_actions(monkeypatch, "/dir/clip.mp4", MediaType.VIDEO)
         assert _SET_RELATED not in actions
+
+
+def _reapply_action(monkeypatch, media_type, label):
+    captured = []
+
+    def _menu_factory(parent):
+        m = _NoExecMenu(None)
+        captured.append(m)
+        return m
+
+    monkeypatch.setattr("ui.app_window.context_menu_builder.QMenu", _menu_factory)
+    monkeypatch.setattr(
+        "ui.app_window.context_menu_builder.get_media_type_for_path",
+        lambda path: media_type,
+    )
+    ContextMenuBuilder(_make_app_mock("/dir/file.png")).show(QPoint(0, 0))
+    matches = [a for a in captured[0].actions() if a.text() == label]
+    return matches[0] if matches else None
+
+
+def _stored_label(kind_label):
+    return _("Reapply Last Selection: {0}").format(kind_label)
+
+
+class TestReapplyLastSelectionEntry:
+    def test_disabled_when_nothing_stored(self, qapp, monkeypatch):
+        action = _reapply_action(monkeypatch, MediaType.IMAGE, _REAPPLY_SELECTION)
+        assert action is not None
+        assert not action.isEnabled()
+
+    def test_enabled_and_named_after_stored_tool(self, qapp, monkeypatch):
+        from image.selection_reapply import LastSelection, SelectionKind, StoredSelection
+        LastSelection.set(StoredSelection(SelectionKind.BOX_POLYGON, ((0, 0), (1, 0), (0, 1)), (10, 10), "/a.png"))
+        action = _reapply_action(monkeypatch, MediaType.IMAGE, _stored_label(_("Box (Freeform)")))
+        assert action is not None
+        assert action.isEnabled()
+
+    def test_disabled_for_video(self, qapp, monkeypatch):
+        from image.selection_reapply import LastSelection, SelectionKind, StoredSelection
+        LastSelection.set(StoredSelection(SelectionKind.BOX_RECT, (0, 0, 5, 5), (10, 10), "/a.png"))
+        action = _reapply_action(monkeypatch, MediaType.VIDEO, _stored_label(_("Box")))
+        assert action is not None and not action.isEnabled()

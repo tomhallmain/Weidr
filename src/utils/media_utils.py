@@ -384,11 +384,11 @@ def is_classifier_dynamic_media_path(path: str) -> bool:
 #   - PDF/ePub/SVG/HTML: can't rotate in their own format, so a rendered raster
 #     stand-in is rotated instead; the source document is never touched. PDF
 #     and ePub are dynamic media and render their first page (an ePub's
-#     cover) on demand. SVG/HTML are
-#     not dynamic media, so by the time they reach run_action the path has
-#     already been substituted with a FrameCache temp render by an unrelated
-#     classification fallback -- resolve_rendered_frame_source() below
-#     reverses that lookup to recover the true source. That same
+#     cover) on demand. SVG/HTML are not dynamic media, so by the time they
+#     reach run_action the path has already been substituted with a
+#     FrameCache temp render by an unrelated classification fallback --
+#     resolve_rendered_frame_source() below reverses that lookup to recover
+#     the true source. That same
 #     substitution also affects MOVE/DELETE for these two types (a known,
 #     separate issue, not fixed here).
 #   - Audio/unmatched: no renderable frame or format, skipped with a notification.

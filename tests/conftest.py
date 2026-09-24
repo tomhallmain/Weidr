@@ -192,6 +192,13 @@ def reset_app_globals():
         except Exception:
             pass
 
+        # LastSelection — process-wide slot for reapplying the last selection
+        try:
+            from image.selection_reapply import LastSelection
+            LastSelection.clear()
+        except Exception:
+            pass
+
         # Lookahead — shared list of lookahead definitions
         try:
             from compare.lookahead import Lookahead

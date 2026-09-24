@@ -443,3 +443,239 @@ class TestRunStaticPolygonActionPreviewFill:
         assert len(calls) == 2
         assert calls[0][0] is calls[1][0]
         assert produced.exists()
+
+
+# ---------------------------------------------------------------------------
+# Reapply the last selection to the current media
+# ---------------------------------------------------------------------------
+
+from image.selection_reapply import LastSelection, SelectionKind, StoredSelection  # noqa: E402
+from utils.translations import _  # noqa: E402
+
+
+def _png_of_size(path, size):
+    from PIL import Image
+    Image.new("RGB", size, (200, 200, 200)).save(path)
+    return str(path)
+
+
+def _no_canvas(monkeypatch):
+    monkeypatch.setattr(
+        "ui.image.media_details.MediaDetails.open_temp_media_canvas",
+        lambda **kwargs: None,
+    )
+
+
+def _accept_fill_preview(monkeypatch, accepted=True):
+    calls = []
+
+    def _dialog(master, preview_path, on_reroll, on_solid, **kwargs):
+        calls.append(preview_path)
+        return accepted
+
+    monkeypatch.setattr("lib.fill_preview_dialog_qt.show_fill_preview_dialog", _dialog)
+    return calls
+
+
+class TestRecordLastSelection:
+    def _run_box(self, tmp_path, monkeypatch, accepted, kind=SelectionKind.BOX_RECT):
+        _no_canvas(monkeypatch)
+        _accept_fill_preview(monkeypatch, accepted)
+        media_path = str(tmp_path / "photo.png")
+        open(media_path, "w").close()
+        produced = tmp_path / "photo_box.png"
+        produced.write_bytes(b"x")
+
+        def fake_apply_fn(source_path, left, upper, right, lower, fill_image=None, output_path=None):
+            return str(produced) if output_path is None else output_path
+
+        launcher, gv = _make_launcher_and_gv()
+        launcher._run_static_rect_action(
+            gv, _make_media_frame(), media_path, "/tmp/source.png", MediaType.IMAGE,
+            restore_original=lambda: None,
+            apply_fn=fake_apply_fn,
+            output_suffix="_box",
+            too_small_msg="too small",
+            success_msg="ok",
+            failed_msg="failed",
+            preview_fill=True,
+            kind=kind,
+        )
+        rect = SimpleNamespace(x=lambda: 10, y=lambda: 20, width=lambda: 30, height=lambda: 40)
+        gv.crop_confirmed.emit(rect)
+        return media_path
+
+    def test_accepted_edit_is_stored(self, tmp_path, monkeypatch):
+        media_path = self._run_box(tmp_path, monkeypatch, accepted=True)
+        stored = LastSelection.get()
+        assert stored == StoredSelection(SelectionKind.BOX_RECT, (10, 20, 40, 60), (100, 100), media_path)
+
+    def test_cancelled_preview_keeps_previous(self, tmp_path, monkeypatch):
+        previous = StoredSelection(SelectionKind.CROP_RECT, (0, 0, 5, 5), (10, 10), "/old.png")
+        LastSelection.set(previous)
+        self._run_box(tmp_path, monkeypatch, accepted=False)
+        assert LastSelection.get() is previous
+
+    def test_without_kind_nothing_is_stored(self, tmp_path, monkeypatch):
+        self._run_box(tmp_path, monkeypatch, accepted=True, kind=None)
+        assert LastSelection.get() is None
+
+    def test_polygon_edit_is_stored(self, tmp_path, monkeypatch):
+        _no_canvas(monkeypatch)
+        media_path = str(tmp_path / "photo.png")
+        open(media_path, "w").close()
+        produced = tmp_path / "photo_crop.png"
+        produced.write_bytes(b"x")
+        launcher, gv = _make_launcher_and_gv_polygon()
+        launcher._run_static_polygon_action(
+            gv, _make_media_frame(), media_path, "/tmp/source.png", MediaType.IMAGE,
+            restore_original=lambda: None,
+            apply_fn=lambda source_path, points: str(produced),
+            output_suffix="_crop",
+            too_small_msg="too small",
+            success_msg="ok",
+            failed_msg="failed",
+            kind=SelectionKind.CROP_POLYGON,
+        )
+        gv.polygon_confirmed.emit([
+            SimpleNamespace(x=lambda: 0, y=lambda: 0),
+            SimpleNamespace(x=lambda: 50, y=lambda: 0),
+            SimpleNamespace(x=lambda: 0, y=lambda: 50),
+        ])
+        stored = LastSelection.get()
+        assert stored.kind == SelectionKind.CROP_POLYGON
+        assert stored.geometry == ((0, 0), (50, 0), (0, 50))
+
+
+def _reapply_launcher(tmp_path, monkeypatch, media_path, media_type, kind, produced_name):
+    """Launcher whose tool table has fake apply_fns recording their calls."""
+    _no_canvas(monkeypatch)
+    monkeypatch.setattr("utils.media_utils.get_media_type_for_path", lambda p: media_type)
+    app = MagicMock()
+    app.media_path = media_path
+    launcher = WindowLauncher(app)
+    produced = tmp_path / produced_name
+    calls = []
+
+    def fake_rect(source_path, left, upper, right, lower, fill_image=None, output_path=None):
+        calls.append((source_path, (left, upper, right, lower), output_path))
+        if output_path is not None:
+            return output_path
+        produced.write_bytes(b"x")
+        return str(produced)
+
+    def fake_polygon(source_path, points, fill_image=None, output_path=None):
+        calls.append((source_path, list(points), output_path))
+        if output_path is not None:
+            return output_path
+        produced.write_bytes(b"x")
+        return str(produced)
+
+    real_tool = launcher._selection_tool
+
+    def _tool(k):
+        tool = dict(real_tool(k))
+        tool["apply_fn"] = fake_polygon if k.is_polygon else fake_rect
+        return tool
+
+    monkeypatch.setattr(launcher, "_selection_tool", _tool)
+    return launcher, app, calls
+
+
+class TestReapplyLastSelection:
+    def test_nothing_stored_toasts(self, tmp_path, monkeypatch):
+        media_path = _png_of_size(tmp_path / "a.png", (100, 100))
+        launcher, app, calls = _reapply_launcher(
+            tmp_path, monkeypatch, media_path, MediaType.IMAGE, None, "a_box.png"
+        )
+        launcher.reapply_last_selection()
+        app.notification_ctrl.toast.assert_called_once_with(_("No selection to reapply yet"))
+        assert calls == []
+
+    def test_video_is_not_supported(self, tmp_path, monkeypatch):
+        LastSelection.set(StoredSelection(SelectionKind.BOX_RECT, (0, 0, 5, 5), (10, 10), "/a.png"))
+        launcher, app, calls = _reapply_launcher(
+            tmp_path, monkeypatch, str(tmp_path / "clip.mp4"), MediaType.VIDEO, None, "x.png"
+        )
+        launcher.reapply_last_selection()
+        app.notification_ctrl.toast.assert_called_once_with(
+            _("Reapplying a selection is not supported for this media type")
+        )
+        assert calls == []
+
+    def test_box_opens_preview_with_scaled_geometry(self, tmp_path, monkeypatch):
+        stored = StoredSelection(SelectionKind.BOX_RECT, (10, 20, 30, 40), (100, 100), "/first.png")
+        LastSelection.set(stored)
+        media_path = _png_of_size(tmp_path / "other.png", (200, 50))
+        launcher, app, calls = _reapply_launcher(
+            tmp_path, monkeypatch, media_path, MediaType.IMAGE, SelectionKind.BOX_RECT, "other_box.png"
+        )
+        previews = _accept_fill_preview(monkeypatch, accepted=True)
+
+        launcher.reapply_last_selection()
+
+        assert len(previews) == 1
+        assert calls[0][1] == (20, 10, 60, 20)       # preview render
+        assert calls[-1] == (media_path, (20, 10, 60, 20), None)  # real save
+        assert (tmp_path / "other_box.png").exists()
+        assert LastSelection.get() is stored        # reapply keeps the original
+
+    def test_box_cancel_writes_nothing(self, tmp_path, monkeypatch):
+        LastSelection.set(StoredSelection(SelectionKind.BOX_RECT, (10, 20, 30, 40), (100, 100), "/first.png"))
+        media_path = _png_of_size(tmp_path / "other.png", (100, 100))
+        launcher, app, calls = _reapply_launcher(
+            tmp_path, monkeypatch, media_path, MediaType.IMAGE, SelectionKind.BOX_RECT, "other_box.png"
+        )
+        _accept_fill_preview(monkeypatch, accepted=False)
+        launcher.reapply_last_selection()
+        assert all(call[2] is not None for call in calls)
+        assert not (tmp_path / "other_box.png").exists()
+
+    def test_crop_applies_directly_without_preview(self, tmp_path, monkeypatch):
+        LastSelection.set(StoredSelection(SelectionKind.CROP_RECT, (10, 20, 30, 40), (100, 100), "/first.png"))
+        media_path = _png_of_size(tmp_path / "other.png", (100, 100))
+        launcher, app, calls = _reapply_launcher(
+            tmp_path, monkeypatch, media_path, MediaType.IMAGE, SelectionKind.CROP_RECT, "other_crop.png"
+        )
+
+        def _no_dialog(*args, **kwargs):
+            raise AssertionError("crop reapply must not open a preview")
+
+        monkeypatch.setattr("lib.fill_preview_dialog_qt.show_fill_preview_dialog", _no_dialog)
+        launcher.reapply_last_selection()
+        assert calls == [(media_path, (10, 20, 30, 40), None)]
+        assert (tmp_path / "other_crop.png").exists()
+
+    def test_freeform_crop_scales_points(self, tmp_path, monkeypatch):
+        LastSelection.set(StoredSelection(
+            SelectionKind.CROP_POLYGON, ((0, 0), (50, 0), (0, 50)), (100, 100), "/first.png"
+        ))
+        media_path = _png_of_size(tmp_path / "other.png", (200, 200))
+        launcher, app, calls = _reapply_launcher(
+            tmp_path, monkeypatch, media_path, MediaType.IMAGE, SelectionKind.CROP_POLYGON, "other_crop.png"
+        )
+        launcher.reapply_last_selection()
+        assert calls == [(media_path, [(0, 0), (100, 0), (0, 100)], None)]
+
+    def test_selection_too_small_after_scaling_toasts(self, tmp_path, monkeypatch):
+        LastSelection.set(StoredSelection(SelectionKind.CROP_RECT, (10, 10, 11, 11), (1000, 1000), "/first.png"))
+        media_path = _png_of_size(tmp_path / "tiny.png", (10, 10))
+        launcher, app, calls = _reapply_launcher(
+            tmp_path, monkeypatch, media_path, MediaType.IMAGE, SelectionKind.CROP_RECT, "tiny_crop.png"
+        )
+        launcher.reapply_last_selection()
+        app.notification_ctrl.toast.assert_called_once_with(_("Crop selection too small"))
+        assert calls == []
+
+    def test_pdf_uses_current_page_and_keeps_raster_extension(self, tmp_path, monkeypatch):
+        LastSelection.set(StoredSelection(SelectionKind.CROP_RECT, (0, 0, 50, 50), (100, 100), "/first.png"))
+        media_path = str(tmp_path / "paper.pdf")
+        open(media_path, "w").close()
+        page = _png_of_size(tmp_path / "page_3.jpg", (100, 100))
+        launcher, app, calls = _reapply_launcher(
+            tmp_path, monkeypatch, media_path, MediaType.PDF, SelectionKind.CROP_RECT, "page_3_crop.jpg"
+        )
+        app.media_frame.pdf_current_page_path.return_value = page
+        launcher.reapply_last_selection()
+        assert calls[0][0] == page
+        assert (tmp_path / "paper_crop.jpg").exists()

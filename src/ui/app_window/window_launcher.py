@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, Any, Optional
 
+from image.selection_reapply import LastSelection, SelectionKind, StoredSelection, map_points, map_rect
 from ui.auth.password_utils import require_password, check_session_expired
 from utils.constants import ClassifierActionType, Mode, ProtectedActions
 from utils.logging_setup import get_logger, set_logger_level
@@ -451,7 +452,7 @@ class WindowLauncher:
         Validates media-type support, tears down any previous QGraphicsView
         crop/polygon-selection session, and either dispatches to *video_launch_fn*
         for video (returning None) or resolves the pixel-space source path for
-        static media (image, animated GIF, SVG, PDF).
+        static media (image, animated GIF, SVG, PDF, ePub).
 
         Returns ``(gv, media_frame, source_path, media_type, restore_original)``
         for static media, or ``None`` if handled elsewhere / unsupported / on error.
@@ -459,7 +460,6 @@ class WindowLauncher:
         import os
         import tempfile
         from PIL import Image
-        from image.frame_cache import FrameCache
         from utils.media_utils import get_media_type_for_path
         from utils.constants import MediaType
 
@@ -508,18 +508,24 @@ class WindowLauncher:
             media_frame._show_image_in_view(tmp_frame)
             source_path = media_path
         else:
-            # For PDFs and ePubs, use the currently displayed page rather than always page 0.
-            if media_type in (MediaType.PDF, MediaType.EPUB):
-                source_path = (self._app.media_frame.pdf_current_page_path()
-                               or FrameCache.get_image_path(media_path))
-            else:
-                source_path = FrameCache.get_image_path(media_path)
+            source_path = self._static_source_path(media_path, media_type)
 
         def _restore_original():
             if is_animated_gif:
                 media_frame.show_media(media_path)
 
         return gv, media_frame, source_path, media_type, _restore_original
+
+    def _static_source_path(self, media_path: str, media_type) -> str:
+        """Pixel-space raster an edit of static *media_path* runs on: the
+        currently displayed page for PDF/ePub, else FrameCache's image path
+        (the SVG render, or the file itself)."""
+        from image.frame_cache import FrameCache
+        from utils.constants import MediaType
+
+        if media_type in (MediaType.PDF, MediaType.EPUB):
+            return self._app.media_frame.pdf_current_page_path() or FrameCache.get_image_path(media_path)
+        return FrameCache.get_image_path(media_path)
 
     def _finish_static_edit(
         self,
@@ -530,10 +536,11 @@ class WindowLauncher:
         success_msg: str,
         failed_msg: str,
         apply_fn=None,
-    ) -> None:
+    ) -> bool:
         """Shared tail for crop/box/background-box/freeform actions on static media:
         fix up the SVG/PDF/ePub sibling extension if needed, then open the result or
-        report failure. *new_path* is whatever apply_fn returned.
+        report failure. *new_path* is whatever apply_fn returned. Returns True
+        when a result file exists.
 
         *apply_fn* is the image_ops function that produced *new_path* -- pass
         it to record this manual edit in the file actions store. All callers
@@ -576,8 +583,9 @@ class WindowLauncher:
                 master=self._app, media_path=new_path,
                 app_actions=self._app.app_actions,
             )
-        else:
-            self._app.notification_ctrl.toast(failed_msg)
+            return True
+        self._app.notification_ctrl.toast(failed_msg)
+        return False
 
     def _preview_and_confirm_fill(
         self,
@@ -660,18 +668,18 @@ class WindowLauncher:
         failed_msg: str,
         preview_fill: bool = False,
         fill_covers_full_image: bool = False,
+        kind: Optional[SelectionKind] = None,
     ) -> None:
         """Wire crop_confirmed/crop_cancelled for one rectangle-selection action
-        (crop / box / background box) on static media. *apply_fn* receives
+        (crop / box / background box) on static media and pass the selection,
+        in image pixels, to :meth:`_apply_rect_selection`. *apply_fn* receives
         (source_path, left, upper, right, lower) and returns the new file path
-        (or "" on failure).
-
-        When *preview_fill* is True (box / background box only -- crop has no
-        fill), *apply_fn* is also called with ``fill_image=``/``output_path=``
-        kwargs so a candidate fill can be previewed and rerolled before the
-        real save; *fill_covers_full_image* selects whether the previewed fill
-        is sized to the selection rect (box) or the whole image (background
-        box, which paints everywhere outside the rect).
+        (or "" on failure). With *preview_fill* (box / background box; crop has
+        no fill) it is also called with ``fill_image=``/``output_path=`` to
+        render rerollable previews before the real save. *fill_covers_full_image*
+        sizes the fill to the whole image (background box, which paints outside
+        the rect) instead of the rect (box). With *kind* given, a successful
+        edit is remembered for :meth:`reapply_last_selection`.
         """
         def _disconnect_signals():
             for sig, slot in ((gv.crop_confirmed, _on_confirmed), (gv.crop_cancelled, _on_cancelled)):
@@ -706,29 +714,65 @@ class WindowLauncher:
                 restore_original()
                 return
 
-            if preview_fill:
-                fill_size = (img_w, img_h) if fill_covers_full_image else (right - left, lower - upper)
-                fill_image = self._preview_and_confirm_fill(
-                    source_path,
-                    fill_size,
-                    lambda fill, out_path: apply_fn(
-                        source_path, left, upper, right, lower, fill_image=fill, output_path=out_path
-                    ),
-                )
-                if fill_image is None:
-                    restore_original()
-                    return
-                new_path = apply_fn(source_path, left, upper, right, lower, fill_image=fill_image)
-            else:
-                new_path = apply_fn(source_path, left, upper, right, lower)
-            self._finish_static_edit(
-                new_path, media_path, media_type, output_suffix, success_msg, failed_msg,
+            self._apply_rect_selection(
+                media_path, source_path, media_type, restore_original,
+                (left, upper, right, lower), (img_w, img_h),
                 apply_fn=apply_fn,
+                output_suffix=output_suffix,
+                success_msg=success_msg,
+                failed_msg=failed_msg,
+                preview_fill=preview_fill,
+                fill_covers_full_image=fill_covers_full_image,
+                kind=kind,
             )
 
         gv.crop_confirmed.connect(_on_confirmed)
         gv.crop_cancelled.connect(_on_cancelled)
         gv.start_crop_mode()
+
+    def _apply_rect_selection(
+        self,
+        media_path: str,
+        source_path: str,
+        media_type,
+        restore_original,
+        rect: tuple,
+        image_size: tuple,
+        *,
+        apply_fn,
+        output_suffix: str,
+        success_msg: str,
+        failed_msg: str,
+        preview_fill: bool = False,
+        fill_covers_full_image: bool = False,
+        kind: Optional[SelectionKind] = None,
+    ) -> None:
+        """Apply a rect already in image pixels (*image_size* is the image's
+        ``(width, height)``): preview the fill if the tool has one, save, and,
+        with *kind* given, remember the action for reapply."""
+        left, upper, right, lower = rect
+        img_w, img_h = image_size
+        if preview_fill:
+            fill_size = (img_w, img_h) if fill_covers_full_image else (right - left, lower - upper)
+            fill_image = self._preview_and_confirm_fill(
+                source_path,
+                fill_size,
+                lambda fill, out_path: apply_fn(
+                    source_path, left, upper, right, lower, fill_image=fill, output_path=out_path
+                ),
+            )
+            if fill_image is None:
+                restore_original()
+                return
+            new_path = apply_fn(source_path, left, upper, right, lower, fill_image=fill_image)
+        else:
+            new_path = apply_fn(source_path, left, upper, right, lower)
+        saved = self._finish_static_edit(
+            new_path, media_path, media_type, output_suffix, success_msg, failed_msg,
+            apply_fn=apply_fn,
+        )
+        if saved and kind is not None:
+            LastSelection.set(StoredSelection(kind, tuple(rect), tuple(image_size), media_path))
 
     def _run_static_polygon_action(
         self,
@@ -745,18 +789,18 @@ class WindowLauncher:
         success_msg: str,
         failed_msg: str,
         preview_fill: bool = False,
+        kind: Optional[SelectionKind] = None,
     ) -> None:
         """Wire polygon_confirmed/crop_cancelled for one freeform-selection action
-        (box / background box) on static media. *apply_fn* receives
-        (source_path, points) where points is a list of (x, y) pixel-space
-        coordinates, and returns the new file path (or "" on failure).
-
-        When *preview_fill* is True (box / background box only -- crop has no
-        fill), *apply_fn* is also called with ``fill_image=``/``output_path=``
-        kwargs so a candidate fill can be previewed and rerolled before the
-        real save. Unlike the rect case, the fill always covers the whole
-        image here -- both freeform box and background-box composite via a
-        full-image mask (see draw_box_at_polygon / draw_background_box_at_polygon).
+        (crop / box / background box) on static media and pass the points, in
+        image pixels, to :meth:`_apply_polygon_selection`. *apply_fn* receives
+        (source_path, points) with points a list of (x, y), and returns the new
+        file path (or "" on failure). With *preview_fill* (box / background box;
+        crop has no fill) it is also called with ``fill_image=``/``output_path=``
+        to render rerollable previews before the real save. The fill always
+        covers the whole image: both composite via a full-image mask (see
+        draw_box_at_polygon / draw_background_box_at_polygon). With *kind*
+        given, a successful edit is remembered for :meth:`reapply_last_selection`.
         """
         def _disconnect_signals():
             for sig, slot in ((gv.polygon_confirmed, _on_confirmed), (gv.crop_cancelled, _on_cancelled)):
@@ -794,91 +838,208 @@ class WindowLauncher:
                 restore_original()
                 return
 
-            if preview_fill:
-                fill_image = self._preview_and_confirm_fill(
-                    source_path,
-                    (img_w, img_h),
-                    lambda fill, out_path: apply_fn(
-                        source_path, points, fill_image=fill, output_path=out_path
-                    ),
-                )
-                if fill_image is None:
-                    restore_original()
-                    return
-                new_path = apply_fn(source_path, points, fill_image=fill_image)
-            else:
-                new_path = apply_fn(source_path, points)
-            self._finish_static_edit(
-                new_path, media_path, media_type, output_suffix, success_msg, failed_msg,
+            self._apply_polygon_selection(
+                media_path, source_path, media_type, restore_original,
+                points, (img_w, img_h),
                 apply_fn=apply_fn,
+                output_suffix=output_suffix,
+                success_msg=success_msg,
+                failed_msg=failed_msg,
+                preview_fill=preview_fill,
+                kind=kind,
             )
 
         gv.polygon_confirmed.connect(_on_confirmed)
         gv.crop_cancelled.connect(_on_cancelled)
         gv.start_polygon_mode()
 
-    def interactive_crop(self, event=None) -> None:
-        """Enter interactive crop mode for the current media (image, GIF, SVG, PDF, or video)."""
+    def _apply_polygon_selection(
+        self,
+        media_path: str,
+        source_path: str,
+        media_type,
+        restore_original,
+        points: list,
+        image_size: tuple,
+        *,
+        apply_fn,
+        output_suffix: str,
+        success_msg: str,
+        failed_msg: str,
+        preview_fill: bool = False,
+        kind: Optional[SelectionKind] = None,
+    ) -> None:
+        """Apply a polygon already in image pixels (*image_size* is the image's
+        ``(width, height)``): preview the fill if the tool has one, save, and,
+        with *kind* given, remember the action for reapply."""
+        if preview_fill:
+            fill_image = self._preview_and_confirm_fill(
+                source_path,
+                tuple(image_size),
+                lambda fill, out_path: apply_fn(
+                    source_path, points, fill_image=fill, output_path=out_path
+                ),
+            )
+            if fill_image is None:
+                restore_original()
+                return
+            new_path = apply_fn(source_path, points, fill_image=fill_image)
+        else:
+            new_path = apply_fn(source_path, points)
+        saved = self._finish_static_edit(
+            new_path, media_path, media_type, output_suffix, success_msg, failed_msg,
+            apply_fn=apply_fn,
+        )
+        if saved and kind is not None:
+            LastSelection.set(StoredSelection(
+                kind, tuple(tuple(p) for p in points), tuple(image_size), media_path,
+            ))
+
+    def _selection_tool(self, kind: SelectionKind) -> dict:
+        """Keyword arguments of the selection runners for *kind*: apply_fn,
+        output suffix, messages, fill preview. Shared by the interactive tools
+        and :meth:`reapply_last_selection`."""
         from image.image_ops import ImageOps
+
+        crop = dict(
+            output_suffix="_crop",
+            success_msg=_("Cropped"),
+            failed_msg=_("Crop failed"),
+        )
+        box = dict(
+            output_suffix="_box",
+            success_msg=_("Box added"),
+            failed_msg=_("Box draw failed"),
+            preview_fill=True,
+        )
+        background_box = dict(
+            output_suffix="_bgbox",
+            success_msg=_("Background box added"),
+            failed_msg=_("Background box draw failed"),
+            preview_fill=True,
+        )
+        too_few_points = _("Need at least 3 points")
+        return {
+            SelectionKind.CROP_RECT: dict(
+                crop, apply_fn=ImageOps.crop_image_to_rect,
+                too_small_msg=_("Crop selection too small"),
+            ),
+            SelectionKind.CROP_POLYGON: dict(
+                crop, apply_fn=ImageOps.crop_image_to_polygon, too_small_msg=too_few_points,
+            ),
+            SelectionKind.BOX_RECT: dict(
+                box, apply_fn=ImageOps.draw_box_at_rect,
+                too_small_msg=_("Box selection too small"),
+            ),
+            SelectionKind.BOX_POLYGON: dict(
+                box, apply_fn=ImageOps.draw_box_at_polygon, too_small_msg=too_few_points,
+            ),
+            SelectionKind.BACKGROUND_BOX_RECT: dict(
+                background_box, apply_fn=ImageOps.draw_background_box_at_rect,
+                too_small_msg=_("Selection too small"), fill_covers_full_image=True,
+            ),
+            SelectionKind.BACKGROUND_BOX_POLYGON: dict(
+                background_box, apply_fn=ImageOps.draw_background_box_at_polygon,
+                too_small_msg=too_few_points,
+            ),
+        }[kind]
+
+    def reapply_last_selection(self, event=None) -> None:
+        """Run the last successful selection action (crop / box / background box,
+        rect or freeform) with the same geometry on the current media, skipping
+        the selection step. Box and background box open the fill preview; crop
+        is applied directly. Geometry is scaled per axis when the image size
+        differs. The stored action stays as it was."""
+        from PIL import Image
+        from utils.media_utils import get_media_type_for_path
+
+        stored = LastSelection.get()
+        if stored is None:
+            self._app.notification_ctrl.toast(_("No selection to reapply yet"))
+            return
+        media_path = self._app.media_path
+        if not media_path:
+            return
+        media_type = get_media_type_for_path(media_path)
+        if not media_type.is_freeform_selection_supported():
+            self._app.notification_ctrl.toast(_("Reapplying a selection is not supported for this media type"))
+            return
+
+        source_path = media_path if media_type.is_gif() else self._static_source_path(media_path, media_type)
+        try:
+            with Image.open(source_path) as img:
+                target_size = img.size
+        except Exception as e:
+            logger.warning("Could not read image size for reapply path=%s: %s", source_path, e)
+            self._app.notification_ctrl.toast(_("Could not read this image to reapply the selection"))
+            return
+
+        tool = dict(self._selection_tool(stored.kind))
+        too_small_msg = tool.pop("too_small_msg")
+        if stored.kind.is_polygon:
+            points = map_points(stored.geometry, stored.source_size, target_size)
+            if points is None:
+                self._app.notification_ctrl.toast(too_small_msg)
+                return
+            self._apply_polygon_selection(
+                media_path, source_path, media_type, lambda: None, points, target_size, **tool,
+            )
+        else:
+            rect = map_rect(stored.geometry, stored.source_size, target_size)
+            if rect is None:
+                self._app.notification_ctrl.toast(too_small_msg)
+                return
+            self._apply_rect_selection(
+                media_path, source_path, media_type, lambda: None, rect, target_size, **tool,
+            )
+
+    def interactive_crop(self, event=None) -> None:
+        """Enter interactive crop mode for the current media (image, GIF, SVG, PDF, ePub, or video)."""
         from ui.app_window.video_crop_overlay_qt import launch_video_crop
 
         ctx = self._setup_static_selection(self._app.media_path, launch_video_crop)
         if ctx is None:
             return
         gv, media_frame, source_path, media_type, restore_original = ctx
+        kind = SelectionKind.CROP_RECT
         self._run_static_rect_action(
             gv, media_frame, self._app.media_path, source_path, media_type, restore_original,
-            apply_fn=ImageOps.crop_image_to_rect,
-            output_suffix="_crop",
-            too_small_msg=_("Crop selection too small"),
-            success_msg=_("Cropped"),
-            failed_msg=_("Crop failed"),
+            **self._selection_tool(kind), kind=kind,
         )
         self._app.notification_ctrl.toast(_("Drag to select crop, Enter to confirm, Escape to cancel"))
 
     def interactive_box(self, event=None) -> None:
-        """Enter interactive box mode for the current media (image, GIF, SVG, PDF, or video):
+        """Enter interactive box mode for the current media (image, GIF, SVG, PDF, ePub, or video):
         paint a random color/pattern box over a selected rectangle, reusing the same
         rect-selection handlers as :meth:`interactive_crop`."""
-        from image.image_ops import ImageOps
         from ui.app_window.video_crop_overlay_qt import launch_video_box
 
         ctx = self._setup_static_selection(self._app.media_path, launch_video_box)
         if ctx is None:
             return
         gv, media_frame, source_path, media_type, restore_original = ctx
+        kind = SelectionKind.BOX_RECT
         self._run_static_rect_action(
             gv, media_frame, self._app.media_path, source_path, media_type, restore_original,
-            apply_fn=ImageOps.draw_box_at_rect,
-            output_suffix="_box",
-            too_small_msg=_("Box selection too small"),
-            success_msg=_("Box added"),
-            failed_msg=_("Box draw failed"),
-            preview_fill=True,
+            **self._selection_tool(kind), kind=kind,
         )
         self._app.notification_ctrl.toast(_("Drag to select box location, Enter to confirm, Escape to cancel"))
 
     def interactive_background_box(self, event=None) -> None:
         """Enter interactive background-box mode for the current media (image, GIF,
-        SVG, PDF, or video): paint a random color/pattern fill over everything
+        SVG, PDF, ePub, or video): paint a random color/pattern fill over everything
         *outside* a selected rectangle, leaving the selection itself unchanged.
         Reuses the same rect-selection handlers as :meth:`interactive_crop`."""
-        from image.image_ops import ImageOps
         from ui.app_window.video_crop_overlay_qt import launch_video_background_box
 
         ctx = self._setup_static_selection(self._app.media_path, launch_video_background_box)
         if ctx is None:
             return
         gv, media_frame, source_path, media_type, restore_original = ctx
+        kind = SelectionKind.BACKGROUND_BOX_RECT
         self._run_static_rect_action(
             gv, media_frame, self._app.media_path, source_path, media_type, restore_original,
-            apply_fn=ImageOps.draw_background_box_at_rect,
-            output_suffix="_bgbox",
-            too_small_msg=_("Selection too small"),
-            success_msg=_("Background box added"),
-            failed_msg=_("Background box draw failed"),
-            preview_fill=True,
-            fill_covers_full_image=True,
+            **self._selection_tool(kind), kind=kind,
         )
         self._app.notification_ctrl.toast(_("Drag to select area to keep, Enter to confirm, Escape to cancel"))
 
@@ -887,8 +1048,8 @@ class WindowLauncher:
 
     def interactive_crop_freeform(self, event=None) -> None:
         """Enter freeform polygon crop mode for the current media (image, GIF,
-        SVG, or PDF -- video is not supported). Click to add points tracing an
-        outline (or click-drag to sweep); close the same way as the other
+        SVG, PDF, or ePub -- video is not supported). Click to add points tracing
+        an outline (or click-drag to sweep); close the same way as the other
         freeform actions to crop to the polygon's bounding box, with everything
         outside the polygon itself made transparent. Requires an alpha channel,
         so the output is saved as PNG (static) or animated WebP (GIF) rather
@@ -896,19 +1057,15 @@ class WindowLauncher:
         :meth:`image.image_ops.ImageOps.crop_image_to_polygon`. A separate
         option from the rectangle-based :meth:`interactive_crop`, which is left
         unchanged."""
-        from image.image_ops import ImageOps
 
         ctx = self._setup_static_selection(self._app.media_path, self._freeform_video_unsupported)
         if ctx is None:
             return
         gv, media_frame, source_path, media_type, restore_original = ctx
+        kind = SelectionKind.CROP_POLYGON
         self._run_static_polygon_action(
             gv, media_frame, self._app.media_path, source_path, media_type, restore_original,
-            apply_fn=ImageOps.crop_image_to_polygon,
-            output_suffix="_crop",
-            too_small_msg=_("Need at least 3 points"),
-            success_msg=_("Cropped"),
-            failed_msg=_("Crop failed"),
+            **self._selection_tool(kind), kind=kind,
         )
         self._app.notification_ctrl.toast(
             _("Click or click-drag to add points, click near the start to close, Enter to confirm, Escape to cancel")
@@ -916,25 +1073,20 @@ class WindowLauncher:
 
     def interactive_box_freeform(self, event=None) -> None:
         """Enter freeform polygon box mode for the current media (image, GIF, SVG,
-        or PDF -- video is not supported). Click to add points tracing an outline;
+        PDF, or ePub -- video is not supported). Click to add points tracing an outline;
         click back near the first point (or press Enter with 3+ points placed,
         Backspace to undo the last point) to close and paint a random
         color/pattern fill inside it. A separate option from the rectangle-based
         :meth:`interactive_box`, which is left unchanged."""
-        from image.image_ops import ImageOps
 
         ctx = self._setup_static_selection(self._app.media_path, self._freeform_video_unsupported)
         if ctx is None:
             return
         gv, media_frame, source_path, media_type, restore_original = ctx
+        kind = SelectionKind.BOX_POLYGON
         self._run_static_polygon_action(
             gv, media_frame, self._app.media_path, source_path, media_type, restore_original,
-            apply_fn=ImageOps.draw_box_at_polygon,
-            output_suffix="_box",
-            too_small_msg=_("Need at least 3 points"),
-            success_msg=_("Box added"),
-            failed_msg=_("Box draw failed"),
-            preview_fill=True,
+            **self._selection_tool(kind), kind=kind,
         )
         self._app.notification_ctrl.toast(
             _("Click or click-drag to add points, click near the start to close, Enter to confirm, Escape to cancel")
@@ -942,25 +1094,20 @@ class WindowLauncher:
 
     def interactive_background_box_freeform(self, event=None) -> None:
         """Enter freeform polygon background-box mode for the current media (image,
-        GIF, SVG, or PDF -- video is not supported). Click to add points tracing an
+        GIF, SVG, PDF, or ePub -- video is not supported). Click to add points tracing an
         outline; click back near the first point (or press Enter with 3+ points
         placed, Backspace to undo the last point) to close and paint a random
         color/pattern fill everywhere *outside* it. A separate option from the
         rectangle-based :meth:`interactive_background_box`, which is left unchanged."""
-        from image.image_ops import ImageOps
 
         ctx = self._setup_static_selection(self._app.media_path, self._freeform_video_unsupported)
         if ctx is None:
             return
         gv, media_frame, source_path, media_type, restore_original = ctx
+        kind = SelectionKind.BACKGROUND_BOX_POLYGON
         self._run_static_polygon_action(
             gv, media_frame, self._app.media_path, source_path, media_type, restore_original,
-            apply_fn=ImageOps.draw_background_box_at_polygon,
-            output_suffix="_bgbox",
-            too_small_msg=_("Need at least 3 points"),
-            success_msg=_("Background box added"),
-            failed_msg=_("Background box draw failed"),
-            preview_fill=True,
+            **self._selection_tool(kind), kind=kind,
         )
         self._app.notification_ctrl.toast(
             _("Click or click-drag to add points, click near the start to close, Enter to confirm, Escape to cancel")

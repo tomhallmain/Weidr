@@ -51,6 +51,7 @@ from compare.classifier_pipeline_runner import (
     _eval_prompt,
     _eval_prototype,
     _eval_related_image,
+    _can_generate,
     _resolve_stem_group,
     _seed_exists_in_dirs,
     run_pipeline,
@@ -121,6 +122,33 @@ class TestEmbeddingCondition:
             EmbeddingCondition(["x"], [], 0.3), IMAGE, {}, {}
         )
         assert result is False
+
+    def test_score_is_the_cached_combined_similarity(self, monkeypatch):
+        import compare.compare_embeddings_clip as clip_mod
+        cache = {}
+        monkeypatch.setattr(clip_mod.CompareEmbeddingClip, "MULTI_EMBEDDING_CACHE", cache)
+
+        def fake_compare(media_path, positives, negatives, threshold=0.3):
+            cache[(media_path, "::p", tuple(positives), "::n", tuple(negatives))] = 0.42
+            return 0.42 > threshold
+
+        monkeypatch.setattr(clip_mod.CompareEmbeddingClip, "multi_text_compare", staticmethod(fake_compare))
+        result, score = _evaluate_condition(
+            EmbeddingCondition(["x"], ["y"], 0.35), IMAGE, {}, {}
+        )
+        assert result is True
+        assert score == 0.42
+
+    def test_cached_score_matches_compare_key(self):
+        from compare.base_compare_embedding import BaseCompareEmbedding
+        cache = {}
+        key = BaseCompareEmbedding._multi_text_key(IMAGE, ["x"], ["y"])
+        cache[key] = 0.3
+        assert BaseCompareEmbedding.multi_text_compare(
+            IMAGE, ["x"], ["y"], None, {}, None, cache, threshold=0.25
+        ) is True
+        assert BaseCompareEmbedding.cached_multi_text_score(IMAGE, ["x"], ["y"], cache) == 0.3
+        assert BaseCompareEmbedding.cached_multi_text_score(IMAGE, ["z"], ["y"], cache) is None
 
 
 # ---------------------------------------------------------------------------
@@ -2849,3 +2877,77 @@ class TestRunSingleNode:
         matched, action = run_single_node(_pipeline(node), node, IMAGE, ActionCallbacks())
         assert matched is False
         assert action is None
+
+
+# ---------------------------------------------------------------------------
+# Seed-filed gate applies only to pipelines that can generate
+# ---------------------------------------------------------------------------
+
+class TestSeedFiledGateOnlyForGeneratingPipelines:
+    """The Malformed skips stop variants being generated from an unfiled seed.
+    A pipeline that cannot generate (e.g. a triage pipeline) must evaluate
+    those files instead of skipping them unevaluated."""
+
+    def setup_method(self):
+        clear_base_stem_dir_cache()
+
+    def teardown_method(self):
+        clear_base_stem_dir_cache()
+
+    @staticmethod
+    def _unfiled_seed(tmp_path, monkeypatch):
+        work = tmp_path / "work"
+        work.mkdir()
+        seed = work / "rose.jpg"
+        seed.touch()
+        target = tmp_path / "target"
+        target.mkdir()
+        monkeypatch.setattr(config, "directories_to_search_for_related_images", [str(target)])
+        return str(seed)
+
+    def test_resolve_without_requirement_evaluates_unfiled_seed(self, tmp_path, monkeypatch):
+        seed = self._unfiled_seed(tmp_path, monkeypatch)
+        assert _resolve_stem_group(seed, "rose", is_seed=True, require_filed_seed=False) == (True, True)
+
+    def test_resolve_without_requirement_evaluates_derivative_without_metadata(self, tmp_path, monkeypatch):
+        self._unfiled_seed(tmp_path, monkeypatch)
+        deriv = tmp_path / "work" / "tulip_a.jpg"
+        deriv.touch()
+        assert _resolve_stem_group(str(deriv), "tulip", is_seed=False, require_filed_seed=False) == (True, False)
+
+    def test_non_generating_pipeline_evaluates_unfiled_seed(self, tmp_path, monkeypatch):
+        seed = self._unfiled_seed(tmp_path, monkeypatch)
+        p = _pipeline(_node("n1", FilenameContainsCondition(["rose"]),
+                            on_match=_execute(ClassifierActionType.NOTIFY)))
+        stems = set()
+        result = run_pipeline(p, seed, ActionCallbacks(), processed_stems=stems)
+        assert result == ClassifierActionType.NOTIFY
+        assert "rose" in stems
+
+    def test_generating_pipeline_still_skips_unfiled_seed(self, tmp_path, monkeypatch):
+        seed = self._unfiled_seed(tmp_path, monkeypatch)
+        p = _pipeline(_node("n1", FilenameContainsCondition(["rose"]),
+                            on_match=_execute(ClassifierActionType.GENERATE, "_apple")))
+        stems = set()
+        with patch("compare.classifier_pipeline_runner._evaluate_condition") as evaluate:
+            result = run_pipeline(p, seed, ActionCallbacks(), processed_stems=stems)
+        assert result is None
+        evaluate.assert_not_called()
+        assert "rose" in stems
+
+    def test_run_pipeline_passes_the_requirement(self):
+        notify = _pipeline(_node("n1", FilenameContainsCondition(["image"]),
+                                 on_match=_execute(ClassifierActionType.NOTIFY)))
+        generate = _pipeline(_node("n1", FilenameContainsCondition(["image"]),
+                                   on_match=_execute(ClassifierActionType.GENERATE, "_apple")))
+        for pipeline, expected in ((notify, False), (generate, True)):
+            with patch("compare.classifier_pipeline_runner._resolve_stem_group",
+                       return_value=(False, True)) as resolve:
+                run_pipeline(pipeline, IMAGE, ActionCallbacks(), processed_stems=set())
+            assert resolve.call_args.kwargs["require_filed_seed"] is expected
+
+    def test_default_action_generate_counts_as_generating(self):
+        p = _pipeline(_node("n1", FilenameContainsCondition(["nothing"])),
+                      default_action=ClassifierActionType.GENERATE)
+        assert _can_generate(p)
+        assert not _can_generate(_pipeline(_node("n1", FilenameContainsCondition(["nothing"]))))

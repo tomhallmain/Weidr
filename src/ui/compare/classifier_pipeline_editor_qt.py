@@ -2128,8 +2128,9 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._dedupe_stem_groups_cb.setChecked(p.dedupe_stem_groups)
         self._dedupe_stem_groups_cb.setToolTip(
             _("In a batch run, skip a file whose stem group has already been "
-              "evaluated, and skip stem groups whose seed cannot be located or "
-              "is not filed. Turn off to evaluate every file independently. "
+              "evaluated. A pipeline that can generate also skips stem groups "
+              "whose seed cannot be located or is not filed. Turn off to "
+              "evaluate every file independently. "
               "Related Image sort order lets derivatives skip sooner, but is "
               "not required for correctness.")
         )

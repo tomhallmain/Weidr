@@ -101,6 +101,7 @@ def _resolve_stem_group(
     image_path: str,
     base_stem: str,
     is_seed: bool,
+    require_filed_seed: bool = True,
 ) -> tuple:
     """
     Classify this image's role in its stem group and decide whether to evaluate.
@@ -145,10 +146,14 @@ def _resolve_stem_group(
     checks (Type 1 valid, Type 2, Malformed B/C) cannot be performed. In that case
     the function falls back to (True, is_seed) — seeds mark the group done, derivatives
     do not — without enforcing the target-presence requirement.
+
+    The same fallback applies when *require_filed_seed* is False. The Malformed
+    cases exist to stop variants being generated from a seed that is not filed;
+    a pipeline that cannot generate must still evaluate such files.
     """
     target_dirs = config.directories_to_search_for_related_images
 
-    if not target_dirs:
+    if not target_dirs or not require_filed_seed:
         # No target dirs configured: skip validity checks, use seeds-only marking.
         return True, is_seed
 
@@ -187,6 +192,15 @@ def _resolve_stem_group(
         return False, True  # Malformed B
 
     return True, True  # Type 2 valid; this derivative is the generation source
+
+
+def _can_generate(pipeline) -> bool:
+    """True when a run of *pipeline* can dispatch GENERATE, from a node outcome
+    or from its default_action."""
+    return (
+        pipeline.has_generate_action()
+        or pipeline.default_action == ClassifierActionType.GENERATE
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -244,9 +258,9 @@ def run_pipeline(
         Optional batch-level set of base stems already handled. When provided:
         - Images whose base_stem is already in the set are skipped immediately.
         - Before entering the evaluation loop, _resolve_stem_group() classifies
-          the image's stem-group role. Malformed cases (A, B, C) are skipped
-          without evaluation and marked done to suppress later derivatives of
-          the same stem group.
+          the image's stem-group role. For a pipeline that can generate,
+          malformed cases (A, B, C) are skipped without evaluation and marked
+          done to suppress later derivatives of the same stem group.
         - After any terminal outcome, images flagged should_mark_done add
           their base_stem to the set so subsequent group members are skipped.
         Pass the same set for every call in a batch run. The parameter is
@@ -291,7 +305,9 @@ def run_pipeline(
                 logger.debug("Pipeline %r: stem %r already processed, skipping %s", pipeline.name, base_stem, image_path)
             return None
 
-        should_evaluate, should_mark_done = _resolve_stem_group(image_path, base_stem, is_seed)
+        should_evaluate, should_mark_done = _resolve_stem_group(
+            image_path, base_stem, is_seed, require_filed_seed=_can_generate(pipeline),
+        )
         if not should_evaluate:
             if config.debug:
                 logger.debug("Pipeline %r: stem group resolve says skip %s", pipeline.name, image_path)
@@ -599,10 +615,21 @@ def _evaluate_condition(
         result = CompareEmbeddingClip.multi_text_compare(
             image_path, condition.positives, condition.negatives, condition.threshold
         )
-        return bool(result), None
+        score = CompareEmbeddingClip.cached_multi_text_score(
+            image_path, condition.positives, condition.negatives
+        )
+        if config.debug:
+            logger.debug(
+                "Embedding[%s]: %s score=%s threshold=%.3f → %s",
+                node_name, os.path.basename(image_path),
+                f"{score:.4f}" if score is not None else "n/a",
+                condition.threshold, "MATCH" if result else "NO-MATCH",
+            )
+        return bool(result), score
 
     if isinstance(condition, ClassifierRankCondition):
-        return _eval_classifier_rank(condition, image_path, pipeline_categories=pipeline_categories)
+        return _eval_classifier_rank(condition, image_path, pipeline_categories=pipeline_categories,
+                                     node_name=node_name)
 
     if isinstance(condition, AudioClassifierRankCondition):
         return _eval_audio_classifier_rank(condition, image_path, pipeline_categories=pipeline_categories)
@@ -650,7 +677,7 @@ def _evaluate_condition(
     if isinstance(condition, CompositeCondition):
         return _eval_composite(condition, image_path, node_results, node_scores, base_directory,
                                report=report, pipeline_categories=pipeline_categories,
-                               is_seed=is_seed)
+                               is_seed=is_seed, node_name=node_name)
 
     if isinstance(condition, GroupCondition):
         return _eval_group(condition, node_name, image_path, node_results, node_scores,
@@ -674,6 +701,7 @@ def _eval_classifier_rank(
     condition: ClassifierRankCondition,
     image_path: str,
     pipeline_categories: list = [],
+    node_name: str = "",
 ) -> tuple[bool, object]:
     from image.image_classifier_manager import image_classifier_manager
     classifier = image_classifier_manager.get_classifier(condition.classifier_name)
@@ -696,6 +724,8 @@ def _eval_classifier_rank(
     ranked = classifier.predict_image_ranked(image_path)
 
     matched_score = None
+    matched_category = None
+    matched_rank = None
     for rank_idx, (category, score) in enumerate(ranked, start=1):
         if rank_idx > condition.max_rank:
             break
@@ -703,9 +733,21 @@ def _eval_classifier_rank(
             continue
         if category in categories and score >= condition.min_confidence:
             matched_score = score
+            matched_category = category
+            matched_rank = rank_idx
             break
 
     matched = matched_score is not None
+    if config.debug:
+        logger.debug(
+            "ClassifierRank[%s]: %s %s categories=%s ranks=%d-%d min=%.3f negate=%s "
+            "top=%s hit=%s → %s",
+            node_name, condition.classifier_name, os.path.basename(image_path), list(categories),
+            condition.min_rank, condition.max_rank, condition.min_confidence, condition.negate,
+            [(c, round(float(sc), 4)) for c, sc in ranked[:5]],
+            f"{matched_category}@{matched_rank}={matched_score:.4f}" if matched else "none",
+            "MATCH" if matched != condition.negate else "NO-MATCH",
+        )
     if condition.negate:
         return (not matched), matched_score
     return matched, matched_score
@@ -1228,6 +1270,9 @@ def _eval_group(
             child_result, child_score = False, None
         node_results[key] = child_result
         node_scores[key] = child_score
+        if config.debug:
+            logger.debug("Group %r: child %r → %s (score=%s)",
+                         outer_node_name, child.name, "MATCH" if child_result else "NO-MATCH", child_score)
 
     child_results = [
         node_results.get(f"{outer_node_name}/{c.name}", False)
@@ -1248,11 +1293,12 @@ def _eval_composite(
     report: Optional[PipelineRunReport] = None,
     pipeline_categories: list = [],
     is_seed: bool = False,
+    node_name: str = "",
 ) -> tuple[bool, object]:
     sub_results = [
         _evaluate_condition(sub, image_path, node_results, node_scores, base_directory,
-                            report=report, pipeline_categories=pipeline_categories,
-                            is_seed=is_seed)[0]
+                            node_name=node_name, report=report,
+                            pipeline_categories=pipeline_categories, is_seed=is_seed)[0]
         for sub in condition.sub_conditions
     ]
     op = condition.operator

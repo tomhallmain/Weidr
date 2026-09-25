@@ -913,8 +913,18 @@ class BaseCompareEmbedding(BaseCompare):
         return similarities
 
     @staticmethod
+    def _multi_text_key(media_path, positives, negatives) -> tuple:
+        return (media_path, "::p", tuple(positives), "::n", tuple(negatives))
+
+    @staticmethod
+    def cached_multi_text_score(media_path, positives, negatives, multi_cache):
+        """The combined similarity multi_text_compare computed for these
+        arguments, or None if it has not run for them."""
+        return multi_cache.get(BaseCompareEmbedding._multi_text_key(media_path, positives, negatives))
+
+    @staticmethod
     def multi_text_compare(media_path, positives, negatives, image_embeddings_func, text_cache, text_embeddings_func, multi_cache, threshold=0.3, sample_dynamic_media=True):
-        key = (media_path, "::p", tuple(positives), "::n", tuple(negatives))
+        key = BaseCompareEmbedding._multi_text_key(media_path, positives, negatives)
         if key in multi_cache:
             return bool(multi_cache[key] > threshold)
         positive_similarities = []

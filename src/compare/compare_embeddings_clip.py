@@ -60,6 +60,12 @@ class CompareEmbeddingClip(BaseCompareEmbedding):
         )
 
     @staticmethod
+    def cached_multi_text_score(media_path, positives, negatives):
+        return BaseCompareEmbedding.cached_multi_text_score(
+            media_path, positives, negatives, CompareEmbeddingClip.MULTI_EMBEDDING_CACHE
+        )
+
+    @staticmethod
     def is_related(media1, media2):
         return BaseCompareEmbedding.is_related(
             media1,

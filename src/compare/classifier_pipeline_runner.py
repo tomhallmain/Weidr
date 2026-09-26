@@ -738,6 +738,10 @@ def _eval_classifier_rank(
 
     ranked = classifier.predict_image_ranked(image_path)
 
+    # The returned score is the highest-ranked listed category's in the rank
+    # window, whether or not it reaches min_confidence, so a run dump shows
+    # how far below the threshold a no-match was.
+    best_score = None
     matched_score = None
     matched_category = None
     matched_rank = None
@@ -746,6 +750,8 @@ def _eval_classifier_rank(
             break
         if rank_idx < condition.min_rank:
             continue
+        if category in categories and best_score is None:
+            best_score = score
         if category in categories and score >= condition.min_confidence:
             matched_score = score
             matched_category = category
@@ -764,8 +770,8 @@ def _eval_classifier_rank(
             "MATCH" if matched != condition.negate else "NO-MATCH",
         )
     if condition.negate:
-        return (not matched), matched_score
-    return matched, matched_score
+        return (not matched), best_score
+    return matched, best_score
 
 
 def _eval_audio_classifier_rank(
@@ -797,20 +803,24 @@ def _eval_audio_classifier_rank(
 
     ranked = classifier.predict_audio_ranked(image_path)
 
-    matched_score = None
+    # Score as in _eval_classifier_rank: the highest-ranked listed category's
+    # in the rank window, whether or not it reaches min_confidence.
+    best_score = None
+    matched = False
     for rank_idx, (category, score) in enumerate(ranked, start=1):
         if rank_idx > condition.max_rank:
             break
         if rank_idx < condition.min_rank:
             continue
+        if category in categories and best_score is None:
+            best_score = score
         if category in categories and score >= condition.min_confidence:
-            matched_score = score
+            matched = True
             break
 
-    matched = matched_score is not None
     if condition.negate:
-        return (not matched), matched_score
-    return matched, matched_score
+        return (not matched), best_score
+    return matched, best_score
 
 
 def _eval_prototype(

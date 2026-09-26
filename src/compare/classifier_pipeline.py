@@ -546,13 +546,50 @@ class ClassifierPipeline:
           has no category_map to inherit from.
         - dedupe_stem_groups without a seeds-first run order on a generating pipeline
           (see _warn_dedupe_without_seed_first_sort).
+        - NodeResultCondition references that can never hold
+          (see _warn_unreachable_node_results).
         """
         known = set(self.category_map.values())
         warnings: list[str] = []
         for node in self.nodes:
             self._collect_suffix_warnings(node.condition, node.name, known, warnings)
         self._warn_dedupe_without_seed_first_sort(warnings)
+        self._warn_unreachable_node_results(warnings)
         return warnings
+
+    def _warn_unreachable_node_results(self, warnings: list) -> None:
+        """Warn for a NodeResultCondition expecting the verdict of an earlier
+        node whose outcome for that verdict ends the run: a later node is only
+        evaluated when the referenced one did not end it, so the reference
+        never holds."""
+        ends_run = (OutcomeType.EXECUTE, OutcomeType.ACCEPT, OutcomeType.REJECT)
+        by_name = {n.name: n for n in self.nodes}
+
+        def node_results(condition):
+            if isinstance(condition, NodeResultCondition):
+                yield condition
+            elif isinstance(condition, CompositeCondition):
+                for sub in condition.sub_conditions:
+                    yield from node_results(sub)
+            elif isinstance(condition, GroupCondition):
+                for child in condition.nodes:
+                    yield from node_results(child.condition)
+
+        for node in self.nodes:
+            for ref in node_results(node.condition):
+                referenced = by_name.get(ref.node_name)
+                if referenced is None or referenced is node:
+                    continue
+                if ref.expected_result and referenced.on_match.outcome_type in ends_run:
+                    warnings.append(_(
+                        "Node {0}: requires a match of {1}, but a match of {1} ends the run, "
+                        "so this never holds."
+                    ).format(node.name, ref.node_name))
+                elif not ref.expected_result and referenced.on_no_match.outcome_type in ends_run:
+                    warnings.append(_(
+                        "Node {0}: requires a no-match of {1}, but a no-match of {1} ends the run, "
+                        "so this never holds."
+                    ).format(node.name, ref.node_name))
 
     def _warn_dedupe_without_seed_first_sort(self, warnings: list) -> None:
         """Warn when stem-group dedup is on but the run order does not put seeds first.

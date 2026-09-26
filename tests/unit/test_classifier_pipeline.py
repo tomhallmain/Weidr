@@ -2283,3 +2283,67 @@ class TestOutputRoot:
             _make_node("child", RelatedImageCondition(edit_suffix="_x", search_directory="rel"))])
         p = ClassifierPipeline(name="p", nodes=[_make_node("g", group)])
         assert self._relative_error("g/child", "rel") in p.validate()
+
+
+# ---------------------------------------------------------------------------
+# Warnings: node_result references that can never hold
+# ---------------------------------------------------------------------------
+
+class TestUnreachableNodeResultWarnings:
+    def _match_warning(self, node, ref):
+        from utils.translations import _
+        return _("Node {0}: requires a match of {1}, but a match of {1} ends the run, "
+                 "so this never holds.").format(node, ref)
+
+    def _no_match_warning(self, node, ref):
+        from utils.translations import _
+        return _("Node {0}: requires a no-match of {1}, but a no-match of {1} ends the run, "
+                 "so this never holds.").format(node, ref)
+
+    def _vote(self, name, on_match=None, on_no_match=None):
+        return _make_node(name, EmbeddingCondition(positives=["x"]),
+                          on_match=on_match or NodeOutcome.continue_(),
+                          on_no_match=on_no_match or NodeOutcome.continue_())
+
+    def test_match_of_a_node_that_accepts_on_match(self):
+        p = ClassifierPipeline(name="p", nodes=[
+            self._vote("filed?", on_match=NodeOutcome(OutcomeType.ACCEPT)),
+            _make_node("route", NodeResultCondition(node_name="filed?", expected_result=True)),
+        ])
+        assert p.validate_warnings() == [self._match_warning("route", "filed?")]
+        assert p.validate() == []
+
+    def test_no_match_of_a_node_that_ends_on_no_match(self):
+        p = ClassifierPipeline(name="p", nodes=[
+            self._vote("guard", on_no_match=NodeOutcome(OutcomeType.REJECT)),
+            _make_node("route", NodeResultCondition(node_name="guard", expected_result=False)),
+        ])
+        assert p.validate_warnings() == [self._no_match_warning("route", "guard")]
+
+    def test_no_warning_for_the_verdict_that_continues(self):
+        p = ClassifierPipeline(name="p", nodes=[
+            self._vote("filed?", on_match=NodeOutcome(OutcomeType.ACCEPT)),
+            _make_node("route", NodeResultCondition(node_name="filed?", expected_result=False)),
+        ])
+        assert p.validate_warnings() == []
+
+    def test_no_warning_for_vote_nodes(self):
+        p = ClassifierPipeline(name="p", nodes=[
+            self._vote("vote"),
+            _make_node("route", NodeResultCondition(node_name="vote", expected_result=True)),
+        ])
+        assert p.validate_warnings() == []
+
+    def test_references_inside_composites_and_groups(self):
+        composite = CompositeCondition(operator="AND", sub_conditions=[
+            NodeResultCondition(node_name="filed?", expected_result=True)])
+        group = GroupCondition(operator="OR", nodes=[
+            _make_node("child", NodeResultCondition(node_name="filed?", expected_result=True))])
+        p = ClassifierPipeline(name="p", nodes=[
+            self._vote("filed?", on_match=NodeOutcome(OutcomeType.EXECUTE,
+                                                       action_type=ClassifierActionType.NOTIFY)),
+            _make_node("in composite", composite),
+            _make_node("in group", group),
+        ])
+        assert p.validate_warnings() == [self._match_warning("in composite", "filed?"),
+                                         self._match_warning("in group", "filed?")]

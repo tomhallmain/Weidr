@@ -3059,3 +3059,66 @@ class TestOutputRootRunner:
         run_pipeline(p, IMAGE, ActionCallbacks())
         assert searched == [[os.path.normpath(str(tmp_path / "in_composite"))],
                             [os.path.normpath(str(tmp_path / "in_group"))]]
+
+
+# ---------------------------------------------------------------------------
+# Classifier-rank scores are recorded below min_confidence
+# ---------------------------------------------------------------------------
+
+class TestClassifierRankScoreBelowThreshold:
+    def _mock(self, monkeypatch, predictions: dict, audio: bool = False):
+        ranked = sorted(predictions.items(), key=lambda kv: kv[1], reverse=True)
+
+        class FakeClassifier:
+            def predict_image_ranked(self, path):
+                return ranked
+
+            def predict_audio_ranked(self, path):
+                return ranked
+
+        class FakeManager:
+            def get_classifier(self, name):
+                return FakeClassifier()
+
+        if audio:
+            import image.audio_classifier_manager as mgr_mod
+            monkeypatch.setattr(mgr_mod, "audio_classifier_manager", FakeManager())
+        else:
+            import image.image_classifier_manager as mgr_mod
+            monkeypatch.setattr(mgr_mod, "image_classifier_manager", FakeManager())
+
+    def test_no_match_reports_the_listed_category_score(self, monkeypatch):
+        self._mock(monkeypatch, {"safe": 0.8, "explicit": 0.05})
+        result, score = _eval_classifier_rank(
+            ClassifierRankCondition("m", ["explicit"], min_rank=2, max_rank=2, min_confidence=0.1), IMAGE)
+        assert result is False
+        assert score == pytest.approx(0.05)
+
+    def test_negated_match_reports_the_score_below_threshold(self, monkeypatch):
+        self._mock(monkeypatch, {"safe": 0.7, "explicit": 0.3})
+        result, score = _eval_classifier_rank(
+            ClassifierRankCondition("m", ["explicit"], min_rank=1, max_rank=2,
+                                    min_confidence=0.5, negate=True), IMAGE)
+        assert result is True
+        assert score == pytest.approx(0.3)
+
+    def test_reports_the_highest_ranked_listed_category(self, monkeypatch):
+        self._mock(monkeypatch, {"safe": 0.5, "b": 0.3, "a": 0.2})
+        result, score = _eval_classifier_rank(
+            ClassifierRankCondition("m", ["a", "b"], min_rank=1, max_rank=3, min_confidence=0.4), IMAGE)
+        assert result is False
+        assert score == pytest.approx(0.3)
+
+    def test_category_outside_the_window_reports_no_score(self, monkeypatch):
+        self._mock(monkeypatch, {"safe": 0.9, "explicit": 0.1})
+        result, score = _eval_classifier_rank(
+            ClassifierRankCondition("m", ["explicit"], min_rank=1, max_rank=1), IMAGE)
+        assert result is False
+        assert score is None
+
+    def test_audio_no_match_reports_the_listed_category_score(self, monkeypatch):
+        self._mock(monkeypatch, {"safe": 0.8, "explicit": 0.05}, audio=True)
+        result, score = _eval_audio_classifier_rank(
+            AudioClassifierRankCondition("m", ["explicit"], min_rank=2, max_rank=2, min_confidence=0.1), IMAGE)
+        assert result is False
+        assert score == pytest.approx(0.05)

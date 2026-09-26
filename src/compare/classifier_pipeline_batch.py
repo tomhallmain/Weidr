@@ -18,11 +18,25 @@ from typing import TYPE_CHECKING, Any, Callable, Optional, Sequence
 
 from utils.config import config
 from utils.logging_setup import get_logger
+from utils.translations import _
 
 if TYPE_CHECKING:
     from compare.classifier_pipeline import ClassifierPipeline
 
 logger = get_logger("classifier_pipeline_batch")
+
+
+class PipelineValidationError(ValueError):
+    """A batch run refused because the pipeline fails validate(); *errors*
+    are validate()'s messages."""
+
+    def __init__(self, pipeline_name: str, errors: list[str]):
+        self.errors = list(errors)
+        super().__init__(
+            _("Pipeline {0} cannot run until these are fixed:\n{1}").format(
+                pipeline_name, "\n".join(self.errors)
+            )
+        )
 
 
 @dataclass
@@ -229,8 +243,13 @@ def run_pipeline_over_directories(
     application-wide setting the pipeline itself does not know about.
 
     Blocking and single-threaded; run it on a worker thread if the caller must
-    stay responsive.
+    stay responsive. Raises PipelineValidationError, before touching any file,
+    when the pipeline fails validate().
     """
+    errors = pipeline.validate()
+    if errors:
+        raise PipelineValidationError(pipeline.name, errors)
+
     from compare.action_callbacks import ActionCallbacks
     from compare.base_compare import gather_files
     from compare.classifier_pipeline_runner import run_pipeline

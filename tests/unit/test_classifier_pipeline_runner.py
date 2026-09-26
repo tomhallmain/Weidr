@@ -6,6 +6,8 @@ are mocked so no real models are loaded.  File-system operations in action
 dispatch are also mocked.
 """
 
+import os
+
 import pytest
 import numpy as np
 
@@ -2951,3 +2953,109 @@ class TestSeedFiledGateOnlyForGeneratingPipelines:
                       default_action=ClassifierActionType.GENERATE)
         assert _can_generate(p)
         assert not _can_generate(_pipeline(_node("n1", FilenameContainsCondition(["nothing"]))))
+
+
+# ---------------------------------------------------------------------------
+# Output root: relative directories
+# ---------------------------------------------------------------------------
+
+class TestOutputRootRunner:
+    def setup_method(self):
+        clear_base_stem_dir_cache()
+
+    def teardown_method(self):
+        clear_base_stem_dir_cache()
+
+    def _record_moves(self, monkeypatch) -> list:
+        import files.file_action as fa_mod
+        import utils.utils as uu_mod
+        moved = []
+        monkeypatch.setattr(fa_mod.FileAction, "add_file_action",
+                            staticmethod(lambda fn, src, tgt, **kw: moved.append((src, tgt))))
+        monkeypatch.setattr(uu_mod.Utils, "get_relative_dirpath",
+                            staticmethod(lambda p, levels=2: p))
+        return moved
+
+    def _move_pipeline(self, target, output_root=""):
+        from compare.classifier_pipeline import AlwaysCondition
+        p = _pipeline(_node("move", AlwaysCondition(),
+                            on_match=_execute(ClassifierActionType.MOVE, target)))
+        p.output_root = output_root
+        return p
+
+    def _record_stem_search(self, monkeypatch) -> list:
+        searched = []
+        monkeypatch.setattr("compare.classifier_pipeline_runner.extract_filename_base_stem", lambda p: "stem")
+        monkeypatch.setattr("compare.classifier_pipeline_runner.find_files_by_base_stem",
+                            lambda dirs, stem, **kw: searched.append(list(dirs)) or [])
+        return searched
+
+    def test_relative_move_target_resolves_against_output_root(self, monkeypatch, tmp_path):
+        moved = self._record_moves(monkeypatch)
+        run_pipeline(self._move_pipeline("sorted/a", str(tmp_path)), IMAGE, ActionCallbacks())
+        assert moved == [(IMAGE, os.path.normpath(str(tmp_path / "sorted" / "a")))]
+        assert (tmp_path / "sorted" / "a").is_dir()
+
+    def test_relative_move_target_without_root_is_skipped(self, monkeypatch, tmp_path):
+        moved = self._record_moves(monkeypatch)
+        monkeypatch.chdir(tmp_path)
+        run_pipeline(self._move_pipeline("sorted"), IMAGE, ActionCallbacks())
+        assert moved == []
+        assert not (tmp_path / "sorted").exists()  # nothing created under the working directory
+
+    def test_rooted_move_target_ignores_output_root(self, monkeypatch, tmp_path):
+        moved = self._record_moves(monkeypatch)
+        target = str(tmp_path / "abs")
+        run_pipeline(self._move_pipeline(target, "/unused/root"), IMAGE, ActionCallbacks())
+        assert moved == [(IMAGE, target)]
+
+    def test_base_stem_match_resolves_relative_search_directory(self, monkeypatch, tmp_path):
+        searched = self._record_stem_search(monkeypatch)
+        _eval_base_stem_match(BaseStemMatchCondition(search_directory="filed"), IMAGE,
+                              output_root=str(tmp_path))
+        assert searched == [[os.path.normpath(str(tmp_path / "filed"))]]
+
+    def test_base_stem_match_unresolvable_is_no_match_without_searching(self, monkeypatch):
+        searched = self._record_stem_search(monkeypatch)
+        result, _ = _eval_base_stem_match(
+            BaseStemMatchCondition(search_directory="filed", require_match=False), IMAGE)
+        assert result is False
+        assert searched == []
+
+    def test_unknown_suffix_unresolvable_is_no_match_without_searching(self, monkeypatch):
+        searched = self._record_stem_search(monkeypatch)
+        result, _ = _eval_unknown_suffix(
+            UnknownSuffixCondition(expected_suffixes=["_a"], search_directory="rel"), IMAGE)
+        assert result is False
+        assert searched == []
+
+    def test_related_image_resolves_relative_search_directory(self, monkeypatch, tmp_path):
+        import files.related_image as ri_mod
+        checked = []
+        monkeypatch.setattr(ri_mod, "should_run_generate_action",
+                            lambda path, suffix, directory, threshold: checked.append(directory) or True)
+        cond = RelatedImageCondition(edit_suffix="_x", search_directory="rel")
+        assert _eval_related_image(cond, IMAGE, None, output_root=str(tmp_path)) == (True, None)
+        assert checked == [os.path.normpath(str(tmp_path / "rel"))]
+
+    def test_related_image_unresolvable_is_no_match(self, monkeypatch):
+        import files.related_image as ri_mod
+        checked = []
+        monkeypatch.setattr(ri_mod, "should_run_generate_action",
+                            lambda *a: checked.append(a) or True)
+        cond = RelatedImageCondition(edit_suffix="_x", search_directory="rel")
+        assert _eval_related_image(cond, IMAGE, None) == (False, None)
+        assert checked == []
+
+    def test_run_pipeline_passes_output_root_into_composites_and_groups(self, monkeypatch, tmp_path):
+        searched = self._record_stem_search(monkeypatch)
+        composite = CompositeCondition(operator="AND", sub_conditions=[
+            BaseStemMatchCondition(search_directory="in_composite")])
+        group = GroupCondition(operator="OR", nodes=[
+            _node("child", BaseStemMatchCondition(search_directory="in_group"))])
+        p = _pipeline(_node("c", composite, on_no_match=NodeOutcome.continue_()),
+                      _node("g", group, on_no_match=NodeOutcome.continue_()))
+        p.output_root = str(tmp_path)
+        run_pipeline(p, IMAGE, ActionCallbacks())
+        assert searched == [[os.path.normpath(str(tmp_path / "in_composite"))],
+                            [os.path.normpath(str(tmp_path / "in_group"))]]

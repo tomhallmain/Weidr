@@ -131,3 +131,40 @@ class TestDumpIsOptional:
         parsed = json.loads(dump.read_text(encoding="utf-8"))
         assert parsed["stats"]["pipeline_name"] == "DumpMe"
         assert parsed["stats"]["files_evaluated"] == 3
+
+
+class TestInvalidPipelineIsRefused:
+    def _unresolvable_move_pipeline(self):
+        from compare.classifier_pipeline import AlwaysCondition, NodeOutcome, OutcomeType, PipelineNode
+        from utils.constants import ClassifierActionType
+        p = ClassifierPipeline(name="RelativeMove", is_active=True)
+        p.nodes = [PipelineNode(
+            name="move", condition=AlwaysCondition(),
+            on_match=NodeOutcome(OutcomeType.EXECUTE, action_type=ClassifierActionType.MOVE,
+                                 action_modifier="sorted"),
+        )]
+        return p
+
+    def test_raises_with_validate_errors(self, two_dirs):
+        a, _b = two_dirs
+        pipeline = self._unresolvable_move_pipeline()
+        with pytest.raises(pipeline_batch.PipelineValidationError) as info:
+            pipeline_batch.run_pipeline_over_directories(pipeline, [str(a)], write_dump=True)
+        assert info.value.errors == pipeline.validate()
+
+    def test_touches_no_file_and_writes_no_dump(self, two_dirs):
+        a, _b = two_dirs
+        before = sorted(p.name for p in a.iterdir())
+        pipeline = self._unresolvable_move_pipeline()
+        with pytest.raises(pipeline_batch.PipelineValidationError):
+            pipeline_batch.run_pipeline_over_directories(pipeline, [str(a)], write_dump=True)
+        assert sorted(p.name for p in a.iterdir()) == before
+        assert pipeline_batch.find_latest_dump(pipeline) is None
+
+    def test_runs_once_the_output_root_is_set(self, two_dirs, tmp_path):
+        a, _b = two_dirs
+        pipeline = self._unresolvable_move_pipeline()
+        pipeline.output_root = str(tmp_path / "out")
+        pipeline.is_active = False  # validated, then nothing is moved
+        outcome = pipeline_batch.run_pipeline_over_directories(pipeline, [str(a)], write_dump=False)
+        assert outcome.stats.files_evaluated == 3

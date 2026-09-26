@@ -51,6 +51,8 @@ logger = get_logger("classifier_pipelines_tab_qt")
 _PROFILE_CACHE_KEY = SELECTED_PROFILE_META_KEY
 # Directory of the last pipeline JSON import or export, offered by the next dialog.
 _JSON_DIR_CACHE_KEY = "classifier_pipeline_json_dir"
+# Validation problems listed after an import; the rest are counted.
+_IMPORT_PROBLEMS_SHOWN = 10
 
 
 class ClassifierPipelinesTab(QWidget):
@@ -195,7 +197,7 @@ class ClassifierPipelinesTab(QWidget):
             active_cb = QCheckBox()
             active_cb.setChecked(pipeline.is_active)
             active_cb.stateChanged.connect(
-                lambda state, p=pipeline: self._toggle_active(p, bool(state))
+                lambda state, p=pipeline, cb=active_cb: self._toggle_active(p, bool(state), cb)
             )
             grid.addWidget(active_cb, r, self._COL_ACTIVE)
 
@@ -360,8 +362,11 @@ class ClassifierPipelinesTab(QWidget):
         message = _("Imported {n} pipeline(s), inactive:\n{names}").format(
             n=len(pipelines), names="\n".join(f"  {p.name}" for p in pipelines))
         if problems:
+            shown = [f"  {p}" for p in problems[:_IMPORT_PROBLEMS_SHOWN]]
+            if len(problems) > _IMPORT_PROBLEMS_SHOWN:
+                shown.append("  " + _("…and {n} more").format(n=len(problems) - _IMPORT_PROBLEMS_SHOWN))
             message += "\n\n" + _("Fix these before activating:\n{problems}").format(
-                problems="\n".join(f"  {p}" for p in problems))
+                problems="\n".join(shown))
         qt_alert(self, _("Import Pipeline"), message, kind="warning" if problems else "info")
 
     def _export(self, pipeline: ClassifierPipeline) -> None:
@@ -385,7 +390,28 @@ class ClassifierPipelinesTab(QWidget):
         except Exception:
             pass
 
-    def _toggle_active(self, pipeline: ClassifierPipeline, value: bool) -> None:
+    @staticmethod
+    def refuse_if_invalid(parent: QWidget, pipeline: ClassifierPipeline, title: str) -> bool:
+        """Show *pipeline*'s validate() errors and return True when it has any."""
+        errors = pipeline.validate()
+        if errors:
+            qt_alert(parent, title,
+                     str(pipeline_batch.PipelineValidationError(pipeline.name, errors)), kind="error")
+        return bool(errors)
+
+    @staticmethod
+    def uncheck_silently(checkbox: Optional[QCheckBox]) -> None:
+        """Uncheck *checkbox* without emitting stateChanged."""
+        if checkbox is not None:
+            checkbox.blockSignals(True)
+            checkbox.setChecked(False)
+            checkbox.blockSignals(False)
+
+    def _toggle_active(self, pipeline: ClassifierPipeline, value: bool,
+                       checkbox: Optional[QCheckBox] = None) -> None:
+        if value and ClassifierPipelinesTab.refuse_if_invalid(self, pipeline, _("Activate Pipeline")):
+            ClassifierPipelinesTab.uncheck_silently(checkbox)
+            return
         pipeline.is_active = value
         ClassifierPipelines.store()
         if isinstance(pipeline, PrevalidationPipeline):
@@ -477,6 +503,9 @@ class ClassifierPipelinesTab(QWidget):
             qt_alert(self, _("Run Pipeline"), _("No profile selected or profile not found."))
             return
 
+        if ClassifierPipelinesTab.refuse_if_invalid(self, pipeline, _("Run Pipeline")):
+            return
+
         directories = list(profile.directories)
 
         details: list[str] = []
@@ -509,12 +538,21 @@ class ClassifierPipelinesTab(QWidget):
             return
 
         app_info_cache.set_meta(_last_profile_key, profile_name)
+        ClassifierPipelinesTab.start_batch_run(
+            self, self._app_actions, pipeline, directories, profile_name
+        )
 
+    @staticmethod
+    def start_batch_run(parent: QWidget, app_actions, pipeline: ClassifierPipeline,
+                        directories: list, profile_name: str) -> None:
+        """Run *pipeline* over *directories* on a worker thread, after asking
+        whether to continue when it generates and SD Runner is unreachable.
+        The caller has validated the pipeline and confirmed the run."""
         if pipeline.has_generate_action():
             from extensions.sd_runner_client import SDRunnerClient
             if not SDRunnerClient.is_reachable():
                 if not qt_alert(
-                    self,
+                    parent,
                     _("SD Runner Not Available"),
                     _(
                         "This pipeline has GENERATE actions but the SD Runner is not "
@@ -541,13 +579,13 @@ class ClassifierPipelinesTab(QWidget):
                 directories,
                 generation_type=generation_type,
                 profile_name=profile_name,
-                hide_callback=self._app_actions.hide_media,
-                notify_callback=self._app_actions.title_notify,
+                hide_callback=app_actions.hide_media,
+                notify_callback=app_actions.title_notify,
                 add_mark_callback=MarkedFiles.add_mark_if_not_present,
-                blur_callback=self._app_actions.request_media_blur,
+                blur_callback=app_actions.request_media_blur,
             )
             try:
-                self._app_actions.title_notify(outcome.summary)
+                app_actions.title_notify(outcome.summary)
             except Exception:
                 pass
 

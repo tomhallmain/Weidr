@@ -120,6 +120,10 @@ class PipelineProfileRuns:
         pipeline = ClassifierPipelines.get_pipeline_by_name(pipeline_name)
         if pipeline is None:
             raise ValueError(f"no pipeline named {pipeline_name!r}")
+        # Checked here too so the caller hears of it, not only the run thread.
+        errors = pipeline.validate()
+        if errors:
+            raise pipeline_batch.PipelineValidationError(pipeline.name, errors)
         if not profile_name:
             profile_name = app_info_cache.get_meta(SELECTED_PROFILE_META_KEY, "") or None
             if not profile_name:

@@ -793,14 +793,34 @@ class TestRunOnProfile:
     def test_seed_category_suffix_omitted_when_not_in_category_map(
         self, qtbot, monkeypatch, isolated_singletons
     ):
+        # A seed category missing from category_map fails validate() and is
+        # refused before the confirmation; an empty suffix passes validate().
+        tab, pipeline, captured = self._setup(
+            qtbot, monkeypatch, isolated_singletons,
+            seed_category="Unknown",
+            category_map={"Unknown": ""},
+        )
+        tab._run_on_profile(pipeline)
+        assert pipeline.validate() == []
+        assert "Unknown" in captured[0]
+        assert "()" not in captured[0]  # no empty-suffix parentheses
+
+    def test_pipeline_failing_validation_is_refused_without_confirmation(
+        self, qtbot, monkeypatch, isolated_singletons
+    ):
+        from compare import classifier_pipeline_batch as pipeline_batch
+        from utils.app_info_cache import app_info_cache
+        from compare.pipeline_profile_run import last_profile_meta_key
         tab, pipeline, captured = self._setup(
             qtbot, monkeypatch, isolated_singletons,
             seed_category="Unknown",
             category_map={},
         )
+        errors = pipeline.validate()
+        assert errors
         tab._run_on_profile(pipeline)
-        assert "Unknown" in captured[0]
-        assert "()" not in captured[0]  # no empty-suffix parentheses
+        assert captured == [str(pipeline_batch.PipelineValidationError(pipeline.name, errors))]
+        assert app_info_cache.get_meta(last_profile_meta_key(pipeline.name), "") == ""
 
     def test_no_last_run_line_on_first_run(self, qtbot, monkeypatch, isolated_singletons):
         tab, pipeline, captured = self._setup(qtbot, monkeypatch, isolated_singletons)
@@ -1041,3 +1061,70 @@ class TestSDRunnerPreCheck:
 
         assert not any("SD Runner" in t for t in alerts)
         assert thread_started == [True]
+
+
+# ---------------------------------------------------------------------------
+# Activation refuses invalid pipelines
+# ---------------------------------------------------------------------------
+
+def _relative_move_pipeline(name: str = "RelativeMove") -> ClassifierPipeline:
+    """Fails validate(): a relative MOVE target and no output root."""
+    from compare.classifier_pipeline import AlwaysCondition
+    from utils.constants import ClassifierActionType
+    p = ClassifierPipeline(name=name, is_active=False)
+    p.nodes = [PipelineNode(
+        name="move", condition=AlwaysCondition(),
+        on_match=NodeOutcome(OutcomeType.EXECUTE, action_type=ClassifierActionType.MOVE,
+                             action_modifier="sorted"),
+    )]
+    return p
+
+
+class TestActivationValidation:
+    def test_invalid_pipeline_is_not_activated(self, qtbot, isolated_singletons, monkeypatch):
+        shown = _capture_alerts(monkeypatch)
+        p = _relative_move_pipeline()
+        ClassifierPipelines.add_pipeline(p)
+        ClassifierPipelines.store()
+        tab = _make_tab(qtbot)
+        p = ClassifierPipelines.get_all_pipelines()[0]
+        tab._toggle_active(p, True)
+        assert p.is_active is False
+        assert [kind for _msg, kind in shown] == ["error"]
+        ClassifierPipelines.load()
+        assert ClassifierPipelines.get_all_pipelines()[0].is_active is False
+
+    def test_row_checkbox_is_unchecked_again(self, qtbot, isolated_singletons, monkeypatch):
+        _capture_alerts(monkeypatch)
+        ClassifierPipelines.add_pipeline(_relative_move_pipeline())
+        ClassifierPipelines.store()
+        tab = _make_tab(qtbot)
+        grid = tab._scroll_layout.itemAt(0).layout()
+        checkbox = grid.itemAtPosition(1, ClassifierPipelinesTab._COL_ACTIVE).widget()
+        checkbox.setChecked(True)
+        assert checkbox.isChecked() is False
+        assert ClassifierPipelines.get_all_pipelines()[0].is_active is False
+
+    def test_valid_pipeline_is_activated(self, qtbot, isolated_singletons, monkeypatch, tmp_path):
+        shown = _capture_alerts(monkeypatch)
+        p = _relative_move_pipeline()
+        p.output_root = str(tmp_path)
+        ClassifierPipelines.add_pipeline(p)
+        ClassifierPipelines.store()
+        tab = _make_tab(qtbot)
+        p = ClassifierPipelines.get_all_pipelines()[0]
+        tab._toggle_active(p, True)
+        assert p.is_active is True
+        assert shown == []
+
+    def test_invalid_pipeline_can_be_deactivated(self, qtbot, isolated_singletons, monkeypatch):
+        shown = _capture_alerts(monkeypatch)
+        p = _relative_move_pipeline()
+        p.is_active = True
+        ClassifierPipelines.add_pipeline(p)
+        ClassifierPipelines.store()
+        tab = _make_tab(qtbot)
+        p = ClassifierPipelines.get_all_pipelines()[0]
+        tab._toggle_active(p, False)
+        assert p.is_active is False
+        assert shown == []

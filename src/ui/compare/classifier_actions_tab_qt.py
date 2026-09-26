@@ -245,7 +245,7 @@ class ClassifierActionsTab(QWidget):
                 active_cb = QCheckBox()
                 active_cb.setChecked(pipeline.is_active)
                 active_cb.stateChanged.connect(
-                    lambda state, p=pipeline: setattr(p, "is_active", bool(state))
+                    lambda state, p=pipeline, cb=active_cb: self._set_pipeline_active(p, bool(state), cb)
                 )
                 row.addWidget(active_cb)
 
@@ -395,32 +395,26 @@ class ClassifierActionsTab(QWidget):
             time_in_seconds=10,
         )
 
+    def _set_pipeline_active(self, pipeline, value: bool, checkbox=None) -> None:
+        from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
+        if value and ClassifierPipelinesTab.refuse_if_invalid(self, pipeline, _("Activate Pipeline")):
+            ClassifierPipelinesTab.uncheck_silently(checkbox)
+            return
+        pipeline.is_active = value
+
     def _run_single_pipeline(self, pipeline) -> None:
+        from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
         profile = self._get_selected_profile()
         if profile is None:
+            return
+        if ClassifierPipelinesTab.refuse_if_invalid(self, pipeline, _("Run Pipeline")):
             return
         msg = _("Run pipeline '{0}' on profile '{1}'?").format(pipeline.name, profile.name)
         if not qt_alert(self, _("Run Pipeline"), msg, kind="askokcancel"):
             return
-
-        directories = list(profile.directories)
-        callbacks = self._app_actions.prevalidation_callbacks_with_mark
-
-        def _worker():
-            from compare.base_compare import gather_files
-            from compare.classifier_pipeline_runner import run_pipeline
-            from files.related_image import clear_base_stem_dir_cache
-            clear_base_stem_dir_cache()
-            for directory in directories:
-                files = pipeline.sort_files_for_run(list(gather_files(directory)))
-                for image_path in files:
-                    try:
-                        run_pipeline(pipeline, image_path, callbacks, base_directory=directory)
-                    except Exception:
-                        logger.exception("Pipeline run error on %s", image_path)
-
-        from utils.running_tasks_registry import start_thread
-        start_thread(_worker, use_asyncio=False)
+        ClassifierPipelinesTab.start_batch_run(
+            self, self._app_actions, pipeline, list(profile.directories), profile.name
+        )
 
     def _run_all(self) -> None:
         profile = self._get_selected_profile()

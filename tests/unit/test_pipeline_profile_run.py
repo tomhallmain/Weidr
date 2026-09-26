@@ -21,14 +21,18 @@ from utils.constants import ImageGenerationType
 class _Pipeline:
     """Duck-typed pipeline for run tests."""
 
-    def __init__(self, name="Sorter", generation_type=None, generates=False):
+    def __init__(self, name="Sorter", generation_type=None, generates=False, errors=()):
         self.name = name
         self.is_active = True
         self.generation_type = generation_type
         self._generates = generates
+        self._errors = list(errors)
 
     def has_generate_action(self):
         return self._generates
+
+    def validate(self):
+        return list(self._errors)
 
 
 @pytest.fixture
@@ -118,6 +122,19 @@ def test_run_error_is_recorded(installed, monkeypatch):
     assert "classifier missing" in status["error"]
     assert status["stats"] is None
     assert status["finished_at"] is not None
+
+
+def test_pipeline_failing_validation_is_refused_before_starting(installed, batch_calls):
+    installed(pipelines=[_Pipeline(errors=["Node n: something is wrong."])],
+              profiles=[DirectoryProfile("Photos", ["/p"])])
+    runs = ppr.PipelineProfileRuns()
+    with pytest.raises(ppr.pipeline_batch.PipelineValidationError) as info:
+        runs.start("Sorter", "Photos", continue_without_sd_runner=False,
+                   fallback_generation_type=None,
+                   hide_callback=None, notify_callback=None, blur_callback=None)
+    assert info.value.errors == ["Node n: something is wrong."]
+    assert batch_calls == []
+    assert runs.status()["running"] is False
 
 
 def test_generate_pipeline_is_refused_while_sd_runner_is_unreachable(installed, batch_calls, monkeypatch):

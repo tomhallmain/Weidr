@@ -2124,6 +2124,20 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._run_sort_by_combo.currentTextChanged.connect(self._on_field_changed)
         form.addRow(_("Run sort order:"), self._run_sort_by_combo)
 
+        self._output_root_edit = QLineEdit(p.output_root)
+        self._output_root_edit.setPlaceholderText(_("(empty = relative directories are not allowed)"))
+        self._output_root_edit.setToolTip(
+            _("Absolute directory that relative MOVE/COPY targets and search "
+              "directories in this pipeline resolve against.")
+        )
+        self._output_root_edit.textChanged.connect(self._on_field_changed)
+        output_root_row = QHBoxLayout()
+        output_root_row.addWidget(self._output_root_edit, 1)
+        output_root_browse = QPushButton(_("Browse…"))
+        output_root_browse.clicked.connect(self._browse_output_root)
+        output_root_row.addWidget(output_root_browse)
+        form.addRow(_("Output root:"), output_root_row)
+
         self._dedupe_stem_groups_cb = QCheckBox(_("Evaluate each stem group once"))
         self._dedupe_stem_groups_cb.setChecked(p.dedupe_stem_groups)
         self._dedupe_stem_groups_cb.setToolTip(
@@ -2325,6 +2339,12 @@ class ClassifierPipelineEditorDialog(SmartDialog):
     def _on_field_changed(self) -> None:
         if not self._suppress_refresh:
             self._refresh_flow_preview()
+
+    def _browse_output_root(self) -> None:
+        current = self._output_root_edit.text() or os.path.expanduser("~")
+        d = QFileDialog.getExistingDirectory(self, _("Select output root"), current)
+        if d:
+            self._output_root_edit.setText(d)
 
     def _on_category_map_changed(self) -> None:
         current = self._seed_category_combo.currentText()
@@ -3048,6 +3068,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         final.run_sort_by = self._run_sort_by_combo.currentData()
         final.dedupe_stem_groups = self._dedupe_stem_groups_cb.isChecked()
         final.record_node_verdicts = self._record_node_verdicts_cb.isChecked()
+        final.output_root = self._output_root_edit.text().strip()
 
         errors = final.validate()
         if errors:

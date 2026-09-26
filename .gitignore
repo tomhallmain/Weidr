@@ -30,6 +30,9 @@ file_paths.json
 temp*
 !temp_media_window.py
 tests/output/*
+# Example pipelines: extracted from assets/example_pipelines.enc, packed with
+# scripts/update_example_pipelines.py
+assets/pipelines/
 
 # -----------------------------------------------------------------------------
 # Editor / IDE

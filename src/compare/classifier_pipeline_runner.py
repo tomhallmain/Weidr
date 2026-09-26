@@ -41,6 +41,7 @@ from compare.classifier_pipeline import (
     UnknownSuffixCondition,
     RelatedImageCondition,
     VarianceFromOriginalCondition,
+    resolve_pipeline_path,
 )
 
 
@@ -399,6 +400,7 @@ def run_pipeline(
                     node_name=node.name, report=report,
                     pipeline_categories=list(pipeline.category_map.values()),
                     is_seed=is_seed_by_name,
+                    output_root=pipeline.output_root,
                 )
             except Exception:
                 logger.exception(
@@ -433,6 +435,7 @@ def run_pipeline(
                 generate_queue=generate_queue,
                 move_to_working_dir=pipeline.move_to_working_dir,
                 dry_run=dry_run,
+                output_root=pipeline.output_root,
             )
             if should_mark_done and base_stem:
                 processed_stems.add(base_stem)
@@ -449,6 +452,7 @@ def run_pipeline(
                 generate_queue=generate_queue,
                 move_to_working_dir=pipeline.move_to_working_dir,
                 dry_run=dry_run,
+                output_root=pipeline.output_root,
             )
             last_etc_action = outcome.action_type
             # Fall through to CONTINUE — advance to the next node.
@@ -472,6 +476,7 @@ def run_pipeline(
                 generate_queue=generate_queue,
                 move_to_working_dir=pipeline.move_to_working_dir,
                 dry_run=dry_run,
+                output_root=pipeline.output_root,
             )
             if should_mark_done and base_stem:
                 processed_stems.add(base_stem)
@@ -499,6 +504,7 @@ def run_pipeline(
         generate_queue=generate_queue,
         move_to_working_dir=pipeline.move_to_working_dir,
         dry_run=dry_run,
+        output_root=pipeline.output_root,
     )
     if should_mark_done and base_stem:
         processed_stems.add(base_stem)
@@ -543,6 +549,7 @@ def run_single_node(
             node_name=node.name,
             pipeline_categories=list(pipeline.category_map.values()),
             is_seed=(base_stem is not None and file_stem.lower() == base_stem.lower()),
+            output_root=pipeline.output_root,
         )
     except Exception:
         logger.exception(
@@ -568,6 +575,7 @@ def run_single_node(
             callbacks,
             base_directory,
             move_to_working_dir=pipeline.move_to_working_dir,
+            output_root=pipeline.output_root,
         )
     elif outcome.outcome_type == OutcomeType.REJECT:
         action = pipeline.default_reject_action
@@ -579,6 +587,7 @@ def run_single_node(
             callbacks,
             base_directory,
             move_to_working_dir=pipeline.move_to_working_dir,
+            output_root=pipeline.output_root,
         )
     return matched, action
 
@@ -598,8 +607,12 @@ def _evaluate_condition(
     report: Optional[PipelineRunReport] = None,
     pipeline_categories: list = [],
     is_seed: bool = False,
+    output_root: str = "",
 ) -> tuple[bool, object]:
     """Return (matched, score). Score is a raw float where available, else None.
+
+    *output_root* is the pipeline's, which relative search directories resolve
+    against.
 
     *is_seed* is the filename-derived seed determination, deliberately not the
     assume_seed-influenced one used for the seed-category GENERATE guard:
@@ -662,14 +675,16 @@ def _evaluate_condition(
     if isinstance(condition, BaseStemMatchCondition):
         return _eval_base_stem_match(condition, image_path, base_directory=base_directory,
                                      node_name=node_name, report=report,
-                                     pipeline_categories=pipeline_categories)
+                                     pipeline_categories=pipeline_categories,
+                                     output_root=output_root)
 
     if isinstance(condition, UnknownSuffixCondition):
         return _eval_unknown_suffix(condition, image_path, base_directory=base_directory,
-                                    node_name=node_name, report=report)
+                                    node_name=node_name, report=report, output_root=output_root)
 
     if isinstance(condition, RelatedImageCondition):
-        return _eval_related_image(condition, image_path, base_directory)
+        return _eval_related_image(condition, image_path, base_directory,
+                                   node_name=node_name, output_root=output_root)
 
     if isinstance(condition, VarianceFromOriginalCondition):
         return _eval_variance_from_original(condition, image_path, is_seed)
@@ -677,12 +692,12 @@ def _evaluate_condition(
     if isinstance(condition, CompositeCondition):
         return _eval_composite(condition, image_path, node_results, node_scores, base_directory,
                                report=report, pipeline_categories=pipeline_categories,
-                               is_seed=is_seed, node_name=node_name)
+                               is_seed=is_seed, node_name=node_name, output_root=output_root)
 
     if isinstance(condition, GroupCondition):
         return _eval_group(condition, node_name, image_path, node_results, node_scores,
                            base_directory, report=report, pipeline_categories=pipeline_categories,
-                           is_seed=is_seed)
+                           is_seed=is_seed, output_root=output_root)
 
     if isinstance(condition, GroupChildResultCondition):
         key = f"{condition.group_node_name}/{condition.child_node_name}"
@@ -914,6 +929,19 @@ def _eval_lookahead(
 
 
 
+def _resolved_search_directory(search_directory: str, output_root: str,
+                               node_name: str) -> Optional[str]:
+    """*search_directory* resolved against *output_root*, or None (logged)
+    when it is relative and cannot be; never against the working directory."""
+    resolved = resolve_pipeline_path(search_directory, output_root)
+    if resolved is None:
+        logger.error(
+            "Node %r: search directory %r is relative and the pipeline has no absolute "
+            "output root; treated as no-match", node_name, search_directory,
+        )
+    return resolved
+
+
 def _eval_base_stem_match(
     condition: BaseStemMatchCondition,
     image_path: str,
@@ -922,6 +950,7 @@ def _eval_base_stem_match(
     node_name: str = "",
     report: Optional[PipelineRunReport] = None,
     pipeline_categories: list = [],
+    output_root: str = "",
 ) -> tuple[bool, object]:
     base_stem = extract_filename_base_stem(image_path)
     if not base_stem:
@@ -929,7 +958,10 @@ def _eval_base_stem_match(
             logger.debug("BaseStemMatch[%s]: no base stem extractable from %s", node_name, image_path)
         return False, None
     if condition.search_directory:
-        dirs = [condition.search_directory]
+        search_directory = _resolved_search_directory(condition.search_directory, output_root, node_name)
+        if search_directory is None:
+            return False, None
+        dirs = [search_directory]
     elif condition.use_working_directory:
         dirs = [base_directory or os.path.dirname(os.path.abspath(image_path))]
     else:
@@ -1022,6 +1054,7 @@ def _eval_unknown_suffix(
     base_directory: Optional[str] = None,
     node_name: str = "",
     report: Optional[PipelineRunReport] = None,
+    output_root: str = "",
 ) -> tuple[bool, object]:
     """Return (True, None) if an unresolvable unknown-suffix file exists for this stem.
 
@@ -1037,7 +1070,10 @@ def _eval_unknown_suffix(
     if not base_stem:
         return False, None
     if condition.search_directory:
-        dirs = [condition.search_directory]
+        search_directory = _resolved_search_directory(condition.search_directory, output_root, node_name)
+        if search_directory is None:
+            return False, None
+        dirs = [search_directory]
     elif condition.use_base_directory:
         dirs = [base_directory or os.path.dirname(os.path.abspath(image_path))]
     else:
@@ -1143,10 +1179,16 @@ def _eval_related_image(
     condition: RelatedImageCondition,
     image_path: str,
     base_directory: Optional[str],
+    *,
+    node_name: str = "",
+    output_root: str = "",
 ) -> tuple[bool, object]:
     from files.related_image import should_run_generate_action
     if condition.search_directory:
-        dirs = [condition.search_directory]
+        search_directory = _resolved_search_directory(condition.search_directory, output_root, node_name)
+        if search_directory is None:
+            return False, None
+        dirs = [search_directory]
     elif condition.use_configured_search_directories:
         dirs = list(config.directories_to_search_for_related_images or [])
     else:
@@ -1252,6 +1294,7 @@ def _eval_group(
     report: Optional[PipelineRunReport] = None,
     pipeline_categories: list = [],
     is_seed: bool = False,
+    output_root: str = "",
 ) -> tuple[bool, object]:
     """Evaluate every child node and store results under '<outer>/<child>' keys."""
     for child in condition.nodes:
@@ -1260,7 +1303,7 @@ def _eval_group(
             child_result, child_score = _evaluate_condition(
                 child.condition, image_path, node_results, node_scores, base_directory,
                 node_name=key, report=report, pipeline_categories=pipeline_categories,
-                is_seed=is_seed,
+                is_seed=is_seed, output_root=output_root,
             )
         except Exception:
             logger.exception(
@@ -1294,11 +1337,13 @@ def _eval_composite(
     pipeline_categories: list = [],
     is_seed: bool = False,
     node_name: str = "",
+    output_root: str = "",
 ) -> tuple[bool, object]:
     sub_results = [
         _evaluate_condition(sub, image_path, node_results, node_scores, base_directory,
                             node_name=node_name, report=report,
-                            pipeline_categories=pipeline_categories, is_seed=is_seed)[0]
+                            pipeline_categories=pipeline_categories, is_seed=is_seed,
+                            output_root=output_root)[0]
         for sub in condition.sub_conditions
     ]
     op = condition.operator
@@ -1329,9 +1374,12 @@ def _dispatch_action(
     generate_queue: Optional[DebouncedGenerateQueue] = None,
     move_to_working_dir: bool = True,
     dry_run: bool = False,
+    output_root: str = "",
 ) -> None:
     # dry_run: the caller only wants the would-be action type (advisory
     # prevalidation for external-context display); execute nothing.
+    # output_root: the pipeline's; a relative MOVE/COPY target resolves
+    # against it.
     if action_type is None or dry_run:
         return
 
@@ -1373,7 +1421,17 @@ def _dispatch_action(
         )
 
     elif action_type.requires_target_directory():
-        target_directory = action_modifier or base_directory
+        if action_modifier:
+            target_directory = resolve_pipeline_path(action_modifier, output_root)
+            if target_directory is None:
+                logger.error(
+                    "Pipeline %r: %s target %r is relative and the pipeline has no absolute "
+                    "output root; %s skipped",
+                    pipeline_name, action_type.value, action_modifier, image_path,
+                )
+                return
+        else:
+            target_directory = base_directory
         if not target_directory:
             logger.error(
                 "Pipeline %r: MOVE/COPY has no target directory", pipeline_name

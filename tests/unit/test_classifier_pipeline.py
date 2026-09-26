@@ -2110,8 +2110,8 @@ class TestPipelineJsonFiles:
             ClassifierPipelines.read_json_file(str(tmp_path / "missing.json"))
 
     def test_json_file_name_replaces_invalid_characters(self):
-        p = _json_pipeline('NSFW Review (S/V/D axis): "a" <b>|c?*')
-        assert ClassifierPipelines.json_file_name(p) == "NSFW Review (S_V_D axis)_ _a_ _b_c.json"
+        p = _json_pipeline('Sorter (A/B/C set): "a" <b>|c?*')
+        assert ClassifierPipelines.json_file_name(p) == "Sorter (A_B_C set)_ _a_ _b_c.json"
 
     def test_json_file_name_falls_back_when_empty(self):
         assert ClassifierPipelines.json_file_name(_json_pipeline("///")) == "pipeline.json"
@@ -2142,9 +2142,11 @@ class TestExamplePipelineFiles:
 
     def test_examples_exist(self):
         names = {os.path.basename(p) for p in ClassifierPipelines.list_example_files()}
-        assert {"category_fill.json", "nsfw_consensus_review.json"} <= names
+        from compare.classifier_pipeline import CATEGORY_FILL_EXAMPLE_FILE
+        assert CATEGORY_FILL_EXAMPLE_FILE in names
+        assert len(names) >= 2
 
-    def test_every_example_is_inactive_valid_and_in_to_dict_form(self, tmp_path, monkeypatch):
+    def test_every_example_is_inactive_valid_and_in_to_dict_form(self, tmp_path):
         def search_directories(obj):
             if isinstance(obj, dict):
                 for key, value in obj.items():
@@ -2156,22 +2158,40 @@ class TestExamplePipelineFiles:
                 for value in obj:
                     yield from search_directories(value)
 
-        # The examples' directories are relative placeholders; validate()
-        # requires them to exist, so create them under a scratch cwd.
-        monkeypatch.chdir(tmp_path)
         for path in ClassifierPipelines.list_example_files():
             with open(path, encoding="utf-8") as f:
                 data = json.load(f)
-            for directory in search_directories(data):
-                os.makedirs(directory, exist_ok=True)
             (p,) = ClassifierPipelines.read_json_file(path)
             assert p.is_active is False, path
-            assert p.validate() == [], path
             # A hand-edited file drifting from what export writes shows up here.
             assert p.to_dict() == data, path
+            # The examples' directories are relative; with an output root
+            # whose subdirectories exist, nothing else may fail validation.
+            p.output_root = str(tmp_path)
+            for directory in search_directories(data):
+                os.makedirs(tmp_path / directory, exist_ok=True)
+            assert p.validate() == [], path
+
+    def test_examples_without_an_output_root_fail_validation(self):
+        from utils.translations import _
+
+        def first_search_directory(node):
+            conditions = [node.condition, *getattr(node.condition, "sub_conditions", [])]
+            return next((c.search_directory for c in conditions
+                         if getattr(c, "search_directory", "")), None)
+
+        for path in ClassifierPipelines.list_example_files():
+            (p,) = ClassifierPipelines.read_json_file(path)
+            assert p.output_root == ""
+            node, directory = next((n, first_search_directory(n)) for n in p.nodes
+                                   if first_search_directory(n))
+            expected = _("Node {0}: {1} is a relative path and the pipeline has no absolute output root.").format(
+                node.name, directory)
+            assert expected in p.validate(), path
 
     def test_category_fill_builder_matches_its_file(self):
-        from compare.classifier_pipeline import CATEGORY_FILL_EXAMPLE_FILE, EXAMPLE_PIPELINES_DIRECTORY
+        from compare.classifier_pipeline import CATEGORY_FILL_EXAMPLE_FILE
+        from compare.example_pipelines import EXAMPLE_PIPELINES_DIRECTORY
         path = os.path.join(EXAMPLE_PIPELINES_DIRECTORY, CATEGORY_FILL_EXAMPLE_FILE)
         (from_file,) = ClassifierPipelines.read_json_file(path)
         assert ClassifierPipelines.build_category_fill_pipeline().to_dict() == from_file.to_dict()
@@ -2182,3 +2202,84 @@ class TestExamplePipelineFiles:
         dirs = {n.name: n.condition.sub_conditions[1].search_directory
                 for n in p.nodes if n.name.startswith("Generate ")}
         assert dirs == {"Generate apple": "/t/a", "Generate banana": "/t/b", "Generate cherry": "/t/c"}
+
+
+# ---------------------------------------------------------------------------
+# Output root
+# ---------------------------------------------------------------------------
+
+class TestOutputRoot:
+    def _move_pipeline(self, target, **kwargs):
+        node = _make_node("move", EmbeddingCondition(positives=["x"]),
+                          on_match=NodeOutcome(OutcomeType.EXECUTE, action_type=ClassifierActionType.MOVE,
+                                               action_modifier=target))
+        return ClassifierPipeline(name="p", nodes=[node], **kwargs)
+
+    def _relative_error(self, node_name, directory):
+        from utils.translations import _
+        return _("Node {0}: {1} is a relative path and the pipeline has no absolute output root.").format(
+            node_name, directory)
+
+    def test_omitted_from_dict_when_empty(self):
+        assert "output_root" not in ClassifierPipeline(name="p").to_dict()
+
+    def test_roundtrips(self, tmp_path):
+        p = ClassifierPipeline(name="p", output_root=str(tmp_path))
+        assert ClassifierPipeline.from_dict(p.to_dict()).output_root == str(tmp_path)
+
+    def test_prevalidation_pipeline_roundtrips(self, tmp_path):
+        p = PrevalidationPipeline(name="p", output_root=str(tmp_path))
+        assert ClassifierPipelines.from_dict(p.to_dict()).output_root == str(tmp_path)
+
+    def test_resolve_keeps_empty_and_rooted_paths(self, tmp_path):
+        from compare.classifier_pipeline import resolve_pipeline_path
+        assert resolve_pipeline_path("", str(tmp_path)) == ""
+        assert resolve_pipeline_path(str(tmp_path / "x"), "") == str(tmp_path / "x")
+        assert resolve_pipeline_path("/rooted/dir", "") == "/rooted/dir"
+
+    def test_resolve_joins_relative_path_onto_root(self, tmp_path):
+        from compare.classifier_pipeline import resolve_pipeline_path
+        assert resolve_pipeline_path("a/b", str(tmp_path)) == os.path.normpath(str(tmp_path / "a" / "b"))
+        assert resolve_pipeline_path(".", str(tmp_path)) == os.path.normpath(str(tmp_path))
+
+    def test_resolve_refuses_relative_path_without_rooted_root(self):
+        from compare.classifier_pipeline import resolve_pipeline_path
+        assert resolve_pipeline_path("a", "") is None
+        assert resolve_pipeline_path("a", "relative/root") is None
+
+    def test_relative_output_root_is_an_error(self):
+        from utils.translations import _
+        p = ClassifierPipeline(name="p", output_root="relative/root")
+        assert _("Output root {0} is not an absolute path.").format("relative/root") in p.validate()
+
+    def test_relative_move_target_without_root_is_an_error(self):
+        p = self._move_pipeline("sorted")
+        assert self._relative_error("move", "sorted") in p.validate()
+
+    def test_relative_move_target_with_root_is_valid(self, tmp_path):
+        assert self._move_pipeline("sorted", output_root=str(tmp_path)).validate() == []
+
+    def test_empty_move_target_needs_no_root(self):
+        assert self._move_pipeline("").validate() == []
+
+    def test_relative_search_directory_without_root_is_an_error(self):
+        p = ClassifierPipeline(name="p", nodes=[
+            _make_node("filed", BaseStemMatchCondition(search_directory="sorted"))])
+        assert p.validate() == [self._relative_error("filed", "sorted")]
+
+    def test_relative_search_directory_is_checked_after_resolving(self, tmp_path):
+        from utils.translations import _
+        p = ClassifierPipeline(name="p", output_root=str(tmp_path), nodes=[
+            _make_node("filed", BaseStemMatchCondition(search_directory="sorted"))])
+        resolved = os.path.normpath(str(tmp_path / "sorted"))
+        assert p.validate() == [
+            _("Node {0}: BaseStemMatchCondition.search_directory ({1}) is not a valid directory.").format(
+                "filed", resolved)]
+        (tmp_path / "sorted").mkdir()
+        assert p.validate() == []
+
+    def test_relative_search_directory_in_group_child_is_checked(self):
+        group = GroupCondition(operator="OR", nodes=[
+            _make_node("child", RelatedImageCondition(edit_suffix="_x", search_directory="rel"))])
+        p = ClassifierPipeline(name="p", nodes=[_make_node("g", group)])
+        assert self._relative_error("g/child", "rel") in p.validate()

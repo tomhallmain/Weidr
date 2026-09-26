@@ -27,7 +27,6 @@ from files.related_image import suffix_is_numeric
 from utils.app_info_cache import app_info_cache
 from utils.constants import ClassifierActionType, CompareMediaType, ImageGenerationType, SortBy
 from utils.logging_setup import get_logger
-from utils.repo_paths import repo_root
 from utils.translations import _
 
 # Re-exported for backward compatibility: these types moved to the sibling
@@ -54,6 +53,7 @@ from compare.classifier_pipeline_conditions import (  # noqa: F401
     VarianceFromOriginalCondition,
     UnknownSuffixCondition,
 )
+from compare import example_pipelines
 from compare.classifier_pipeline_nodes import (  # noqa: F401
     NodeOutcome,
     OutcomeType,
@@ -62,6 +62,25 @@ from compare.classifier_pipeline_nodes import (  # noqa: F401
 )
 
 logger = get_logger("classifier_pipeline")
+
+
+def is_rooted_path(path: str) -> bool:
+    """True when *path* does not depend on the working directory: absolute,
+    or on Windows starting at a drive or a root separator. os.path.isabs
+    alone is False for "/x" on Windows from Python 3.13."""
+    return (os.path.isabs(path) or path.startswith(("/", "\\"))
+            or bool(os.path.splitdrive(path)[0]))
+
+
+def resolve_pipeline_path(path: str, output_root: str) -> Optional[str]:
+    """*path* as a pipeline run uses it: empty and rooted paths unchanged, a
+    relative path joined onto *output_root*, or None when *path* is relative
+    and *output_root* is empty or relative itself."""
+    if not path or is_rooted_path(path):
+        return path
+    if not output_root or not is_rooted_path(output_root):
+        return None
+    return os.path.normpath(os.path.join(output_root, path))
 
 
 # ---------------------------------------------------------------------------
@@ -115,6 +134,11 @@ class ClassifierPipeline:
     # which the run dump then persists.  Off by default: the records are one per
     # file and are held in memory until the dump is written.
     record_node_verdicts: bool = False
+    # Absolute directory that relative directories in the pipeline resolve
+    # against: MOVE/COPY targets and condition search directories. With it
+    # empty, a relative directory is a validation error; at run time a
+    # relative MOVE/COPY is skipped and a relative search is a no-match.
+    output_root: str = ""
 
     def __post_init__(self):
         if self.nodes is None:
@@ -125,6 +149,10 @@ class ClassifierPipeline:
                 for mt in self.applies_to_media_types
             ]
             self.applies_to_media_types = coerced if coerced else None
+
+    def resolve_path(self, path: str) -> Optional[str]:
+        """*path* resolved against output_root (see resolve_pipeline_path)."""
+        return resolve_pipeline_path(path, self.output_root)
 
     def media_type_allowed(self, path: str) -> bool:
         """Return False when applies_to_media_types is set and path's type is not in it."""
@@ -202,6 +230,11 @@ class ClassifierPipeline:
                     )
                 )
 
+        if self.output_root and not is_rooted_path(self.output_root):
+            errors.append(
+                _("Output root {0} is not an absolute path.").format(self.output_root)
+            )
+
         for category, suffix in self.category_map.items():
             if suffix_is_numeric(suffix):
                 errors.append(
@@ -250,6 +283,11 @@ class ClassifierPipeline:
                             node.name, outcome.outcome_type.display()
                         )
                     )
+                if (outcome.outcome_type.requires_action
+                        and outcome.action_type is not None
+                        and outcome.action_type.requires_target_directory()
+                        and self.resolve_path(outcome.action_modifier) is None):
+                    errors.append(self._unresolved_directory_error(node.name, outcome.action_modifier))
 
             errors.extend(
                 self._validate_condition(node.condition, node.name, defined_before)
@@ -382,30 +420,24 @@ class ClassifierPipeline:
                     pass
 
         elif isinstance(condition, BaseStemMatchCondition):
-            if condition.search_directory and not os.path.isdir(condition.search_directory):
-                errors.append(
-                    _("Node {0}: BaseStemMatchCondition.search_directory ({1}) is not a valid directory.").format(
-                        node_name, condition.search_directory
-                    )
-                )
+            errors.extend(self._search_directory_errors(
+                node_name, condition.search_directory,
+                _("Node {0}: BaseStemMatchCondition.search_directory ({1}) is not a valid directory."),
+            ))
 
         elif isinstance(condition, UnknownSuffixCondition):
-            if condition.search_directory and not os.path.isdir(condition.search_directory):
-                errors.append(
-                    _("Node {0}: UnknownSuffixCondition.search_directory ({1}) is not a valid directory.").format(
-                        node_name, condition.search_directory
-                    )
-                )
+            errors.extend(self._search_directory_errors(
+                node_name, condition.search_directory,
+                _("Node {0}: UnknownSuffixCondition.search_directory ({1}) is not a valid directory."),
+            ))
 
         elif isinstance(condition, RelatedImageCondition):
             if not condition.edit_suffix:
                 errors.append(_("Node {0}: RelatedImageCondition has no edit_suffix.").format(node_name))
-            if condition.search_directory and not os.path.isdir(condition.search_directory):
-                errors.append(
-                    _("Node {0}: RelatedImageCondition.search_directory ({1}) is not a valid directory.").format(
-                        node_name, condition.search_directory
-                    )
-                )
+            errors.extend(self._search_directory_errors(
+                node_name, condition.search_directory,
+                _("Node {0}: RelatedImageCondition.search_directory ({1}) is not a valid directory."),
+            ))
 
         elif isinstance(condition, CompositeCondition):
             if condition.operator not in CompositeCondition.VALID_OPERATORS:
@@ -480,6 +512,25 @@ class ClassifierPipeline:
                 )
 
         return errors
+
+    def _unresolved_directory_error(self, node_name: str, directory: str) -> str:
+        return _("Node {0}: {1} is a relative path and the pipeline has no absolute output root.").format(
+            node_name, directory
+        )
+
+    def _search_directory_errors(self, node_name: str, directory: str,
+                                 not_a_directory_message: str) -> list[str]:
+        """Errors for a condition's search_directory: unresolvable, or not an
+        existing directory once resolved. *not_a_directory_message* takes the
+        node name and the resolved directory."""
+        if not directory:
+            return []
+        resolved = self.resolve_path(directory)
+        if resolved is None:
+            return [self._unresolved_directory_error(node_name, directory)]
+        if not os.path.isdir(resolved):
+            return [not_a_directory_message.format(node_name, resolved)]
+        return []
 
     # ------------------------------------------------------------------
     # Category-map suffix warnings (non-blocking)
@@ -677,6 +728,8 @@ class ClassifierPipeline:
             d["dedupe_stem_groups"] = False
         if self.record_node_verdicts:
             d["record_node_verdicts"] = True
+        if self.output_root:
+            d["output_root"] = self.output_root
         return d
 
     @staticmethod
@@ -718,6 +771,7 @@ class ClassifierPipeline:
             move_to_working_dir=d.get("move_to_working_dir", True),
             dedupe_stem_groups=d.get("dedupe_stem_groups", True),
             record_node_verdicts=d.get("record_node_verdicts", False),
+            output_root=d.get("output_root", ""),
         )
 
 
@@ -799,6 +853,7 @@ class PrevalidationPipeline(ClassifierPipeline):
             category_map=raw_map,
             dedupe_stem_groups=d.get("dedupe_stem_groups", True),
             record_node_verdicts=d.get("record_node_verdicts", False),
+            output_root=d.get("output_root", ""),
         )
 
 
@@ -808,8 +863,6 @@ class PrevalidationPipeline(ClassifierPipeline):
 
 _CACHE_KEY = "classifier_pipelines"
 
-# Example pipelines shipped as JSON files, loadable from the pipelines tab.
-EXAMPLE_PIPELINES_DIRECTORY = os.path.join(repo_root(), "assets", "pipelines")
 CATEGORY_FILL_EXAMPLE_FILE = "category_fill.json"
 
 
@@ -925,13 +978,11 @@ class ClassifierPipelines:
 
     @staticmethod
     def list_example_files() -> list[str]:
-        """Paths of the example pipeline JSON files, sorted by file name."""
-        try:
-            names = sorted(os.listdir(EXAMPLE_PIPELINES_DIRECTORY))
-        except OSError:
-            return []
-        return [os.path.join(EXAMPLE_PIPELINES_DIRECTORY, n) for n in names
-                if n.lower().endswith(".json")]
+        """Paths of the example pipeline JSON files, sorted by file name,
+        extracting them from their archive first when needed."""
+        example_pipelines.ensure_extracted()
+        directory = example_pipelines.EXAMPLE_PIPELINES_DIRECTORY
+        return [os.path.join(directory, n) for n in example_pipelines.json_files_in(directory)]
 
     @staticmethod
     def build_demo_pipeline() -> "ClassifierPipeline":
@@ -1180,8 +1231,9 @@ class ClassifierPipelines:
         Unknown suffix, unresolvable        fail    —        —        REJECT
         ─────────────────────────────────────────────────────────────────────────
 
-        The pipeline is inactive by default. Replace the placeholder target
-        directory paths with absolute paths before activating.
+        The pipeline is inactive by default. Before activating, set its output
+        root, which the relative placeholder target directories resolve
+        against, or replace them with absolute paths.
 
         Target directories are matched by node name, so renaming the category
         nodes in the JSON file requires updating the names below.
@@ -1209,7 +1261,8 @@ class ClassifierPipelines:
         of -- including a duplicate of its own, since should_run_generate_action
         only counts files downstream of the file being evaluated.
         """
-        path = os.path.join(EXAMPLE_PIPELINES_DIRECTORY, CATEGORY_FILL_EXAMPLE_FILE)
+        example_pipelines.ensure_extracted()
+        path = os.path.join(example_pipelines.EXAMPLE_PIPELINES_DIRECTORY, CATEGORY_FILL_EXAMPLE_FILE)
         (pipeline,) = ClassifierPipelines.read_json_file(path)
         target_dirs = {
             "Generate apple": target_dir_apple,

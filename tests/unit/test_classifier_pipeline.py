@@ -7,6 +7,9 @@ autouse fixtures from the root conftest.py keep app_info_cache and config
 pointed at per-test temp directories.
 """
 
+import json
+import os
+
 import pytest
 
 from compare.classifier_pipeline import (
@@ -1782,10 +1785,15 @@ class TestRunSortBy:
         p = ClassifierPipeline(name="p")
         assert "run_sort_by" not in p.to_dict()
 
-    def test_present_in_dict_when_set_as_get_text_string(self):
+    def test_present_in_dict_when_set_as_member_name(self):
         from utils.constants import SortBy
-        p = ClassifierPipeline(name="p", run_sort_by=SortBy.NAME)
-        assert p.to_dict()["run_sort_by"] == SortBy.NAME.get_text()
+        p = ClassifierPipeline(name="p", run_sort_by=SortBy.RELATED_IMAGE)
+        assert p.to_dict()["run_sort_by"] == "RELATED_IMAGE"
+
+    def test_reads_translated_text_from_older_configs(self):
+        from utils.constants import SortBy
+        d = {"name": "p", "nodes": [], "run_sort_by": SortBy.RELATED_IMAGE.get_text()}
+        assert ClassifierPipeline.from_dict(d).run_sort_by is SortBy.RELATED_IMAGE
 
     def test_missing_key_in_dict_defaults_to_none(self):
         d = {"name": "p", "nodes": []}
@@ -2034,3 +2042,143 @@ class TestNewFieldsPreserveStoredConfigs:
         once = ClassifierPipeline.from_dict(original).to_dict()
         twice = ClassifierPipeline.from_dict(once).to_dict()
         assert once == twice
+
+
+# ---------------------------------------------------------------------------
+# JSON files
+# ---------------------------------------------------------------------------
+
+def _json_pipeline(name="p", **kwargs) -> ClassifierPipeline:
+    node = _make_node("n1", EmbeddingCondition(positives=["cat"], threshold=0.3),
+                      on_match=NodeOutcome(OutcomeType.ACCEPT),
+                      on_no_match=NodeOutcome(OutcomeType.REJECT))
+    return ClassifierPipeline(name=name, nodes=[node], **kwargs)
+
+
+class TestPipelineJsonFiles:
+    def test_write_then_read_roundtrips(self, tmp_path):
+        from utils.constants import SortBy
+        original = _json_pipeline(run_sort_by=SortBy.RELATED_IMAGE, record_node_verdicts=True)
+        path = tmp_path / "p.json"
+        ClassifierPipelines.write_json_file(original, str(path))
+        (loaded,) = ClassifierPipelines.read_json_file(str(path))
+        assert loaded.to_dict() == original.to_dict()
+
+    def test_written_file_is_the_to_dict_form(self, tmp_path):
+        original = _json_pipeline()
+        path = tmp_path / "p.json"
+        ClassifierPipelines.write_json_file(original, str(path))
+        assert json.loads(path.read_text(encoding="utf-8")) == original.to_dict()
+
+    def test_prevalidation_pipeline_keeps_its_class(self, tmp_path):
+        original = PrevalidationPipeline(name="pv", profile_name="prof")
+        path = tmp_path / "p.json"
+        ClassifierPipelines.write_json_file(original, str(path))
+        (loaded,) = ClassifierPipelines.read_json_file(str(path))
+        assert isinstance(loaded, PrevalidationPipeline)
+        assert loaded.profile_name == "prof"
+
+    def test_reads_a_list_of_pipelines(self):
+        data = [_json_pipeline("a").to_dict(), _json_pipeline("b").to_dict()]
+        assert [p.name for p in ClassifierPipelines.pipelines_from_json(data)] == ["a", "b"]
+
+    def test_reads_the_pipeline_of_a_run_dump(self):
+        dump = {"timestamp": "2026-01-01T00:00:00", "pipeline": _json_pipeline("dumped").to_dict(),
+                "stats": {}, "decisions": []}
+        (p,) = ClassifierPipelines.pipelines_from_json(dump)
+        assert p.name == "dumped"
+
+    @pytest.mark.parametrize("data", [None, 3, "text", [], [3], {"name": "no nodes"},
+                                      {"nodes": "not a list"}, [{"nodes": []}, {"name": "x"}]])
+    def test_rejects_data_without_a_pipeline(self, data):
+        with pytest.raises(ValueError):
+            ClassifierPipelines.pipelines_from_json(data)
+
+    def test_rejects_a_malformed_pipeline(self):
+        with pytest.raises(ValueError):
+            ClassifierPipelines.pipelines_from_json(
+                {"name": "p", "nodes": [{"name": "n", "condition": {"condition_type": "bogus"}}]})
+
+    def test_rejects_invalid_json(self, tmp_path):
+        path = tmp_path / "bad.json"
+        path.write_text("{not json", encoding="utf-8")
+        with pytest.raises(ValueError):
+            ClassifierPipelines.read_json_file(str(path))
+
+    def test_missing_file_raises_oserror(self, tmp_path):
+        with pytest.raises(OSError):
+            ClassifierPipelines.read_json_file(str(tmp_path / "missing.json"))
+
+    def test_json_file_name_replaces_invalid_characters(self):
+        p = _json_pipeline('NSFW Review (S/V/D axis): "a" <b>|c?*')
+        assert ClassifierPipelines.json_file_name(p) == "NSFW Review (S_V_D axis)_ _a_ _b_c.json"
+
+    def test_json_file_name_falls_back_when_empty(self):
+        assert ClassifierPipelines.json_file_name(_json_pipeline("///")) == "pipeline.json"
+
+
+class TestUniqueName:
+    @pytest.fixture(autouse=True)
+    def _clean_store(self, monkeypatch):
+        monkeypatch.setattr(ClassifierPipelines, "pipelines", [])
+
+    def test_unused_name_is_unchanged(self):
+        assert ClassifierPipelines.unique_name("p") == "p"
+
+    def test_used_names_get_a_counter(self):
+        ClassifierPipelines.pipelines = [_json_pipeline("p"), _json_pipeline("p (2)")]
+        assert ClassifierPipelines.unique_name("p") == "p (3)"
+
+
+class TestExamplePipelineFiles:
+    """The JSON files under assets/pipelines, offered by the tab's Load Example menu."""
+
+    @pytest.fixture(autouse=True)
+    def _no_registered_classifiers(self, monkeypatch):
+        # The examples name classifiers that need not be registered here;
+        # validate() skips that check when the manager lists no models.
+        from image.image_classifier_manager import image_classifier_manager
+        monkeypatch.setattr(image_classifier_manager, "get_model_names", lambda: [])
+
+    def test_examples_exist(self):
+        names = {os.path.basename(p) for p in ClassifierPipelines.list_example_files()}
+        assert {"category_fill.json", "nsfw_consensus_review.json"} <= names
+
+    def test_every_example_is_inactive_valid_and_in_to_dict_form(self, tmp_path, monkeypatch):
+        def search_directories(obj):
+            if isinstance(obj, dict):
+                for key, value in obj.items():
+                    if key == "search_directory" and value:
+                        yield value
+                    else:
+                        yield from search_directories(value)
+            elif isinstance(obj, list):
+                for value in obj:
+                    yield from search_directories(value)
+
+        # The examples' directories are relative placeholders; validate()
+        # requires them to exist, so create them under a scratch cwd.
+        monkeypatch.chdir(tmp_path)
+        for path in ClassifierPipelines.list_example_files():
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+            for directory in search_directories(data):
+                os.makedirs(directory, exist_ok=True)
+            (p,) = ClassifierPipelines.read_json_file(path)
+            assert p.is_active is False, path
+            assert p.validate() == [], path
+            # A hand-edited file drifting from what export writes shows up here.
+            assert p.to_dict() == data, path
+
+    def test_category_fill_builder_matches_its_file(self):
+        from compare.classifier_pipeline import CATEGORY_FILL_EXAMPLE_FILE, EXAMPLE_PIPELINES_DIRECTORY
+        path = os.path.join(EXAMPLE_PIPELINES_DIRECTORY, CATEGORY_FILL_EXAMPLE_FILE)
+        (from_file,) = ClassifierPipelines.read_json_file(path)
+        assert ClassifierPipelines.build_category_fill_pipeline().to_dict() == from_file.to_dict()
+
+    def test_category_fill_builder_sets_target_directories(self):
+        p = ClassifierPipelines.build_category_fill_pipeline(
+            target_dir_apple="/t/a", target_dir_banana="/t/b", target_dir_cherry="/t/c")
+        dirs = {n.name: n.condition.sub_conditions[1].search_directory
+                for n in p.nodes if n.name.startswith("Generate ")}
+        assert dirs == {"Generate apple": "/t/a", "Generate banana": "/t/b", "Generate cherry": "/t/c"}

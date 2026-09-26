@@ -17,7 +17,9 @@ global store.
 
 from __future__ import annotations
 
+import json
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -25,6 +27,7 @@ from files.related_image import suffix_is_numeric
 from utils.app_info_cache import app_info_cache
 from utils.constants import ClassifierActionType, CompareMediaType, ImageGenerationType, SortBy
 from utils.logging_setup import get_logger
+from utils.repo_paths import repo_root
 from utils.translations import _
 
 # Re-exported for backward compatibility: these types moved to the sibling
@@ -665,7 +668,9 @@ class ClassifierPipeline:
         if self.seed_category:
             d["seed_category"] = self.seed_category
         if self.run_sort_by:
-            d["run_sort_by"] = self.run_sort_by.get_text()
+            # The member name: SortBy values are translated text, which would
+            # tie the saved pipeline to the locale it was saved under.
+            d["run_sort_by"] = self.run_sort_by.name
         # Both written only when set away from their default, so a config saved
         # before these fields existed round-trips unchanged.
         if not self.dedupe_stem_groups:
@@ -684,7 +689,11 @@ class ClassifierPipeline:
         def _opt_sort_by(val):
             if not val:
                 return None
-            return SortBy.get(val) if isinstance(val, str) else val
+            if not isinstance(val, str):
+                return val
+            if val in SortBy.__members__:
+                return SortBy[val]
+            return SortBy.get(val)  # translated text, as older configs stored it
 
         raw_map = d.get("category_map")
         if raw_map is None:
@@ -799,6 +808,10 @@ class PrevalidationPipeline(ClassifierPipeline):
 
 _CACHE_KEY = "classifier_pipelines"
 
+# Example pipelines shipped as JSON files, loadable from the pipelines tab.
+EXAMPLE_PIPELINES_DIRECTORY = os.path.join(repo_root(), "assets", "pipelines")
+CATEGORY_FILL_EXAMPLE_FILE = "category_fill.json"
+
 
 class ClassifierPipelines:
     pipelines: list[ClassifierPipeline] = []
@@ -827,19 +840,98 @@ class ClassifierPipelines:
         ClassifierPipelines._action_pipelines = ac
 
     @staticmethod
+    def from_dict(d: dict) -> ClassifierPipeline:
+        """A ClassifierPipeline or PrevalidationPipeline, per *d*'s pipeline_class."""
+        if d.get("pipeline_class") == "prevalidation":
+            return PrevalidationPipeline.from_dict(d)
+        return ClassifierPipeline.from_dict(d)
+
+    @staticmethod
     def load() -> None:
         raw = app_info_cache.get_meta(_CACHE_KEY, default_val=None)
         result: list[ClassifierPipeline] = []
         for d in (raw or []):
             try:
-                if d.get("pipeline_class") == "prevalidation":
-                    result.append(PrevalidationPipeline.from_dict(d))
-                else:
-                    result.append(ClassifierPipeline.from_dict(d))
+                result.append(ClassifierPipelines.from_dict(d))
             except Exception:
                 logger.exception("Failed to load pipeline from cache entry")
         ClassifierPipelines.pipelines = result
         ClassifierPipelines._rebuild_type_cache()
+
+    # ------------------------------------------------------------------
+    # JSON files
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def pipelines_from_json(data) -> list[ClassifierPipeline]:
+        """Pipelines from parsed JSON: one pipeline dict, a list of them, or a
+        pipeline run dump (its "pipeline" entry). Raises ValueError with a
+        user-facing message when *data* is none of these."""
+        if isinstance(data, dict) and isinstance(data.get("pipeline"), dict):
+            entries = [data["pipeline"]]
+        elif isinstance(data, dict):
+            entries = [data]
+        elif isinstance(data, list):
+            entries = data
+        else:
+            raise ValueError(_("The file does not contain a pipeline."))
+        if not entries or not all(
+            isinstance(e, dict) and isinstance(e.get("nodes"), list) for e in entries
+        ):
+            raise ValueError(_("The file does not contain a pipeline."))
+        pipelines = []
+        for entry in entries:
+            try:
+                pipelines.append(ClassifierPipelines.from_dict(entry))
+            except Exception as e:
+                raise ValueError(_("Pipeline {0} could not be read: {1}").format(
+                    entry.get("name", "?"), e)) from e
+        return pipelines
+
+    @staticmethod
+    def read_json_file(path: str) -> list[ClassifierPipeline]:
+        """Pipelines from the JSON file at *path* (see pipelines_from_json).
+        Raises OSError when the file cannot be read, ValueError when it is
+        not valid JSON or holds no pipeline."""
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return ClassifierPipelines.pipelines_from_json(data)
+
+    @staticmethod
+    def write_json_file(pipeline: ClassifierPipeline, path: str) -> None:
+        """Write *pipeline* to *path* in the form read_json_file reads."""
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(pipeline.to_dict(), f, indent=2, ensure_ascii=False)
+            f.write("\n")
+
+    @staticmethod
+    def json_file_name(pipeline: ClassifierPipeline) -> str:
+        """A file name for exporting *pipeline*: its name with characters that
+        are invalid in Windows file names replaced."""
+        stem = re.sub(r'[\\/:*?"<>|]+', "_", pipeline.name).strip(" ._") or "pipeline"
+        return stem + ".json"
+
+    @staticmethod
+    def unique_name(name: str) -> str:
+        """*name*, or *name* with " (2)", " (3)", ... appended if a stored
+        pipeline already has it."""
+        existing = {p.name for p in ClassifierPipelines.pipelines}
+        candidate = name
+        counter = 2
+        while candidate in existing:
+            candidate = f"{name} ({counter})"
+            counter += 1
+        return candidate
+
+    @staticmethod
+    def list_example_files() -> list[str]:
+        """Paths of the example pipeline JSON files, sorted by file name."""
+        try:
+            names = sorted(os.listdir(EXAMPLE_PIPELINES_DIRECTORY))
+        except OSError:
+            return []
+        return [os.path.join(EXAMPLE_PIPELINES_DIRECTORY, n) for n in names
+                if n.lower().endswith(".json")]
 
     @staticmethod
     def build_demo_pipeline() -> "ClassifierPipeline":
@@ -1048,7 +1140,9 @@ class ClassifierPipelines:
         target_dir_cherry: str = "target/C/",
     ) -> "ClassifierPipeline":
         """
-        Demo pipeline for filling a per-category target directory set.
+        Demo pipeline for filling a per-category target directory set, read
+        from CATEGORY_FILL_EXAMPLE_FILE with each category node's target
+        directory replaced by the matching argument.
 
         Illustrates the recommended category-fill pipeline architecture:
         guard → uniqueness check → per-category GENERATE nodes.
@@ -1089,6 +1183,9 @@ class ClassifierPipelines:
         The pipeline is inactive by default. Replace the placeholder target
         directory paths with absolute paths before activating.
 
+        Target directories are matched by node name, so renaming the category
+        nodes in the JSON file requires updating the names below.
+
         Seed guard note
         ───────────────────────
         Each category node could optionally include a ClassifierRankCondition
@@ -1112,116 +1209,18 @@ class ClassifierPipelines:
         of -- including a duplicate of its own, since should_run_generate_action
         only counts files downstream of the file being evaluated.
         """
-        CATEGORY_MAP = {"Apple": "_apple", "Banana": "_banana", "Cherry": "_cherry"}
-        ALL_SUFFIXES = list(CATEGORY_MAP.values())
-
-        # ------------------------------------------------------------------
-        # Node 1 — Unknown-suffix guard
-        # Guards against stem groups that contain files with unrecognised
-        # suffixes, which could indicate a miscategorised or manually renamed
-        # file that would corrupt the representative set.
-        # ------------------------------------------------------------------
-        node_guard = PipelineNode(
-            name="Unknown-suffix guard",
-            condition=CompositeCondition(
-                operator="NOT",
-                sub_conditions=[
-                    UnknownSuffixCondition(
-                        expected_suffixes=ALL_SUFFIXES,
-                        use_base_directory=True,
-                        # classifier_name: set to a seed classifier to attempt inference
-                        # on unrecognised files before rejecting.
-                    ),
-                ],
-            ),
-            on_match=NodeOutcome(OutcomeType.CONTINUE),   # clean → proceed to category nodes
-            on_no_match=NodeOutcome(OutcomeType.REJECT),  # anomaly → reject without generating
-        )
-
-        # ------------------------------------------------------------------
-        # Category node factory
-        # Each category node is a two-condition AND gate:
-        #   [0] RelatedImageCondition — True when no local variant exists AND
-        #       the current image is not a working-dir derivative (type-3 guard).
-        #   [1] BaseStemMatchCondition(require_match=False) — True when no file
-        #       with this base stem exists in the category's target directory,
-        #       meaning generation is still needed.
-        # Both must be True to dispatch GENERATE. Either being False means the
-        # category is already covered; the node falls through via on_no_match=CONTINUE.
-        # ------------------------------------------------------------------
-        def _make_category_node(name: str, suffix: str, target_dir: str) -> PipelineNode:
-            return PipelineNode(
-                name=name,
-                condition=CompositeCondition(
-                    operator="AND",
-                    sub_conditions=[
-                        # [0] Not a local derivative; no variant in working dir.
-                        # use_configured_search_directories=False → checks base_directory
-                        # (the working dir passed to run_pipeline) only.
-                        RelatedImageCondition(
-                            edit_suffix=suffix,
-                            use_configured_search_directories=False,
-                            count_threshold=1,
-                        ),
-                        # [1] No file with this base stem exists in the target category dir.
-                        # search_directory pins the check to the specific category directory,
-                        # so a file with the wrong suffix in the right directory still
-                        # correctly signals that the category is covered.
-                        BaseStemMatchCondition(
-                            require_match=False,
-                            search_directory=target_dir,
-                        ),
-                    ],
-                ),
-                on_match=NodeOutcome(
-                    OutcomeType.EXECUTE_AND_CONTINUE,
-                    action_type=ClassifierActionType.GENERATE,
-                    action_modifier=suffix,
-                ),
-                on_no_match=NodeOutcome(OutcomeType.CONTINUE),
-            )
-
-        node_apple  = _make_category_node("Generate apple",  "_apple",  target_dir_apple)
-        node_banana = _make_category_node("Generate banana", "_banana", target_dir_banana)
-        node_cherry = _make_category_node("Generate cherry", "_cherry", target_dir_cherry)
-
-        # ------------------------------------------------------------------
-        # Node 2 — Stem uniqueness check: rejects when the base stem matches
-        # more than max_stem_group_size files across the target dirs (e.g. a
-        # bare label like "photo" colliding with thousands of files) --
-        # search_directory empty uses directories_to_search_for_related_images
-        # (all target dirs). on_match=REJECT (not unique); on_no_match=CONTINUE
-        # (within limit, proceed to category nodes).
-        # ------------------------------------------------------------------
-        node_uniqueness = PipelineNode(
-            name="Stem uniqueness check",
-            condition=BaseStemMatchCondition(
-                max_stem_group_size=-1,
-            ),
-            on_match=NodeOutcome(OutcomeType.REJECT),
-            on_no_match=NodeOutcome(OutcomeType.CONTINUE),
-        )
-
-        return ClassifierPipeline(
-            name="Example: Representation Set Generator (apple / banana / cherry)",
-            description=(
-                "Demo category-fill pipeline (inactive). Fills per-category target "
-                "subdirectories from a working directory of seed images. "
-                "Categories: apple → target/A/, banana → target/B/, cherry → target/C/. "
-                "Guard node rejects stem groups with unrecognised suffixes. "
-                "Uniqueness node rejects stems with too many existing matches in the "
-                "target dirs (non-unique base stem). "
-                "Each category node generates if and only if (a) the image is not a "
-                "local derivative and (b) the target directory does not already contain "
-                "a file with this base stem."
-            ),
-            nodes=[node_guard, node_uniqueness, node_apple, node_banana, node_cherry],
-            is_active=False,
-            category_map=CATEGORY_MAP,
-            # Pairs with dedupe_stem_groups: seeds sort before their derivatives,
-            # so a stem group generates only its genuinely missing categories.
-            run_sort_by=SortBy.RELATED_IMAGE,
-        )
+        path = os.path.join(EXAMPLE_PIPELINES_DIRECTORY, CATEGORY_FILL_EXAMPLE_FILE)
+        (pipeline,) = ClassifierPipelines.read_json_file(path)
+        target_dirs = {
+            "Generate apple": target_dir_apple,
+            "Generate banana": target_dir_banana,
+            "Generate cherry": target_dir_cherry,
+        }
+        for node in pipeline.nodes:
+            if node.name in target_dirs:
+                # sub_conditions[1] is the BaseStemMatchCondition on the target dir.
+                node.condition.sub_conditions[1].search_directory = target_dirs[node.name]
+        return pipeline
 
     @staticmethod
     def build_scramble_coherence_pipeline(

@@ -27,8 +27,8 @@ from typing import Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox, QGridLayout, QHBoxLayout, QLabel, QPushButton,
-    QScrollArea, QVBoxLayout, QWidget,
+    QCheckBox, QComboBox, QFileDialog, QGridLayout, QHBoxLayout, QLabel, QMenu,
+    QPushButton, QScrollArea, QVBoxLayout, QWidget,
 )
 
 from compare import classifier_pipeline_batch as pipeline_batch
@@ -49,6 +49,8 @@ from utils.translations import _
 logger = get_logger("classifier_pipelines_tab_qt")
 
 _PROFILE_CACHE_KEY = SELECTED_PROFILE_META_KEY
+# Directory of the last pipeline JSON import or export, offered by the next dialog.
+_JSON_DIR_CACHE_KEY = "classifier_pipeline_json_dir"
 
 
 class ClassifierPipelinesTab(QWidget):
@@ -96,10 +98,17 @@ class ClassifierPipelinesTab(QWidget):
         demo_btn.clicked.connect(self._load_demo)
         title_row.addWidget(demo_btn)
 
-        cat_fill_btn = QPushButton(_("Load Rep. Set Gen."))
-        cat_fill_btn.setToolTip(_("Insert the representation set generator demo pipeline"))
-        cat_fill_btn.clicked.connect(self._load_category_fill_demo)
-        title_row.addWidget(cat_fill_btn)
+        example_btn = QPushButton(_("Load Example"))
+        example_btn.setToolTip(_("Insert an example pipeline shipped with the app"))
+        self._example_menu = QMenu(example_btn)
+        self._example_menu.aboutToShow.connect(self._populate_example_menu)
+        example_btn.setMenu(self._example_menu)
+        title_row.addWidget(example_btn)
+
+        import_btn = QPushButton(_("Import..."))
+        import_btn.setToolTip(_("Add pipelines from a JSON file (an exported pipeline or a pipeline run dump)"))
+        import_btn.clicked.connect(self._import)
+        title_row.addWidget(import_btn)
 
         title_row.addStretch()
         root.addLayout(title_row)
@@ -153,8 +162,9 @@ class ClassifierPipelinesTab(QWidget):
     _COL_RERUN   = 8
     _COL_EDIT    = 9
     _COL_DUP     = 10
-    _COL_DEL     = 11
-    _COL_DOWN    = 12
+    _COL_EXPORT  = 11
+    _COL_DEL     = 12
+    _COL_DOWN    = 13
 
     def _rebuild_rows(self) -> None:
         _clear_layout(self._scroll_layout)
@@ -246,6 +256,11 @@ class ClassifierPipelinesTab(QWidget):
             dup_btn.clicked.connect(lambda _=False, p=pipeline: self._copy(p))
             grid.addWidget(dup_btn, r, self._COL_DUP)
 
+            export_btn = QPushButton(_("Export"))
+            export_btn.setToolTip(_("Save this pipeline to a JSON file"))
+            export_btn.clicked.connect(lambda _=False, p=pipeline: self._export(p))
+            grid.addWidget(export_btn, r, self._COL_EXPORT)
+
             del_btn = QPushButton(_("Delete"))
             del_btn.clicked.connect(lambda _=False, p=pipeline: self._delete(p))
             grid.addWidget(del_btn, r, self._COL_DEL)
@@ -287,21 +302,88 @@ class ClassifierPipelinesTab(QWidget):
         demo = ClassifierPipelines.build_demo_pipeline()
         self._insert_demo(demo)
 
-    def _load_category_fill_demo(self) -> None:
-        demo = ClassifierPipelines.build_category_fill_pipeline()
-        self._insert_demo(demo)
-
     def _insert_demo(self, demo: ClassifierPipeline) -> None:
-        existing = {p.name for p in ClassifierPipelines.get_all_pipelines()}
-        if demo.name in existing:
-            base = demo.name
-            counter = 2
-            while demo.name in existing:
-                demo.name = f"{base} ({counter})"
-                counter += 1
+        demo.name = ClassifierPipelines.unique_name(demo.name)
         ClassifierPipelines.add_pipeline(demo)
         ClassifierPipelines.store()
         self._rebuild_rows()
+
+    def _populate_example_menu(self) -> None:
+        self._example_menu.clear()
+        paths = ClassifierPipelines.list_example_files()
+        if not paths:
+            action = self._example_menu.addAction(_("(no examples found)"))
+            action.setEnabled(False)
+            return
+        for path in paths:
+            try:
+                label = ", ".join(p.name for p in ClassifierPipelines.read_json_file(path))
+            except (OSError, ValueError):
+                logger.exception("Failed to read example pipeline file %s", path)
+                label = os.path.basename(path)
+            action = self._example_menu.addAction(label)
+            action.triggered.connect(lambda _=False, fp=path: self._import_file(fp))
+
+    def _import(self) -> None:
+        path, _filter = QFileDialog.getOpenFileName(
+            self, _("Import Pipeline"), app_info_cache.get_meta(_JSON_DIR_CACHE_KEY, ""),
+            _("JSON files (*.json)"),
+        )
+        if not path:
+            return
+        app_info_cache.set_meta(_JSON_DIR_CACHE_KEY, os.path.dirname(path))
+        self._import_file(path)
+
+    def _import_file(self, path: str) -> None:
+        """Add every pipeline in the JSON file at *path*, inactive and under a
+        unique name, then report any validation problems. Imported pipelines
+        may name classifiers or directories that do not exist on this machine,
+        so validation problems are reported rather than refused."""
+        try:
+            pipelines = ClassifierPipelines.read_json_file(path)
+        except (OSError, ValueError) as e:
+            qt_alert(self, _("Import Pipeline"),
+                     _("Could not import {path}:\n{err}").format(path=path, err=e), kind="error")
+            return
+
+        problems: list[str] = []
+        for pipeline in pipelines:
+            # Inactive until reviewed: an active prevalidation pipeline acts on
+            # media as soon as it is browsed.
+            pipeline.is_active = False
+            pipeline.name = ClassifierPipelines.unique_name(pipeline.name)
+            problems += [f"{pipeline.name}: {err}" for err in pipeline.validate()]
+            ClassifierPipelines.add_pipeline(pipeline)
+        ClassifierPipelines.store()
+        self._rebuild_rows()
+
+        message = _("Imported {n} pipeline(s), inactive:\n{names}").format(
+            n=len(pipelines), names="\n".join(f"  {p.name}" for p in pipelines))
+        if problems:
+            message += "\n\n" + _("Fix these before activating:\n{problems}").format(
+                problems="\n".join(f"  {p}" for p in problems))
+        qt_alert(self, _("Import Pipeline"), message, kind="warning" if problems else "info")
+
+    def _export(self, pipeline: ClassifierPipeline) -> None:
+        start = os.path.join(app_info_cache.get_meta(_JSON_DIR_CACHE_KEY, ""),
+                             ClassifierPipelines.json_file_name(pipeline))
+        path, _filter = QFileDialog.getSaveFileName(
+            self, _("Export Pipeline"), start, _("JSON files (*.json)"),
+        )
+        if not path:
+            return
+        app_info_cache.set_meta(_JSON_DIR_CACHE_KEY, os.path.dirname(path))
+        try:
+            ClassifierPipelines.write_json_file(pipeline, path)
+        except OSError as e:
+            qt_alert(self, _("Export Pipeline"),
+                     _("Could not write {path}:\n{err}").format(path=path, err=e), kind="error")
+            return
+        try:
+            self._app_actions.title_notify(
+                _("Exported pipeline '{name}' to {path}").format(name=pipeline.name, path=path))
+        except Exception:
+            pass
 
     def _toggle_active(self, pipeline: ClassifierPipeline, value: bool) -> None:
         pipeline.is_active = value

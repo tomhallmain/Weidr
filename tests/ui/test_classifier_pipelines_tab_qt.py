@@ -557,6 +557,118 @@ class TestLoadDemo:
 
 
 # ---------------------------------------------------------------------------
+# JSON import / export and examples
+# ---------------------------------------------------------------------------
+
+def _capture_alerts(monkeypatch) -> list:
+    """Patch the tab's qt_alert; returns the list of (message, kind) shown."""
+    import ui.compare.classifier_pipelines_tab_qt as _mod
+    shown: list = []
+    monkeypatch.setattr(_mod, "qt_alert",
+                        lambda _parent, _title, msg, kind="info": shown.append((msg, kind)))
+    return shown
+
+
+def _patch_save_dialog(monkeypatch, chosen_path: str) -> None:
+    """Replace the tab's QFileDialog with a stand-in whose save dialog
+    returns *chosen_path* ("" = cancelled)."""
+    import ui.compare.classifier_pipelines_tab_qt as _mod
+
+    class _Dialog:
+        @staticmethod
+        def getSaveFileName(*_args, **_kwargs):
+            return chosen_path, ""
+
+    monkeypatch.setattr(_mod, "QFileDialog", _Dialog)
+
+
+class TestImportExport:
+    def test_import_file_adds_pipeline_inactive(self, qtbot, isolated_singletons, monkeypatch, tmp_path):
+        shown = _capture_alerts(monkeypatch)
+        path = tmp_path / "p.json"
+        ClassifierPipelines.write_json_file(_make_pipeline("imported", is_active=True), str(path))
+        tab = _make_tab(qtbot)
+        tab._import_file(str(path))
+        (p,) = ClassifierPipelines.get_all_pipelines()
+        assert p.name == "imported"
+        assert p.is_active is False
+        assert _row_count(tab) == 1
+        assert shown and shown[0][1] == "info"
+
+    def test_import_file_stores_to_cache(self, qtbot, isolated_singletons, monkeypatch, tmp_path):
+        _capture_alerts(monkeypatch)
+        path = tmp_path / "p.json"
+        ClassifierPipelines.write_json_file(_make_pipeline("imported"), str(path))
+        _make_tab(qtbot)._import_file(str(path))
+        ClassifierPipelines.pipelines = []
+        ClassifierPipelines.load()
+        assert [p.name for p in ClassifierPipelines.get_all_pipelines()] == ["imported"]
+
+    def test_import_file_deduplicates_name(self, qtbot, isolated_singletons, monkeypatch, tmp_path):
+        _capture_alerts(monkeypatch)
+        ClassifierPipelines.add_pipeline(_make_pipeline("same"))
+        ClassifierPipelines.store()  # the tab reloads the list from the cache
+        path = tmp_path / "p.json"
+        ClassifierPipelines.write_json_file(_make_pipeline("same"), str(path))
+        _make_tab(qtbot)._import_file(str(path))
+        assert [p.name for p in ClassifierPipelines.get_all_pipelines()] == ["same", "same (2)"]
+
+    def test_import_invalid_file_adds_nothing_and_reports_error(
+            self, qtbot, isolated_singletons, monkeypatch, tmp_path):
+        shown = _capture_alerts(monkeypatch)
+        path = tmp_path / "bad.json"
+        path.write_text("{not json", encoding="utf-8")
+        _make_tab(qtbot)._import_file(str(path))
+        assert ClassifierPipelines.get_all_pipelines() == []
+        assert shown and shown[0][1] == "error"
+
+    def test_import_reports_validation_problems(self, qtbot, isolated_singletons, monkeypatch, tmp_path):
+        from compare.classifier_pipeline import NodeResultCondition
+        from utils.translations import _
+        shown = _capture_alerts(monkeypatch)
+        p = _make_pipeline("broken")
+        p.nodes[0].condition = NodeResultCondition(node_name="missing")
+        path = tmp_path / "p.json"
+        ClassifierPipelines.write_json_file(p, str(path))
+        _make_tab(qtbot)._import_file(str(path))
+        assert len(ClassifierPipelines.get_all_pipelines()) == 1
+        msg, kind = shown[0]
+        assert kind == "warning"
+        assert _("Node {0}: NodeResultCondition references {1} which is not a prior node.").format(
+            "n1", "missing") in msg
+
+    def test_export_writes_readable_file(self, qtbot, isolated_singletons, monkeypatch, tmp_path):
+        target = tmp_path / "out.json"
+        _patch_save_dialog(monkeypatch, str(target))
+        tab = _make_tab(qtbot)
+        tab._export(_make_pipeline("exported"))
+        (p,) = ClassifierPipelines.read_json_file(str(target))
+        assert p.name == "exported"
+
+    def test_export_cancelled_writes_nothing(self, qtbot, isolated_singletons, monkeypatch, tmp_path):
+        _patch_save_dialog(monkeypatch, "")
+        _make_tab(qtbot)._export(_make_pipeline("exported"))
+        assert list(tmp_path.glob("*.json")) == []
+
+    def test_example_menu_lists_every_example_file(self, qtbot, isolated_singletons):
+        tab = _make_tab(qtbot)
+        tab._populate_example_menu()
+        labels = [a.text() for a in tab._example_menu.actions()]
+        expected = [p.name for path in ClassifierPipelines.list_example_files()
+                    for p in ClassifierPipelines.read_json_file(path)]
+        assert labels == expected
+        assert len(labels) >= 2
+
+    def test_example_menu_action_imports_example(self, qtbot, isolated_singletons, monkeypatch):
+        _capture_alerts(monkeypatch)
+        tab = _make_tab(qtbot)
+        tab._populate_example_menu()
+        tab._example_menu.actions()[0].trigger()
+        (p,) = ClassifierPipelines.get_all_pipelines()
+        assert p.is_active is False
+
+
+# ---------------------------------------------------------------------------
 # Profile dropdown persistence
 # ---------------------------------------------------------------------------
 

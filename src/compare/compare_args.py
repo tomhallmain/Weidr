@@ -60,10 +60,12 @@ class CompareArgs:
                 and not self.positive_seed_vectors and not self.negative_seed_vectors)
 
     def _is_new_data_request_required(self, other):
+        from compare.compare_filters import filter_signature
         return (self.threshold != other.threshold
                 or self.counter_limit != other.counter_limit
                 or self.file_filter != other.file_filter
                 or self.recursive != other.recursive
+                or filter_signature(self.data_filter) != filter_signature(other.data_filter)
                 or (not self.overwrite and other.overwrite))
 
     def clone(self):

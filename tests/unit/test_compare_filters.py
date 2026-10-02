@@ -503,3 +503,321 @@ class TestNormalizeScore:
 
     def test_size_mode_passthrough(self):
         assert self.normalize(self.Mode.SIZE, 0.5) == pytest.approx(0.5)
+
+
+# ===========================================================================
+# ClassifierFilter
+# ===========================================================================
+
+from compare.compare_filters import (  # noqa: E402
+    SELECTION_MODEL_STRATEGY,
+    ClassifierFilter,
+    ClassifierFilterError,
+    contains_classifier_filter,
+    filter_from_dict,
+    filter_to_dict,
+    validate_filter,
+)
+
+
+class _StubClassifier:
+    """Stands in for ImageClassifierWrapper/AudioClassifierWrapper.
+
+    predictions maps path -> (category, score)."""
+
+    def __init__(self, predictions, model_categories=("photo", "drawing", "nsfw"),
+                 positive_groups=(), fail=(), can_run=True):
+        self.predictions = predictions
+        self.model_categories = list(model_categories)
+        self.positive_groups = [list(g) for g in positive_groups]
+        self.fail = set(fail)
+        self.can_run = can_run
+        self.classified = []
+
+    def classify_image(self, path):
+        self.classified.append(path)
+        if path in self.fail:
+            raise RuntimeError("unreadable")
+        return self.predictions[path][0]
+
+    def predict_image(self, path):
+        category, score = self.predictions[path]
+        return {category: score}
+
+    classify_audio = classify_image
+    predict_audio = predict_image
+
+
+PREDICTIONS = {
+    "/img/a.png": ("photo", 0.9),
+    "/img/b.png": ("drawing", 0.8),
+    "/img/c.png": ("photo", 0.4),
+}
+
+
+def _resolver(stub):
+    return lambda f: stub
+
+
+class TestClassifierFilterIsActive:
+    def test_no_model_is_inactive(self):
+        assert ClassifierFilter(categories=["photo"]).is_active() is False
+
+    def test_no_categories_is_inactive(self):
+        assert ClassifierFilter(classifier_name="m").is_active() is False
+
+    def test_model_and_categories_is_active(self):
+        assert ClassifierFilter(classifier_name="m", categories=["photo"]).is_active() is True
+
+    def test_model_strategy_needs_no_categories(self):
+        f = ClassifierFilter(classifier_name="m", selection_mode=SELECTION_MODEL_STRATEGY)
+        assert f.is_active() is True
+
+
+class TestApplyClassifierFilter:
+    def test_include_keeps_only_selected_categories(self):
+        f = ClassifierFilter(classifier_name="m", categories=["photo"])
+        result = apply_filter(FILES, f, classifier_resolver=_resolver(_StubClassifier(PREDICTIONS)))
+        assert result == ["/img/a.png", "/img/c.png"]
+
+    def test_exclude_drops_selected_categories(self):
+        f = ClassifierFilter(classifier_name="m", categories=["photo"], mode="exclude")
+        result = apply_filter(FILES, f, classifier_resolver=_resolver(_StubClassifier(PREDICTIONS)))
+        assert result == ["/img/b.png"]
+
+    def test_min_confidence_requires_score(self):
+        f = ClassifierFilter(classifier_name="m", categories=["photo"], min_confidence=0.5)
+        result = apply_filter(FILES, f, classifier_resolver=_resolver(_StubClassifier(PREDICTIONS)))
+        assert result == ["/img/a.png"]
+
+    def test_model_strategy_uses_positive_groups(self):
+        stub = _StubClassifier(PREDICTIONS, positive_groups=[["drawing", "nsfw"]])
+        f = ClassifierFilter(classifier_name="m", selection_mode=SELECTION_MODEL_STRATEGY)
+        assert apply_filter(FILES, f, classifier_resolver=_resolver(stub)) == ["/img/b.png"]
+
+    def test_model_strategy_without_positive_groups_raises(self):
+        f = ClassifierFilter(classifier_name="m", selection_mode=SELECTION_MODEL_STRATEGY)
+        with pytest.raises(ClassifierFilterError):
+            apply_filter(FILES, f, classifier_resolver=_resolver(_StubClassifier(PREDICTIONS)))
+
+    def test_unknown_category_raises(self):
+        f = ClassifierFilter(classifier_name="m", categories=["landscape"])
+        with pytest.raises(ClassifierFilterError):
+            apply_filter(FILES, f, classifier_resolver=_resolver(_StubClassifier(PREDICTIONS)))
+
+    def test_unclassifiable_file_dropped_by_include_kept_by_exclude(self):
+        stub = _StubClassifier(PREDICTIONS, fail={"/img/a.png"})
+        include = ClassifierFilter(classifier_name="m", categories=["photo"])
+        exclude = ClassifierFilter(classifier_name="m", categories=["photo"], mode="exclude")
+        assert apply_filter(FILES, include, classifier_resolver=_resolver(stub)) == ["/img/c.png"]
+        assert apply_filter(FILES, exclude, classifier_resolver=_resolver(stub)) == [
+            "/img/a.png", "/img/b.png"]
+
+    def test_audio_file_not_applicable_to_image_classifier(self):
+        stub = _StubClassifier(PREDICTIONS)
+        files = FILES + ["/img/song.mp3"]
+        include = ClassifierFilter(classifier_name="m", categories=["photo"])
+        exclude = ClassifierFilter(classifier_name="m", categories=["photo"], mode="exclude")
+        assert "/img/song.mp3" not in apply_filter(files, include, classifier_resolver=_resolver(stub))
+        assert "/img/song.mp3" in apply_filter(files, exclude, classifier_resolver=_resolver(stub))
+        assert "/img/song.mp3" not in stub.classified
+
+    def test_image_file_not_applicable_to_audio_classifier(self):
+        stub = _StubClassifier(PREDICTIONS)
+        f = ClassifierFilter(classifier_name="m", domain="audio", categories=["photo"])
+        assert apply_filter(FILES, f, classifier_resolver=_resolver(stub)) == []
+        assert stub.classified == []
+
+    def test_progress_reported_and_can_cancel(self):
+        calls = []
+
+        class _Cancelled(Exception):
+            pass
+
+        def progress(done, total):
+            calls.append((done, total))
+            if done == 1:
+                raise _Cancelled()
+
+        f = ClassifierFilter(classifier_name="m", categories=["photo"])
+        with pytest.raises(_Cancelled):
+            apply_filter(FILES, f, classifier_resolver=_resolver(_StubClassifier(PREDICTIONS)),
+                         progress=progress)
+        assert calls == [(0, 3), (1, 3)]
+
+
+class TestClassifierFilterInGroups:
+    def test_and_runs_size_filter_before_classifier(self):
+        stub = _StubClassifier(PREDICTIONS)
+        group = CompareFilterGroup(operator=FilterOperator.AND, filters=[
+            ClassifierFilter(classifier_name="m", categories=["photo"]),
+            SizeFilter(min_size=(512, 512)),
+        ])
+        sizes = {"/img/a.png": (1024, 1024), "/img/b.png": (1024, 1024), "/img/c.png": (100, 100)}
+        with _size_reader(sizes):
+            result = apply_filter(FILES, group, classifier_resolver=_resolver(stub))
+        assert result == ["/img/a.png"]
+        assert stub.classified == ["/img/a.png", "/img/b.png"]
+
+    def test_not_group_excludes_classifier_matches(self):
+        group = CompareFilterGroup(operator=FilterOperator.NOT, filters=[
+            ClassifierFilter(classifier_name="m", categories=["drawing"]),
+        ])
+        result = apply_filter(FILES, group, classifier_resolver=_resolver(_StubClassifier(PREDICTIONS)))
+        assert result == ["/img/a.png", "/img/c.png"]
+
+    def test_contains_classifier_filter(self):
+        cf = ClassifierFilter(classifier_name="m", categories=["photo"])
+        assert contains_classifier_filter(cf) is True
+        assert contains_classifier_filter(CompareFilterGroup(filters=[SizeFilter(min_size=(1, 1)), cf])) is True
+        assert contains_classifier_filter(SizeFilter(min_size=(1, 1))) is False
+        assert contains_classifier_filter(ClassifierFilter(classifier_name="m")) is False
+        assert contains_classifier_filter(None) is False
+
+
+class TestClassifierFilterSerialization:
+    def test_round_trip(self):
+        f = ClassifierFilter(classifier_name="m", domain="audio", categories=["photo", "nsfw"],
+                             mode="exclude", min_confidence=0.3)
+        assert filter_from_dict(filter_to_dict(f)) == f
+
+    def test_round_trip_inside_group(self):
+        group = CompareFilterGroup(operator=FilterOperator.OR, filters=[
+            SizeFilter(min_size=(10, 10)),
+            ClassifierFilter(classifier_name="m", selection_mode=SELECTION_MODEL_STRATEGY),
+        ])
+        assert filter_from_dict(filter_to_dict(group)) == group
+
+    def test_invalid_values_fall_back_to_defaults(self):
+        f = filter_from_dict({"type": "classifier", "classifier_name": "m", "domain": "video",
+                              "selection_mode": "bogus", "mode": "bogus",
+                              "min_confidence": "x", "categories": None})
+        assert f == ClassifierFilter(classifier_name="m", categories=[])
+
+
+class TestValidateFilter:
+    def test_no_filter_is_valid(self):
+        assert validate_filter(None) == []
+
+    def test_size_only_filter_does_not_resolve_classifiers(self):
+        def resolver(f):
+            raise AssertionError("must not be called")
+        assert validate_filter(SizeFilter(min_size=(1, 1)), classifier_resolver=resolver) == []
+
+    def test_reports_each_failing_classifier(self):
+        def resolver(f):
+            if f.classifier_name == "missing":
+                raise ClassifierFilterError("missing model")
+            return _StubClassifier(PREDICTIONS)
+        group = CompareFilterGroup(filters=[
+            ClassifierFilter(classifier_name="missing", categories=["photo"]),
+            ClassifierFilter(classifier_name="ok", categories=["landscape"]),
+            ClassifierFilter(classifier_name="ok", categories=["photo"]),
+        ])
+        errors = validate_filter(group, classifier_resolver=resolver)
+        assert len(errors) == 2
+        assert errors[0] == "missing model"
+        assert "landscape" in errors[1]
+
+
+class TestResolveClassifier:
+    def test_unregistered_model_raises(self, monkeypatch):
+        from compare import compare_filters
+        manager = MagicMock()
+        manager.resolve_registered_model_name.return_value = None
+        monkeypatch.setattr(compare_filters, "_classifier_manager", lambda domain: manager)
+        with pytest.raises(ClassifierFilterError):
+            compare_filters.resolve_classifier(ClassifierFilter(classifier_name="m", categories=["x"]))
+
+    def test_not_runnable_model_raises(self, monkeypatch):
+        from compare import compare_filters
+        manager = MagicMock()
+        manager.resolve_registered_model_name.return_value = "m"
+        manager.get_classifier.return_value = _StubClassifier({}, can_run=False)
+        monkeypatch.setattr(compare_filters, "_classifier_manager", lambda domain: manager)
+        with pytest.raises(ClassifierFilterError):
+            compare_filters.resolve_classifier(ClassifierFilter(classifier_name="m", categories=["x"]))
+
+    def test_runnable_model_returned(self, monkeypatch):
+        from compare import compare_filters
+        stub = _StubClassifier({})
+        manager = MagicMock()
+        manager.resolve_registered_model_name.return_value = "m"
+        manager.get_classifier.return_value = stub
+        monkeypatch.setattr(compare_filters, "_classifier_manager", lambda domain: manager)
+        assert compare_filters.resolve_classifier(
+            ClassifierFilter(classifier_name="m", categories=["x"])) is stub
+
+
+class TestFilterSignature:
+    def test_none_and_inactive_have_no_signature(self):
+        from compare.compare_filters import filter_signature
+        assert filter_signature(None) is None
+        assert filter_signature(SizeFilter()) is None
+
+    def test_equal_filters_share_signature(self):
+        from compare.compare_filters import filter_signature
+        a = ClassifierFilter(classifier_name="m", categories=["photo"])
+        b = ClassifierFilter(classifier_name="m", categories=["photo"])
+        assert filter_signature(a) == filter_signature(b)
+
+    def test_different_filters_differ(self):
+        from compare.compare_filters import filter_signature
+        a = ClassifierFilter(classifier_name="m", categories=["photo"])
+        b = ClassifierFilter(classifier_name="m", categories=["photo"], mode="exclude")
+        assert filter_signature(a) != filter_signature(b)
+
+
+class TestClassifierFilterDynamicMedia:
+    """Videos/GIFs/PDFs go through the same frame sampling as classifier actions."""
+
+    @pytest.fixture
+    def sampled(self, monkeypatch):
+        """Treat /vid/* as dynamic media whose frames are /vid/<name>#<n>."""
+        import utils.media_utils as mu
+        from image.frame_cache import FrameCache
+        monkeypatch.setattr(mu, "is_classifier_dynamic_media_path", lambda p: p.startswith("/vid/"))
+        calls = []
+
+        def stream(media_path, sample_ratio=0.1, detect_pseudostatic=False, max_samples=None):
+            calls.append((media_path, sample_ratio))
+            frames = [f"{media_path}#{i}" for i in range(4)]
+            return len(frames), iter(frames)
+
+        monkeypatch.setattr(FrameCache, "stream_frame_samples", stream)
+        return calls
+
+    def _stub(self, frame_categories):
+        return _StubClassifier({p: (c, 1.0) for p, c in frame_categories.items()})
+
+    def test_match_in_later_frames_counts(self, sampled):
+        stub = self._stub({"/vid/a.mp4#0": "drawing", "/vid/a.mp4#1": "drawing",
+                           "/vid/a.mp4#2": "photo", "/vid/a.mp4#3": "photo"})
+        f = ClassifierFilter(classifier_name="m", categories=["photo"], positive_ratio=0.5)
+        assert apply_filter(["/vid/a.mp4"], f, classifier_resolver=_resolver(stub)) == ["/vid/a.mp4"]
+
+    def test_positive_ratio_not_reached_excludes(self, sampled):
+        stub = self._stub({"/vid/a.mp4#0": "photo", "/vid/a.mp4#1": "drawing",
+                           "/vid/a.mp4#2": "drawing", "/vid/a.mp4#3": "drawing"})
+        f = ClassifierFilter(classifier_name="m", categories=["photo"], positive_ratio=0.5)
+        assert apply_filter(["/vid/a.mp4"], f, classifier_resolver=_resolver(stub)) == []
+
+    def test_sample_ratio_passed_to_frame_cache(self, sampled):
+        stub = self._stub({f"/vid/a.mp4#{i}": "photo" for i in range(4)})
+        f = ClassifierFilter(classifier_name="m", categories=["photo"], sample_ratio=0.3)
+        apply_filter(["/vid/a.mp4"], f, classifier_resolver=_resolver(stub))
+        assert sampled == [("/vid/a.mp4", 0.3)]
+
+    def test_audio_domain_does_not_sample(self, sampled):
+        stub = self._stub({})
+        f = ClassifierFilter(classifier_name="m", domain="audio", categories=["photo"])
+        assert apply_filter(["/vid/a.mp4"], f, classifier_resolver=_resolver(stub)) == []
+        assert sampled == []
+
+    def test_ratios_round_trip_and_clamp(self):
+        f = ClassifierFilter(classifier_name="m", categories=["photo"], sample_ratio=0.25, positive_ratio=0.5)
+        assert filter_from_dict(filter_to_dict(f)) == f
+        clamped = filter_from_dict({"type": "classifier", "classifier_name": "m", "categories": ["x"],
+                                    "sample_ratio": 5, "positive_ratio": "bad"})
+        assert clamped.sample_ratio == 1.0
+        assert clamped.positive_ratio == 0.1

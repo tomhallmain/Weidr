@@ -44,6 +44,13 @@ Evacuation
 age exceeds *max_age_seconds* (default ~60 days). Empty placeholder buckets are removed.
 Call before persisting meta (e.g. from the app’s store hook) to keep on-disk entries
 bounded over time.
+
+Epoch-free variant
+------------------
+:class:`FileMtimeInvalidationCache` has the same API and snapshot format but ignores the
+policy epoch: a row stays valid until a tracked file changes or the row is cleared. Use it
+for values that don't depend on the policy, held in the caller's own map rather than the
+module-level bucket map.
 """
 
 from __future__ import annotations
@@ -188,6 +195,9 @@ class FileKeyedInvalidationCache(Generic[T]):
     def _path_key(p: str) -> str:
         return os.path.normcase(os.path.normpath(os.path.abspath(p)))
 
+    def _current_epoch(self) -> int:
+        return _policy_epoch
+
     @staticmethod
     def _file_time(p: str) -> float:
         st = os.stat(p)
@@ -200,7 +210,7 @@ class FileKeyedInvalidationCache(Generic[T]):
         """
         if not self._has_entry:
             return False, None
-        if self._epoch_at_set != _policy_epoch:
+        if self._epoch_at_set != self._current_epoch():
             return False, None
         want = {self._path_key(p) for p in file_paths}
         if want != set(self._path_mtimes.keys()):
@@ -222,7 +232,7 @@ class FileKeyedInvalidationCache(Generic[T]):
             mtimes[p] = self._file_time(p)
         self._has_entry = True
         self._signature = signature
-        self._epoch_at_set = _policy_epoch
+        self._epoch_at_set = self._current_epoch()
         self._cached_at_unix = time.time()
         self._value = value
         self._path_mtimes = mtimes
@@ -240,7 +250,7 @@ class FileKeyedInvalidationCache(Generic[T]):
         self._path_mtimes = {self._path_key(p): t for p, t in path_mtimes.items()}
         self._value = value
         self._signature = signature
-        self._epoch_at_set = epoch_at_set if epoch_at_set is not None else _policy_epoch
+        self._epoch_at_set = epoch_at_set if epoch_at_set is not None else self._current_epoch()
         self._cached_at_unix = (
             float(cached_at_unix) if cached_at_unix is not None else time.time()
         )
@@ -291,3 +301,23 @@ class FileKeyedInvalidationCache(Generic[T]):
         v = compute()
         self.set(file_paths, v, signature)
         return v
+
+
+class FileMtimeInvalidationCache(FileKeyedInvalidationCache[T]):
+    """:class:`FileKeyedInvalidationCache` that ignores the policy epoch, so
+    :func:`invalidate_policy_caches` doesn't touch it. Snapshots store epoch 0."""
+
+    __slots__ = ()
+
+    def _current_epoch(self) -> int:
+        return 0
+
+    def load_from_snapshot(
+        self,
+        path_mtimes: Dict[str, float],
+        value: Optional[T],
+        signature: str,
+        epoch_at_set: Optional[int] = None,
+        cached_at_unix: Optional[float] = None,
+    ) -> None:
+        super().load_from_snapshot(path_mtimes, value, signature, 0, cached_at_unix)

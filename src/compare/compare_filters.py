@@ -5,22 +5,30 @@ Filters are applied in BaseCompare.get_files() *before* any expensive
 embedding/color computation, so only cheap I/O is done here (PIL header
 reads for size, JSON/EXIF reads for model metadata).
 
+ClassifierFilter is the exception: it runs a classifier model on every file
+that reaches it, so AND groups evaluate it after the cheap leaves.
+
 Tree shape
 ----------
 CompareFilter (abstract)
 ├── SizeFilter          — leaf: dimension constraints
 ├── ModelFilter         — leaf: model/lora name constraints
+├── ClassifierFilter    — leaf: classifier category constraints
 └── CompareFilterGroup  — node: AND / OR / NOT of child filters
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
+from compare.classifier_categories import model_strategy_positive_categories
 from utils.logging_setup import get_logger
+from utils.translations import _
 
 logger = get_logger("compare_filters")
 
@@ -93,6 +101,59 @@ class ModelFilter(CompareFilter):
 
 
 # ---------------------------------------------------------------------------
+# Leaf: classifier category constraints
+# ---------------------------------------------------------------------------
+
+CLASSIFIER_DOMAIN_IMAGE = "image"
+CLASSIFIER_DOMAIN_AUDIO = "audio"
+
+# Same values as ClassifierClassificationMode in compare/classifier_action.py.
+SELECTION_SELECTED_CATEGORIES = "selected_categories"
+SELECTION_MODEL_STRATEGY = "model_strategy"
+
+
+class ClassifierFilterError(Exception):
+    """A classifier filter cannot run (model missing, not loadable, or
+    misconfigured). The message is user-facing."""
+
+
+@dataclass
+class ClassifierFilter(CompareFilter):
+    """
+    Classifier-based pre-filter.
+
+    A file matches when the model's predicted category is in the selected
+    set: *categories* for 'selected_categories', the union of the model
+    config's positive_groups for 'model_strategy'. With min_confidence > 0 the
+    predicted category's score must also reach it. Image classifiers judge
+    video/GIF/PDF/ePub the way classifier actions do (dynamic_media_sampling):
+    sample_ratio of the frames/pages are sampled, and the file matches once
+    positive_ratio of the sampled ones match.
+
+    mode — 'include': only matching files pass; 'exclude': matching files are
+           blocked. Files the classifier cannot handle (wrong media domain,
+           read/prediction error) count as not matching, so 'include' drops
+           them and 'exclude' keeps them.
+    """
+    classifier_name: str = ""
+    domain:          str = CLASSIFIER_DOMAIN_IMAGE
+    selection_mode:  str = SELECTION_SELECTED_CATEGORIES
+    categories:      Optional[List[str]] = None
+    mode:            str = 'include'   # 'include' | 'exclude'
+    min_confidence:  float = 0.0
+    # Same defaults as ClassifierAction.dynamic_content_sample_ratio/_positive_ratio.
+    sample_ratio:    float = 0.1
+    positive_ratio:  float = 0.1
+
+    def is_active(self) -> bool:
+        if not (self.classifier_name or "").strip():
+            return False
+        if self.selection_mode == SELECTION_MODEL_STRATEGY:
+            return True
+        return bool(self.categories)
+
+
+# ---------------------------------------------------------------------------
 # Composite node
 # ---------------------------------------------------------------------------
 
@@ -134,6 +195,18 @@ def filter_to_dict(f: Optional[CompareFilter]) -> Optional[dict]:
             "match_any": f.match_any,
             "include_loras": f.include_loras,
         }
+    if isinstance(f, ClassifierFilter):
+        return {
+            "type": "classifier",
+            "classifier_name": f.classifier_name,
+            "domain": f.domain,
+            "selection_mode": f.selection_mode,
+            "categories": list(f.categories) if f.categories else [],
+            "mode": f.mode,
+            "min_confidence": f.min_confidence,
+            "sample_ratio": f.sample_ratio,
+            "positive_ratio": f.positive_ratio,
+        }
     if isinstance(f, CompareFilterGroup):
         return {
             "type": "group",
@@ -141,6 +214,15 @@ def filter_to_dict(f: Optional[CompareFilter]) -> Optional[dict]:
             "filters": [filter_to_dict(c) for c in f.filters],
         }
     return None
+
+
+def filter_signature(f: Optional[CompareFilter]) -> Optional[str]:
+    """Short stable hash of an active filter tree, or None for no/inactive
+    filter. Distinguishes runs whose candidate file lists differ only by filter."""
+    if f is None or not f.is_active():
+        return None
+    payload = json.dumps(filter_to_dict(f), sort_keys=True)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
 
 
 def filter_from_dict(d: Optional[dict]) -> Optional[CompareFilter]:
@@ -162,6 +244,33 @@ def filter_from_dict(d: Optional[dict]) -> Optional[CompareFilter]:
             match_any=d.get("match_any", False),
             include_loras=d.get("include_loras", True),
         )
+    if t == "classifier":
+        domain = d.get("domain", CLASSIFIER_DOMAIN_IMAGE)
+        if domain not in (CLASSIFIER_DOMAIN_IMAGE, CLASSIFIER_DOMAIN_AUDIO):
+            domain = CLASSIFIER_DOMAIN_IMAGE
+        selection_mode = d.get("selection_mode", SELECTION_SELECTED_CATEGORIES)
+        if selection_mode not in (SELECTION_SELECTED_CATEGORIES, SELECTION_MODEL_STRATEGY):
+            selection_mode = SELECTION_SELECTED_CATEGORIES
+        def _ratio(key: str, default: float) -> float:
+            try:
+                return max(0.0, min(1.0, float(d.get(key, default))))
+            except (TypeError, ValueError):
+                return default
+
+        try:
+            min_confidence = float(d.get("min_confidence", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            min_confidence = 0.0
+        return ClassifierFilter(
+            classifier_name=str(d.get("classifier_name", "") or ""),
+            domain=domain,
+            selection_mode=selection_mode,
+            categories=[str(c) for c in (d.get("categories") or [])],
+            mode="exclude" if d.get("mode") == "exclude" else "include",
+            min_confidence=min_confidence,
+            sample_ratio=_ratio("sample_ratio", 0.1),
+            positive_ratio=_ratio("positive_ratio", 0.1),
+        )
     if t == "group":
         children = [filter_from_dict(c) for c in d.get("filters", [])]
         children = [c for c in children if c is not None]
@@ -181,22 +290,31 @@ def apply_filter(
     files: list,
     f: CompareFilter,
     metadata_reader=None,
+    classifier_resolver=None,
+    progress: Optional[Callable[[int, int], None]] = None,
 ) -> list:
     """
     Return the subset of *files* that passes filter *f*.
 
-    metadata_reader — optional override for model metadata reading (for tests);
-                      defaults to the real image_data_extractor singleton.
+    metadata_reader     — optional override for model metadata reading (for tests);
+                          defaults to the real image_data_extractor singleton.
+    classifier_resolver — optional override mapping a ClassifierFilter to a
+                          classifier wrapper (for tests); defaults to
+                          resolve_classifier().
+    progress            — called as progress(done, total) per file a
+                          ClassifierFilter classifies; may raise to cancel.
     """
     if not f.is_active():
         return files
 
     if isinstance(f, CompareFilterGroup):
-        return _apply_group(files, f, metadata_reader)
+        return _apply_group(files, f, metadata_reader, classifier_resolver, progress)
     if isinstance(f, SizeFilter):
         return _apply_size(files, f)
     if isinstance(f, ModelFilter):
         return _apply_model(files, f, metadata_reader)
+    if isinstance(f, ClassifierFilter):
+        return _apply_classifier(files, f, classifier_resolver, progress)
 
     logger.warning(f"Unknown filter type {type(f).__name__} — skipping")
     return files
@@ -206,10 +324,23 @@ def apply_filter(
 # Group dispatch
 # ---------------------------------------------------------------------------
 
+def contains_classifier_filter(f: Optional[CompareFilter]) -> bool:
+    """True if *f* has an active ClassifierFilter anywhere in its tree."""
+    if f is None or not f.is_active():
+        return False
+    if isinstance(f, ClassifierFilter):
+        return True
+    if isinstance(f, CompareFilterGroup):
+        return any(contains_classifier_filter(c) for c in f.filters)
+    return False
+
+
 def _apply_group(
     files: list,
     group: CompareFilterGroup,
     metadata_reader,
+    classifier_resolver=None,
+    progress=None,
 ) -> list:
     op = group.operator
     active = [c for c in group.filters if c.is_active()]
@@ -223,21 +354,22 @@ def _apply_group(
     )
 
     if op == FilterOperator.AND:
+        # Cheap leaves first so classifiers only see files that survived them.
         result = files
-        for child in active:
-            result = apply_filter(result, child, metadata_reader)
+        for child in sorted(active, key=contains_classifier_filter):
+            result = apply_filter(result, child, metadata_reader, classifier_resolver, progress)
         return result
 
     if op == FilterOperator.OR:
         passed: set = set()
         for child in active:
-            passed.update(apply_filter(files, child, metadata_reader))
+            passed.update(apply_filter(files, child, metadata_reader, classifier_resolver, progress))
         return [fp for fp in files if fp in passed]
 
     if op == FilterOperator.NOT:
         excluded: set = set()
         for child in active:
-            excluded.update(apply_filter(files, child, metadata_reader))
+            excluded.update(apply_filter(files, child, metadata_reader, classifier_resolver, progress))
         result = [fp for fp in files if fp not in excluded]
         logger.debug(
             f"NOT group excluded {len(excluded)} file(s), "
@@ -356,5 +488,172 @@ def _apply_model(files: list, f: ModelFilter, metadata_reader) -> list:
     logger.info(
         f"ModelFilter ({f.mode}, match_{'any' if f.match_any else 'all'}): "
         f"{excluded}/{total} file(s) excluded ({len(passed)} remain)"
+    )
+    return passed
+
+
+# ---------------------------------------------------------------------------
+# Classifier leaf
+# ---------------------------------------------------------------------------
+
+def _classifier_manager(domain: str):
+    if domain == CLASSIFIER_DOMAIN_AUDIO:
+        from image.audio_classifier_manager import audio_classifier_manager
+        return audio_classifier_manager
+    from image.image_classifier_manager import image_classifier_manager
+    return image_classifier_manager
+
+
+def resolve_classifier(f: ClassifierFilter):
+    """Return the loaded, runnable classifier wrapper for *f*, or raise
+    ClassifierFilterError."""
+    name = (f.classifier_name or "").strip()
+    manager = _classifier_manager(f.domain)
+    key = manager.resolve_registered_model_name(name)
+    if key is None:
+        raise ClassifierFilterError(
+            _("The classifier \"{0}\" used in the compare filters is not registered.").format(name)
+        )
+    try:
+        wrapper = manager.get_classifier(key)
+    except Exception as e:
+        logger.error(f"ClassifierFilter: failed to load classifier {key!r}: {e}")
+        wrapper = None
+    if wrapper is None or not getattr(wrapper, "can_run", False):
+        raise ClassifierFilterError(
+            _("The classifier \"{0}\" used in the compare filters could not be loaded. "
+              "See the log for details.").format(name)
+        )
+    return wrapper
+
+
+def _selected_categories(f: ClassifierFilter, wrapper) -> frozenset:
+    """The category set *f* matches against, validated against *wrapper*.
+    Raises ClassifierFilterError if it is empty or names unknown categories."""
+    name = f.classifier_name
+    if f.selection_mode == SELECTION_MODEL_STRATEGY:
+        selected = model_strategy_positive_categories(getattr(wrapper, "positive_groups", None))
+        if not selected:
+            raise ClassifierFilterError(
+                _("The classifier \"{0}\" defines no positive groups, so its model "
+                  "strategy cannot be used as a compare filter.").format(name)
+            )
+        return selected
+    selected = frozenset(f.categories or [])
+    unknown = sorted(selected - set(getattr(wrapper, "model_categories", []) or []))
+    if unknown:
+        raise ClassifierFilterError(
+            _("The compare filter for classifier \"{0}\" uses categories the model "
+              "does not have: {1}").format(name, ", ".join(unknown))
+        )
+    if not selected:
+        raise ClassifierFilterError(
+            _("The compare filter for classifier \"{0}\" has no categories selected.").format(name)
+        )
+    return selected
+
+
+def _iter_classifier_filters(f: Optional[CompareFilter]):
+    if f is None or not f.is_active():
+        return
+    if isinstance(f, ClassifierFilter):
+        yield f
+    elif isinstance(f, CompareFilterGroup):
+        for child in f.filters:
+            yield from _iter_classifier_filters(child)
+
+
+def validate_filter(f: Optional[CompareFilter], classifier_resolver=None) -> List[str]:
+    """User-facing problems that would stop *f* from running; empty if none.
+    Loads every classifier the tree uses."""
+    resolver = classifier_resolver or resolve_classifier
+    errors: List[str] = []
+    for cf in _iter_classifier_filters(f):
+        try:
+            _selected_categories(cf, resolver(cf))
+        except ClassifierFilterError as e:
+            errors.append(str(e))
+    return errors
+
+
+def _classifier_input_path(fp: str, domain: str) -> Optional[str]:
+    """Path to hand the classifier for *fp*, or None if *domain* doesn't apply
+    to this media type. Image classifiers see a rendered still (first frame /
+    page / render) of non-raster media that isn't frame-sampled."""
+    from utils.audio_media import is_audio_path_by_extension
+    is_audio = is_audio_path_by_extension(fp)
+    if domain == CLASSIFIER_DOMAIN_AUDIO:
+        return fp if is_audio else None
+    if is_audio:
+        return None
+    from image.frame_cache import FrameCache
+    return FrameCache.get_image_path(fp)
+
+
+def _classify(wrapper, domain: str, path: str) -> Tuple[str, float]:
+    if domain == CLASSIFIER_DOMAIN_AUDIO:
+        category = wrapper.classify_audio(path)
+        scores = wrapper.predict_audio(path)
+    else:
+        category = wrapper.classify_image(path)
+        scores = wrapper.predict_image(path)
+    return category, float(scores.get(category, 0.0))
+
+
+def _file_matches(fp: str, f: ClassifierFilter, wrapper, selected: frozenset) -> Optional[bool]:
+    """Whether *fp* is in the selected categories; None if *f*'s domain
+    doesn't apply to it. Raises if it can't be classified."""
+    def frame_matches(path: str) -> Tuple[bool, Optional[str]]:
+        category, score = _classify(wrapper, f.domain, path)
+        return category in selected and score >= f.min_confidence, category
+
+    if f.domain == CLASSIFIER_DOMAIN_IMAGE:
+        from utils.media_utils import is_classifier_dynamic_media_path
+        if is_classifier_dynamic_media_path(fp):
+            from compare.dynamic_media_sampling import evaluate_dynamic_media
+            result = evaluate_dynamic_media(fp, frame_matches, f.sample_ratio, f.positive_ratio)
+            if result is not None:
+                return result.threshold_met
+    path = _classifier_input_path(fp, f.domain)
+    if path is None:
+        return None
+    return frame_matches(path)[0]
+
+
+def _apply_classifier(files: list, f: ClassifierFilter, classifier_resolver, progress) -> list:
+    wrapper = (classifier_resolver or resolve_classifier)(f)
+    selected = _selected_categories(f, wrapper)
+
+    total = len(files)
+    passed = []
+    not_applicable = 0
+    errors = 0
+
+    for i, fp in enumerate(files):
+        if progress is not None:
+            progress(i, total)
+        matches = False
+        try:
+            result = _file_matches(fp, f, wrapper, selected)
+            if result is None:
+                not_applicable += 1
+            else:
+                matches = result
+        except Exception as e:
+            errors += 1
+            logger.debug(f"ClassifierFilter: could not classify '{fp}': {e}")
+
+        if (f.mode == 'include') == matches:
+            passed.append(fp)
+
+    if progress is not None:
+        progress(total, total)
+
+    excluded = total - len(passed)
+    logger.info(
+        f"ClassifierFilter ({f.classifier_name}, {f.mode}, {f.selection_mode}): "
+        f"{excluded}/{total} file(s) excluded ({len(passed)} remain"
+        + (f", {not_applicable} not applicable" if not_applicable else "")
+        + (f", {errors} unclassifiable)" if errors else ")")
     )
     return passed

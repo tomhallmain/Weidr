@@ -69,6 +69,9 @@ class CacheController:
             from compare.classifier_actions_manager import ClassifierActionsManager
 
             ClassifierActionsManager.load_prevalidation_file_cache_from_disk()
+            from image.classifier_prediction_cache import classifier_prediction_cache
+
+            classifier_prediction_cache.load()
             FavoritesWindow.load_favorites()
             GoToFile.load_persisted_data()
             TargetDirectoryWindow.load_recent_directories()
@@ -165,6 +168,9 @@ class CacheController:
         from compare.classifier_actions_manager import ClassifierActionsManager
 
         ClassifierActionsManager.store_prevalidation_file_cache_to_disk()
+        from image.classifier_prediction_cache import classifier_prediction_cache
+
+        classifier_prediction_cache.store()
         # Must precede the has_changes check: this is what marks the info cache
         # changed when only file metadata was collected this interval.
         from files.file_metadata_cache import file_metadata_cache

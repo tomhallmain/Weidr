@@ -416,7 +416,8 @@ class CompareColors(BaseCompare):
         '''
         overwrite = self.args.overwrite or not store_checkpoints
         self.compare_result = CompareResult.load(
-            self.base_dir, self.compare_data.files_found, mode=self.COMPARE_MODE, overwrite=overwrite)
+            self.base_dir, self.compare_data.files_found, mode=self.COMPARE_MODE, overwrite=overwrite,
+            filter_key=self.checkpoint_filter_key)
         if self.compare_result.is_complete:
             return (self.compare_result.files_grouped, self.compare_result.file_groups)
         n_files_found_even = Utils.round_up(self.compare_data.n_files_found, 5)

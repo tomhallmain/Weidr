@@ -1,7 +1,8 @@
 """
 Filter builder panel — renders a CompareFilter tree as an editable list of
-condition rows. Each row maps to a SizeFilter or ModelFilter leaf. Multiple
-rows are combined via a top-level AND / OR / NOT operator into a
+condition rows. Each row maps to a SizeFilter, ModelFilter or
+ClassifierFilter leaf; classifier rows are edited in ClassifierFilterDialog
+since a category selection does not fit on one row. Multiple rows are combined via a top-level AND / OR / NOT operator into a
 CompareFilterGroup.
 
 Public interface:
@@ -19,10 +20,13 @@ from PySide6.QtWidgets import (
 )
 
 from compare.compare_filters import (
-    CompareFilter, CompareFilterGroup, FilterOperator,
+    ClassifierFilter, CompareFilter, CompareFilterGroup, FilterOperator,
     ModelFilter, SizeFilter,
 )
 from ui.app_style import AppStyle
+from ui.compare.classifier_filter_dialog_qt import (
+    ClassifierFilterDialog, describe_classifier_filter,
+)
 from utils.translations import _
 
 
@@ -33,6 +37,9 @@ class _FilterRow(QWidget):
                  parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._on_remove = on_remove
+        self._classifier_filter: Optional[ClassifierFilter] = None
+        # Set while set_filter() switches the type, so it doesn't open the dialog.
+        self._loading = False
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 2, 0, 2)
@@ -40,8 +47,9 @@ class _FilterRow(QWidget):
 
         # --- Filter-type selector ---
         self._type_combo = QComboBox()
-        self._type_combo.addItems([_("Size"), _("Model")])
-        self._type_combo.setFixedWidth(80)
+        self._type_combo.addItems([_("Size"), _("Model"), _("Classifier")])
+        self._type_combo.setFixedWidth(100)
+        self._previous_type = self._type_combo.currentText()
         self._type_combo.currentTextChanged.connect(self._on_type_changed)
         layout.addWidget(self._type_combo)
 
@@ -106,6 +114,23 @@ class _FilterRow(QWidget):
         ml.addWidget(self._model_loras)
 
         layout.addWidget(self._model_widget)
+
+        # --- Classifier sub-widgets ---
+        self._classifier_widget = QWidget()
+        cl = QHBoxLayout(self._classifier_widget)
+        cl.setContentsMargins(0, 0, 0, 0)
+        cl.setSpacing(4)
+
+        self._classifier_summary = QLabel()
+        self._classifier_summary.setStyleSheet(f"color: {AppStyle.FG_COLOR};")
+        self._classifier_summary.setMinimumWidth(180)
+        cl.addWidget(self._classifier_summary, 1)
+
+        edit_btn = QPushButton(_("Edit…"))
+        edit_btn.clicked.connect(self._edit_classifier_filter)
+        cl.addWidget(edit_btn)
+
+        layout.addWidget(self._classifier_widget)
         layout.addStretch()
 
         # --- Remove button ---
@@ -120,9 +145,33 @@ class _FilterRow(QWidget):
 
     # ------------------------------------------------------------------
     def _on_type_changed(self, type_text: str) -> None:
-        is_size = (type_text == _("Size"))
-        self._size_widget.setVisible(is_size)
-        self._model_widget.setVisible(not is_size)
+        is_classifier = (type_text == _("Classifier"))
+        if (is_classifier and self._classifier_filter is None
+                and not self._loading and not self._edit_classifier_filter()):
+            # Dialog cancelled before any classifier was configured.
+            self._type_combo.blockSignals(True)
+            self._type_combo.setCurrentText(self._previous_type)
+            self._type_combo.blockSignals(False)
+            type_text = self._previous_type
+            is_classifier = False
+        self._previous_type = type_text
+        self._size_widget.setVisible(type_text == _("Size"))
+        self._model_widget.setVisible(type_text == _("Model"))
+        self._classifier_widget.setVisible(is_classifier)
+
+    def _edit_classifier_filter(self) -> bool:
+        """Open the classifier dialog; True if the user confirmed it."""
+        dlg = ClassifierFilterDialog(self.window(), self._classifier_filter)
+        dlg.exec()
+        result = dlg.get_result()
+        if result is None:
+            return False
+        self._set_classifier_filter(result)
+        return True
+
+    def _set_classifier_filter(self, f: Optional[ClassifierFilter]) -> None:
+        self._classifier_filter = f
+        self._classifier_summary.setText(describe_classifier_filter(f))
 
     def _on_size_sub_changed(self, sub_text: str) -> None:
         is_exact = (sub_text == _("exact"))
@@ -131,8 +180,11 @@ class _FilterRow(QWidget):
 
     # ------------------------------------------------------------------
     def get_filter(self) -> Optional[CompareFilter]:
-        if self._type_combo.currentText() == _("Size"):
+        type_text = self._type_combo.currentText()
+        if type_text == _("Size"):
             return self._build_size_filter()
+        if type_text == _("Classifier"):
+            return self._classifier_filter
         return self._build_model_filter()
 
     def _build_size_filter(self) -> Optional[SizeFilter]:
@@ -196,6 +248,13 @@ class _FilterRow(QWidget):
             )
             self._model_match_any.setChecked(f.match_any)
             self._model_loras.setChecked(f.include_loras)
+        elif isinstance(f, ClassifierFilter):
+            self._set_classifier_filter(f)
+            self._loading = True
+            try:
+                self._type_combo.setCurrentText(_("Classifier"))
+            finally:
+                self._loading = False
 
 
 class FilterBuilderPanel(QFrame):
@@ -287,7 +346,7 @@ class FilterBuilderPanel(QFrame):
         if isinstance(f, CompareFilterGroup):
             self._op_combo.setCurrentText(f.operator.name)
             for child in f.filters:
-                if isinstance(child, (SizeFilter, ModelFilter)):
+                if isinstance(child, (SizeFilter, ModelFilter, ClassifierFilter)):
                     self._add_row(child)
-        elif isinstance(f, (SizeFilter, ModelFilter)):
+        elif isinstance(f, (SizeFilter, ModelFilter, ClassifierFilter)):
             self._add_row(f)

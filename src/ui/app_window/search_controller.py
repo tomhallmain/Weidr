@@ -297,7 +297,7 @@ class SearchController:
     @require_password(ProtectedActions.RUN_COMPARES)
     def run_compare(
         self,
-        compare_args: CompareArgs = CompareArgs(),
+        compare_args: Optional[CompareArgs] = None,
         find_duplicates: bool = False,
         on_success: Optional[Callable[[], None]] = None,
     ) -> None:
@@ -306,12 +306,17 @@ class SearchController:
         *on_success* runs on the GUI thread once the run has finished without
         raising or being cancelled.
         """
+        # A fresh CompareArgs per run: the compare engine keeps the previous
+        # run's args and diffs them against the new ones to decide whether to
+        # re-gather files, which a shared default instance would defeat.
+        if compare_args is None:
+            compare_args = CompareArgs()
         self._pending_compare = lambda: self._debounced_run_compare(
             compare_args, find_duplicates, on_success
         )
         self._debouncer.schedule()
 
-    def refresh_compare(self, compare_args: CompareArgs = CompareArgs()) -> None:
+    def refresh_compare(self, compare_args: Optional[CompareArgs] = None) -> None:
         """Re-run comparison for windows with an active compare (see WindowManager)."""
         self.run_compare(compare_args=compare_args)
 

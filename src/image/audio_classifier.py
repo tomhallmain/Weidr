@@ -22,6 +22,7 @@ from typing import Dict, List, Optional
 import numpy as np
 
 from image.audio_classifier_model_config import AudioClassifierModelConfig
+from image.classifier_prediction_cache import classifier_prediction_cache, model_signature
 from image.video_ops import VideoOps
 from utils.config import config
 from utils.logging_setup import get_logger
@@ -127,6 +128,7 @@ class AudioClassifierWrapper:
         self.feature_extractor = None
         self.model = None
         self.predictions_cache: Dict[str, Dict[str, float]] = {}
+        self._prediction_signature: Optional[str] = None
 
         if self.can_run:
             try:
@@ -210,9 +212,34 @@ class AudioClassifierWrapper:
             self.model = None
             logger.error(f"Failed to load audio classifier {self.model_name!r} from {self.model_location!r}: {e}")
 
+    def _persisted_prediction_key(self) -> tuple:
+        """(model key, settings signature) for classifier_prediction_cache."""
+        if self._prediction_signature is None:
+            self._prediction_signature = model_signature({
+                "location": self.model_location,
+                "categories": self.model_categories,
+                "model_kwargs": self.model_kwargs,
+                "sample_rate": self.sample_rate,
+                "max_duration_seconds": self.max_duration_seconds,
+            })
+        return f"audio:{self.model_name}", self._prediction_signature
+
+    def discard_cached_prediction(self, audio_path: str) -> None:
+        """Forget the session and persisted scores for *audio_path*."""
+        self.predictions_cache.pop(audio_path, None)
+        model_key, _sig = self._persisted_prediction_key()
+        classifier_prediction_cache.discard(model_key, audio_path)
+
     def predict_audio(self, audio_path: str) -> Dict[str, float]:
         if audio_path in self.predictions_cache:
             return self.predictions_cache[audio_path]
+
+        model_key, signature = self._persisted_prediction_key()
+        persisted = classifier_prediction_cache.get(
+            model_key, signature, self.model_location, audio_path)
+        if persisted is not None:
+            self.predictions_cache[audio_path] = persisted
+            return dict(persisted)
 
         if self.model is None or self.feature_extractor is None:
             raise ValueError("Classifier not initialized")
@@ -250,6 +277,8 @@ class AudioClassifierWrapper:
                 classed_predictions[self.model_categories[i]] = float(scores[i])
 
         self.predictions_cache[audio_path] = dict(classed_predictions)
+        classifier_prediction_cache.put(
+            model_key, signature, self.model_location, audio_path, classed_predictions)
         return classed_predictions
 
     def predict_audio_ranked(self, audio_path: str) -> list[tuple[str, float]]:

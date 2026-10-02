@@ -393,8 +393,8 @@ class _ClassifierTestWorker(QThread):
                 self.failed.emit(self._model_name, self._image_path,
                                  "Model failed to initialize (can_run=False).")
                 return
-            # Evict cache entry so we always get a live result.
-            classifier.predictions_cache.pop(self._image_path, None)
+            # Evict cached scores so we always get a live result.
+            classifier.discard_cached_prediction(self._image_path)
             ranked = classifier.predict_image_ranked(self._image_path)
             classification = classifier.classify_image(self._image_path)
             self.finished.emit(self._model_name, self._image_path,

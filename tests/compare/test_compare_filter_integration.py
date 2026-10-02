@@ -189,3 +189,79 @@ class TestZeroCandidatesIsADeliberateError:
 
         with pytest.raises(AssertionError, match="No image data found"):
             cc.compare_data.save_data(overwrite=False, verbose=False)
+
+
+class _ColorNameClassifier:
+    """Classifier stub: the category is the file name's colour prefix
+    (red_00.png -> "red"), scored 1.0."""
+
+    model_categories = ["red", "blue", "green", "outlier"]
+    positive_groups = []
+    can_run = True
+
+    def classify_image(self, path):
+        return os.path.basename(path).split("_")[0]
+
+    def predict_image(self, path):
+        return {self.classify_image(path): 1.0}
+
+
+@pytest.fixture
+def color_classifier(monkeypatch):
+    from compare import compare_filters
+    stub = _ColorNameClassifier()
+    monkeypatch.setattr(compare_filters, "resolve_classifier", lambda f: stub)
+    return stub
+
+
+class TestClassifierDataFilter:
+    """ClassifierFilter as args.data_filter, through BaseCompare.get_files()."""
+
+    def test_group_run_only_sees_selected_categories(self, compare_colors_dir, color_classifier):
+        from compare.compare_filters import ClassifierFilter
+        cc = _make_compare(compare_colors_dir["dir"])
+        cc.args.data_filter = ClassifierFilter(classifier_name="colors", categories=["red", "blue"])
+        cc.get_files()
+        cc.get_data()
+
+        expected = set(compare_colors_dir["red"] + compare_colors_dir["blue"])
+        assert set(cc.compare_data.files_found) == expected
+        assert cc.data_filter_stats == (8, 18)
+
+    def test_search_reference_kept_when_classifier_excludes_it(
+        self, compare_colors_dir, color_classifier
+    ):
+        from compare.compare_filters import ClassifierFilter
+        reference = compare_colors_dir["green"][0]
+        cc = _make_compare(compare_colors_dir["dir"], search_media_path=reference)
+        cc.args.data_filter = ClassifierFilter(classifier_name="colors", categories=["red"])
+        cc.get_files()
+        cc.get_data()
+
+        assert reference in cc.compare_data.files_found
+        others = set(cc.compare_data.files_found) - {reference}
+        assert others == set(compare_colors_dir["red"])
+
+    def test_no_data_filter_leaves_stats_unset(self, compare_colors_dir):
+        cc = _make_compare(compare_colors_dir["dir"])
+        cc.get_files()
+        assert cc.data_filter_stats is None
+
+    def test_cancel_during_classification_raises_compare_cancelled(
+        self, compare_colors_dir, color_classifier
+    ):
+        from compare.base_compare import CompareCancelled
+        from compare.compare_filters import ClassifierFilter
+        cc = _make_compare(compare_colors_dir["dir"])
+        cc.args.data_filter = ClassifierFilter(classifier_name="colors", categories=["red"])
+        cc.cancel()
+        with pytest.raises(CompareCancelled):
+            cc.get_files()
+
+    def test_checkpoint_key_follows_data_filter(self, compare_colors_dir):
+        from compare.compare_filters import ClassifierFilter, filter_signature
+        cc = _make_compare(compare_colors_dir["dir"])
+        assert cc.checkpoint_filter_key is None
+        f = ClassifierFilter(classifier_name="colors", categories=["red"])
+        cc.args.data_filter = f
+        assert cc.checkpoint_filter_key == filter_signature(f)

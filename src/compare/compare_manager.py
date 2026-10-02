@@ -864,6 +864,13 @@ class CompareManager:
         if not self._primary_mode:
             raise ValueError("No compare mode set")
 
+        # Stop before any work if a classifier filter can't run, rather than
+        # letting it drop (or keep) every file.
+        from compare.compare_filters import ClassifierFilterError, validate_filter
+        filter_errors = validate_filter(self._data_filter)
+        if filter_errors:
+            raise ClassifierFilterError("\n".join(filter_errors))
+
         # Record this run in the persistent recent-history list.
         try:
             from compare.compare_history import CompareHistory

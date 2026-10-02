@@ -252,6 +252,13 @@ def reset_app_globals():
         except Exception:
             pass
 
+        # Classifier prediction cache — process-wide rows keyed by model and path
+        try:
+            from image.classifier_prediction_cache import classifier_prediction_cache
+            classifier_prediction_cache.reset()
+        except Exception:
+            pass
+
         # FrameCache — clear in-memory dicts only; leave temp dir intact
         try:
             from image.frame_cache import FrameCache

@@ -830,6 +830,11 @@ class CompareWrapper:
             self._app_actions.toast(_("Gathering media data for comparison"))
             self._compare.get_files()
             self._compare.get_data()
+            filter_stats = self._compare.data_filter_stats
+            if filter_stats:
+                excluded, total = filter_stats
+                self._app_actions.toast(
+                    _("Compare filters excluded {0} of {1} files").format(excluded, total))
 
         if args.not_searching():
             self.run_group(args)
@@ -1091,8 +1096,7 @@ class CompareWrapper:
         if not relevant_files:
             return
         compare_result = getattr(self._compare, "compare_result", None)
-        checkpoint_existed = os.path.exists(CompareResult.cache_path(
-            self._compare.base_dir, getattr(self._compare, "COMPARE_MODE", None)))
+        checkpoint_existed = os.path.exists(self._checkpoint_path())
         self._removal_undo_snapshot = RemovalUndoSnapshot(
             relevant_files, app_mode, self, compare_result, checkpoint_existed)
         logger.info("Captured compare state snapshot before removal of %s file(s)",
@@ -1149,6 +1153,15 @@ class CompareWrapper:
                     len(snap.removed_files), snap.base_dir)
         return snap
 
+    def _checkpoint_path(self) -> str:
+        """On-disk CompareResult checkpoint path for the current compare,
+        including its data-filter key."""
+        return CompareResult.cache_path(
+            self._compare.base_dir,
+            getattr(self._compare, "COMPARE_MODE", None),
+            getattr(self._compare, "checkpoint_filter_key", None),
+        )
+
     def _invalidate_removal_undo_snapshot(self) -> None:
         self._removal_undo_snapshot = None
 
@@ -1163,10 +1176,7 @@ class CompareWrapper:
         compare_result = getattr(self._compare, "compare_result", None)
         if compare_result is None:
             return
-        cache_path = CompareResult.cache_path(
-            self._compare.base_dir,
-            getattr(self._compare, "COMPARE_MODE", None),
-        )
+        cache_path = self._checkpoint_path()
         if not os.path.exists(cache_path):
             return
 
@@ -1200,10 +1210,7 @@ class CompareWrapper:
         """Delete the on-disk CompareResult checkpoint for this compare session."""
         if self._compare is None:
             return
-        cache_path = CompareResult.cache_path(
-            self._compare.base_dir,
-            getattr(self._compare, "COMPARE_MODE", None),
-        )
+        cache_path = self._checkpoint_path()
         try:
             if os.path.exists(cache_path):
                 os.remove(cache_path)

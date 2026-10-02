@@ -33,6 +33,7 @@ from files.file_metadata_cache import file_metadata_cache
 from files.image_generation import request_image_generation
 from files.marked_files import MarkedFiles
 from files.skip_aware_navigation import advance_past_skipped
+from image.classifier_prediction_cache import classifier_prediction_cache
 from utils.app_info_cache import app_info_cache
 from utils.background_runner import ThreadedTaskRunner
 from utils.config import config
@@ -52,8 +53,9 @@ _DEFAULT_IMAGE_GENERATION_TYPE = ImageGenerationType.CONTROL_NET
 
 def load_persisted_classifier_state() -> None:
     """Load the saved prevalidation rules (with their lookaheads and directory
-    profiles), classifier actions and prevalidation result cache, in the order
-    the Qt app loads them at startup (CacheController.load_info_cache).
+    profiles), classifier actions, prevalidation result cache and classifier
+    prediction cache, in the order the Qt app loads them at startup
+    (CacheController.load_info_cache).
 
     This is process-wide ClassifierActionsManager state shared by every
     session, so main() calls it once rather than each session constructor.
@@ -63,6 +65,7 @@ def load_persisted_classifier_state() -> None:
     ClassifierActionsManager.load_prevalidations()
     ClassifierActionsManager.load_classifier_actions()
     ClassifierActionsManager.load_prevalidation_file_cache_from_disk()
+    classifier_prediction_cache.load()
 
 
 def _persisted_image_generation_type() -> ImageGenerationType:
@@ -679,6 +682,7 @@ def main(argv=None) -> int:
         started = server.start()
     finally:
         file_metadata_cache.store()
+        classifier_prediction_cache.store()
         app_info_cache.store()
     return 0 if started else 1
 

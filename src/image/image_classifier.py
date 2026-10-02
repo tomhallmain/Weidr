@@ -9,6 +9,7 @@ from PIL import Image
 from utils.config import config
 from utils.logging_setup import get_logger
 
+from image.classifier_prediction_cache import classifier_prediction_cache, model_signature
 from image.image_classifier_model_config import ImageClassifierModelConfig
 
 logger = get_logger("image_classifier")
@@ -989,6 +990,7 @@ class ImageClassifierWrapper:
         self.can_run = True
         self.classifier = None
         self.predictions_cache = {}
+        self._prediction_signature: Optional[str] = None
         
         if self.can_run:
             try:
@@ -1137,10 +1139,35 @@ class ImageClassifierWrapper:
             logger.error(e)
             logger.warning(f"Failed to initialize {self.backend} model for image classifier: {self.model_name}")
 
+    def _persisted_prediction_key(self) -> tuple:
+        """(model key, settings signature) for classifier_prediction_cache."""
+        if self._prediction_signature is None:
+            self._prediction_signature = model_signature({
+                "location": self.model_location,
+                "categories": self.model_categories,
+                "backend": self.backend.value if self.backend else None,
+                "model_kwargs": self.model_kwargs,
+                "input_shape": self.input_shape,
+            })
+        return f"image:{self.model_name}", self._prediction_signature
+
+    def discard_cached_prediction(self, image_path) -> None:
+        """Forget the session and persisted scores for *image_path*."""
+        self.predictions_cache.pop(image_path, None)
+        model_key, _sig = self._persisted_prediction_key()
+        classifier_prediction_cache.discard(model_key, image_path)
+
     def predict_image(self, image_path):
         if image_path in self.predictions_cache:
             return self.predictions_cache[image_path]
-        
+
+        model_key, signature = self._persisted_prediction_key()
+        persisted = classifier_prediction_cache.get(
+            model_key, signature, self.model_location, image_path)
+        if persisted is not None:
+            self.predictions_cache[image_path] = persisted
+            return dict(persisted)
+
         if self.classifier is None:
             raise ValueError("Classifier not initialized")
         
@@ -1158,6 +1185,8 @@ class ImageClassifierWrapper:
                 classed_predictions[self.model_categories[i]] = float(predictions[0][i])
         
         self.predictions_cache[image_path] = dict(classed_predictions)
+        classifier_prediction_cache.put(
+            model_key, signature, self.model_location, image_path, classed_predictions)
         return classed_predictions
 
     def predict_image_ranked(self, image_path) -> list[tuple[str, float]]:

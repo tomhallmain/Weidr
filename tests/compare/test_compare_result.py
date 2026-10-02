@@ -143,3 +143,48 @@ class TestStoreLoad:
 
         loaded = CompareResult.load(str(tmp_path), files)
         assert loaded.files_grouped == {}
+
+
+class TestFilteredCheckpoints:
+    """A run with a data filter has its own checkpoint file, keyed by
+    compare_filters.filter_signature(), so it never collides with the
+    unfiltered (or differently filtered) checkpoint of the same directory/mode."""
+
+    def test_cache_path_includes_filter_key(self, tmp_path):
+        plain = CompareResult.cache_path(str(tmp_path), None)
+        filtered = CompareResult.cache_path(str(tmp_path), None, "abc123")
+        assert plain != filtered
+        assert filtered.endswith("weidr_result_default_fabc123.pkl")
+
+    def test_no_filter_key_keeps_existing_file_name(self, tmp_path):
+        assert CompareResult.cache_path(str(tmp_path), None, None) == CompareResult.cache_path(str(tmp_path), None)
+
+    def test_filtered_run_ignores_unfiltered_checkpoint(self, tmp_path):
+        unfiltered = CompareResult(str(tmp_path), ["a.jpg", "b.jpg", "c.jpg"])
+        unfiltered.is_complete = True
+        unfiltered.store()
+
+        loaded = CompareResult.load(str(tmp_path), ["a.jpg"], filter_key="abc123")
+        assert loaded.is_complete is False
+
+    def test_filtered_store_and_load_roundtrip(self, tmp_path):
+        files = ["a.jpg"]
+        cr = CompareResult(str(tmp_path), files, filter_key="abc123")
+        cr.files_grouped = {0: 0.5}
+        cr.is_complete = True
+        cr.store()
+
+        assert CompareResult.load(str(tmp_path), files).is_complete is False
+        loaded = CompareResult.load(str(tmp_path), files, filter_key="abc123")
+        assert loaded.is_complete is True
+        assert loaded.files_grouped == {0: 0.5}
+
+    def test_loaded_pickle_without_filter_key_attribute_stores_to_requested_path(self, tmp_path):
+        files = ["a.jpg"]
+        cr = CompareResult(str(tmp_path), files, filter_key="abc123")
+        del cr._filter_key  # as in a pickle written before filtered checkpoints
+        with open(CompareResult.cache_path(str(tmp_path), None, "abc123"), "wb") as f:
+            pickle.dump(cr, f)
+
+        loaded = CompareResult.load(str(tmp_path), files, filter_key="abc123")
+        assert loaded._filter_key == "abc123"

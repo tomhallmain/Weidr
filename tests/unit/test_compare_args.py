@@ -152,6 +152,32 @@ class TestIsNewDataRequestRequired:
         other.overwrite = False
         assert base._is_new_data_request_required(other) is False
 
+    def test_added_data_filter_requires_new_data(self):
+        from compare.compare_filters import ClassifierFilter
+        base, other = self._pair(
+            data_filter=ClassifierFilter(classifier_name="m", categories=["photo"]))
+        assert base._is_new_data_request_required(other) is True
+
+    def test_changed_data_filter_requires_new_data(self):
+        from compare.compare_filters import ClassifierFilter
+        base = CompareArgs()
+        base.data_filter = ClassifierFilter(classifier_name="m", categories=["photo"])
+        other = base.clone()
+        other.data_filter.categories = ["drawing"]
+        assert base._is_new_data_request_required(other) is True
+
+    def test_equal_data_filter_does_not_require_new_data(self):
+        from compare.compare_filters import SizeFilter
+        base = CompareArgs()
+        base.data_filter = SizeFilter(min_size=(512, 512))
+        other = base.clone()
+        assert base._is_new_data_request_required(other) is False
+
+    def test_inactive_data_filter_equals_none(self):
+        from compare.compare_filters import SizeFilter
+        base, other = self._pair(data_filter=SizeFilter())
+        assert base._is_new_data_request_required(other) is False
+
 
 class TestCompareArgsInit:
     def test_default_base_dir(self):

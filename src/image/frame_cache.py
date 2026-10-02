@@ -290,10 +290,18 @@ async def _render_epub_documents(jobs: List[_EpubRenderJob], allowed_root: str) 
         await browser.close()
 
 
+# _stable_media_path_hash() digest -> the path it was computed from, so a
+# render's file name leads back to its source (FrameCache.source_and_frame_id).
+_media_hash_sources: Dict[str, str] = {}
+_MEDIA_HASH_LEN = 64
+
+
 def _stable_media_path_hash(media_path: str) -> str:
     """Deterministic ASCII-safe name component from absolute media path (for temp output files)."""
     n = os.path.normpath(os.path.abspath(media_path))
-    return hashlib.sha256(n.encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(n.encode("utf-8")).hexdigest()
+    _media_hash_sources[digest] = n
+    return digest
 
 
 def _make_sample_cache_key(media_path: str, ratio: float) -> str:
@@ -2131,6 +2139,19 @@ class FrameCache:
         Returns None if the media is not in the cache or is not a type that uses a temp file.
         """
         return cls.cache.get(media_path)
+
+    @classmethod
+    def source_and_frame_id(cls, rendered_path: str) -> Optional[Tuple[str, str]]:
+        """``(source media path, frame id)`` for a file this class rendered, or
+        None. Every render is named ``<_stable_media_path_hash(source)><suffix>``
+        with a suffix naming the frame (``_first.jpg``, ``_page_0.jpg``,
+        ``_sample_120.jpg``, ...), so the pair is stable across sessions."""
+        name = os.path.basename(rendered_path)
+        digest, frame_id = name[:_MEDIA_HASH_LEN], name[_MEDIA_HASH_LEN:]
+        if not frame_id or frame_id[0] not in "_.":
+            return None
+        source = _media_hash_sources.get(digest)
+        return (source, frame_id) if source else None
 
     @classmethod
     def get_media_path_for_cached(cls, maybe_cached_path: str) -> Optional[str]:

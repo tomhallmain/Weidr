@@ -27,9 +27,12 @@ class CompareResult:
     # scoped per mode so concurrent runs on the same directory don't clash.
     RESULT_FILENAME_TEMPLATE = "weidr_result_{mode}.pkl"
 
-    def __init__(self, base_dir=".", files=[], mode=None):
+    def __init__(self, base_dir=".", files=[], mode=None, filter_key=None):
         self.base_dir = base_dir
         self._mode = mode
+        # compare_filters.filter_signature() of the run's data filter; part of
+        # the checkpoint file name, since a filtered run has its own file list.
+        self._filter_key = filter_key
         self._dir_files_hash = CompareResult.hash_dir_files(files)
         self.file_groups = {}
         self.files_grouped = {}
@@ -220,7 +223,8 @@ class CompareResult:
         self.supergroups = []
 
     def store(self):
-        save_path = CompareResult.cache_path(self.base_dir, self._mode)
+        save_path = CompareResult.cache_path(
+            self.base_dir, self._mode, getattr(self, "_filter_key", None))
         with open(save_path, "wb") as f:
             pickle.dump(self, f)
             logger.info(f"Stored compare result: {save_path}")
@@ -229,8 +233,10 @@ class CompareResult:
         return self._dir_files_hash == CompareResult.hash_dir_files(files)
 
     @staticmethod
-    def cache_path(base_dir, mode=None):
+    def cache_path(base_dir, mode=None, filter_key=None):
         mode_slug = mode.name.lower() if mode is not None else "default"
+        if filter_key:
+            mode_slug += f"_f{filter_key}"
         filename = CompareResult.RESULT_FILENAME_TEMPLATE.format(mode=mode_slug)
         return os.path.join(base_dir, filename)
 
@@ -253,20 +259,20 @@ class CompareResult:
         return True
 
     @staticmethod
-    def load(base_dir, files, mode=None, overwrite=False):
+    def load(base_dir, files, mode=None, overwrite=False, filter_key=None):
         if overwrite:
-            return CompareResult(base_dir, files, mode=mode)
-        cache_path = CompareResult.cache_path(base_dir, mode)
+            return CompareResult(base_dir, files, mode=mode, filter_key=filter_key)
+        cache_path = CompareResult.cache_path(base_dir, mode, filter_key)
         if not os.path.exists(cache_path):
             logger.info(f"No checkpoint found for {base_dir} - creating new compare result cache.")
-            return CompareResult(base_dir, files, mode=mode)
+            return CompareResult(base_dir, files, mode=mode, filter_key=filter_key)
         cached = None
         try:
             with open(cache_path, "rb") as f:
                 cached = pickle.load(f)
         except Exception:
             logger.error(f"Failed to load compare result from base dir {base_dir}")
-            return CompareResult(base_dir, files, mode=mode)
+            return CompareResult(base_dir, files, mode=mode, filter_key=filter_key)
         if not cached.equals_hash(files):
             # Old pkls used Python's hash() on strings, which is randomised per-process.
             # Those are always stale — discard silently and rebuild rather than surface a
@@ -274,12 +280,14 @@ class CompareResult:
             if (cached._dir_files_hash
                     and isinstance(cached._dir_files_hash[0], int)):
                 logger.warning(f"Discarding {cache_path}: stored in legacy format, rebuilding checkpoint.")
-                return CompareResult(base_dir, files, mode=mode)
+                return CompareResult(base_dir, files, mode=mode, filter_key=filter_key)
             raise ValueError(f"{cache_path} does not match {files}")
 
         # Validate that all indices in files_grouped are valid
         if not cached.validate_indices(files):
-            return CompareResult(base_dir, files, mode=mode)
+            return CompareResult(base_dir, files, mode=mode, filter_key=filter_key)
 
+        # Pickles from before filtered checkpoints existed lack the attribute.
+        cached._filter_key = filter_key
         logger.info(f"Loaded compare result: {cache_path}")
         return cached

@@ -71,7 +71,17 @@ class BaseCompare:
         self.progress_listener = self.args.listener
         self._cancelled = False
         self.gather_files_func = gather_files_func
-        self.compare_result = CompareResult(base_dir=self.args.base_dir, mode=self.args.compare_mode)
+        # (excluded, total) from the last get_files() data-filter pass, or None.
+        self.data_filter_stats = None
+        self.compare_result = CompareResult(
+            base_dir=self.args.base_dir, mode=self.args.compare_mode,
+            filter_key=self.checkpoint_filter_key)
+
+    @property
+    def checkpoint_filter_key(self):
+        """Data-filter part of this compare's checkpoint file name (None if unfiltered)."""
+        from compare.compare_filters import filter_signature
+        return filter_signature(getattr(self.args, "data_filter", None))
 
     def is_runnable(self):
         return True
@@ -180,7 +190,8 @@ class BaseCompare:
                 f"{type(self).__name__} must define a CACHE_FILENAME class attribute"
             )
         self.compare_data = CompareData(base_dir=base_dir, data_filename=cache_filename)
-        self.compare_result = CompareResult(base_dir=base_dir, mode=self.args.compare_mode)
+        self.compare_result = CompareResult(
+            base_dir=base_dir, mode=self.args.compare_mode, filter_key=self.checkpoint_filter_key)
 
     def set_search_media_path(self, search_media_path):
         '''
@@ -249,11 +260,14 @@ class BaseCompare:
             raise Exception("No gather files function found.")
         self.files.sort()
 
+        self.data_filter_stats = None
         data_filter = getattr(self.args, 'data_filter', None)
         if data_filter and data_filter.is_active():
             from compare.compare_filters import apply_filter
             before = len(self.files)
-            self.files = apply_filter(self.files, data_filter)
+            self.files = apply_filter(
+                self.files, data_filter, progress=self._handle_filter_progress)
+            self.data_filter_stats = (before - len(self.files), before)
             # The search file is a reference, not a candidate — keep it even if the
             # filter would exclude it (e.g. size filter, but reference is a diff size)
             if (
@@ -325,6 +339,16 @@ class BaseCompare:
                 desc2 = _("Image data collection") if gathering_data else _(
                     "Image comparison")
                 self.progress_listener.update(desc2, percent_complete)
+
+    def _handle_filter_progress(self, counter, total):
+        """Progress/cancel hook for classifier filters run by get_files()."""
+        if self.is_cancelled():
+            self.raise_cancellation_exception()
+        if total <= 0 or not (counter % 50 == 0 or counter == total):
+            return
+        if self.progress_listener and sys.platform != "darwin":
+            # Same OSX master-update issue as _handle_progress.
+            self.progress_listener.update(_("Classifier filter"), int(counter / total * 100))
 
     def print_settings(self):
         pass

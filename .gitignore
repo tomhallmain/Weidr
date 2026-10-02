@@ -26,6 +26,8 @@ weidr_*
 tag_suggestions.json
 app_info_cache*
 !app_info_cache.py
+classifier_prediction_cache.enc
+.classifier_prediction_cache_*.tmp
 file_paths.json
 temp*
 !temp_media_window.py

@@ -12,6 +12,8 @@ import os
 from typing import Callable, ClassVar, Optional
 
 from compare.action_callbacks import ActionCallbacks
+from compare.classifier_categories import model_strategy_positive_categories
+from compare.dynamic_media_sampling import evaluate_dynamic_media
 from compare.compare_embeddings_clip import CompareEmbeddingClip
 from compare.embedding_prototype import EmbeddingPrototype
 from compare.lookahead import Lookahead
@@ -1117,55 +1119,19 @@ class ClassifierAction:
         add_mark_callback = callbacks.add_mark_callback
         blur_callback = callbacks.blur_callback
         if is_classifier_dynamic_media_path(media_path):
-            planned_slots, sample_iter = FrameCache.stream_frame_samples(
+            lookahead_eval_cache = {}
+            result = evaluate_dynamic_media(
                 media_path,
+                lambda sampled_path: self._evaluate_image_path_match_for_mode(
+                    sampled_path, lookahead_eval_cache=lookahead_eval_cache
+                ),
                 sample_ratio=self.dynamic_content_sample_ratio,
+                positive_ratio=self.dynamic_content_positive_ratio,
                 detect_pseudostatic=self.use_pseudostatic_dynamic_media,
             )
-            if planned_slots > 0:
-                stats = FrameCache.get_dynamic_media_stats(media_path) if config.debug else None
-                lookahead_eval_cache = {}
-                positive_count = 0
-                required_positive_count = math.ceil(
-                    planned_slots * self.dynamic_content_positive_ratio
-                )
-                processed_samples = 0
-                last_processed_index = -1
-                threshold_met = False
-                resolved_match_category: Optional[str] = None
-                reached_last_sample = False
-                try:
-                    for idx, sampled_path in enumerate(sample_iter):
-                        try:
-                            processed_samples += 1
-                            last_processed_index = idx
-                            is_match, matched_category = self._evaluate_image_path_match_for_mode(
-                                sampled_path, lookahead_eval_cache=lookahead_eval_cache
-                            )
-                            if is_match:
-                                positive_count += 1
-                                if matched_category:
-                                    resolved_match_category = matched_category
-                                # Early success once the positive threshold is met.
-                                if positive_count >= required_positive_count:
-                                    threshold_met = True
-                                    break
-                            # Early failure if even all remaining planned slots cannot meet threshold.
-                            remaining_samples = planned_slots - (idx + 1)
-                            if positive_count + remaining_samples < required_positive_count:
-                                break
-                        except Exception as e:
-                            logger.debug(
-                                f"Sample frame prevalidation failed for {sampled_path}: {e}"
-                            )
-                    else:
-                        # No break: consumed all yielded samples (may be fewer than planned_slots).
-                        reached_last_sample = True
-                finally:
-                    close_m = getattr(sample_iter, "close", None)
-                    if callable(close_m):
-                        close_m()
+            if result is not None:
                 if config.debug:
+                    stats = FrameCache.get_dynamic_media_stats(media_path)
                     media_type = stats.media_type if stats else "dynamic"
                     total_items = stats.total_items if stats else None
                     duration_seconds = stats.duration_seconds if stats else None
@@ -1176,13 +1142,13 @@ class ClassifierAction:
                         self.name,
                         media_path,
                         media_type,
-                        (last_processed_index + 1) if last_processed_index >= 0 else 0,
-                        planned_slots,
-                        processed_samples,
-                        positive_count,
-                        required_positive_count,
-                        threshold_met,
-                        reached_last_sample,
+                        result.last_processed_index + 1,
+                        result.planned_slots,
+                        result.processed_samples,
+                        result.positive_count,
+                        result.required_positive_count,
+                        result.threshold_met,
+                        result.reached_last_sample,
                         total_items,
                         f"{duration_seconds:.2f}" if isinstance(duration_seconds, (int, float)) else "n/a",
                     )
@@ -1190,14 +1156,14 @@ class ClassifierAction:
                     self.use_pseudostatic_dynamic_media
                     and FrameCache.is_pseudostatic_dynamic_media(media_path)
                 )
-                if threshold_met or pseudostatic_match:
+                if result.threshold_met or pseudostatic_match:
                     if dry_run:
                         return self.action
                     return self.run_action(
                         media_path,
                         callbacks,
                         base_directory=base_directory or os.path.dirname(media_path),
-                        resolved_category=resolved_match_category,
+                        resolved_category=result.matched_category,
                     )
                 return None
 
@@ -1759,7 +1725,7 @@ class ClassifierAction:
                 f'{domain_label} classifier model config "{name}" must define positive_groups '
                 "for model strategy classification mode."
             )
-        positives = frozenset(c for grp in groups_sig for c in grp)
+        positives = model_strategy_positive_categories(groups_sig)
         if not positives:
             raise Exception(
                 f'{domain_label} classifier model config "{name}" has no usable positive categories.'

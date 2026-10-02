@@ -241,6 +241,7 @@ def _isolated_transfer_state():
     saved = {
         "file_marks": MarkedFiles.file_marks[:],
         "previous_marks": MarkedFiles.previous_marks[:],
+        "previous_action": MarkedFiles.previous_action,
         "is_performing_action": MarkedFiles.is_performing_action,
         "is_cancelled_action": MarkedFiles.is_cancelled_action,
         "is_shutdown_requested": MarkedFiles.is_shutdown_requested,
@@ -251,6 +252,7 @@ def _isolated_transfer_state():
     yield
     MarkedFiles.file_marks = saved["file_marks"]
     MarkedFiles.previous_marks = saved["previous_marks"]
+    MarkedFiles.previous_action = saved["previous_action"]
     MarkedFiles.is_performing_action = saved["is_performing_action"]
     MarkedFiles.is_cancelled_action = saved["is_cancelled_action"]
     MarkedFiles.is_shutdown_requested = saved["is_shutdown_requested"]

@@ -137,20 +137,20 @@ class MarkedFileMover(SmartDialog):
         return target_dir, False
 
     @staticmethod
-    def undo_move_marks(target_dir, app_actions) -> None:
-        """Undo the previous move/copy operation."""
-        def get_base_dir_callback():
-            base_dir = get_existing_directory(
+    def undo_move_marks(app_actions, ask_destination=False) -> None:
+        """Undo the previous move/copy operation. Moved files go back to the
+        directories they came from; with *ask_destination*, to one directory
+        the user picks."""
+        def get_destination_dir_callback(suggested_dir):
+            return get_existing_directory(
                 None,
                 _("Where should the marked files have gone?"),
-                target_dir or "",
+                suggested_dir or "",
                 quick_access_locations=[(app_actions.get_base_dir(), _("Current Base Directory"))],
             )
-            return base_dir
         return MarkedFiles.undo_move_marks(
-            target_dir, app_actions,
-            get_base_dir_callback=get_base_dir_callback,
-            get_target_dir_callback=MarkedFileMover.get_target_directory
+            app_actions,
+            get_destination_dir_callback=get_destination_dir_callback if ask_destination else None,
         )
 
     # ==================================================================

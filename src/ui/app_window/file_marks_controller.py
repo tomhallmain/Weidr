@@ -350,7 +350,7 @@ class FileMarksController:
     def revert_last_marks_change(self, event=None) -> None:
         """Undo the last marks change."""
         if not config.use_file_paths_json:
-            MarkedFileMover.undo_move_marks(self._app.get_base_dir(), self._app.app_actions)
+            MarkedFileMover.undo_move_marks(self._app.app_actions)
 
     # ==================================================================
     # Related media / downstream marks

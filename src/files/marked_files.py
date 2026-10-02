@@ -20,6 +20,11 @@ class MarkedFiles():
     mark_cursor = -1
     mark_target_dirs = []
     previous_marks = []
+    # The FileAction of the transfer that filled previous_marks; its new_files
+    # pair index for index with previous_marks. Undo acts on this, not on
+    # FileAction.action_history[0], which deletes, image ops and automated
+    # moves also write to.
+    previous_action = None
     last_moved_image = None
     last_set_target_dir = None
     file_browser = None # a file browser for test_is_in_directory
@@ -530,13 +535,14 @@ class MarkedFiles():
         files=None,
         single_image=False,
         current_media=None,
-        get_base_dir_callback=None,
         get_target_dir_callback=None,
         progress_callback: Optional[Callable[[int, int], None]] = None,
-        get_current_base_dir=None,
     ) -> Tuple[bool, bool]:
         """
         Move or copy the marked files to the target directory.
+
+        get_target_dir_callback is accepted for existing callers; nothing
+        reads it.
         """
         is_moving = move_func == Utils.move_file
         if is_moving and app_actions is not None and app_actions.is_compare_running():
@@ -557,6 +563,7 @@ class MarkedFiles():
         action_part1 = _("Moving") if is_moving else _("Copying")
         MarkedFiles.previous_marks.clear()
         action = FileAction(move_func, target_dir, files_to_move)
+        MarkedFiles.previous_action = action
         try:
             return MarkedFiles._move_marks_to_dir_impl(
                 app_actions=app_actions,
@@ -565,13 +572,10 @@ class MarkedFiles():
                 files_to_move=files_to_move,
                 single_image=single_image,
                 current_media=current_media,
-                get_base_dir_callback=get_base_dir_callback,
-                get_target_dir_callback=get_target_dir_callback,
                 progress_callback=progress_callback,
                 is_moving=is_moving,
                 action=action,
                 action_part1=action_part1,
-                get_current_base_dir=get_current_base_dir,
             )
         finally:
             MarkedFiles.is_performing_action = False
@@ -584,13 +588,10 @@ class MarkedFiles():
         files_to_move,
         single_image,
         current_media,
-        get_base_dir_callback,
-        get_target_dir_callback,
         progress_callback,
         is_moving,
         action,
         action_part1,
-        get_current_base_dir=None,
     ) -> Tuple[bool, bool]:
         some_files_already_present = False
         if len(files_to_move) > 1:
@@ -680,20 +681,7 @@ class MarkedFiles():
                     # Release session lock before undo; outer finally has not run yet and
                     # undo_move_marks treats is_performing_action as "cancel in-flight".
                     MarkedFiles.is_performing_action = False
-                    # The directory to put the files back into is the one
-                    # currently being browsed -- not get_base_dir_callback,
-                    # which prompts the user for a directory and is only
-                    # reached when no directory is supplied at all.
-                    current_base_dir = (
-                        get_current_base_dir() if get_current_base_dir is not None
-                        else app_actions.get_base_dir()
-                    )
-                    MarkedFiles.undo_move_marks(
-                        current_base_dir,
-                        app_actions,
-                        get_base_dir_callback,
-                        get_target_dir_callback,
-                    )
+                    MarkedFiles.undo_move_marks(app_actions)
             return False, False
         if len(exceptions) < len(files_to_move):
             FileAction.update_history(action)
@@ -825,69 +813,78 @@ class MarkedFiles():
             MarkedFiles.mark_cursor = max(-1, len(MarkedFiles.file_marks) - 1)
 
     @staticmethod
-    def undo_move_marks(base_dir, app_actions, get_base_dir_callback=None, get_target_dir_callback=None):
+    def undo_move_marks(app_actions, get_destination_dir_callback=None):
         """
-        Undo the previous move/copy operation.
+        Undo the last marks transfer (MarkedFiles.previous_action): move each
+        file back to the directory it was moved from, or remove the copies.
+        get_destination_dir_callback(suggested_dir) -> dir instead moves every
+        file into the one directory it returns.
+
+        Pairs that fail and can be retried (the file is still in the target)
+        stay in previous_marks/previous_action; then raises.
         """
         if MarkedFiles.is_performing_action:
             MarkedFiles.is_cancelled_action = True
             return
         if MarkedFiles.delete_lock:
+            app_actions.warn(_("Cannot undo the last marked files move after a file was deleted."))
             return
-        is_moving_back = FileAction.action_history[0].action == Utils.move_file
+        action = MarkedFiles.previous_action
+        if action is None or not MarkedFiles.previous_marks:
+            app_actions.toast(_("No marked files move or copy to undo."))
+            return
+        is_moving_back = action.action == Utils.move_file
         action_part1 = _("Moving back") if is_moving_back else _("Removing")
-        action_part2 = _("Moved back") if is_moving_back else _("Removed")
-        if get_target_dir_callback is None:
-            raise Exception("get_target_dir_callback is required to get the target directory for undo move marked files.")
-        target_dir, target_was_valid = get_target_dir_callback(MarkedFiles.last_set_target_dir, None, app_actions)
-        if not target_was_valid:
-            raise Exception(f"{action_part1} previously marked files failed, somehow previous target directory invalid:  {target_dir}")
-        if base_dir is None:
-            if get_base_dir_callback is None:
-                raise Exception("get_base_dir_callback is required to get the base directory for undo move marked files.")
-            base_dir = get_base_dir_callback()
-        if base_dir is None or base_dir == "" or not os.path.isdir(base_dir):
-            raise Exception("Failed to get valid base directory for undo move marked files.")
-        logger.warning(f"Undoing action: {action_part1} {len(MarkedFiles.previous_marks)} files from directory:\n{MarkedFiles.last_set_target_dir}")
+        target_dir = action.target
+        # previous_marks holds source paths (e.g. foo.svg); new_files holds the
+        # paths created in the target (foo.png if the generated PNG was moved).
+        # Both are appended together on success; the fallback covers legacy
+        # or edge cases where new_files falls short.
+        pairs = [
+            (source, action.new_files[i] if i < len(action.new_files)
+             else os.path.join(target_dir, os.path.basename(source)))
+            for i, source in enumerate(MarkedFiles.previous_marks)
+        ]
+        destination_dir = None
+        if is_moving_back and get_destination_dir_callback is not None:
+            destination_dir = get_destination_dir_callback(os.path.dirname(pairs[0][0]))
+            if not destination_dir or not os.path.isdir(destination_dir):
+                raise Exception(f"{action_part1} previously marked files failed: invalid directory {destination_dir}")
+        logger.warning(f"Undoing action: {action_part1} {len(pairs)} files from directory:\n{target_dir}")
         exceptions = {}
-        invalid_files = []
-        action = FileAction.action_history[0]
-        for i, marked_file in enumerate(MarkedFiles.previous_marks):
-            # previous_marks holds source paths (e.g. foo.svg); action.new_files holds the paths we
-            # actually created in the target. If we moved the generated PNG instead of the SVG,
-            # the file in the target is foo.png, not foo.svg, so we must use action.new_files[i]
-            # to know which file to move back. Both lists are appended in lockstep on success,
-            # so they are normally the same length; the fallback is for legacy or edge cases.
-            if i < len(action.new_files):
-                expected_new_filepath = action.new_files[i]
-            else:
-                expected_new_filepath = os.path.join(target_dir, os.path.basename(marked_file))
+        destinations = set()
+        for source, new_file in pairs:
             try:
                 if is_moving_back:
-                    # Move the file back to its original place.
-                    Utils.move_file(expected_new_filepath, base_dir, overwrite_existing=config.move_marks_overwrite_existing_file)
+                    destination = destination_dir or os.path.dirname(source)
+                    Utils.move_file(new_file, destination, overwrite_existing=config.move_marks_overwrite_existing_file)
+                    destinations.add(destination)
+                    logger.info(f"Moved back file from {target_dir} to {destination}: {os.path.basename(new_file)}")
                 else:
-                    # Remove the file.
-                    os.remove(expected_new_filepath)
-                logger.info(f"{action_part2} file from {target_dir}: {os.path.basename(expected_new_filepath)}")
+                    os.remove(new_file)
+                    logger.info(f"Removed file from {target_dir}: {os.path.basename(new_file)}")
             except Exception as e:
-                exceptions[marked_file] = str(e)
-                if is_moving_back:
-                    if not os.path.exists(marked_file):
-                        invalid_files.append(expected_new_filepath)
-                elif os.path.exists(expected_new_filepath):
-                    invalid_files.append(expected_new_filepath)
-        if len(exceptions) < len(MarkedFiles.previous_marks):
-            if is_moving_back:
-                message = _("Moved back {0} files from {1}").format(len(MarkedFiles.previous_marks) - len(exceptions), target_dir)
+                exceptions[source] = str(e)
+        n_done = len(pairs) - len(exceptions)
+        if n_done > 0:
+            if not is_moving_back:
+                message = _("Removed {0} files from {1}").format(n_done, target_dir)
+            elif len(destinations) == 1:
+                message = _("Moved back {0} files from {1} to {2}").format(n_done, target_dir, next(iter(destinations)))
             else:
-                message = _("Removed {0} files from {1}").format(len(MarkedFiles.previous_marks) - len(exceptions), target_dir)
+                message = _("Moved back {0} files from {1} to {2} directories").format(
+                    n_done, target_dir, len(destinations))
             app_actions.toast(message)
+        retry = [(source, new_file) for source, new_file in pairs
+                 if source in exceptions and os.path.exists(new_file)]
         MarkedFiles.previous_marks.clear()
-        if len(exceptions) > 0:
-            for marked_file in exceptions.keys():
-                if marked_file not in invalid_files:
-                    MarkedFiles.previous_marks.append(marked_file)  # Just in case some of them failed to move for whatever reason.
+        MarkedFiles.previous_marks.extend(source for source, _new_file in retry)
+        # Kept out of FileAction.action_history: it only carries the retry pairs.
+        MarkedFiles.previous_action = FileAction(
+            action.action, target_dir,
+            [source for source, _new_file in retry], [new_file for _source, new_file in retry],
+        ) if retry else None
+        if exceptions:
             action_part3 = "move" if is_moving_back else "copy"
             raise Exception(f"Failed to {action_part3} some files: {exceptions}")
         app_actions.refresh()

@@ -348,7 +348,7 @@ class KeyBindingManager:
         self._bind("Ctrl+Shift+I", app.file_marks_ctrl.create_interpolation_gif, guarded=False)
         self._bind(
             "Ctrl+X",
-            lambda: MarkedFileMover.undo_move_marks(None, app.app_actions),
+            lambda: MarkedFileMover.undo_move_marks(app.app_actions, ask_destination=True),
         )
         self._bind("Ctrl+Shift+P", app.window_launcher.interactive_crop, guarded=False)
         self._bind("Ctrl+Shift+B", app.window_launcher.interactive_box, guarded=False)

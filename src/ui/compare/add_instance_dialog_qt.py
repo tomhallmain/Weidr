@@ -18,13 +18,11 @@ from PySide6.QtWidgets import (
     QLineEdit, QPushButton, QVBoxLayout, QWidget,
 )
 
-from compare.compare_manager import CombinationLogic
+from compare.compare_manager import MAX_INSTANCES, CombinationLogic
 from lib.multi_display_qt import SmartDialog
 from ui.app_style import AppStyle
 from utils.constants import CompareMode
 from utils.translations import _
-
-MAX_INSTANCES = 10
 
 
 class AddInstanceDialog(SmartDialog):

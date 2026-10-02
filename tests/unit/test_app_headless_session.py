@@ -184,6 +184,94 @@ def test_run_compare_while_one_is_running_is_a_value_error(tmp_path):
             session.run_compare("CLIP_EMBEDDING", False)
 
 
+def test_run_compare_task_applies_the_managers_compare_settings(tmp_path):
+    session = _session(tmp_path)
+    cm = session._compare_manager
+    session.set_compare_settings({
+        "threshold": 0.42, "threshold_mode": "CLIP_EMBEDDING",
+        "counter_limit": 7, "store_checkpoints": True,
+    })
+    args = CompareArgs()
+    with patch.object(cm, "run") as run:
+        session._run_compare_task(CompareMode.CLIP_EMBEDDING, args, complement=False)
+    run.assert_called_once_with(args)
+    assert args.threshold == 0.42
+    assert args.counter_limit == 7
+    assert args.store_checkpoints is True
+
+
+def test_run_compare_task_uses_the_mode_default_threshold_after_switching(tmp_path):
+    """The default threshold is per mode, so it is applied after the switch."""
+    from utils.config import config
+    session = _session(tmp_path)
+    args = CompareArgs()
+    with patch.object(session._compare_manager, "run"):
+        session._run_compare_task(CompareMode.COLOR_MATCHING, args, complement=False)
+    assert args.threshold == config.color_diff_threshold
+
+
+def test_run_compare_task_does_not_apply_a_threshold_set_for_another_mode(tmp_path):
+    from utils.config import config
+    session = _session(tmp_path)
+    session.set_compare_settings({"threshold": 0.42, "threshold_mode": "CLIP_EMBEDDING"})
+    args = CompareArgs()
+    with patch.object(session._compare_manager, "run"):
+        session._run_compare_task(CompareMode.COLOR_MATCHING, args, complement=False)
+    assert args.threshold == config.color_diff_threshold
+
+
+def _composite(session, *instances):
+    session.set_compare_settings({"instances": [{"compare_mode": m, **extra} for m, extra in instances]})
+
+
+def test_run_compare_refuses_a_mode_for_a_composite_setup(tmp_path):
+    session = _session(tmp_path)
+    _composite(session, ("CLIP_EMBEDDING", {}), ("SIZE", {}))
+    with patch.object(session._runner, "start") as start:
+        with pytest.raises(ValueError):
+            session.run_compare("CLIP_EMBEDDING", False)
+    start.assert_not_called()
+
+
+def test_run_compare_without_mode_runs_the_composite_setup_as_it_stands(tmp_path):
+    session = _session(tmp_path)
+    cm = session._compare_manager
+    _composite(session, ("CLIP_EMBEDDING", {}), ("SIZE", {}))
+    with patch.object(session._runner, "start") as start:
+        session.run_compare(None, False)
+    task, (compare_mode, args, _complement) = start.call_args.args
+    assert compare_mode == CompareMode.CLIP_EMBEDDING
+    with patch.object(cm, "run") as run:
+        task(compare_mode, args, False)
+    run.assert_called_once_with(args)
+    assert cm.is_composite_mode()
+
+
+def test_run_compare_refuses_a_composite_setup_with_instance_search_texts(tmp_path):
+    session = _session(tmp_path)
+    _composite(session, ("CLIP_EMBEDDING", {"search_text": "cat"}), ("SIZE", {}))
+    with patch.object(session._runner, "start") as start:
+        with pytest.raises(ValueError):
+            session.run_compare(None, False)
+        session.run_search(None, search_text="dog")
+    start.assert_called_once()
+
+
+def test_set_compare_settings_returns_the_resulting_settings(tmp_path):
+    session = _session(tmp_path)
+    result = session.set_compare_settings({"threshold": 0.5})
+    assert result["threshold"] == 0.5
+    assert session.get_compare_settings() == result
+
+
+def test_set_compare_settings_refused_while_a_compare_runs(tmp_path):
+    session = _session(tmp_path)
+    with patch.object(session._runner, "is_running", return_value=True):
+        with pytest.raises(ValueError):
+            session.set_compare_settings({"threshold": 0.5})
+    assert session._compare_manager.get_threshold() is None
+
+
 def _session_abcd(tmp_path):
     for i, name in enumerate(("a.png", "b.png", "c.png", "d.png")):
         _png(tmp_path / name, (40 * i, 100, 100))

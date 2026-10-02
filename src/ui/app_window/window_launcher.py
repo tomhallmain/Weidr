@@ -1238,6 +1238,15 @@ class WindowLauncher:
         """Toggle prevalidations on or off for the current base directory."""
         self.set_prevalidations_running(not self._app.compare_manager.prevalidations_running)
 
+    def apply_compare_settings(self, changes: dict) -> None:
+        """Apply MCP-supplied compare settings (see compare.compare_settings)
+        to this window's CompareManager, then reload an open compare settings
+        window so its Apply doesn't restore the previous values."""
+        from compare.compare_settings import apply_compare_settings
+        from ui.compare.compare_settings_window_qt import CompareSettingsWindow
+        apply_compare_settings(self._app.compare_manager, changes)
+        CompareSettingsWindow.reload_open_window(self._app.compare_manager)
+
     def set_prevalidations_running(self, enabled: bool) -> None:
         """Turn prevalidations on or off for the current base directory.
 

@@ -563,6 +563,28 @@ def _iter_classifier_filters(f: Optional[CompareFilter]):
             yield from _iter_classifier_filters(child)
 
 
+def check_classifier_configs(f: Optional[CompareFilter]) -> List[str]:
+    """Like validate_filter, but against the registered model configs only,
+    so no model is loaded: unknown models, unknown categories, a model
+    strategy without positive groups. Configs share the attribute names
+    _selected_categories reads from a loaded wrapper."""
+    errors: List[str] = []
+    for cf in _iter_classifier_filters(f):
+        name = (cf.classifier_name or "").strip()
+        manager = _classifier_manager(cf.domain)
+        key = manager.resolve_registered_model_name(name)
+        if key is None:
+            errors.append(
+                _("The classifier \"{0}\" used in the compare filters is not registered.").format(name)
+            )
+            continue
+        try:
+            _selected_categories(cf, manager.classifier_metadata[key])
+        except ClassifierFilterError as e:
+            errors.append(str(e))
+    return errors
+
+
 def validate_filter(f: Optional[CompareFilter], classifier_resolver=None) -> List[str]:
     """User-facing problems that would stop *f* from running; empty if none.
     Loads every classifier the tree uses."""

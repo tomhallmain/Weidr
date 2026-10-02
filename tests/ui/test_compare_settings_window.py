@@ -121,3 +121,49 @@ class TestCompareSettingsWindowOpen:
         qtbot.mouseClick(apply_btn, Qt.MouseButton.LeftButton)
 
         assert cfg_module.config.compare_group_sort == Sort.ASC
+
+
+class TestCompareSettingsReloadAfterExternalChange:
+    """Settings changed outside the window (the MCP session, through the
+    apply_compare_settings app action) must show in an open window, or its
+    Apply would write the old values back."""
+
+    def test_open_window_shows_externally_applied_settings(self, compare_settings_window):
+        from compare.compare_filters import SizeFilter
+        settings_win, app_win = compare_settings_window
+        app_win.app_actions.apply_compare_settings({
+            "counter_limit": 33,
+            "data_filter": {"type": "size", "min_size": [100, 100]},
+        })
+        assert settings_win._counter_limit_edit.text() == "33"
+        assert settings_win._filter_panel.get_filter() == SizeFilter(min_size=(100, 100))
+
+    def test_apply_after_external_change_keeps_it(self, compare_settings_window):
+        settings_win, app_win = compare_settings_window
+        app_win.app_actions.apply_compare_settings({"counter_limit": 33})
+        settings_win._on_apply()
+        assert app_win.compare_manager.get_counter_limit() == 33
+
+    def test_invalid_settings_leave_manager_unchanged(self, compare_settings_window):
+        _settings_win, app_win = compare_settings_window
+        before = app_win.compare_manager.get_counter_limit()
+        with pytest.raises(ValueError):
+            app_win.app_actions.apply_compare_settings({"counter_limit": 0})
+        assert app_win.compare_manager.get_counter_limit() == before
+
+    def test_open_window_shows_externally_applied_instances(self, compare_settings_window):
+        from compare.compare_manager import CombinationLogic
+        settings_win, app_win = compare_settings_window
+        app_win.app_actions.apply_compare_settings({
+            "instances": [
+                {"compare_mode": "CLIP_EMBEDDING", "weight": 2.0},
+                {"compare_mode": "COLOR_MATCHING"},
+            ],
+            "combination_logic": "WEIGHTED",
+        })
+        assert settings_win._logic_combo.currentText() == CombinationLogic.WEIGHTED.value
+        assert [e.text() for e in settings_win._weight_vars.values()] == ["2.0", "1.0"]
+        settings_win._on_apply()
+        cm = app_win.compare_manager
+        assert cm.get_combination_logic() == CombinationLogic.WEIGHTED
+        assert [c.weight for c in cm.get_mode_instances()] == [2.0, 1.0]

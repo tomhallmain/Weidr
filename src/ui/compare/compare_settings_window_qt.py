@@ -75,6 +75,36 @@ class CompareSettingsWindow(SmartDialog):
                 cls._open_windows.pop(compare_manager, None)
         cls(parent, compare_manager, set_file_filter=set_file_filter)
 
+    @classmethod
+    def reload_open_window(cls, compare_manager: CompareManager) -> None:
+        """Reload the open window for *compare_manager*, if any, from the
+        manager -- after its settings changed elsewhere, so Apply doesn't
+        write the window's older values back over them."""
+        win = cls._open_windows.get(compare_manager)
+        if win is None:
+            return
+        try:
+            visible = win.isVisible()
+        except RuntimeError:
+            cls._open_windows.pop(compare_manager, None)
+            return
+        if visible:
+            win.reload_from_manager()
+
+    def reload_from_manager(self) -> None:
+        self._logic_combo.blockSignals(True)
+        self._logic_combo.setCurrentText(self._compare_manager.get_combination_logic().value)
+        self._logic_combo.blockSignals(False)
+        self._refresh_instance_list()
+        self._filter_panel.set_filter(self._compare_manager.get_data_filter())
+        self._refresh_global_settings_controls()
+        self._search_closest_cb.setChecked(config.search_only_return_closest)
+        if self._group_sort_combo is not None:
+            for i in range(self._group_sort_combo.count()):
+                if self._group_sort_combo.itemData(i) == config.compare_group_sort:
+                    self._group_sort_combo.setCurrentIndex(i)
+                    break
+
     # ------------------------------------------------------------------
     # Construction
     # ------------------------------------------------------------------
@@ -503,10 +533,8 @@ class CompareSettingsWindow(SmartDialog):
 
         if current_args is not None and hasattr(current_args, "threshold"):
             current_val = str(current_args.threshold)
-        elif mode == CompareMode.COLOR_MATCHING:
-            current_val = str(config.color_diff_threshold)
         else:
-            current_val = str(config.embedding_similarity_threshold)
+            current_val = str(CompareManager.default_threshold(mode))
 
         self._threshold_combo.setCurrentText(current_val)
 

@@ -6,6 +6,7 @@ Run it:
     python scripts/agent_headless_demo.py --api      # print the API notes only
     python scripts/agent_headless_demo.py --list     # list demo names
     python scripts/agent_headless_demo.py --only compare
+    python scripts/agent_headless_demo.py --only composite
     python scripts/agent_headless_demo.py --keep     # keep the sandbox to inspect
 
 Every demo works inside a throwaway directory this script creates and fills
@@ -101,22 +102,61 @@ COMPARISONS                        compare.compare_manager.CompareManager
         get_base_dir=lambda: base_dir,
         responsiveness=NullResponsiveness(),  # nothing to keep responsive
     )
-    manager.set_primary_mode(CompareMode.COLOR_MATCHING)
+    manager.set_compare_mode(CompareMode.COLOR_MATCHING)
+    manager.apply_settings_to_args(args)      # threshold, file limit, run flags
     manager.run(args)
     manager._primary_wrapper().file_groups    # {group_index: {path: distance}}
 
+A new CompareManager restores the most recent entry of the compare history
+(app_info_cache): instances, data filter, threshold and run flags from your
+last compare in the app, composite setups included. set_compare_mode()
+keeps only that mode's instances; check the rest before relying on it. Each run is in
+turn recorded there and shows under the app's Recent Analyses.
+
+Settings as plain data (compare.compare_settings) -- the same keys the MCP
+set_compare_settings tool takes, all validated before any is applied:
+
+    describe_compare_settings(manager)    -> dict   incl. effective_threshold
+    apply_compare_settings(manager, {"threshold": 15,
+                                     "threshold_mode": "COLOR_MATCHING",
+                                     "counter_limit": 500,
+                                     "data_filter": {...}})
+    list_classifier_models()              -> what a classifier filter can name
+
+Thresholds are on their mode's scale (a 0-1 similarity for embedding modes, a
+LAB colour distance for COLOR_MATCHING, ...). A threshold belongs to the mode
+it was set for (threshold_mode, default the current mode) and other modes run
+with their own default, so it never carries over to a mode with another scale.
+
 Two traps in CompareArgs:
 
-  * mode must be Mode.GROUP for a grouping run. With Mode.SEARCH the engine
-    asks for confirmation first, the headless port declines, and the run
-    returns having done nothing at all.
-  * compare_threshold means different things per mode. It defaults to
-    embedding_similarity_threshold (0.9); CompareColors reads the same field
-    as a LAB colour distance, where the useful value is config
-    .color_diff_threshold (15). Set it to match your mode or nothing groups.
+  * mode must be Mode.GROUP for a grouping run. With Mode.SEARCH and no
+    search input the engine asks to switch to a group run, the headless port
+    declines, and the run returns having done nothing at all.
+  * The constructor's compare_threshold defaults to
+    embedding_similarity_threshold (0.9), whatever the mode -- for
+    COLOR_MATCHING a LAB distance that groups nearly everything. Call
+    manager.apply_settings_to_args(args) after setting the mode; it fills
+    the threshold for that mode.
 
-COLOR_MATCHING needs no ML model, which is why this demo uses it. The
-embedding modes download and load a model on first use.
+Composite compares run several instances and combine their results:
+
+    apply_compare_settings(manager, {
+        "instances": [{"compare_mode": "COLOR_MATCHING"},
+                      {"compare_mode": "SIZE", "threshold": 10}],
+        "combination_logic": "AND",          # or OR, WEIGHTED (uses "weight")
+    })
+
+The first instance is the primary mode; results land on its wrapper as for a
+single mode. An instance without its own threshold uses the global one if it
+has the primary mode, else its mode's default.
+
+COLOR_MATCHING and SIZE need no ML model, which is why this demo uses them.
+The embedding modes download and load a model on first use.
+
+app_headless.HeadlessMCPSession wraps one FileBrowser and CompareManager into
+the persistent session the MCP server drives; its run_compare/run_search
+handle the mode switch and settings above.
 
 To run a comparison off the calling thread, use the Qt-free runner:
 
@@ -294,34 +334,79 @@ def demo_delete(source, target):
          "(with a trash folder configured the file is moved there, not destroyed)")
 
 
-def demo_compare(source, target):
-    """Group visually similar files. COLOR_MATCHING needs no ML model."""
-    from compare.compare_args import CompareArgs
+def _compare_manager(scope):
     from compare.compare_manager import CompareManager
-    from utils.config import config
-    from utils.constants import CompareMode, Mode
     from utils.ui_responsiveness import NullResponsiveness
 
-    scope = target if os.listdir(target) else source
-    app_actions = _actions(scope)
-    manager = CompareManager(
-        master=None, app_actions=app_actions,
+    return CompareManager(
+        master=None, app_actions=_actions(scope),
         get_base_dir=lambda: scope, responsiveness=NullResponsiveness(),
     )
-    manager.set_primary_mode(CompareMode.COLOR_MATCHING)
-    manager.run(CompareArgs(
+
+
+def _run_group_compare(manager, scope, heading):
+    from compare.compare_args import CompareArgs
+    from utils.constants import Mode
+
+    args = CompareArgs(
         base_dir=scope,
         mode=Mode.GROUP,                  # not SEARCH -- see the API notes
-        compare_mode=CompareMode.COLOR_MATCHING,
+        compare_mode=manager.compare_mode,
         recursive=False,
-        store_checkpoints=False,
-        app_actions=app_actions,
-        compare_threshold=config.color_diff_threshold,   # per-mode! see notes
-    ))
+        app_actions=manager._app_actions,
+    )
+    # Threshold for the manager's mode, file limit and run flags -- see notes.
+    manager.apply_settings_to_args(args)
+    manager.run(args)
     groups = manager._primary_wrapper().file_groups
-    _say("compare", f"scope: {scope}", f"{len(groups)} group(s) formed")
+    _say(heading, f"scope: {scope}", f"threshold used: {args.threshold}",
+         f"{len(groups)} group(s) formed")
     for index, group in groups.items():
         print(f"    group {index}: {[os.path.basename(p) for p in group]}")
+
+
+def demo_compare(source, target):
+    """Group visually similar files. COLOR_MATCHING needs no ML model."""
+    from compare.compare_settings import apply_compare_settings, describe_compare_settings
+
+    scope = target if os.listdir(target) else source
+    manager = _compare_manager(scope)
+    # A single COLOR_MATCHING instance, whatever the restored history held.
+    apply_compare_settings(manager, {
+        "instances": [{"compare_mode": "COLOR_MATCHING"}],
+        "data_filter": None,
+        "threshold": None,                # the mode's default
+        "store_checkpoints": False,
+    })
+    settings = describe_compare_settings(manager)
+    _say("settings", f"compare_mode       : {settings['compare_mode']}",
+         f"effective_threshold: {settings['effective_threshold']}")
+    _run_group_compare(manager, scope, "compare")
+
+
+def demo_composite(source, target):
+    """Combine COLOR_MATCHING and SIZE: files alike in colour AND size."""
+    from compare.compare_settings import apply_compare_settings, describe_compare_settings
+
+    scope = target if os.listdir(target) else source
+    # A differently sized red image: like the samples in colour only.
+    _png(os.path.join(scope, "red_large.png"), (205, 35, 30), size=(96, 96))
+    manager = _compare_manager(scope)
+    apply_compare_settings(manager, {
+        "instances": [
+            {"compare_mode": "COLOR_MATCHING"},
+            {"compare_mode": "SIZE", "threshold": 0},   # pixel tolerance
+        ],
+        "combination_logic": "AND",
+        "data_filter": None,
+        "threshold": None,
+        "store_checkpoints": False,
+    })
+    settings = describe_compare_settings(manager)
+    _say("settings", f"composite: {settings['composite']}",
+         f"instances: {[i['compare_mode'] for i in settings['instances']]}",
+         f"logic    : {settings['combination_logic']}")
+    _run_group_compare(manager, scope, "composite compare")
 
 
 def demo_pipeline(source, target):
@@ -390,6 +475,7 @@ DEMOS = {
     "marks": demo_marks,
     "delete": demo_delete,
     "compare": demo_compare,
+    "composite": demo_composite,
     "pipeline": demo_pipeline,
     "directory-ops": demo_directory_ops,
 }

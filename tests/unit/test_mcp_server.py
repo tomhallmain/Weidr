@@ -41,6 +41,7 @@ class _FakeSession:
         self.run_mode = "BROWSE"
         self.file_groups = {}
         self.files_matched = []
+        self.compare_settings = {"threshold": None, "data_filter": None}
         self.calls = []
 
     def get_current_file(self):
@@ -259,6 +260,20 @@ class _FakeSession:
 
     def list_trigger_actions(self):
         return {"classifier_actions": [{"name": "Cats", "applies_to_media_types": None}], "prevalidations": []}
+
+    def get_compare_settings(self):
+        return dict(self.compare_settings)
+
+    def set_compare_settings(self, changes):
+        self.calls.append(("set_compare_settings", changes))
+        if not isinstance(changes, dict) or "bogus" in (changes or {}):
+            raise ValueError("unknown settings: bogus")
+        self.compare_settings.update(changes)
+        return self.get_compare_settings()
+
+    def list_classifiers(self):
+        return {"classifiers": [{"domain": "image", "name": "content",
+                                 "categories": ["photo", "drawing"], "model_strategy_categories": []}]}
 
 
 def _extension(session=None, **kwargs):
@@ -527,6 +542,21 @@ class TestDispatch:
         assert result == {"written": 2, "failed": 0}
         assert "strip_video_metadata" in session.calls
 
+    def test_set_compare_settings_passes_settings_and_returns_result(self):
+        ext, session = _extension()
+        result = ext.dispatch("set_compare_settings", {"settings": {"threshold": 0.8}})
+        assert session.calls == [("set_compare_settings", {"threshold": 0.8})]
+        assert result["threshold"] == 0.8
+
+    def test_set_compare_settings_value_error_is_a_tool_error(self):
+        ext, _ = _extension()
+        with pytest.raises(MCPToolError):
+            ext.dispatch("set_compare_settings", {"settings": {"bogus": 1}})
+
+    def test_set_compare_settings_is_not_password_gated(self):
+        """The compare settings window has no password gate either."""
+        assert "set_compare_settings" not in PASSWORD_GATES
+
     def test_run_compare(self):
         ext, session = _extension()
         result = ext.dispatch("run_compare", {"mode": "GROUP", "find_duplicates": True})
@@ -543,10 +573,11 @@ class TestDispatch:
         with pytest.raises(MCPToolError):
             ext.dispatch("run_compare", {"mode": "CLIP_EMBEDDING", "run_mode": "SEARCH"})
 
-    def test_run_compare_requires_mode(self):
-        ext, _ = _extension()
-        with pytest.raises(MCPToolError):
-            ext.dispatch("run_compare", {})
+    def test_run_compare_without_mode_passes_none(self):
+        """No mode runs the configured setup, composite included."""
+        ext, session = _extension()
+        ext.dispatch("run_compare", {})
+        assert ("run_compare", None, False, "GROUP") in session.calls
 
     def test_run_compare_wraps_value_error_as_tool_error(self):
         """A session rejecting an unknown mode raises ValueError; dispatch
@@ -562,10 +593,10 @@ class TestDispatch:
         assert result == {"status": "started"}
         assert ("run_search", "CLIP_EMBEDDING", "cat", None, None, None) in session.calls
 
-    def test_run_search_requires_mode(self):
-        ext, _ = _extension()
-        with pytest.raises(MCPToolError):
-            ext.dispatch("run_search", {"search_text": "cat"})
+    def test_run_search_without_mode_passes_none(self):
+        ext, session = _extension()
+        ext.dispatch("run_search", {"search_text": "cat"})
+        assert ("run_search", None, "cat", None, None, None) in session.calls
 
     def test_run_search_wraps_value_error_as_tool_error(self):
         ext, _ = _extension()
@@ -757,6 +788,14 @@ class TestReadResource:
     def test_pipeline_status(self):
         ext, _ = _extension()
         assert ext.read_resource("pipeline_status") == {"running": False, "pipeline": None}
+
+    def test_compare_settings(self):
+        ext, _ = _extension()
+        assert ext.read_resource("compare_settings") == {"threshold": None, "data_filter": None}
+
+    def test_classifiers(self):
+        ext, _ = _extension()
+        assert ext.read_resource("classifiers")["classifiers"][0]["name"] == "content"
 
     def test_unknown_resource_raises(self):
         ext, _ = _extension()

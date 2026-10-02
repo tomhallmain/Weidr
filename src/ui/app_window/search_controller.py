@@ -487,19 +487,6 @@ class SearchController:
                 raise AssertionError("Negative search file is not a valid file.")
         return search_file
 
-    def get_compare_threshold(self) -> float:
-        """Get compare threshold from CompareManager, with fallback to config."""
-        threshold = self._cm.get_threshold()
-        if threshold is not None:
-            return threshold
-
-        primary_mode = self._cm.compare_mode
-        if primary_mode == CompareMode.COLOR_MATCHING:
-            return config.color_diff_threshold
-        if primary_mode == CompareMode.COLOR_HISTOGRAM:
-            return 0.2
-        return config.embedding_similarity_threshold
-
     def get_file_filter(self) -> Optional[str]:
         """Read the file filter from the sidebar entry."""
         text = self._sidebar.file_filter_entry.text().strip()

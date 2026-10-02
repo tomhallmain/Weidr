@@ -208,9 +208,12 @@ def tool_descriptors() -> list:
             "name": "run_compare",
             "description": (
                 "Start a GROUP-mode compare/grouping run (results land in "
-                "compare_results' file_groups) with the given compare mode; in an app "
-                "window this switches the window's compare mode, and is refused if it "
-                "runs a composite multi-mode setup. run_mode=GROUP_COMPLEMENT (not with "
+                "compare_results' file_groups). With mode, the setup is switched to that "
+                "compare mode (in an app window, the window's compare mode); refused "
+                "while the setup is composite (several instances, see "
+                "set_compare_settings). Without mode, the configured setup runs as it "
+                "stands, composite included; a composite setup whose instances have "
+                "search texts runs only through run_search. run_mode=GROUP_COMPLEMENT (not with "
                 "find_duplicates) then switches to the scanned files no group contains, "
                 "in browse-listing order, in compare_results' files_matched; if every "
                 "file was grouped, compare_results' run_mode stays GROUP. Returns once "
@@ -224,10 +227,47 @@ def tool_descriptors() -> list:
                 "Start a SEARCH-mode compare run for the given search_text and/or "
                 "search_media_path (positive) and search_text_negative and/or "
                 "negative_search_media_path (negative) -- at least one is required. "
-                "The compare mode is applied as for run_compare. "
+                "mode is applied, or left out, as for run_compare. In a composite "
+                "setup, an instance's own search texts replace these for that "
+                "instance; instances without one use these. "
                 "Results land in compare_results' files_matched. Returns once the run "
                 "is started, not once it has finished -- poll compare_status or call "
                 "health_check to find out when it's done."
+            ),
+        },
+        {
+            "name": "set_compare_settings",
+            "description": (
+                "Change the compare settings later run_compare/run_search runs use -- the "
+                "compare settings window's settings, instances and data filter. `settings` is "
+                "an object with any of: instances (list of 1-10 objects {compare_mode, "
+                "enabled, threshold (null = the global threshold on the primary mode, "
+                "else the instance mode's default), weight, search_text, "
+                "search_text_negative (embedding modes only)}; replaces all instances, "
+                "the first one's mode becomes the compare mode, several make the setup "
+                "composite), combination_logic (AND, OR or WEIGHTED; how a composite "
+                "setup combines instance results; WEIGHTED uses the weights), "
+                "threshold (number, null = the compare mode's default; on that mode's "
+                "scale -- e.g. a 0-1 similarity for embedding modes, a LAB distance for "
+                "COLOR_MATCHING -- and applied only while that mode is the compare mode, "
+                "other modes use their default), threshold_mode (only with threshold: the "
+                "compare mode name it is for; default the compare mode after any "
+                "instances change, so set it to prepare a run_compare/run_search that "
+                "switches modes), counter_limit (whole number >= 1, null = config default), "
+                "overwrite, store_checkpoints, use_matrix_comparison, "
+                "search_only_return_closest (true/false), group_sort (ASC or DESC), "
+                "data_filter (null to clear, or a filter object). Absent keys stay as "
+                "they are. A filter object is one of {type: size, min_size/max_size/"
+                "exact_size: [w, h], size_tolerance}, {type: model, models: [names], "
+                "mode: include|exclude, match_any, include_loras}, {type: classifier, "
+                "classifier_name, domain: image|audio, selection_mode: "
+                "selected_categories|model_strategy, categories: [names], mode: "
+                "include|exclude, min_confidence, sample_ratio, positive_ratio (0-1; "
+                "video/GIF/PDF frame sampling)}, or {type: group, operator: and|or|not, "
+                "filters: [filter objects]}; the classifiers resource lists models and "
+                "categories. Everything is validated before anything changes. Refused "
+                "while a compare is running. Returns the resulting settings, as the "
+                "compare_settings resource reports them."
             ),
         },
         {
@@ -352,6 +392,27 @@ def resource_descriptors() -> list:
             "description": (
                 "Whether a compare is running, the active compare mode, and whether "
                 "prevalidation rules run while browsing this directory."
+            ),
+        },
+        {
+            "name": "compare_settings",
+            "uri": "weidr://compare/settings",
+            "description": (
+                "The compare settings set_compare_settings changes, in the same keys: "
+                "instances and combination_logic, threshold with the threshold_mode it "
+                "applies to and counter_limit (null = default) with the "
+                "effective_threshold/effective_counter_limit a run uses, the run flags, "
+                "group_sort and the data_filter; plus the resulting compare_mode and "
+                "whether the setup is composite."
+            ),
+        },
+        {
+            "name": "classifiers",
+            "uri": "weidr://classifiers",
+            "description": (
+                "Registered image and audio classifier models a classifier data_filter "
+                "can name, with their categories and the categories model_strategy "
+                "selects (empty if the model has no positive groups)."
             ),
         },
         {
@@ -556,11 +617,9 @@ class MCPServerExtension:
             return session.strip_video_metadata()
         if tool_name == "run_compare":
             mode = arguments.get("mode")
-            if not mode:
-                raise MCPToolError("run_compare needs a mode")
             try:
                 session.run_compare(
-                    str(mode), bool(arguments.get("find_duplicates", False)),
+                    str(mode) if mode else None, bool(arguments.get("find_duplicates", False)),
                     run_mode=str(arguments.get("run_mode") or "GROUP"),
                 )
             except ValueError as e:
@@ -568,11 +627,9 @@ class MCPServerExtension:
             return {"status": "started"}
         if tool_name == "run_search":
             mode = arguments.get("mode")
-            if not mode:
-                raise MCPToolError("run_search needs a mode")
             try:
                 session.run_search(
-                    str(mode),
+                    str(mode) if mode else None,
                     search_text=arguments.get("search_text"),
                     search_text_negative=arguments.get("search_text_negative"),
                     search_media_path=arguments.get("search_media_path"),
@@ -581,6 +638,11 @@ class MCPServerExtension:
             except ValueError as e:
                 raise MCPToolError(str(e))
             return {"status": "started"}
+        if tool_name == "set_compare_settings":
+            try:
+                return session.set_compare_settings(arguments.get("settings"))
+            except ValueError as e:
+                raise MCPToolError(str(e))
         if tool_name == "run_image_generation":
             session.run_image_generation(
                 arguments.get("edit_suffix"), arguments.get("target_dir"),
@@ -683,6 +745,10 @@ class MCPServerExtension:
             }
         if name == "compare_results":
             return session.compare_results()
+        if name == "compare_settings":
+            return session.get_compare_settings()
+        if name == "classifiers":
+            return session.list_classifiers()
         if name == "pipelines":
             return session.list_pipelines()
         if name == "directory_profiles":
@@ -842,14 +908,14 @@ class MCPServerExtension:
             return self.dispatch("strip_video_metadata")
 
         @server.tool(name="run_compare", description=described["run_compare"])
-        def run_compare(mode: str, find_duplicates: bool = False, run_mode: str = "GROUP") -> dict:
+        def run_compare(mode: str | None = None, find_duplicates: bool = False, run_mode: str = "GROUP") -> dict:
             return self.dispatch("run_compare", {
                 "mode": mode, "find_duplicates": find_duplicates, "run_mode": run_mode,
             })
 
         @server.tool(name="run_search", description=described["run_search"])
         def run_search(
-            mode: str,
+            mode: str | None = None,
             search_text: str | None = None,
             search_text_negative: str | None = None,
             search_media_path: str | None = None,
@@ -861,6 +927,10 @@ class MCPServerExtension:
                 "search_media_path": search_media_path,
                 "negative_search_media_path": negative_search_media_path,
             })
+
+        @server.tool(name="set_compare_settings", description=described["set_compare_settings"])
+        def set_compare_settings(settings: dict) -> dict:
+            return self.dispatch("set_compare_settings", {"settings": settings})
 
         @server.tool(name="run_image_generation", description=described["run_image_generation"])
         def run_image_generation(edit_suffix: str | None = None, target_dir: str | None = None) -> dict:

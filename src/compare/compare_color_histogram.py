@@ -50,6 +50,7 @@ class CompareColorHistogram(BaseCompare):
     THRESHOLD_POTENTIAL_DUPLICATE = 0.02
     THRESHOLD_PROBABLE_MATCH = 0.08
     THRESHOLD_GROUP_CUTOFF = 0.15
+    DEFAULT_THRESHOLD = 0.2
 
     def __init__(
         self,
@@ -57,7 +58,10 @@ class CompareColorHistogram(BaseCompare):
         gather_files_func=gather_files,
     ) -> None:
         super().__init__(args, gather_files_func)
-        self.threshold = float(args.threshold) if args.threshold is not None else 0.2
+        self.threshold = (
+            float(args.threshold) if args.threshold is not None
+            else CompareColorHistogram.DEFAULT_THRESHOLD
+        )
         self._file_histograms: np.ndarray = np.empty((0, _HIST_LEN), dtype=np.float64)
 
     def _reset_run_accumulators(self) -> None:

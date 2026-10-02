@@ -5,6 +5,7 @@ from enum import Enum
 
 from compare.compare_wrapper import CompareWrapper
 from compare.compare_args import CompareArgs
+from compare.compare_color_histogram import CompareColorHistogram
 from compare.compare_models import CompareModels
 from compare.base_compare import CompareCancelled
 from lib.sleep_prevention import WakeLevel, hold_wake
@@ -20,6 +21,10 @@ class CombinationLogic(Enum):
     AND = "AND"  # File must match ALL criteria
     OR = "OR"    # File must match ANY criterion
     WEIGHTED = "WEIGHTED"  # Weighted combination of scores
+
+
+# Most compare instances one manager runs at once.
+MAX_INSTANCES = 10
 
 
 @dataclass
@@ -91,6 +96,9 @@ class CompareManager:
         
         # Compare settings (migrated from sidebar)
         self._threshold: Optional[float] = None
+        # The mode _threshold was set for; it applies only while that mode is
+        # primary (None: set before any mode, applies to all).
+        self._threshold_mode: Optional[CompareMode] = None
         self._counter_limit: Optional[int] = None
         self._overwrite: bool = False
         self._store_checkpoints: bool = config.store_checkpoints
@@ -285,9 +293,33 @@ class CompareManager:
     
     def get_mode_instances_by_mode(self, compare_mode: CompareMode) -> List[CompareConfig]:
         """Get all instances of a specific compare mode."""
-        return [config for config in self._mode_configs.values() 
+        return [config for config in self._mode_configs.values()
                 if config.compare_mode == compare_mode and config.enabled]
-    
+
+    def replace_mode_instances(self, specs: List[dict]) -> None:
+        """Make the instances match *specs*, in order: dicts with
+        ``compare_mode`` plus any of ``weight``, ``threshold``, ``enabled``,
+        ``search_text``, ``search_text_negative`` (absent: the CompareConfig
+        default). The first becomes the primary mode. Leading instances whose
+        mode already matches are updated in place, keeping their wrappers and
+        any results loaded in them."""
+        if not specs:
+            raise ValueError("At least one compare instance is required")
+        current = list(self._mode_configs.values())
+        keep = 0
+        while (keep < min(len(current), len(specs))
+               and current[keep].compare_mode == specs[keep]["compare_mode"]):
+            keep += 1
+        for cfg in current[keep:]:
+            self.remove_mode_instance(cfg.instance_id)
+        for spec in specs[keep:]:
+            self.add_mode_instance(spec["compare_mode"])
+        defaults = CompareConfig(instance_id="", compare_mode=specs[0]["compare_mode"])
+        for cfg, spec in zip(self._mode_configs.values(), specs):
+            for field in ("weight", "threshold", "enabled", "search_text", "search_text_negative"):
+                setattr(cfg, field, spec.get(field, getattr(defaults, field)))
+        self.set_primary_mode(specs[0]["compare_mode"])
+
     @property
     def prevalidations_running(self) -> bool:
         return self._prevalidations_running
@@ -324,14 +356,26 @@ class CompareManager:
     
     # ========== Compare Settings ==========
     
-    def set_threshold(self, threshold: float):
-        """Set comparison threshold."""
+    def set_threshold(self, threshold: Optional[float],
+                      compare_mode: Optional[CompareMode] = None):
+        """Set the comparison threshold for *compare_mode* (default: the
+        primary mode). Each mode has its own scale, so the threshold applies
+        only while that mode is primary; other modes use their default."""
         self._threshold = threshold
-        logger.info(f"Compare threshold set to: {threshold}")
-    
+        self._threshold_mode = None if threshold is None else (compare_mode or self._primary_mode)
+        mode_name = self._threshold_mode.name if self._threshold_mode else "any mode"
+        logger.info(f"Compare threshold set to: {threshold} (for {mode_name})")
+
     def get_threshold(self) -> Optional[float]:
-        """Get comparison threshold."""
+        """The set threshold if it applies to the primary mode, else None."""
+        if self._threshold_mode is not None and self._threshold_mode != self._primary_mode:
+            return None
         return self._threshold
+
+    def get_threshold_setting(self) -> "tuple[Optional[float], Optional[CompareMode]]":
+        """The set threshold and the mode it was set for, whether or not that
+        mode is primary."""
+        return self._threshold, self._threshold_mode
     
     def set_counter_limit(self, counter_limit: Optional[int]):
         """Set counter limit option."""
@@ -342,32 +386,44 @@ class CompareManager:
         """Get counter limit option."""
         return self._counter_limit
     
+    def effective_threshold(self) -> float:
+        """The threshold a run uses: the set one if it applies to the primary
+        mode, else that mode's default."""
+        primary_mode = self.compare_mode
+        threshold = self.get_threshold()
+        if threshold is not None and primary_mode != CompareMode.MODELS:
+            return threshold
+        return self.default_threshold(primary_mode)
+
+    @staticmethod
+    def default_threshold(compare_mode: Optional[CompareMode]) -> float:
+        """*compare_mode*'s config default threshold. Each mode has its own
+        scale, so a value from one mode is meaningless in another: the
+        embedding threshold (0.9) applied to MODELS rejected everything, since
+        that mode's scores top out well below it -- MODELS always uses its own
+        match threshold."""
+        if compare_mode == CompareMode.COLOR_MATCHING:
+            return config.color_diff_threshold
+        if compare_mode == CompareMode.COLOR_HISTOGRAM:
+            # A distance (lower = more similar): the embedding similarity
+            # default would group nearly everything.
+            return CompareColorHistogram.DEFAULT_THRESHOLD
+        if compare_mode == CompareMode.MODELS:
+            return CompareModels.THRESHOLD_MATCH
+        return config.embedding_similarity_threshold
+
+    def effective_counter_limit(self) -> int:
+        """The file limit a run uses: the set one, else the config default."""
+        counter_limit = self.get_counter_limit()
+        return counter_limit if counter_limit is not None else config.file_counter_limit
+
     def apply_settings_to_args(self, args: CompareArgs) -> None:
         """
         Apply all compare settings from this manager to a CompareArgs object.
         Handles fallbacks to config defaults when settings are not explicitly set.
         """
-        # Apply threshold with fallback to config defaults. Each branch is a
-        # different scale, so a value from one mode is meaningless in another:
-        # the embedding threshold (0.9) applied to MODELS rejected everything,
-        # since that mode's scores top out well below it.
-        primary_mode = self.compare_mode
-        threshold = self.get_threshold()
-        if threshold is not None and primary_mode != CompareMode.MODELS:
-            args.threshold = threshold
-        elif primary_mode == CompareMode.COLOR_MATCHING:
-            args.threshold = config.color_diff_threshold
-        elif primary_mode == CompareMode.MODELS:
-            args.threshold = CompareModels.THRESHOLD_MATCH
-        else:
-            args.threshold = config.embedding_similarity_threshold
-        
-        # Apply counter_limit with fallback to config default
-        counter_limit = self.get_counter_limit()
-        if counter_limit is not None:
-            args.counter_limit = counter_limit
-        else:
-            args.counter_limit = config.file_counter_limit
+        args.threshold = self.effective_threshold()
+        args.counter_limit = self.effective_counter_limit()
         
         # Apply boolean settings (these always have values, no fallback needed)
         args.overwrite = self.get_overwrite()
@@ -977,6 +1033,9 @@ class CompareManager:
             instance_args.compare_mode = config.compare_mode
             if config.threshold is not None:
                 instance_args.threshold = config.threshold
+            elif config.compare_mode != self._primary_mode:
+                # args.threshold is on the primary mode's scale.
+                instance_args.threshold = self.default_threshold(config.compare_mode)
 
             # Apply instance-specific search text
             if config.search_text:

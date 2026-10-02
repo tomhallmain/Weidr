@@ -27,6 +27,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src
 from compare.classifier_actions_manager import ClassifierActionsManager
 from compare.compare_args import CompareArgs
 from compare.compare_manager import CompareManager
+from compare.compare_settings import (
+    apply_compare_settings, describe_compare_settings, list_classifier_models,
+    resolve_run_compare_mode,
+)
 from extensions.mcp_server import MCPServerExtension
 from files.file_browser import FileBrowser
 from files.file_metadata_cache import file_metadata_cache
@@ -491,22 +495,6 @@ class HeadlessMCPSession:
     # ------------------------------------------------------------------
     # Compare
     # ------------------------------------------------------------------
-    def _resolve_compare_mode(self, mode: str) -> CompareMode:
-        try:
-            return CompareMode[mode]
-        except KeyError:
-            raise ValueError(f"unknown compare mode: {mode}")
-
-    def _compare_threshold(self, compare_mode: CompareMode) -> float:
-        # COLOR_MATCHING reads compare_threshold as a LAB colour distance
-        # rather than an embedding similarity -- see
-        # scripts/agent_headless_demo.py's API notes on this same gotcha.
-        return (
-            config.color_diff_threshold
-            if compare_mode == CompareMode.COLOR_MATCHING
-            else config.embedding_similarity_threshold
-        )
-
     def _resolve_run_mode(self, run_mode: str) -> Mode:
         resolved = Mode.__members__.get(run_mode)
         if resolved not in (Mode.GROUP, Mode.GROUP_COMPLEMENT):
@@ -526,40 +514,44 @@ class HeadlessMCPSession:
     def _run_compare_task(self, compare_mode: CompareMode, compare_args: CompareArgs,
                           complement: bool) -> None:
         # CompareManager.run compares with its own primary mode and ignores
-        # compare_args.compare_mode. Switched here, on the runner thread, so a
+        # compare_args.compare_mode. resolve_run_compare_mode returns the
+        # primary mode for a composite setup, so it is never collapsed here.
+        # Switched here, on the runner thread, so a
         # start refused because a run is in flight leaves that run's mode alone.
         if compare_mode != self._compare_manager.compare_mode:
             self._compare_manager.set_compare_mode(compare_mode)
+        # Threshold, file limit and run flags from the manager's settings
+        # (set_compare_settings), as the Qt window's SearchController applies
+        # them; after the mode switch, since the default threshold is per mode.
+        self._compare_manager.apply_settings_to_args(compare_args)
         self._compare_manager.run(compare_args)
         if complement:
             self._compare_manager.enter_complement_mode()
 
-    def run_compare(self, mode: str, find_duplicates: bool, run_mode: str = "GROUP") -> None:
+    def run_compare(self, mode: Optional[str], find_duplicates: bool, run_mode: str = "GROUP") -> None:
         """*run_mode* GROUP_COMPLEMENT runs the same GROUP compare, then
         switches to the files it left ungrouped, as the GUI's "View ungrouped
         files" button does. That button exists only after a plain GROUP run,
         so find_duplicates is refused with it. If every file was grouped the
         session stays in GROUP mode (compare_results' run_mode says which).
         """
-        compare_mode = self._resolve_compare_mode(mode)
         complement = self._resolve_run_mode(run_mode) == Mode.GROUP_COMPLEMENT
         if complement and find_duplicates:
             raise ValueError("run_mode GROUP_COMPLEMENT cannot be combined with find_duplicates")
+        compare_mode = resolve_run_compare_mode(self._compare_manager, mode, searching=False)
         compare_args = CompareArgs(
             base_dir=self._base_dir,
             mode=Mode.GROUP,
             compare_mode=compare_mode,
             recursive=False,
-            store_checkpoints=False,
             app_actions=self._actions,
-            compare_threshold=self._compare_threshold(compare_mode),
         )
         compare_args.find_duplicates = find_duplicates
         self._start_compare(compare_mode, compare_args, complement=complement)
 
     def run_search(
         self,
-        mode: str,
+        mode: Optional[str],
         search_text: Optional[str] = None,
         search_text_negative: Optional[str] = None,
         search_media_path: Optional[str] = None,
@@ -570,15 +562,13 @@ class HeadlessMCPSession:
                 "run_search needs at least one of search_text, search_text_negative, "
                 "search_media_path, negative_search_media_path"
             )
-        compare_mode = self._resolve_compare_mode(mode)
+        compare_mode = resolve_run_compare_mode(self._compare_manager, mode, searching=True)
         compare_args = CompareArgs(
             base_dir=self._base_dir,
             mode=Mode.SEARCH,
             compare_mode=compare_mode,
             recursive=False,
-            store_checkpoints=False,
             app_actions=self._actions,
-            compare_threshold=self._compare_threshold(compare_mode),
             search_text=search_text,
             search_text_negative=search_text_negative,
             search_media_path=search_media_path,
@@ -590,6 +580,20 @@ class HeadlessMCPSession:
 
     def is_compare_running(self) -> bool:
         return self._runner.is_running()
+
+    def get_compare_settings(self) -> dict:
+        return describe_compare_settings(self._compare_manager)
+
+    def set_compare_settings(self, changes) -> dict:
+        # A running compare syncs its own args back into the manager when it
+        # finishes, which would undo these changes.
+        if self.is_compare_running():
+            raise ValueError("a compare is running; change settings once it has finished")
+        apply_compare_settings(self._compare_manager, changes)
+        return self.get_compare_settings()
+
+    def list_classifiers(self) -> dict:
+        return list_classifier_models()
 
     def get_compare_mode(self) -> str:
         return self._compare_manager.compare_mode.name

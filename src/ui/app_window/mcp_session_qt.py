@@ -15,7 +15,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 
 from compare.compare_args import CompareArgs
-from utils.config import config
 from utils.constants import CompareMode, Mode
 
 if TYPE_CHECKING:
@@ -313,42 +312,24 @@ class QtWindowMCPSession:
     # ------------------------------------------------------------------
     # Compare
     # ------------------------------------------------------------------
-    def _resolve_compare_mode(self, mode: str) -> CompareMode:
-        try:
-            return CompareMode[mode]
-        except KeyError:
-            raise ValueError(f"unknown compare mode: {mode}")
-
-    def _compare_threshold(self, compare_mode: CompareMode) -> float:
-        # COLOR_MATCHING reads compare_threshold as a LAB colour distance
-        # rather than an embedding similarity -- see
-        # scripts/agent_headless_demo.py's API notes on this same gotcha.
-        return (
-            config.color_diff_threshold
-            if compare_mode == CompareMode.COLOR_MATCHING
-            else config.embedding_similarity_threshold
-        )
-
-    def _prepare_compare(self, compare_mode: CompareMode) -> None:
-        """Point the window's CompareManager at *compare_mode* before a run.
+    def _prepare_compare(self, mode: Optional[str], searching: bool) -> CompareMode:
+        """Point the window's CompareManager at *mode* before a run and return
+        the compare mode the run uses (see resolve_run_compare_mode).
 
         CompareManager.run compares with its configured mode, not
         CompareArgs.compare_mode. A single-mode window is switched the way
         restoring a directory's saved compare mode switches it (and the window
-        saves it for the directory in turn). A composite setup is refused:
-        set_compare_mode would collapse it to one mode.
+        saves it for the directory in turn).
         """
+        from compare.compare_settings import resolve_run_compare_mode
+
         if self.is_compare_running():
             raise ValueError("a compare is already running")
         cm = self._window.compare_manager
-        if cm.is_composite_mode():
-            modes = ", ".join(sorted(m.name for m in cm.get_active_modes()))
-            raise ValueError(
-                f"the window runs a composite compare setup ({modes}); MCP compares "
-                "run one mode, so change the setup in the compare settings window first"
-            )
+        compare_mode = resolve_run_compare_mode(cm, mode, searching)
         if compare_mode != cm.compare_mode:
             self._actions.set_compare_mode(compare_mode)
+        return compare_mode
 
     def _enter_complement_if_grouped(self) -> None:
         # Runs on the GUI thread after a clean run. The mode check skips a run
@@ -356,7 +337,7 @@ class QtWindowMCPSession:
         if self._window.mode == Mode.GROUP:
             self._window.compare_manager.enter_complement_mode()
 
-    def run_compare(self, mode: str, find_duplicates: bool, run_mode: str = "GROUP") -> None:
+    def run_compare(self, mode: Optional[str], find_duplicates: bool, run_mode: str = "GROUP") -> None:
         """*run_mode* GROUP_COMPLEMENT runs the same GROUP compare, then
         enters the complement as the window's View ungrouped files button
         does. That button exists only after a plain GROUP run, so
@@ -367,8 +348,7 @@ class QtWindowMCPSession:
             raise ValueError(f"run_mode must be GROUP or GROUP_COMPLEMENT, not {run_mode}")
         if complement and find_duplicates:
             raise ValueError("run_mode GROUP_COMPLEMENT cannot be combined with find_duplicates")
-        compare_mode = self._resolve_compare_mode(mode)
-        self._prepare_compare(compare_mode)
+        compare_mode = self._prepare_compare(mode, searching=False)
         # SearchController._run_compare overwrites CompareArgs.mode with the
         # window's own mode, so set it here too: a stale SEARCH mode from
         # earlier UI activity must not leak into this run.
@@ -379,7 +359,6 @@ class QtWindowMCPSession:
                 mode=Mode.GROUP,
                 compare_mode=compare_mode,
                 app_actions=self._actions,
-                compare_threshold=self._compare_threshold(compare_mode),
             ),
             find_duplicates=find_duplicates,
             on_success=self._enter_complement_if_grouped if complement else None,
@@ -387,7 +366,7 @@ class QtWindowMCPSession:
 
     def run_search(
         self,
-        mode: str,
+        mode: Optional[str],
         search_text: Optional[str] = None,
         search_text_negative: Optional[str] = None,
         search_media_path: Optional[str] = None,
@@ -398,13 +377,12 @@ class QtWindowMCPSession:
                 "run_search needs at least one of search_text, search_text_negative, "
                 "search_media_path, negative_search_media_path"
             )
-        compare_mode = self._resolve_compare_mode(mode)
+        compare_mode = self._prepare_compare(mode, searching=True)
         compare_args = CompareArgs(
             base_dir=self.get_base_dir(),
             mode=Mode.SEARCH,
             compare_mode=compare_mode,
             app_actions=self._actions,
-            compare_threshold=self._compare_threshold(compare_mode),
             search_text=search_text,
             search_text_negative=search_text_negative,
             search_media_path=search_media_path,
@@ -412,12 +390,27 @@ class QtWindowMCPSession:
         # Not a CompareArgs constructor parameter -- only settable as an
         # attribute after construction.
         compare_args.negative_search_media_path = negative_search_media_path
-        self._prepare_compare(compare_mode)
         # See run_compare's note: SearchController._run_compare reads the
         # window's own mode rather than trusting compare_args.mode, so it has
         # to be set here too.
         self._actions.set_mode(Mode.SEARCH)
         self._actions.run_compare(compare_args, find_duplicates=False)
+
+    def get_compare_settings(self) -> dict:
+        from compare.compare_settings import describe_compare_settings
+        return describe_compare_settings(self._window.compare_manager)
+
+    def set_compare_settings(self, changes) -> dict:
+        # A running compare syncs its own args back into the manager when it
+        # finishes, which would undo these changes.
+        if self.is_compare_running():
+            raise ValueError("a compare is running; change settings once it has finished")
+        self._actions.apply_compare_settings(changes)
+        return self.get_compare_settings()
+
+    def list_classifiers(self) -> dict:
+        from compare.compare_settings import list_classifier_models
+        return list_classifier_models()
 
     def get_prevalidations_running(self) -> bool:
         return self._window.compare_manager.prevalidations_running

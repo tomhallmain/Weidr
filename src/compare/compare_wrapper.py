@@ -1184,19 +1184,25 @@ class CompareWrapper:
             idx: dict(group) for idx, group in self.file_groups.items()
         }
         try:
-            compare_result._dir_files_hash.remove(filepath)
+            removed_index = compare_result._dir_files_hash.index(filepath)
+            del compare_result._dir_files_hash[removed_index]
         except (ValueError, AttributeError):
-            pass
+            removed_index = None
         if self._compare.is_run_search:
             # Search-mode files_grouped is keyed by filepath with a plain score
             # value (not a (group_index, score) tuple), so just drop the deleted
             # file's own entry rather than indexing into the score with v[0].
             compare_result.files_grouped.pop(filepath, None)
         else:
+            # Group-mode keys are indexes into the stored file list, which just
+            # lost an entry: drop the deleted file's key and shift later ones
+            # down, or a reload would read them against the wrong files (and
+            # reject the checkpoint once the last index is out of range).
             active_group_indexes = set(self.file_groups.keys())
             compare_result.files_grouped = {
-                k: v for k, v in compare_result.files_grouped.items()
-                if v[0] in active_group_indexes
+                (k - 1 if removed_index is not None and k > removed_index else k): v
+                for k, v in compare_result.files_grouped.items()
+                if k != removed_index and v[0] in active_group_indexes
             }
         compare_result.prune_stale_supergroups()
         try:

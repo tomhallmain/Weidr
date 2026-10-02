@@ -252,11 +252,37 @@ class CompareResult:
         Validates that all indices in files_grouped are valid for the given files list.
         Returns True if all indices are valid, False otherwise.
         """
-        valid_indices = [idx for idx in self.files_grouped if idx < len(files)]
+        valid_indices = [idx for idx in self.files_grouped if 0 <= idx < len(files)]
         if len(valid_indices) != len(self.files_grouped):
             logger.error("Warning: Checkpoint data contains invalid indices. Discarding checkpoint data.")
             return False
         return True
+
+    @staticmethod
+    def _describe_file_list_change(cache_path, stored, current, sample_size=5) -> str:
+        """User-facing message for a checkpoint whose file list differs from
+        the current one: counts and a few basenames per direction, not the
+        whole list, which runs to hundreds of thousands of paths."""
+        stored_set, current_set = set(stored), set(current)
+        removed = sorted(stored_set - current_set)
+        added = sorted(current_set - stored_set)
+
+        def sample(paths):
+            text = ", ".join(os.path.basename(p) for p in paths[:sample_size])
+            if len(paths) > sample_size:
+                text += " " + _("(and {0} more)").format(len(paths) - sample_size)
+            return text
+
+        lines = [_("The compare checkpoint no longer matches the files being compared: {0}").format(cache_path)]
+        if removed:
+            lines.append(_("Removed ({0}): {1}").format(len(removed), sample(removed)))
+        if added:
+            lines.append(_("Added ({0}): {1}").format(len(added), sample(added)))
+        if not removed and not added:
+            lines.append(_("No file was added or removed, but the file list is in a different order."))
+        lines.append(_("Enable \"{0}\" in the compare settings, or delete the checkpoint file, to rebuild it.").format(
+            _("Overwrite cache")))
+        return "\n".join(lines)
 
     @staticmethod
     def load(base_dir, files, mode=None, overwrite=False, filter_key=None):
@@ -281,7 +307,8 @@ class CompareResult:
                     and isinstance(cached._dir_files_hash[0], int)):
                 logger.warning(f"Discarding {cache_path}: stored in legacy format, rebuilding checkpoint.")
                 return CompareResult(base_dir, files, mode=mode, filter_key=filter_key)
-            raise ValueError(f"{cache_path} does not match {files}")
+            raise ValueError(CompareResult._describe_file_list_change(
+                cache_path, cached._dir_files_hash, files))
 
         # Validate that all indices in files_grouped are valid
         if not cached.validate_indices(files):

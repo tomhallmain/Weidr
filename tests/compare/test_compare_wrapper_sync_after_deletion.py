@@ -102,3 +102,26 @@ class TestSyncResultAfterDeletionGroupMode:
         wrapper._sync_result_after_deletion("/b.jpg")
 
         assert compare_result.files_grouped == {0: (0, 0.9)}
+
+    def test_later_file_indexes_shift_down_and_checkpoint_reloads(self, tmp_path):
+        """files_grouped keys index the stored file list. Deleting a file
+        removes it from that list, so keys after it must shift down; left as
+        they were, the last one would be out of range and the reloaded
+        checkpoint discarded."""
+        files = ["/a.jpg", "/b.jpg", "/c.jpg", "/d.jpg"]
+        files_grouped = {0: (0, 0.9), 1: (0, 0.8), 2: (1, 0.7), 3: (1, 0.6)}
+        file_groups = {0: {"/a.jpg": 0.9, "/b.jpg": 0.8}, 1: {"/c.jpg": 0.7, "/d.jpg": 0.6}}
+        compare_result = _stored_compare_result(tmp_path, files, files_grouped, file_groups)
+        wrapper = _wrapper_for(
+            tmp_path, compare_result,
+            {0: {"/a.jpg": 0.9, "/b.jpg": 0.8}, 1: {"/d.jpg": 0.6}},
+            is_run_search=False,
+        )
+
+        wrapper._sync_result_after_deletion("/c.jpg")
+
+        assert compare_result.files_grouped == {0: (0, 0.9), 1: (0, 0.8), 2: (1, 0.6)}
+        remaining = ["/a.jpg", "/b.jpg", "/d.jpg"]
+        reloaded = CompareResult.load(str(tmp_path), remaining, mode=CompareMode.CLIP_EMBEDDING)
+        assert reloaded.is_complete is True
+        assert reloaded.files_grouped == compare_result.files_grouped

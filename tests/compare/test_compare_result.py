@@ -12,6 +12,7 @@ import pickle
 import pytest
 
 from compare.compare_result import CompareResult
+from utils.translations import _
 
 
 class TestHashDirFiles:
@@ -90,6 +91,13 @@ class TestValidateIndices:
         cr.files_grouped = {0: 0.9, 1: 0.8, 2: 0.7}
         assert cr.validate_indices(files) is True
 
+    def test_negative_index_returns_false(self, tmp_path):
+        """A negative index would silently read files from the end of the list."""
+        files = ["a.jpg", "b.jpg"]
+        cr = CompareResult(str(tmp_path), files)
+        cr.files_grouped = {0: 0.9, -1: 0.8}
+        assert cr.validate_indices(files) is False
+
     def test_out_of_range_index_returns_false(self, tmp_path):
         files = ["a.jpg", "b.jpg"]
         cr = CompareResult(str(tmp_path), files)
@@ -134,6 +142,28 @@ class TestStoreLoad:
         files_changed = ["c.jpg", "d.jpg"]
         with pytest.raises(ValueError):
             CompareResult.load(str(tmp_path), files_changed)
+
+    def test_load_hash_mismatch_names_only_the_changes(self, tmp_path):
+        """The message lists a few changed basenames per direction, not the
+        whole file list (which can run to 200k paths)."""
+        kept = [f"/media/keep_{i:03}.jpg" for i in range(100)]
+        removed = [f"/media/gone_{i}.jpg" for i in range(7)]
+        CompareResult(str(tmp_path), kept + removed).store()
+
+        with pytest.raises(ValueError) as excinfo:
+            CompareResult.load(str(tmp_path), kept + ["/media/new.jpg"])
+        message = str(excinfo.value)
+        assert _("Removed ({0}): {1}").format(
+            7, "gone_0.jpg, gone_1.jpg, gone_2.jpg, gone_3.jpg, gone_4.jpg"
+            + " " + _("(and {0} more)").format(2)) in message
+        assert _("Added ({0}): {1}").format(1, "new.jpg") in message
+        assert "keep_000.jpg" not in message
+
+    def test_load_reordered_file_list_says_so(self, tmp_path):
+        CompareResult(str(tmp_path), ["a.jpg", "b.jpg"]).store()
+        with pytest.raises(ValueError) as excinfo:
+            CompareResult.load(str(tmp_path), ["b.jpg", "a.jpg"])
+        assert _("No file was added or removed, but the file list is in a different order.") in str(excinfo.value)
 
     def test_load_invalid_indices_returns_fresh(self, tmp_path):
         files = ["a.jpg"]

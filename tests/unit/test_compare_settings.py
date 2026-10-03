@@ -236,6 +236,46 @@ class TestThresholdMode:
                         CompareMode.COLOR_MATCHING: config.color_diff_threshold}
 
 
+class TestCompositeRun:
+    def test_search_instances_return_only_threshold_matches(self, cm, monkeypatch):
+        """A ranking of every file would let AND exclude nothing."""
+        apply_compare_settings(cm, {"instances": [
+            {"compare_mode": "COLOR_MATCHING"}, {"compare_mode": "SIZE"},
+        ]})
+        seen = []
+
+        def fake_wrapper(_iid, _mode):
+            wrapper = MagicMock(files_grouped={0: {}})
+            wrapper.run.side_effect = lambda a: seen.append(a.search_only_return_closest)
+            return wrapper
+
+        monkeypatch.setattr(cm, "_app_actions", MagicMock())
+        monkeypatch.setattr(cm, "_ensure_wrapper", fake_wrapper)
+        monkeypatch.setattr(cm, "_apply_combined_results_to_primary", lambda **_kw: None)
+        args = CompareArgs(search_media_path="/x/query.png")
+        cm._run_composite(args)
+        assert seen == [True, True]
+        assert args.search_only_return_closest is None
+
+    def test_an_empty_combined_result_clears_the_primary_groups(self, cm, monkeypatch):
+        """AND that leaves nothing must not show the primary instance's own,
+        unfiltered groups."""
+        apply_compare_settings(cm, {"instances": [
+            {"compare_mode": "COLOR_MATCHING"}, {"compare_mode": "CLIP_EMBEDDING"},
+        ]})
+        app_actions = MagicMock()
+        monkeypatch.setattr(cm, "_app_actions", app_actions)
+        wrapper = cm._primary_wrapper()
+        wrapper.file_groups = {0: {"/a.png": 1.0, "/b.png": 2.0}}
+        cm._combined_results = {}
+
+        cm._apply_combined_results_to_primary(is_group_mode=True)
+
+        assert wrapper.file_groups == {}
+        assert wrapper.has_media_matches is False
+        app_actions.alert.assert_called_once()
+
+
 class TestInstances:
     def test_instances_replace_the_setup(self, cm):
         apply_compare_settings(cm, {"instances": TWO_INSTANCES, "combination_logic": "WEIGHTED"})
@@ -310,7 +350,9 @@ class TestResolveRunCompareMode:
             resolve_run_compare_mode(cm, "NOT_A_MODE", searching=False)
 
     def test_composite_runs_only_without_mode(self, cm):
-        apply_compare_settings(cm, {"instances": [{"compare_mode": "CLIP_EMBEDDING"}, {"compare_mode": "SIZE"}]})
+        apply_compare_settings(cm, {"instances": [
+            {"compare_mode": "CLIP_EMBEDDING"}, {"compare_mode": "COLOR_MATCHING"},
+        ]})
         with pytest.raises(ValueError):
             resolve_run_compare_mode(cm, "CLIP_EMBEDDING", searching=False)
         assert resolve_run_compare_mode(cm, None, searching=False) == CompareMode.CLIP_EMBEDDING

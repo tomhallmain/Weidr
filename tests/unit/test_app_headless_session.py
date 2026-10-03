@@ -236,7 +236,7 @@ def test_run_compare_refuses_a_mode_for_a_composite_setup(tmp_path):
 def test_run_compare_without_mode_runs_the_composite_setup_as_it_stands(tmp_path):
     session = _session(tmp_path)
     cm = session._compare_manager
-    _composite(session, ("CLIP_EMBEDDING", {}), ("SIZE", {}))
+    _composite(session, ("CLIP_EMBEDDING", {}), ("COLOR_MATCHING", {}))
     with patch.object(session._runner, "start") as start:
         session.run_compare(None, False)
     task, (compare_mode, args, _complement) = start.call_args.args

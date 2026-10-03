@@ -354,7 +354,7 @@ class CompareModels(BaseCompare):
 
         # Order and cap results
         sorted_items = sorted(temp_scores.items(), key=lambda item: item[1], reverse=True)
-        if config.search_only_return_closest:
+        if self.search_only_return_closest():
             files_grouped[0] = dict(sorted_items)
         else:
             files_grouped_limited = {}
@@ -382,7 +382,7 @@ class CompareModels(BaseCompare):
         overwrite = self.args.overwrite or not store_checkpoints
         self.compare_result = CompareResult.load(
             self.base_dir, self.compare_data.files_found, mode=self.COMPARE_MODE, overwrite=overwrite,
-            filter_key=self.checkpoint_filter_key)
+            filter_key=self.checkpoint_filter_key, threshold=self.args.threshold)
         if self.compare_result.is_complete:
             return (self.compare_result.files_grouped, self.compare_result.file_groups)
 
@@ -484,7 +484,7 @@ class CompareModels(BaseCompare):
             file_group[_file] = similarity
             self.compare_result.file_groups[group_index] = file_group
 
-        self.compare_result.finalize_group_result()
+        self.compare_result.finalize_group_result(store_checkpoints=store_checkpoints)
         return (self.compare_result.files_grouped, self.compare_result.file_groups)
 
     def run(self, store_checkpoints=False):

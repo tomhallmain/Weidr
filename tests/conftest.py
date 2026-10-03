@@ -133,7 +133,12 @@ def reset_app_globals():
             from files.marked_files import MarkedFiles
             MarkedFiles.file_marks = []
             MarkedFiles.is_performing_action = False
+            MarkedFiles.is_cancelled_action = False
             MarkedFiles.delete_lock = False
+            # What Ctrl+Z undoes: one test's transfer must not be undone by the next.
+            MarkedFiles.previous_marks = []
+            MarkedFiles.previous_action = None
+            MarkedFiles.last_set_target_dir = None
         except Exception:
             pass
 

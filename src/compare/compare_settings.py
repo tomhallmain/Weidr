@@ -223,6 +223,7 @@ def resolve_run_compare_mode(cm, mode: Optional[str], searching: bool) -> Compar
                 cfg.enabled and (cfg.search_text or cfg.search_text_negative)
                 for cfg in cm.get_mode_instances()):
             raise ValueError("the composite setup's instances have search texts; run it with run_search")
+
     return compare_mode
 
 

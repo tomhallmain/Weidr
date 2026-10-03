@@ -214,7 +214,7 @@ class ComparePrompts(BaseCompareEmbedding):
 
         similars = np.nonzero(embedding_similars[0])
 
-        if config.search_only_return_closest:
+        if self.search_only_return_closest():
             for _index in similars[0]:
                 files_grouped[_files_found[_index]] = embedding_similars[1][_index]
         else:
@@ -301,7 +301,7 @@ class ComparePrompts(BaseCompareEmbedding):
         overwrite = self.args.overwrite or not store_checkpoints
         self.compare_result = CompareResult.load(
             self.base_dir, self.compare_data.files_found, mode=self.COMPARE_MODE, overwrite=overwrite,
-            filter_key=self.checkpoint_filter_key)
+            filter_key=self.checkpoint_filter_key, threshold=self.args.threshold)
         if self.compare_result.is_complete:
             return (self.compare_result.files_grouped, self.compare_result.file_groups)
 
@@ -392,7 +392,7 @@ class ComparePrompts(BaseCompareEmbedding):
             file_group[_file] = similarity
             self.compare_result.file_groups[group_index] = file_group
 
-        self.compare_result.finalize_group_result()
+        self.compare_result.finalize_group_result(store_checkpoints=store_checkpoints)
         return (self.compare_result.files_grouped, self.compare_result.file_groups)
 
     def run(self, store_checkpoints=False):

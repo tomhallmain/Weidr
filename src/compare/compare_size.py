@@ -96,6 +96,9 @@ class CompareSize(BaseCompare):
         self.threshold_match = CompareSize.THRESHOLD_MATCH
         self.threshold_tolerance = 0  # Pixel tolerance for size matching
         self.settings_updated = False
+        # Sizes of this run's files_found. compare_data.file_data_dict is only
+        # the on-disk cache: save_data() frees it after writing new data.
+        self._file_sizes = {}
         # Initialize compare_data for size comparison
         self.compare_data = CompareData(base_dir=self.base_dir, data_filename=CompareSize.CACHE_FILENAME)
         # Set initial tolerance from args
@@ -194,6 +197,7 @@ class CompareSize(BaseCompare):
             print("Gathering size data", end="", flush=True)
 
         self._reset_run_accumulators()
+        self._file_sizes = {}
 
         counter = 0
 
@@ -220,6 +224,7 @@ class CompareSize(BaseCompare):
                 self.compare_data.has_new_file_data = True
 
             counter += 1
+            self._file_sizes[f] = tuple(size)
             self.compare_data.files_found.append(f)
             self._handle_progress(counter, self.max_files_processed_even)
 
@@ -237,15 +242,15 @@ class CompareSize(BaseCompare):
             logger.info("Identifying similar size files...")
 
         # Get the search media's size
-        if search_path in self.compare_data.file_data_dict:
-            search_size = self.compare_data.file_data_dict[search_path]
+        if search_path in self._file_sizes:
+            search_size = self._file_sizes[search_path]
         else:
             search_size = extract_size_from_media(search_path)
             if search_size is None:
                 if self.verbose:
                     logger.warning(f"Could not extract size from search image {search_path}")
                 return {0: {}}
-            self.compare_data.file_data_dict[search_path] = search_size
+            self._file_sizes[search_path] = search_size
 
         # Remove search file from comparison list
         if search_file_index < len(_files_found):
@@ -256,8 +261,8 @@ class CompareSize(BaseCompare):
 
         # Compare with all other files
         for file_path in _files_found:
-            if file_path in self.compare_data.file_data_dict:
-                file_size = self.compare_data.file_data_dict[file_path]
+            if file_path in self._file_sizes:
+                file_size = self._file_sizes[file_path]
             else:
                 continue  # Skip files without size data
             
@@ -310,8 +315,8 @@ class CompareSize(BaseCompare):
         # Compute similarity against each file's stored size
         temp_scores = {}
         for file_path in self.compare_data.files_found:
-            if file_path in self.compare_data.file_data_dict:
-                file_size = self.compare_data.file_data_dict[file_path]
+            if file_path in self._file_sizes:
+                file_size = self._file_sizes[file_path]
             else:
                 continue
             
@@ -322,7 +327,7 @@ class CompareSize(BaseCompare):
 
         # Order and cap results
         sorted_items = sorted(temp_scores.items(), key=lambda item: item[1], reverse=True)
-        if config.search_only_return_closest:
+        if self.search_only_return_closest():
             files_grouped[0] = dict(sorted_items)
         else:
             files_grouped_limited = {}
@@ -345,9 +350,57 @@ class CompareSize(BaseCompare):
 
     def run_comparison(self, store_checkpoints=False):
         '''
-        Group comparison is not supported for size comparison.
+        Group files by dimensions. A file joins the first group whose first
+        member is within the pixel tolerance in width and height, so with a
+        tolerance > 0 sizes cannot chain further and further apart. Scores
+        are similarities to that first member, 1.0 for the same size, on the
+        same 0-1 scale as size searches. Groups of one are left out.
         '''
-        raise Exception("Group comparison is not supported for size comparison mode. Use search mode instead.")
+        overwrite = self.args.overwrite or not store_checkpoints
+        self.compare_result = CompareResult.load(
+            self.base_dir, self.compare_data.files_found, mode=self.COMPARE_MODE, overwrite=overwrite,
+            filter_key=self.checkpoint_filter_key, threshold=self.args.threshold)
+        if self.compare_result.is_complete:
+            return (self.compare_result.files_grouped, self.compare_result.file_groups)
+
+        tolerance = getattr(self, 'threshold_tolerance', 0)
+        buckets = []  # [(first member's size, [(file_index, score), ...])]
+        exact_buckets = {}  # size -> index in buckets, for tolerance 0
+        for file_index, path in enumerate(self.compare_data.files_found):
+            if file_index % 1000 == 0 and self.is_cancelled():
+                self.raise_cancellation_exception()
+            size = self._file_sizes.get(path)
+            if size is None:
+                continue
+            if tolerance == 0:
+                bucket_index = exact_buckets.get(size)
+            else:
+                bucket_index = next(
+                    (i for i, (first, _members) in enumerate(buckets)
+                     if abs(first[0] - size[0]) <= tolerance and abs(first[1] - size[1]) <= tolerance),
+                    None)
+            if bucket_index is None:
+                exact_buckets[size] = len(buckets)
+                buckets.append((size, [(file_index, 1.0)]))
+                continue
+            first = buckets[bucket_index][0]
+            score = 1.0 - max(abs(first[0] - size[0]), abs(first[1] - size[1])) / (tolerance + 1)
+            buckets[bucket_index][1].append((file_index, score))
+
+        files_found = self.compare_data.files_found
+        for _first, members in buckets:
+            if len(members) < 2:
+                continue
+            group_index = self.compare_result.group_index
+            self.compare_result.group_index += 1
+            self.compare_result.file_groups[group_index] = {
+                files_found[file_index]: score for file_index, score in members
+            }
+            for file_index, score in members:
+                self.compare_result.files_grouped[file_index] = (group_index, score)
+
+        self.compare_result.finalize_group_result(store_checkpoints=store_checkpoints)
+        return (self.compare_result.files_grouped, self.compare_result.file_groups)
 
     def run(self, store_checkpoints=False):
         '''
@@ -368,8 +421,7 @@ class CompareSize(BaseCompare):
         for f in removed_files:
             if f in self.compare_data.files_found:
                 self.compare_data.files_found.remove(f)
-            if f in self.compare_data.file_data_dict:
-                del self.compare_data.file_data_dict[f]
+            self._file_sizes.pop(f, None)
 
     @staticmethod
     def is_related(media1, media2):

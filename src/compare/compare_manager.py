@@ -12,6 +12,7 @@ from lib.sleep_prevention import WakeLevel, hold_wake
 from utils.config import config
 from utils.constants import CompareMode, Mode
 from utils.logging_setup import get_logger
+from utils.translations import _
 
 logger = get_logger("compare_manager")
 
@@ -1031,6 +1032,9 @@ class CompareManager:
             # Create instance-specific args
             instance_args = args.clone()
             instance_args.compare_mode = config.compare_mode
+            # A search instance contributes its matches, not a ranking of every
+            # file; otherwise AND could not exclude anything by that mode.
+            instance_args.search_only_return_closest = True
             if config.threshold is not None:
                 instance_args.threshold = config.threshold
             elif config.compare_mode != self._primary_mode:
@@ -1242,7 +1246,9 @@ class CompareManager:
                      behave identically to a single-compare group run.
         SEARCH mode: stores a flat group-0 result and drives create_media() directly.
         """
-        if not self._primary_mode or not self._combined_results:
+        # An empty combined result still goes through: it clears the primary
+        # instance's own results, which would otherwise show unfiltered.
+        if not self._primary_mode or self._combined_results is None:
             return
 
         primary_iid = self._primary_instance_id
@@ -1277,10 +1283,10 @@ class CompareManager:
                 wrapper.file_groups = {}
                 wrapper.files_grouped = {}
                 wrapper.group_indexes = []
-                self._app_actions._set_label_state("No matching groups found")
+                self._app_actions._set_label_state(_("No matching groups found"))
                 self._app_actions.alert(
-                    "No Match Found",
-                    "No groups survived the composite filter criteria."
+                    _("No Match Found"),
+                    _("No groups survived the composite filter criteria.")
                 )
                 return
 
@@ -1320,11 +1326,12 @@ class CompareManager:
             wrapper.files_grouped = {0: self._combined_results}
             wrapper.file_groups = deepcopy(wrapper.files_grouped)
 
-            reverse = self._primary_mode.is_embedding()
+            # Combined scores are normalized similarities whatever the modes:
+            # best first.
             wrapper.files_matched = []
             for f in sorted(self._combined_results.keys(),
                            key=lambda f: self._combined_results[f],
-                           reverse=reverse):
+                           reverse=True):
                 wrapper.files_matched.append(f)
 
             wrapper.group_indexes = [0]
@@ -1335,15 +1342,15 @@ class CompareManager:
 
             if wrapper.has_media_matches:
                 self._app_actions._set_label_state(
-                    f"{len(wrapper.files_matched)} matches found (composite search)"
+                    _("{0} matches found (composite search)").format(len(wrapper.files_matched))
                 )
                 self._app_actions._add_buttons_for_mode()
                 self._app_actions.create_media(wrapper.files_matched[0])
             else:
-                self._app_actions._set_label_state("No matches found")
+                self._app_actions._set_label_state(_("No matches found"))
                 self._app_actions.alert(
-                    "No Match Found",
-                    "None of the files match the composite search criteria."
+                    _("No Match Found"),
+                    _("None of the files match the composite search criteria.")
                 )
 
     # ========== History / Snapshot ==========

@@ -138,7 +138,7 @@ class ClassifierFilter(CompareFilter):
     classifier_name: str = ""
     domain:          str = CLASSIFIER_DOMAIN_IMAGE
     selection_mode:  str = SELECTION_SELECTED_CATEGORIES
-    categories:      Optional[List[str]] = None
+    categories:      List[str] = field(default_factory=list)
     mode:            str = 'include'   # 'include' | 'exclude'
     min_confidence:  float = 0.0
     # Same defaults as ClassifierAction.dynamic_content_sample_ratio/_positive_ratio.

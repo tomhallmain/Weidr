@@ -368,6 +368,12 @@ class BaseCompare:
     def supports_supergrouping(self) -> bool:
         return False
 
+    def search_only_return_closest(self) -> bool:
+        """Whether a search returns only threshold matches: the run's
+        override if set, else the config setting."""
+        override = getattr(self.args, "search_only_return_closest", None)
+        return config.search_only_return_closest if override is None else override
+
     def remove_from_groups(self, removed_files=[]):
         pass
 

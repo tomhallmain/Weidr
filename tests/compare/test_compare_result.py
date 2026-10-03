@@ -218,3 +218,35 @@ class TestFilteredCheckpoints:
 
         loaded = CompareResult.load(str(tmp_path), files, filter_key="abc123")
         assert loaded._filter_key == "abc123"
+
+
+class TestCheckpointThreshold:
+    """A checkpoint holds groups formed at one threshold; a run at another
+    must not resume or reuse it."""
+
+    def _stored(self, tmp_path, files, threshold):
+        cr = CompareResult(str(tmp_path), files, threshold=threshold)
+        cr.files_grouped = {0: (0, 1.0), 1: (0, 2.0)}
+        cr.file_groups = {0: {files[0]: 1.0, files[1]: 2.0}}
+        cr.is_complete = True
+        cr.store()
+
+    def test_same_threshold_reuses_the_checkpoint(self, tmp_path):
+        files = ["a.jpg", "b.jpg"]
+        self._stored(tmp_path, files, 15)
+        loaded = CompareResult.load(str(tmp_path), files, threshold=15)
+        assert loaded.is_complete is True
+
+    def test_other_threshold_starts_fresh(self, tmp_path):
+        files = ["a.jpg", "b.jpg"]
+        self._stored(tmp_path, files, 15)
+        loaded = CompareResult.load(str(tmp_path), files, threshold=10)
+        assert loaded.is_complete is False
+        assert loaded.files_grouped == {}
+
+    def test_checkpoint_without_a_threshold_is_kept_and_adopts_the_run_threshold(self, tmp_path):
+        files = ["a.jpg", "b.jpg"]
+        self._stored(tmp_path, files, None)
+        loaded = CompareResult.load(str(tmp_path), files, threshold=15)
+        assert loaded.is_complete is True
+        assert loaded._threshold == 15

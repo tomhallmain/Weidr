@@ -132,3 +132,28 @@ class TestDefaults:
 
     def test_default_find_duplicates_is_false(self):
         assert CompareArgs().find_duplicates is False
+
+
+
+class TestSearchOnlyReturnClosestOverride:
+    def test_unset_follows_the_config(self, monkeypatch):
+        from compare.base_compare import BaseCompare
+        from utils.config import config
+        monkeypatch.setattr(config, "search_only_return_closest", True)
+        compare = BaseCompare.__new__(BaseCompare)
+        compare.args = CompareArgs()
+        assert compare.search_only_return_closest() is True
+
+    def test_set_overrides_the_config(self, monkeypatch):
+        from compare.base_compare import BaseCompare
+        from utils.config import config
+        monkeypatch.setattr(config, "search_only_return_closest", False)
+        compare = BaseCompare.__new__(BaseCompare)
+        compare.args = CompareArgs()
+        compare.args.search_only_return_closest = True
+        assert compare.search_only_return_closest() is True
+
+    def test_clone_keeps_the_override(self):
+        args = CompareArgs()
+        args.search_only_return_closest = True
+        assert args.clone().search_only_return_closest is True

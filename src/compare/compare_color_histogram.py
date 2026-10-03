@@ -177,7 +177,7 @@ class CompareColorHistogram(BaseCompare):
 
         distances = np.sum(np.abs(other_hists - search_hist), axis=1) / 2.0
 
-        if config.search_only_return_closest:
+        if self.search_only_return_closest():
             files_grouped = {
                 files_found[i]: float(distances[i])
                 for i in range(len(files_found))
@@ -235,6 +235,7 @@ class CompareColorHistogram(BaseCompare):
             mode=self.COMPARE_MODE,
             overwrite=overwrite,
             filter_key=self.checkpoint_filter_key,
+            threshold=self.args.threshold,
         )
         if self.compare_result.is_complete:
             return (self.compare_result.files_grouped, self.compare_result.file_groups)
@@ -327,7 +328,7 @@ class CompareColorHistogram(BaseCompare):
             file_group[_file] = dist
             self.compare_result.file_groups[group_index] = file_group
 
-        self.compare_result.finalize_group_result()
+        self.compare_result.finalize_group_result(store_checkpoints=store_checkpoints)
         return (self.compare_result.files_grouped, self.compare_result.file_groups)
 
     def run(self, store_checkpoints: bool = False):

@@ -47,6 +47,10 @@ class CompareArgs:
         # replacing it.
         self.positive_seed_vectors: Optional[list] = None
         self.negative_seed_vectors: Optional[list] = None
+        # Overrides config.search_only_return_closest for this run when set:
+        # a search then returns only the files within the threshold rather
+        # than a ranking of all of them.
+        self.search_only_return_closest: Optional[bool] = None
 
     def not_searching(self):
         def _empty(v):

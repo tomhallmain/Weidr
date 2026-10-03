@@ -148,7 +148,8 @@ def test_a_failed_pair_is_kept_for_another_try(tmp_path):
     assert os.path.isfile(files[1])
     assert MarkedFiles.previous_marks == [files[0]]
     assert MarkedFiles.previous_action.new_files == [str(target / "a.txt")]
-    assert MarkedFiles.previous_action not in FileAction.action_history
+    # FileAction.__eq__ compares action and target only, so check identity.
+    assert all(a is not MarkedFiles.previous_action for a in FileAction.action_history)
 
 
 def test_nothing_to_undo_changes_nothing(tmp_path):

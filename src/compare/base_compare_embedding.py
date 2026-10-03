@@ -415,7 +415,7 @@ class BaseCompareEmbedding(BaseCompare):
         logger.debug(f"Store checkpoints: {store_checkpoints}")
         self.compare_result = CompareResult.load(
             self.base_dir, self.compare_data.files_found, mode=self.COMPARE_MODE, overwrite=overwrite,
-            filter_key=self.checkpoint_filter_key)
+            filter_key=self.checkpoint_filter_key, threshold=self.args.threshold)
         if self.compare_result.is_complete:
             self.compute_supergroups()
             return (self.compare_result.files_grouped, self.compare_result.file_groups)
@@ -561,7 +561,7 @@ class BaseCompareEmbedding(BaseCompare):
 
         similars = np.nonzero(embedding_similars[0])
 
-        if config.search_only_return_closest:
+        if self.search_only_return_closest():
             for _index in similars[0]:
                 files_grouped[_files_found[_index]] = embedding_similars[1][_index]
             # Sort results by increasing difference score
@@ -634,7 +634,7 @@ class BaseCompareEmbedding(BaseCompare):
     def _compute_multiembedding_diff(self, positive_embeddings=[], negative_embeddings=[], threshold=0.0):
         files_grouped = {}
 
-        if config.search_only_return_closest:
+        if self.search_only_return_closest():
             _files_found = list(self.compare_data.files_found)
             embedding_similars = self._compute_embedding_diff(
                 self._file_embeddings, positive_embeddings[0], True, threshold=threshold)

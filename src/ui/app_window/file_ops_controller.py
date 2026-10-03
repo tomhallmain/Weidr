@@ -8,7 +8,6 @@ for changes and refreshes the file list when needed.
 from __future__ import annotations
 
 import os
-import subprocess
 import sys
 import threading
 from typing import TYPE_CHECKING, Optional
@@ -20,7 +19,6 @@ from ui.auth.password_utils import require_password
 from utils.config import config
 from utils.constants import ActionType, Mode, ProtectedActions, Sort, SortBy
 from utils.logging_setup import get_logger
-from utils.repo_paths import repo_root
 from utils.running_tasks_registry import start_thread
 from utils.translations import _, compare_running_warn
 from utils.utils import Utils
@@ -33,6 +31,8 @@ if TYPE_CHECKING:
 logger = get_logger("file_ops_controller")
 
 _RANDOMIZE_FILENAMES_LOG_BASENAME = "randomize_filenames.log"
+# randomize_filenames logs through one module-level logger, so one run at a time.
+_randomize_filenames_lock = threading.Lock()
 
 
 class _FrameExtractionWorker(QThread):
@@ -1256,12 +1256,8 @@ class FileOpsController:
         refacdir_client.run(self._app.media_path)
         self._app.notification_ctrl.toast(_("Running refacdir"))
 
-    @staticmethod
-    def _randomize_filenames_script_path() -> str:
-        return os.path.join(repo_root(), "scripts", "randomize_filenames.py")
-
     def run_randomize_filenames(self, event=None) -> None:
-        """Spawn randomize_filenames.py on the base directory (dry run or execute)."""
+        """Run files.randomize_filenames on the base directory (dry run or execute)."""
         if self._app.is_compare_running():
             self._app.app_actions.warn(compare_running_warn(_("randomize filenames")))
             return
@@ -1269,13 +1265,6 @@ class FileOpsController:
         base_dir = self._app.get_base_dir()
         if not base_dir or not os.path.isdir(base_dir):
             self._app.app_actions.warn(_("No valid base directory for randomize filenames"))
-            return
-
-        script_path = self._randomize_filenames_script_path()
-        if not os.path.isfile(script_path):
-            self._app.app_actions.warn(
-                _("Randomize filenames script not found:\n{0}").format(script_path)
-            )
             return
 
         log_path = os.path.join(base_dir, _RANDOMIZE_FILENAMES_LOG_BASENAME)
@@ -1316,35 +1305,28 @@ class FileOpsController:
         ):
             return
 
-        cmd = [
-            sys.executable,
-            script_path,
-            base_dir,
-            "--verbose",
-            "--log-file",
-            log_path,
-        ]
-        cmd.append("--execute" if execute else "--dry-run")
+        if not _randomize_filenames_lock.acquire(blocking=False):
+            self._app.app_actions.warn(_("Randomize filenames is already running"))
+            return
 
-        def spawn_worker() -> None:
-            creationflags = 0
-            if sys.platform == "win32":
-                creationflags = subprocess.CREATE_NO_WINDOW
+        argv = [base_dir, "--verbose", "--log-file", log_path,
+                "--execute" if execute else "--dry-run"]
+
+        def worker() -> None:
+            # Runs in this process so a build needs no Python interpreter.
             try:
-                subprocess.Popen(
-                    cmd,
-                    cwd=base_dir,
-                    stdin=subprocess.DEVNULL,
-                    creationflags=creationflags,
-                )
-            except OSError as e:
-                logger.error("Failed to start randomize_filenames: %s", e)
-                self._app.notification_ctrl.handle_error(
-                    _("Failed to start randomize filenames: {0}").format(e)
-                )
-                return
+                from files.randomize_filenames import main as randomize_filenames_main
+                exit_code = randomize_filenames_main(argv)
+                if exit_code:
+                    logger.error("randomize_filenames exited %s; see %s", exit_code, log_path)
+            except BaseException:
+                # argparse raises SystemExit on bad arguments.
+                logger.exception("randomize_filenames failed; see %s", log_path)
+            finally:
+                _randomize_filenames_lock.release()
 
-        start_thread(spawn_worker, use_asyncio=False)
+        # Not a daemon: closing the app must not stop a run part-way through renaming.
+        threading.Thread(target=worker, name="randomize-filenames", daemon=False).start()
 
         if execute:
             self._app.notification_ctrl.toast(

@@ -24,12 +24,13 @@ from typing import Optional
 
 from utils.constants import AppInfo
 from utils.logging_setup import get_logger
-from utils.repo_paths import repo_root
+from utils.repo_paths import resource_root, user_root
 
 logger = get_logger("example_pipelines")
 
-EXAMPLE_PIPELINES_DIRECTORY = os.path.join(repo_root(), "assets", "pipelines")
-EXAMPLE_PIPELINES_ARCHIVE = os.path.join(repo_root(), "assets", "example_pipelines.enc")
+# Extracted files are edited and rewritten, so they live with the user data.
+EXAMPLE_PIPELINES_DIRECTORY = os.path.join(user_root(), "assets", "pipelines")
+EXAMPLE_PIPELINES_ARCHIVE = os.path.join(resource_root(), "assets", "example_pipelines.enc")
 SOURCE_MARKER_FILE = ".archive_sha256"
 # Changing the app identifier makes the archive unreadable until it is
 # regenerated with scripts/update_example_pipelines.py.

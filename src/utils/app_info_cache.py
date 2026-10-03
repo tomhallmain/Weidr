@@ -12,7 +12,7 @@ from lib.equivalence import are_equivalent
 from utils.constants import AppInfo
 from utils.encryptor import encrypt_data_to_file, decrypt_data_from_file
 from utils.logging_setup import get_logger
-from utils.repo_paths import repo_root
+from utils.repo_paths import user_root
 
 logger = get_logger(__name__)
 
@@ -198,8 +198,8 @@ class InflationMonitor(ABC):
 
 
 class AppInfoCache(InflationMonitor):
-    CACHE_LOC = os.path.join(repo_root(), "app_info_cache.enc")
-    JSON_LOC = os.path.join(repo_root(), "app_info_cache.json")
+    CACHE_LOC = os.path.join(user_root(), "app_info_cache.enc")
+    JSON_LOC = os.path.join(user_root(), "app_info_cache.json")
     META_INFO_KEY = "info"
     DIRECTORIES_KEY = "directories"
     NUM_BACKUPS = 4  # Number of backup files to maintain

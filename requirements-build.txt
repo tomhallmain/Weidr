@@ -1,5 +1,11 @@
-pytest>=8.0.0
-pytest-qt>=4.4.0
+# Packages for build_exe.py's .venv-build: Nuitka plus requirements.txt without
+# the test packages (pytest, pytest-qt) and ttkthemes, which src/ never imports.
+# Keep the runtime lines in step with requirements.txt.
+nuitka>=2.4
+# Nuitka (4.2.2) reads lazy_loader._StubVisitor to resolve scikit-image's lazy
+# imports; lazy_loader 0.6 made it local to attach_stub().
+lazy_loader>=0.4,<0.6
+
 cairosvg
 cryptography
 imageio>=2.31.6
@@ -7,7 +13,6 @@ keyring
 matplotlib>=3.8.0
 numpy>=1.26.1
 openai-clip
-setuptools<82            # openai-clip imports pkg_resources, which setuptools 82 removed
 open-clip-torch          # EVA CLIP embedding mode
 insightface              # Face Embedding mode
 onnxruntime-gpu          # GPU inference for InsightFace and the ONNX image classifier backend (use onnxruntime for CPU-only)
@@ -33,4 +38,3 @@ torch
 torchvision
 transformers
 PySide6>=6.6.0
-ttkthemes>=3.2.2

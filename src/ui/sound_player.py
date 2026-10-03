@@ -13,9 +13,9 @@ from typing import Dict
 from PySide6.QtCore import QUrl
 from PySide6.QtMultimedia import QSoundEffect
 
-from utils.repo_paths import repo_root
+from utils.repo_paths import resource_root
 
-_SOUNDS_DIR = os.path.join(repo_root(), "assets", "sounds")
+_SOUNDS_DIR = os.path.join(resource_root(), "assets", "sounds")
 _effects: Dict[str, QSoundEffect] = {}
 
 

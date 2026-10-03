@@ -7,7 +7,7 @@ import sys
 from image.image_edit_configuration import ImageEditConfiguration
 from utils.constants import CompareMode, Sort, SortBy
 from utils.logging_setup import get_logger
-from utils.repo_paths import repo_root
+from utils.repo_paths import is_compiled, resource_root, user_root
 from utils.running_tasks_registry import running_tasks_registry
 from utils.utils import Utils
 
@@ -15,7 +15,10 @@ logger = get_logger("config")
 
 
 class Config:
-    CONFIGS_DIR_LOC = os.path.join(repo_root(), "configs")
+    CONFIGS_DIR_LOC = os.path.join(user_root(), "configs")
+    EXAMPLE_CONFIG_LOC = os.path.join(resource_root(), "configs", "config_example.json")
+    # JSON files in configs/ that are never a config to load.
+    _NON_CONFIG_FILES = ("config_example.json", "suggested_classifier_models.json")
 
     # Registry of config keys that the Help/Config dialog exposes as editable.
     # Maps key → expected Python type for conversion:
@@ -116,17 +119,36 @@ class Config:
     def resolve_config_path():
         """Resolve the active config file path, preferring config.json."""
         configs_dir = os.environ.get("WEIDR_CONFIGS_DIR") or Config.CONFIGS_DIR_LOC
-        configs = [f.path for f in os.scandir(configs_dir) if f.is_file() and f.path.endswith(".json")]
+        configs = []
+        if os.path.isdir(configs_dir):
+            configs = [f.path for f in os.scandir(configs_dir) if f.is_file() and f.path.endswith(".json")]
         config_path = None
         for candidate in configs:
             basename = os.path.basename(candidate)
             if basename == "config.json":
                 config_path = candidate
                 break
-            if basename != "config_example.json":
+            if basename not in Config._NON_CONFIG_FILES:
                 config_path = candidate
         if config_path is None:
-            config_path = os.path.join(Config.CONFIGS_DIR_LOC, "config_example.json")
+            config_path = Config._seed_config(configs_dir) if is_compiled() else Config.EXAMPLE_CONFIG_LOC
+        return config_path
+
+    @staticmethod
+    def _seed_config(configs_dir):
+        """Copy the shipped example config to *configs_dir*/config.json.
+
+        persist() writes back to the file it loaded, and a build's
+        config_example.json sits in the build folder, which a new build
+        replaces and which may not be writable.
+        """
+        config_path = os.path.join(configs_dir, "config.json")
+        try:
+            os.makedirs(configs_dir, exist_ok=True)
+            shutil.copyfile(Config.EXAMPLE_CONFIG_LOC, config_path)
+        except OSError as e:
+            logger.error(f"Unable to create {config_path} from the example config: {e}")
+            return Config.EXAMPLE_CONFIG_LOC
         return config_path
 
     def __init__(self):

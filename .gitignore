@@ -8,11 +8,13 @@ __pycache__/
 .Python
 venv/
 .venv/
+.venv-build/
 env/
 *.egg-info/
 .eggs/
 dist/
 build/
+nuitka-crash-report.xml
 
 # -----------------------------------------------------------------------------
 # Project / application

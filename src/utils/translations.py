@@ -3,7 +3,7 @@ import os
 import re
 
 from utils.logging_setup import get_logger
-from utils.repo_paths import repo_root
+from utils.repo_paths import resource_root
 from utils.utils import Utils
 
 logger = get_logger("translations")
@@ -16,7 +16,7 @@ elif _locale is not None and "_" in _locale:
     _locale = _locale[:_locale.index("_")]
 
 class I18N:
-    localedir = os.path.join(repo_root(), 'locale')
+    localedir = os.path.join(resource_root(), 'locale')
     locale = "en"
     translate = gettext.translation('base', localedir, languages=[_locale])
 

@@ -1,0 +1,26 @@
+# Nuitka package configuration for build_exe.py
+# (--user-package-configuration-file). Same format as Nuitka's own
+# nuitka/plugins/standard/standard.nuitka-package.config.yml.
+---
+- module-name: 'clip.clip'
+  anti-bloat:
+    # setuptools >= 82 no longer ships pkg_resources, and in 71-81 it imports
+    # its dependencies from setuptools/_vendor via a runtime sys.path change
+    # that Nuitka does not follow. clip only uses packaging.version from it.
+    - description: 'use packaging directly, not through pkg_resources'
+      replacements_plain:
+        'from pkg_resources import packaging': 'import packaging.version'
+
+# torchvision >= 0.29 renamed its extensions _C/image to _C_stable/image_stable.
+# They are loaded by file path, not imported, so Nuitka only ships them through
+# these entries; its own config names only the old ones. Nuitka merges
+# implicit-imports with its own entries for the same module.
+- module-name: 'torchvision.extension'
+  implicit-imports:
+    - depends:
+        - '._C_stable'
+
+- module-name: 'torchvision.io.image'
+  implicit-imports:
+    - depends:
+        - 'torchvision.image_stable'

@@ -27,6 +27,25 @@ python scripts/agent_headless_demo.py --list   # or pick one with --only NAME
 
 It runs against a throwaway directory of generated images with the app cache redirected into it, so it never touches your media or saved pipelines. The `--api` output is written to be handed to an agent as its instructions.
 
+### Building an executable
+
+`python build_exe.py` compiles `app_qt.py` with [Nuitka](https://nuitka.net) into `dist/Weidr/`, a folder holding the `Weidr` executable (`Weidr.exe` on Windows) beside its libraries and data files. Distribute the whole folder, e.g. as a zip. Running from source (`python app_qt.py`, `start_qt.bat`) is unaffected.
+
+Requirements:
+- A C compiler: on Windows, Visual Studio Build Tools (or Nuitka downloads MinGW itself); on macOS, the Xcode Command Line Tools; on Linux, gcc.
+- Disk space for the build environment and output: the ML stack (torch, TensorFlow, transformers, ...) makes both several GB.
+- Time: compiling this dependency tree takes a long time.
+
+The script installs `requirements-build.txt` into its own `.venv-build`, so nothing from your active environment is bundled. pip installs the CPU build of torch there on Windows; for CUDA torch, install it into `.venv-build` from [pytorch.org](https://pytorch.org) first, or pass `--current-env` to build with the running interpreter. Other arguments are passed to Nuitka. Nuitka does not cross-compile: build on each target OS. Each build ends with `Weidr --smoke-test`, which loads the configuration, translations, image plugins and compare modules without opening a window.
+
+Not included in the build, as when running from source:
+- libVLC: install [VLC](https://www.videolan.org) for video playback.
+- GIMP, diff-pdf, sd-runner and other external programs.
+- Model weights: downloaded to the Hugging Face cache on first use.
+- `requirements-optional.txt` packages (OCR, MCP server, post-quantum encryption, PEEK).
+
+The executable keeps its configuration and caches in the user data directory, not beside the program: `%LOCALAPPDATA%\Weidr` on Windows, `~/Library/Application Support/Weidr` on macOS, `$XDG_DATA_HOME/Weidr` (default `~/.local/share/Weidr`) on Linux. On first start it creates `configs/config.json` there from the example config. To carry over a source checkout's setup, close Weidr and copy `configs/config.json`, `app_info_cache.enc` and `classifier_prediction_cache.enc` from the checkout to the same relative paths in that directory.
+
 ---
 
 ## Media Browser

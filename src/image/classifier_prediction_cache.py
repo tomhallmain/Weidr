@@ -28,7 +28,7 @@ from lib.file_invalidation_cache import (
     FileMtimeInvalidationCache,
 )
 from utils.logging_setup import get_logger
-from utils.repo_paths import repo_root
+from utils.repo_paths import user_root
 
 logger = get_logger("classifier_prediction_cache")
 
@@ -38,7 +38,7 @@ FORMAT_VERSION = 1
 
 def _cache_file_path() -> str:
     override = os.environ.get("WEIDR_CACHE_DIR")
-    return os.path.join(override or repo_root(), CACHE_FILENAME)
+    return os.path.join(override or user_root(), CACHE_FILENAME)
 
 
 def model_signature(settings: Dict[str, Any]) -> str:

@@ -532,69 +532,6 @@ if __name__ == "__main__":
         self.cleanup()
 
 
-# Convenience functions for common operations
-def apply_brightness_contrast(input_path: str, brightness: float = 0.0, 
-                            contrast: float = 0.0, output_path: Optional[str] = None) -> str:
-    """Apply brightness and contrast adjustment using GEGL."""
-    with GimpGeglClient() as client:
-        return client.apply_gegl_operation(
-            input_path, 
-            "gegl:brightness-contrast", 
-            {"brightness": brightness, "contrast": contrast},
-            output_path
-        )
-
-
-def apply_color_balance(input_path: str, cyan_red: float = 0.0, 
-                       magenta_green: float = 0.0, yellow_blue: float = 0.0,
-                       output_path: Optional[str] = None) -> str:
-    """Apply color balance adjustment using GEGL."""
-    with GimpGeglClient() as client:
-        return client.apply_gegl_operation(
-            input_path,
-            "gegl:color-balance",
-            {"cyan-red": cyan_red, "magenta-green": magenta_green, "yellow-blue": yellow_blue},
-            output_path
-        )
-
-
-def apply_gaussian_blur(input_path: str, std_dev_x: float = 1.0, 
-                       std_dev_y: float = 1.0, output_path: Optional[str] = None) -> str:
-    """Apply Gaussian blur using GEGL."""
-    with GimpGeglClient() as client:
-        return client.apply_gegl_operation(
-            input_path,
-            "gegl:gaussian-blur",
-            {"std-dev-x": std_dev_x, "std-dev-y": std_dev_y},
-            output_path
-        )
-
-
-def apply_unsharp_mask(input_path: str, std_dev: float = 1.0, 
-                      scale: float = 0.5, output_path: Optional[str] = None) -> str:
-    """Apply unsharp mask using GEGL."""
-    with GimpGeglClient() as client:
-        return client.apply_gegl_operation(
-            input_path,
-            "gegl:unsharp-mask",
-            {"std-dev": std_dev, "scale": scale},
-            output_path
-        )
-
-
-def apply_hue_saturation(input_path: str, hue: float = 0.0, 
-                        saturation: float = 0.0, lightness: float = 0.0,
-                        output_path: Optional[str] = None) -> str:
-    """Apply hue, saturation, and lightness adjustment using GEGL."""
-    with GimpGeglClient() as client:
-        return client.apply_gegl_operation(
-            input_path,
-            "gegl:hue-saturation",
-            {"hue": hue, "saturation": saturation, "lightness": lightness},
-            output_path
-        )
-
-
 if __name__ == "__main__":
     # Example usage
     if len(sys.argv) < 2:

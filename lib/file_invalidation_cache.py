@@ -90,10 +90,6 @@ def invalidate_policy_caches() -> None:
     _file_buckets.clear()
 
 
-def get_policy_epoch() -> int:
-    return _policy_epoch
-
-
 def get_file_bucket_for_media(media_path: str) -> "FileKeyedInvalidationCache[Any]":
     k = FileKeyedInvalidationCache._path_key(media_path)
     if k not in _file_buckets:

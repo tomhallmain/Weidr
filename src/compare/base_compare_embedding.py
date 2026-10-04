@@ -972,6 +972,70 @@ class BaseCompareEmbedding(BaseCompare):
         return similarity > 0.8
 
 
+class ModelCompareEmbedding(BaseCompareEmbedding):
+    """An embedding mode backed by one model's embedding functions.
+
+    A subclass declares IMAGE_EMBEDDINGS_FUNC, TEXT_EMBEDDINGS_FUNC (None when
+    the model has no text encoder), both wrapped in staticmethod, plus
+    EMBEDDING_DIM and its own TEXT_EMBEDDING_CACHE and MULTI_EMBEDDING_CACHE
+    dicts: cached text embeddings and scores are only valid for the model that
+    made them. The constructor and the class-level helpers below read these.
+    """
+    EMBEDDING_DIM = 512
+    IMAGE_EMBEDDINGS_FUNC = None
+    TEXT_EMBEDDINGS_FUNC = None
+    THRESHHOLD_POTENTIAL_DUPLICATE = config.threshold_potential_duplicate_embedding
+    THRESHHOLD_PROBABLE_MATCH = 0.98
+    THRESHHOLD_GROUP_CUTOFF = 4500  # TODO fix this for Embedding case
+
+    def __init__(self, args=CompareArgs(), gather_files_func=gather_files):
+        super().__init__(args, gather_files_func)
+        cls = type(self)
+        self._file_embeddings = np.empty((0, cls.embedding_dim()))
+        self.threshold_duplicate = cls.THRESHHOLD_POTENTIAL_DUPLICATE
+        self.threshold_probable_match = cls.THRESHHOLD_PROBABLE_MATCH
+        self.threshold_group_cutoff = cls.THRESHHOLD_GROUP_CUTOFF
+        self.image_embeddings_func = cls.IMAGE_EMBEDDINGS_FUNC
+        self.text_embeddings_func = cls.TEXT_EMBEDDINGS_FUNC
+        self.text_embedding_cache = cls.TEXT_EMBEDDING_CACHE
+        self.multi_embedding_cache = cls.MULTI_EMBEDDING_CACHE
+
+    @classmethod
+    def embedding_dim(cls) -> int:
+        return cls.EMBEDDING_DIM
+
+    @classmethod
+    def _get_text_embedding_from_cache(cls, text):
+        return BaseCompareEmbedding._get_text_embedding_from_cache(
+            text, cls.TEXT_EMBEDDING_CACHE, cls.TEXT_EMBEDDINGS_FUNC)
+
+    @classmethod
+    def single_text_compare(cls, media_path, texts_dict):
+        return BaseCompareEmbedding.single_text_compare(
+            media_path, texts_dict, cls.IMAGE_EMBEDDINGS_FUNC,
+            cls.TEXT_EMBEDDING_CACHE, cls.TEXT_EMBEDDINGS_FUNC,
+            sample_dynamic_media=not cls.EMBEDS_DYNAMIC_MEDIA_NATIVELY)
+
+    @classmethod
+    def multi_text_compare(cls, media_path, positives, negatives, threshold=0.3):
+        return BaseCompareEmbedding.multi_text_compare(
+            media_path, positives, negatives, cls.IMAGE_EMBEDDINGS_FUNC,
+            cls.TEXT_EMBEDDING_CACHE, cls.TEXT_EMBEDDINGS_FUNC,
+            cls.MULTI_EMBEDDING_CACHE, threshold,
+            sample_dynamic_media=not cls.EMBEDS_DYNAMIC_MEDIA_NATIVELY)
+
+    @classmethod
+    def cached_multi_text_score(cls, media_path, positives, negatives):
+        return BaseCompareEmbedding.cached_multi_text_score(
+            media_path, positives, negatives, cls.MULTI_EMBEDDING_CACHE)
+
+    @classmethod
+    def is_related(cls, media1, media2):
+        return BaseCompareEmbedding.is_related(
+            media1, media2, cls.IMAGE_EMBEDDINGS_FUNC,
+            sample_dynamic_media=not cls.EMBEDS_DYNAMIC_MEDIA_NATIVELY)
+
+
 def usage():
     print("  Option                 Function                                 Default")
     print("      --dir=dirpath      Set base directory                       .      ")

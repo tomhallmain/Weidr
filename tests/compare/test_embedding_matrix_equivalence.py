@@ -43,7 +43,7 @@ Fixture and isolation
 ---------------------
 ``tests.fixtures.embedding_matrix_fixtures`` creates **26** tiny PNGs and a catalog
 of precomputed 512-D vectors (three tight clusters + one outlier family). CLIP is
-patched at ``compare.compare_embeddings_clip.image_embeddings_clip`` so
+patched at ``CompareEmbeddingClip.IMAGE_EMBEDDINGS_FUNC`` so
 ``get_data()`` loads fixture vectors without GPU work. ``stable_chunk_ram`` pins RAM
 budget so chunked similarity chunk sizes are deterministic in CI.
 
@@ -104,10 +104,7 @@ def patched_clip_embeddings(monkeypatch, embedding_matrix_catalog):
     def _fake(path: str) -> np.ndarray:
         return fake_image_embeddings_clip(path, embedding_matrix_catalog)
 
-    monkeypatch.setattr(
-        "compare.compare_embeddings_clip.image_embeddings_clip",
-        _fake,
-    )
+    monkeypatch.setattr(CompareEmbeddingClip, "IMAGE_EMBEDDINGS_FUNC", staticmethod(_fake))
     return embedding_matrix_catalog
 
 

@@ -24,6 +24,7 @@ from files.file_interceptor_rule import (
     InterceptorTransformOp,
 )
 from files.file_interceptor_rules_manager import FileInterceptorRulesManager
+from lib.layout_utils_qt import clear_layout
 from lib.multi_display_qt import SmartDialog
 from ui.app_style import AppStyle
 from utils.app_actions import AppActions
@@ -268,13 +269,7 @@ class FileInterceptorRulesWindow(SmartDialog):
     # Rows
     # ------------------------------------------------------------------
     def _rebuild_rows(self) -> None:
-        while self._scroll_layout.count():
-            item = self._scroll_layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.deleteLater()
-            elif item.layout() is not None:
-                self._clear_layout(item.layout())
+        clear_layout(self._scroll_layout)
 
         rules = FileInterceptorRulesManager.rules
         if not rules:
@@ -322,16 +317,6 @@ class FileInterceptorRulesWindow(SmartDialog):
             self._scroll_layout.addLayout(row)
 
         self._scroll_layout.addStretch()
-
-    @staticmethod
-    def _clear_layout(layout) -> None:
-        while layout.count():
-            item = layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.deleteLater()
-            elif item.layout() is not None:
-                FileInterceptorRulesWindow._clear_layout(item.layout())
 
     # ------------------------------------------------------------------
     # Actions

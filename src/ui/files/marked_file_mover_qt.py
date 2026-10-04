@@ -26,6 +26,7 @@ from files.marked_files import MarkedFiles
 from files.file_action import FileAction
 from image.frame_cache import FrameCache
 from lib.fast_directory_picker_qt import get_existing_directory
+from lib.layout_utils_qt import clear_layout
 from lib.multi_display_qt import SmartDialog
 from ui.app_style import AppStyle
 from ui.auth.password_utils import require_password
@@ -391,7 +392,7 @@ class MarkedFileMover(SmartDialog):
 
     def _rebuild_directory_rows(self) -> None:
         """Clear and rebuild the scrollable directory list."""
-        _clear_layout(self._scroll_layout)
+        clear_layout(self._scroll_layout)
 
         for target_dir in self._filtered_target_dirs:
             row = QHBoxLayout()
@@ -1224,18 +1225,3 @@ class MarkedFileMover(SmartDialog):
             MarkedFiles.file_marks.clear()
             self._app_actions.toast(_("Cleared marked file"))
         super().closeEvent(event)
-
-
-# ======================================================================
-# Helpers
-# ======================================================================
-def _clear_layout(layout) -> None:
-    """Recursively remove all items from a QLayout."""
-    while layout.count():
-        item = layout.takeAt(0)
-        widget = item.widget()
-        if widget is not None:
-            widget.deleteLater()
-        sub = item.layout()
-        if sub is not None:
-            _clear_layout(sub)

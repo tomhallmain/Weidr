@@ -4,14 +4,9 @@ Unit tests for compare-mode get_files() honoring an explicit CompareArgs.file_li
 Lets FileActionsWindow's "Search in New Window" feature build a search corpus
 from action-history destination files instead of scanning a directory.
 
-BaseCompare.get_files() carries the file_list shortcut, but several compare
-modes (CompareSize, CompareModels, ComparePrompts, ComparePromptsExact) have
-their own full get_files() override that never calls super().get_files() --
-a pre-existing duplication in this codebase. The fix therefore had to be
-applied to each override independently, and each is parametrized here so a
-future change to one doesn't silently stop covering the others (exactly the
-gap that slipped through when this was tested via CompareSize alone and
-CompareSize's own override didn't have the shortcut yet).
+BaseCompare.get_files() carries the file_list shortcut. Each mode is
+parametrized here so an override added to one of them later can't drop it
+unnoticed.
 """
 from __future__ import annotations
 
@@ -29,8 +24,7 @@ def _raise_if_called(**kwargs):
     raise AssertionError("gather_files_func should not be called when args.file_list is set")
 
 
-# name -> compare class. CompareColors uses BaseCompare.get_files() unmodified;
-# the rest each have their own override.
+# name -> compare class.
 COMPARE_CLASSES = {
     "CompareColors (base impl)": CompareColors,
     "CompareSize": CompareSize,

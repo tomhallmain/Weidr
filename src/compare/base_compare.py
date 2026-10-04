@@ -58,6 +58,11 @@ class CompareCancelled(Exception):
 
 
 class BaseCompare:
+    # Whether a directory scan takes videos, PDFs and ePubs when args enable
+    # them. Modes that compare generation metadata set it False: the metadata
+    # extractor reads images only.
+    SCANS_VIDEOS_AND_DOCUMENTS = True
+
     def __init__(self, args=CompareArgs(), gather_files_func=gather_files):
         self.args = args
         self.files = []
@@ -253,9 +258,13 @@ class BaseCompare:
             self.files = list(self.args.file_list)
         elif self.gather_files_func:
             exts = config.image_types
+            dynamic = self.SCANS_VIDEOS_AND_DOCUMENTS
             self.files = self.gather_files_func(
-                base_dir=self.base_dir, exts=exts, recursive=self.args.recursive, include_videos=self.args.include_videos, include_gifs=self.args.include_gifs, include_pdfs=self.args.include_pdfs,
-                include_epubs=getattr(self.args, "include_epubs", False))
+                base_dir=self.base_dir, exts=exts, recursive=self.args.recursive,
+                include_videos=dynamic and self.args.include_videos,
+                include_gifs=self.args.include_gifs,
+                include_pdfs=dynamic and self.args.include_pdfs,
+                include_epubs=dynamic and getattr(self.args, "include_epubs", False))
         else:
             raise Exception("No gather files function found.")
         self.files.sort()

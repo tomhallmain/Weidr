@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from files.file_action import FileAction
+from lib.layout_utils_qt import clear_layout
 from lib.multi_display_qt import SmartWindow
 from ui.app_style import AppStyle
 from utils.app_actions import AppActions
@@ -186,7 +187,7 @@ class FileActionsWindow(SmartWindow):
     # ==================================================================
     def _rebuild_content(self) -> None:
         """Clear and rebuild the entire scrollable content area."""
-        _clear_layout(self._scroll_layout)
+        clear_layout(self._scroll_layout)
 
         # Statistics section
         stats_widget = self._build_statistics()
@@ -978,18 +979,3 @@ class FileActionsWindow(SmartWindow):
     def closeEvent(self, event) -> None:  # noqa: N802
         FileActionsWindow._instance = None
         super().closeEvent(event)
-
-
-# ======================================================================
-# Helpers
-# ======================================================================
-def _clear_layout(layout) -> None:
-    """Recursively remove all items from a QLayout."""
-    while layout.count():
-        item = layout.takeAt(0)
-        widget = item.widget()
-        if widget is not None:
-            widget.deleteLater()
-        sub = item.layout()
-        if sub is not None:
-            _clear_layout(sub)

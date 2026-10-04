@@ -35,8 +35,8 @@ class WindowLauncher:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
-    def _handle_error(self, error: Exception, title: str = "Window Error") -> None:
-        self._app.notification_ctrl.handle_error(str(error), title=title)
+    def _handle_error(self, error: Exception, title: Optional[str] = None) -> None:
+        self._app.notification_ctrl.handle_error(str(error), title=title or _("Window Error"))
 
     # ------------------------------------------------------------------
     # Navigation windows
@@ -57,7 +57,7 @@ class WindowLauncher:
             self._go_to_file_window = GoToFile(self._app, self._app.app_actions)
             self._go_to_file_window.show()
         except Exception as e:
-            self._handle_error(e, "Go To File Window Error")
+            self._handle_error(e, _("Go To File Window Error"))
 
     def open_go_to_file_with_current_media(self, event=None) -> None:
         """Open go-to-file pre-populated with the current media name."""
@@ -75,7 +75,7 @@ class WindowLauncher:
             self._go_to_file_window.show()
             self._go_to_file_window.update_with_current_media(focus=True)
         except Exception as e:
-            self._handle_error(e, "Go To File Window Error")
+            self._handle_error(e, _("Go To File Window Error"))
 
     # ------------------------------------------------------------------
     # Directory windows
@@ -101,7 +101,7 @@ class WindowLauncher:
             )
             window.show()
         except Exception as e:
-            self._handle_error(e, "Recent Directory Window Error")
+            self._handle_error(e, _("Recent Directory Window Error"))
 
     def open_favorites_window(self, event=None) -> None:
         """Open the favorites directory window."""
@@ -109,7 +109,7 @@ class WindowLauncher:
             from ui.files.favorites_window_qt import FavoritesWindow
             FavoritesWindow.show_window(self._app, self._app.app_actions)
         except Exception as e:
-            self._handle_error(e, "Favorites Window Error")
+            self._handle_error(e, _("Favorites Window Error"))
 
     def open_embedding_seed_library_window(self, event=None) -> None:
         """Open the embedding seed library window."""
@@ -117,7 +117,7 @@ class WindowLauncher:
             from ui.compare.embedding_seed_library_window_qt import EmbeddingSeedLibraryWindow
             EmbeddingSeedLibraryWindow.show_window(self._app, self._app.app_actions)
         except Exception as e:
-            self._handle_error(e, "Embedding Seed Library Window Error")
+            self._handle_error(e, _("Embedding Seed Library Window Error"))
 
     def save_supergroup_as_embedding_seed(self, seed_data: dict) -> None:
         """
@@ -152,7 +152,7 @@ class WindowLauncher:
                 self._app, self._app.app_actions, lambda: None, pending_seed=pending
             ).show()
         except Exception as e:
-            self._handle_error(e, "Save Embedding Seed Error")
+            self._handle_error(e, _("Save Embedding Seed Error"))
 
     def save_current_media_as_embedding_seed(self, media_path: str) -> None:
         """
@@ -178,7 +178,7 @@ class WindowLauncher:
                 default_compare_mode=self._app.compare_manager.compare_mode,
             ).show()
         except Exception as e:
-            self._handle_error(e, "Save Embedding Seed Error")
+            self._handle_error(e, _("Save Embedding Seed Error"))
 
     def open_related_images_window(self, event=None) -> None:
         """Open the related images actions window."""
@@ -187,7 +187,7 @@ class WindowLauncher:
             window = RelatedImagesWindow(self._app)
             window.show()
         except Exception as e:
-            self._handle_error(e, "Related Images Window Error")
+            self._handle_error(e, _("Related Images Window Error"))
 
     def open_directory_notes_window(self, event=None) -> None:
         """Open the directory notes window for the current base directory."""
@@ -218,7 +218,7 @@ class WindowLauncher:
             )
             self._directory_notes_window.show()
         except Exception as e:
-            self._handle_error(e, "Directory Notes Window Error")
+            self._handle_error(e, _("Directory Notes Window Error"))
 
     # ------------------------------------------------------------------
     # Settings / configuration windows
@@ -233,7 +233,7 @@ class WindowLauncher:
                 set_file_filter=self._app.sidebar_panel.file_filter_entry.setText,
             )
         except Exception as e:
-            self._handle_error(e, "Compare Settings Window Error")
+            self._handle_error(e, _("Compare Settings Window Error"))
 
     @require_password(ProtectedActions.EDIT_PREVALIDATIONS)
     def open_hf_model_manager_window(self, event=None) -> None:
@@ -242,7 +242,7 @@ class WindowLauncher:
             from ui.compare.hf_model_manager_window_qt import HfModelManagerWindow
             HfModelManagerWindow.show_window(self._app, self._app.app_actions)
         except Exception as e:
-            self._handle_error(e, "HF Hub Model Manager Window Error")
+            self._handle_error(e, _("HF Hub Model Manager Window Error"))
 
     @require_password(ProtectedActions.CONFIGURE_MEDIA_TYPES)
     def open_type_configuration_window(self, event=None) -> None:
@@ -262,7 +262,7 @@ class WindowLauncher:
             from ui.compare.classifier_management_window_qt import ClassifierManagementWindow
             ClassifierManagementWindow.show_window(self._app, self._app.app_actions)
         except Exception as e:
-            self._handle_error(e, "Prevalidations Window Error")
+            self._handle_error(e, _("Prevalidations Window Error"))
 
     @require_password(ProtectedActions.EDIT_PREVALIDATIONS, ProtectedActions.RUN_PREVALIDATIONS)
     def open_classifier_actions_window(self, event=None) -> None:
@@ -274,7 +274,7 @@ class WindowLauncher:
             if mgmt and hasattr(mgmt, '_tabs'):
                 mgmt._tabs.setCurrentIndex(0)
         except Exception as e:
-            self._handle_error(e, "Classifier Actions Window Error")
+            self._handle_error(e, _("Classifier Actions Window Error"))
 
     # ------------------------------------------------------------------
     # File operations windows
@@ -293,7 +293,7 @@ class WindowLauncher:
             )
             window.show()
         except Exception as e:
-            self._handle_error(e, "File Actions Window Error")
+            self._handle_error(e, _("File Actions Window Error"))
 
     @require_password(ProtectedActions.VIEW_FILE_ACTIONS)
     def open_file_action_sets_window(self, event=None) -> None:
@@ -320,7 +320,7 @@ class WindowLauncher:
             )
             window.show()
         except Exception as e:
-            self._handle_error(e, "File Action Sets Window Error")
+            self._handle_error(e, _("File Action Sets Window Error"))
 
     def open_file_interceptor_rules_window(self, event=None) -> None:
         """Open the file handling interceptor rules window."""
@@ -328,7 +328,7 @@ class WindowLauncher:
             from ui.files.file_interceptor_rules_window_qt import FileInterceptorRulesWindow
             FileInterceptorRulesWindow.show_window(self._app, self._app.app_actions)
         except Exception as e:
-            self._handle_error(e, "File Interceptor Rules Window Error")
+            self._handle_error(e, _("File Interceptor Rules Window Error"))
 
     def open_auto_sort_confirmation_window(self, event=None) -> None:
         """Open the auto-sort confirmation categories window."""
@@ -336,7 +336,7 @@ class WindowLauncher:
             from ui.files.auto_sort_confirmation_window_qt import AutoSortConfirmationWindow
             AutoSortConfirmationWindow.show_window(self._app, self._app.app_actions)
         except Exception as e:
-            self._handle_error(e, "Auto-Sort Confirmation Window Error")
+            self._handle_error(e, _("Auto-Sort Confirmation Window Error"))
 
     # ------------------------------------------------------------------
     # Auth / admin windows
@@ -348,7 +348,7 @@ class WindowLauncher:
             from ui.auth.password_admin_window import PasswordAdminWindow
             PasswordAdminWindow(self._app, self._app.app_actions)
         except Exception as e:
-            self._handle_error(e, "Password Admin Window Error")
+            self._handle_error(e, _("Password Admin Window Error"))
 
     # ------------------------------------------------------------------
     # Info windows
@@ -424,7 +424,7 @@ class WindowLauncher:
                 details_win.show()
                 app_actions.set_media_details_window(details_win)
             except Exception as e:
-                self._handle_error(e, "Image Details Error")
+                self._handle_error(e, _("Image Details Error"))
 
     @require_password(ProtectedActions.VIEW_MEDIA_DETAILS)
     def copy_prompt(self, event=None) -> None:

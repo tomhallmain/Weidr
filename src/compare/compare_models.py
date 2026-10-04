@@ -97,6 +97,7 @@ def model_similarity(models1: List[str], loras1: List[str],
 
 class CompareModels(BaseCompare):
     COMPARE_MODE = CompareMode.MODELS
+    SCANS_VIDEOS_AND_DOCUMENTS = False
     CACHE_FILENAME = "image_models.pkl"
     THRESHOLD_MATCH = 0.7  # Default threshold for model matching
 
@@ -144,47 +145,6 @@ class CompareModels(BaseCompare):
         '''
         self.base_dir = base_dir
         self.compare_data = CompareData(base_dir=base_dir, data_filename=CompareModels.CACHE_FILENAME)
-
-    def set_search_media_path(self, search_media_path):
-        '''
-        Set the search file path. If it is already in the found data, move the
-        reference to it to the first index in the list.
-        '''
-        self.search_media_path = search_media_path
-        self.is_run_search = search_media_path is not None
-        if self.is_run_search and self.files is not None:
-            if self.search_media_path in self.files:
-                self.files.remove(self.search_media_path)
-            self.search_file_index = 0
-            self.files.insert(self.search_file_index, self.search_media_path)
-
-    def get_files(self):
-        '''
-        Get all image files in the base dir as requested by the parameters.
-        '''
-        self._files_found = []
-        if self.args.file_list:
-            self.files = list(self.args.file_list)
-        elif self.gather_files_func:
-            exts = config.image_types
-            if self.args.include_gifs:
-                exts.append(".gif")
-            self.files = self.gather_files_func(base_dir=self.base_dir, exts=exts, recursive=self.args.recursive)
-        else:
-            raise Exception("No gather files function found.")
-        self.files.sort()
-        self.has_new_file_data = False
-        self.max_files_processed = min(self.args.counter_limit, len(self.files))
-        self.max_files_processed_even = Utils.round_up(self.max_files_processed, 200)
-
-        if self.is_run_search:
-            if self.search_media_path in self.files:
-                self.files.remove(self.search_media_path)
-            self.search_file_index = 0
-            self.files.insert(self.search_file_index, self.search_media_path)
-
-        if self.verbose:
-            self.print_settings()
 
     def print_settings(self):
         logger.info("|--------------------------------------------------------------------|")

@@ -92,6 +92,7 @@ from utils.config import config
 from utils.logging_setup import get_logger
 from utils.translations import _
 from utils.utils import Utils
+from lib.layout_utils_qt import clear_layout
 logger = get_logger("prevalidations_tab_qt")
 
 
@@ -327,7 +328,7 @@ class PrevalidationsTab(QWidget):
     # Prevalidation rows
     # ------------------------------------------------------------------
     def _rebuild_pv_rows(self) -> None:
-        _clear_layout(self._scroll_layout)
+        clear_layout(self._scroll_layout)
 
         # Header
         hdr = QHBoxLayout()
@@ -606,18 +607,3 @@ class PrevalidationsTab(QWidget):
                 directories=n_dirs,
             )
         )
-
-
-# ======================================================================
-# Layout helper
-# ======================================================================
-def _clear_layout(layout) -> None:
-    """Recursively remove all items from a QLayout."""
-    while layout.count():
-        item = layout.takeAt(0)
-        widget = item.widget()
-        if widget is not None:
-            widget.deleteLater()
-        sub = item.layout()
-        if sub is not None:
-            _clear_layout(sub)

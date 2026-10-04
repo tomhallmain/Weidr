@@ -23,6 +23,7 @@ from compare.action_callbacks import ActionCallbacks
 from compare.classifier_action import ClassifierAction
 from compare.classifier_actions_manager import ClassifierActionsManager
 from files.directory_profile import DirectoryProfile
+from lib.layout_utils_qt import clear_layout
 from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle
 from utils.app_info_cache import app_info_cache
@@ -171,7 +172,7 @@ class ClassifierActionsTab(QWidget):
     # Rebuild action rows
     # ------------------------------------------------------------------
     def _rebuild_rows(self) -> None:
-        _clear_layout(self._scroll_layout)
+        clear_layout(self._scroll_layout)
 
         # Header
         hdr = QHBoxLayout()
@@ -445,18 +446,3 @@ class ClassifierActionsTab(QWidget):
                 ca, profile.directories, callbacks, profile.name,
                 on_complete=self._notify_classifier_action_complete,
             )
-
-
-# ======================================================================
-# Helpers
-# ======================================================================
-def _clear_layout(layout) -> None:
-    """Recursively remove all items from a QLayout."""
-    while layout.count():
-        item = layout.takeAt(0)
-        widget = item.widget()
-        if widget is not None:
-            widget.deleteLater()
-        sub = item.layout()
-        if sub is not None:
-            _clear_layout(sub)

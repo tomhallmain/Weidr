@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 
 from files.file_action import FileAction
 from files.file_action_set import ActionSet, ActionStep, FileActionSets
+from lib.layout_utils_qt import clear_layout
 from lib.multi_display_qt import SmartDialog, SmartWindow
 from ui.app_style import AppStyle
 from ui.auth.password_utils import require_password
@@ -21,17 +22,6 @@ from utils.logging_setup import get_logger
 from utils.translations import _, format_shortcut
 from utils.utils import Utils
 logger = get_logger("file_action_sets_window_qt")
-
-
-def _clear_layout(layout) -> None:
-    while layout.count():
-        item = layout.takeAt(0)
-        widget = item.widget()
-        if widget is not None:
-            widget.deleteLater()
-        sub = item.layout()
-        if sub is not None:
-            _clear_layout(sub)
 
 
 # ======================================================================
@@ -250,7 +240,7 @@ class FileActionSetsWindow(SmartWindow):
     # Actions (pool) UI
     # ==================================================================
     def _rebuild_actions(self) -> None:
-        _clear_layout(self._actions_layout)
+        clear_layout(self._actions_layout)
         if not FileActionSets.all_actions:
             hint = QLabel(_("Add actions from Hotkeys or Recent to get started."))
             hint.setStyleSheet(f"color: {AppStyle.FG_COLOR}; font-style: italic;")
@@ -379,7 +369,7 @@ class FileActionSetsWindow(SmartWindow):
     # Presets UI
     # ==================================================================
     def _rebuild_presets(self) -> None:
-        _clear_layout(self._presets_layout)
+        clear_layout(self._presets_layout)
         if not FileActionSets.action_sets:
             empty_lbl = QLabel(_("No presets saved yet."))
             empty_lbl.setStyleSheet(f"color: {AppStyle.FG_COLOR}; font-style: italic;")

@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 
 from compare.compare_history import CompareHistory
 from compare.compare_manager import CompareManager, CombinationLogic
+from lib.layout_utils_qt import clear_layout
 from lib.multi_display_qt import SmartDialog
 from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle
@@ -385,7 +386,7 @@ class CompareSettingsWindow(SmartDialog):
     # ------------------------------------------------------------------
     def _refresh_instance_list(self) -> None:
         """Rebuild the scrollable instance list from manager state."""
-        _clear_layout(self._instance_list_layout)
+        clear_layout(self._instance_list_layout)
         self._weight_vars.clear()
 
         instances = self._compare_manager.get_mode_instances()
@@ -638,7 +639,7 @@ class CompareSettingsWindow(SmartDialog):
     # ------------------------------------------------------------------
     def _refresh_recent_history(self) -> None:
         """Rebuild the recent-analyses list from persisted history."""
-        _clear_layout(self._recent_layout)
+        clear_layout(self._recent_layout)
         history = CompareHistory.load_recent()
 
         if not history:
@@ -730,18 +731,3 @@ class CompareSettingsWindow(SmartDialog):
     def closeEvent(self, event) -> None:  # noqa: N802
         CompareSettingsWindow._open_windows.pop(self._compare_manager, None)
         super().closeEvent(event)
-
-
-# ======================================================================
-# Helpers
-# ======================================================================
-def _clear_layout(layout) -> None:
-    """Recursively remove all items from a QLayout."""
-    while layout.count():
-        item = layout.takeAt(0)
-        widget = item.widget()
-        if widget is not None:
-            widget.deleteLater()
-        sub = item.layout()
-        if sub is not None:
-            _clear_layout(sub)

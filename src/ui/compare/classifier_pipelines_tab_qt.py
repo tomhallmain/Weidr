@@ -40,6 +40,7 @@ from compare.classifier_pipeline import (
 )
 from compare.pipeline_profile_run import SELECTED_PROFILE_META_KEY, last_profile_meta_key
 from files.directory_profile import DirectoryProfile
+from lib.layout_utils_qt import clear_layout
 from lib.qt_alert import qt_alert
 from ui.app_style import AppStyle
 from utils.app_info_cache import app_info_cache
@@ -169,7 +170,7 @@ class ClassifierPipelinesTab(QWidget):
     _COL_DOWN    = 13
 
     def _rebuild_rows(self) -> None:
-        _clear_layout(self._scroll_layout)
+        clear_layout(self._scroll_layout)
 
         grid = QGridLayout()
         grid.setSpacing(4)
@@ -828,16 +829,3 @@ class ClassifierPipelinesTab(QWidget):
         except Exception:
             cls._editor_window = None
             return False
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _clear_layout(layout) -> None:
-    while layout.count():
-        item = layout.takeAt(0)
-        if item.widget():
-            item.widget().deleteLater()
-        elif item.layout():
-            _clear_layout(item.layout())

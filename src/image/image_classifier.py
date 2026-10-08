@@ -968,12 +968,15 @@ class TFLiteImageClassifier(BaseImageClassifier):
     class first.
     """
 
-    # Tried in order; the first importable package wins. tensorflow.lite is the
-    # fallback since tensorflow is already a core requirement.
+    # (module to import, attribute path on it), tried in order; the first that
+    # resolves wins. tensorflow is the fallback since it is a core requirement.
+    # tf.lite.Interpreter has to be read as an attribute of the tensorflow module:
+    # importing "tensorflow.lite" yields the empty source package, while the public
+    # tf.lite namespace is generated under tensorflow._api.
     _INTERPRETER_SOURCES = (
         ("ai_edge_litert.interpreter", "Interpreter"),
         ("tflite_runtime.interpreter", "Interpreter"),
-        ("tensorflow.lite", "Interpreter"),
+        ("tensorflow", "lite.Interpreter"),
     )
 
     def __init__(self, model_path: str,
@@ -1013,14 +1016,21 @@ class TFLiteImageClassifier(BaseImageClassifier):
 
     @classmethod
     def _import_interpreter_class(cls):
-        """Return (Interpreter class, module name) from the first available runtime, or (None, None)."""
+        """Return (Interpreter class, source name) from the first available runtime, or
+        (None, None) after logging why each source was unusable."""
         import importlib
-        for module_name, attr in cls._INTERPRETER_SOURCES:
+        failures = []
+        for module_name, attr_path in cls._INTERPRETER_SOURCES:
+            source = f"{module_name}.{attr_path}"
             try:
-                module = importlib.import_module(module_name)
-                return getattr(module, attr), module_name
-            except Exception:
-                continue
+                target = importlib.import_module(module_name)
+                for attr in attr_path.split("."):
+                    target = getattr(target, attr)
+                return target, source
+            except Exception as e:
+                failures.append(f"{source}: {type(e).__name__}: {e}")
+        for failure in failures:
+            logger.error(f"TFLite runtime unavailable - {failure}")
         return None, None
 
     @staticmethod
@@ -1048,8 +1058,8 @@ class TFLiteImageClassifier(BaseImageClassifier):
         interpreter_cls, source = self._import_interpreter_class()
         if interpreter_cls is None:
             logger.error(
-                "No TFLite runtime installed. Install one of: ai-edge-litert, "
-                "tflite-runtime, or tensorflow"
+                "No usable TFLite runtime found (reasons logged above). Supported: "
+                "ai-edge-litert, tflite-runtime, or tensorflow with tf.lite.Interpreter"
             )
             return False
 

@@ -97,6 +97,44 @@ def image_path(tmp_path):
     return str(path)
 
 
+class TestImportInterpreterClass:
+    """Mimics tensorflow's layout: the "<pkg>.lite" submodule is an empty package and
+    Interpreter is only reachable as an attribute of the top-level module."""
+
+    @pytest.fixture
+    def fake_tf(self, monkeypatch):
+        import sys
+        import types
+
+        class FakeInterpreter:
+            pass
+
+        top = types.ModuleType("fake_tf_pkg")
+        empty_lite = types.ModuleType("fake_tf_pkg.lite")
+        monkeypatch.setitem(sys.modules, "fake_tf_pkg", top)
+        monkeypatch.setitem(sys.modules, "fake_tf_pkg.lite", empty_lite)
+        top.lite = types.SimpleNamespace(Interpreter=FakeInterpreter)
+        return FakeInterpreter
+
+    def test_resolves_attribute_path_on_top_level_module(self, fake_tf, monkeypatch):
+        monkeypatch.setattr(TFLiteImageClassifier, "_INTERPRETER_SOURCES", (
+            ("weidr_missing_runtime_xyz.interpreter", "Interpreter"),
+            ("fake_tf_pkg", "lite.Interpreter"),
+        ))
+        interpreter_cls, source = TFLiteImageClassifier._import_interpreter_class()
+        assert interpreter_cls is fake_tf
+        assert source == "fake_tf_pkg.lite.Interpreter"
+
+    def test_importing_the_lite_submodule_does_not_find_interpreter(self, fake_tf, monkeypatch):
+        monkeypatch.setattr(TFLiteImageClassifier, "_INTERPRETER_SOURCES", (
+            ("fake_tf_pkg.lite", "Interpreter"),
+        ))
+        assert TFLiteImageClassifier._import_interpreter_class() == (None, None)
+
+    def test_tensorflow_source_uses_attribute_path(self):
+        assert ("tensorflow", "lite.Interpreter") in TFLiteImageClassifier._INTERPRETER_SOURCES
+
+
 class TestBackendTypeParseTflite:
     @pytest.mark.parametrize("value", ["tflite", " TFLite ", "litert", "tf_lite"])
     def test_parses_aliases(self, value):

@@ -25,6 +25,8 @@ from compare.classifier_actions_manager import ClassifierActionsManager
 from extensions.hf_hub_api import HfHubApiBackend
 from image.audio_classifier_manager import audio_classifier_manager
 from image.audio_classifier_model_config import AudioClassifierModelConfig
+from image.classifier_model_files import MODEL_FILE_EXTENSIONS, is_model_file, model_file_choices
+from image.image_classifier import BackendType
 from image.image_classifier_manager import image_classifier_manager
 from image.image_classifier_model_config import ImageClassifierModelConfig
 from image.suggested_classifier_models import SUGGESTED_CLASSIFIER_MODELS, SuggestedClassifierModel
@@ -35,6 +37,27 @@ from utils.constants import HfHubModelTask, HfHubSortDirection, HfHubSortOption
 from utils.logging_setup import get_logger
 from utils.translations import _
 logger = get_logger("hf_model_manager_window_qt")
+
+
+def _populate_repo_file_combo(
+    combo: QComboBox, files: list[str], extensions, fallback_text: str = ""
+) -> None:
+    """Fill an editable repo-file combo from *files* (see model_file_choices). Keeps the
+    current text when it is still offered; with no model file in the repo nothing is
+    pre-selected; with no files at all the current text, else *fallback_text*, stays."""
+    choices, default = model_file_choices(files, extensions)
+    current = combo.currentText().strip()
+    combo.clear()
+    combo.addItems(choices)
+    if current and current in choices:
+        combo.setCurrentText(current)
+    elif default:
+        combo.setCurrentText(default)
+    elif choices:
+        combo.setCurrentIndex(-1)
+        combo.setEditText("")
+    else:
+        combo.setEditText(current or fallback_text)
 
 
 class _TextPreviewDialog(SmartDialog):
@@ -82,7 +105,7 @@ class _InstalledModelEditDialog(SmartDialog):
         row1.addWidget(self._model_name_edit, stretch=1)
         row1.addWidget(QLabel(_("Backend")))
         self._backend_combo = QComboBox()
-        self._backend_combo.addItems(["auto", "pytorch", "hdf5", "onnx", "tflite"])
+        self._backend_combo.addItems(BackendType.config_values())
         self._backend_combo.setCurrentText(str(initial_model.get("backend", "auto")))
         row1.addWidget(self._backend_combo)
         layout.addLayout(row1)
@@ -221,16 +244,7 @@ class _InstalledModelEditDialog(SmartDialog):
             else:
                 files = self._api_getter().list_model_files(repo_id)
                 self._repo_files_cache[repo_id] = files
-            preferred = [f for f in files if os.path.splitext(f)[1].lower() in self._model_file_extensions]
-            values = preferred if preferred else files
-            current = self._repo_file_combo.currentText().strip()
-            self._repo_file_combo.clear()
-            for f in values:
-                self._repo_file_combo.addItem(f)
-            if current and current in values:
-                self._repo_file_combo.setCurrentText(current)
-            elif values:
-                self._repo_file_combo.setCurrentText(values[0])
+            _populate_repo_file_combo(self._repo_file_combo, files, self._model_file_extensions)
         except Exception:
             pass
 
@@ -474,17 +488,7 @@ class HfModelManagerWindow(SmartDialog):
     """Manage image classifier models from HF Hub and local config."""
 
     _instance: Optional["HfModelManagerWindow"] = None
-    _MODEL_FILE_EXTENSIONS = {
-        ".safetensors",
-        ".ckpt",
-        ".bin",
-        ".onnx",
-        ".pt",
-        ".pth",
-        ".h5",
-        ".keras",
-        ".tflite",
-    }
+    _MODEL_FILE_EXTENSIONS = MODEL_FILE_EXTENSIONS
 
     def __init__(self, parent: QWidget, app_actions):
         super().__init__(
@@ -637,7 +641,7 @@ class HfModelManagerWindow(SmartDialog):
         install_row_2.addWidget(self._categories_edit, stretch=1)
         install_row_2.addWidget(QLabel(_("Backend")))
         self._backend_combo = QComboBox()
-        self._backend_combo.addItems(["auto", "pytorch", "hdf5", "onnx", "tflite"])
+        self._backend_combo.addItems(BackendType.config_values())
         install_row_2.addWidget(self._backend_combo)
         layout.addLayout(install_row_2)
 
@@ -991,20 +995,8 @@ class HfModelManagerWindow(SmartDialog):
             else:
                 files = self._api().list_model_files(repo_id)
                 self._repo_files_cache[repo_id] = files
-            preferred = [f for f in files if os.path.splitext(f)[1].lower() in self._MODEL_FILE_EXTENSIONS]
-            values = preferred if preferred else files
-            current = self._filename_combo.currentText().strip()
-            self._filename_combo.clear()
-            for value in values:
-                self._filename_combo.addItem(value)
-            if current and current in values:
-                self._filename_combo.setCurrentText(current)
-            elif values:
-                self._filename_combo.setCurrentText(values[0])
-            elif current:
-                self._filename_combo.setEditText(current)
-            else:
-                self._filename_combo.setEditText("model.safetensors")
+            _populate_repo_file_combo(
+                self._filename_combo, files, self._MODEL_FILE_EXTENSIONS, fallback_text="model.safetensors")
         except Exception as e:
             logger.error(f"Failed to load repo file list for {repo_id}: {e}")
 
@@ -1019,10 +1011,7 @@ class HfModelManagerWindow(SmartDialog):
             or "processor_config.json" in lower
             or "feature_extractor_config.json" in lower
         )
-        has_model_weights = any(
-            os.path.splitext(f)[1].lower() in self._MODEL_FILE_EXTENSIONS
-            for f in files
-        )
+        has_model_weights = any(is_model_file(f, self._MODEL_FILE_EXTENSIONS) for f in files)
         return has_config and has_model_weights and has_processor
 
     def _load_selected_repo_files(self) -> None:
@@ -1058,6 +1047,21 @@ class HfModelManagerWindow(SmartDialog):
         if not filename:
             self._app_actions.warn(_("Please enter a filename to download."))
             return
+        # Transformers AutoModel loads from the snapshot directory, so the selected
+        # file only needs to be a weights file when it is the model itself.
+        if not self._use_transformers_auto_model_cb.isChecked() and not is_model_file(
+            filename, self._MODEL_FILE_EXTENSIONS
+        ):
+            install_anyway = self._app_actions.alert(
+                _("Not a Model File?"),
+                _("'{0}' does not have a recognized model file extension ({1}). Install it anyway?").format(
+                    filename, ", ".join(sorted(self._MODEL_FILE_EXTENSIONS))
+                ),
+                kind="askokcancel",
+                master=self,
+            )
+            if not install_anyway:
+                return
 
         try:
             snapshot_dir = self._api().download_snapshot(repo_id)

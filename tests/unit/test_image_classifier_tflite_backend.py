@@ -15,7 +15,8 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from image.image_classifier import BackendType, ImageClassifierWrapper, TFLiteImageClassifier, _sigmoid
+from image.classifier_utils import sigmoid as _sigmoid
+from image.image_classifier import BackendType, ImageClassifierWrapper, TFLiteImageClassifier
 from image.image_classifier_model_config import ImageClassifierModelConfig
 
 
@@ -265,18 +266,31 @@ class TestTflitePredict:
         clf = TFLiteImageClassifier("m.tflite")
         assert np.allclose(self._predict(clf), [[0.2, 0.8]])
 
-    def test_single_probability_expands_to_binary(self, stub_runtime):
+    def test_single_probability_passes_through(self, stub_runtime):
         stub_runtime.output_spec = _output_spec([1, 1], np.float32)
         stub_runtime.output_value = np.array([[0.9]], dtype=np.float32)
         clf = TFLiteImageClassifier("m.tflite")
-        assert np.allclose(self._predict(clf), [[0.1, 0.9]])
+        assert np.allclose(self._predict(clf), [[0.9]])
 
     def test_single_logit_gets_sigmoid(self, stub_runtime):
         stub_runtime.output_spec = _output_spec([1, 1], np.float32)
         stub_runtime.output_value = np.array([[3.0]], dtype=np.float32)
         clf = TFLiteImageClassifier("m.tflite")
         p = float(_sigmoid(np.array(3.0)))
-        assert np.allclose(self._predict(clf), [[1.0 - p, p]])
+        assert np.allclose(self._predict(clf), [[p]])
+
+    def test_wrapper_expands_single_output_to_binary(self, tmp_path, stub_runtime, image_path):
+        stub_runtime.output_spec = _output_spec([1, 1], np.float32)
+        stub_runtime.output_value = np.array([[0.9]], dtype=np.float32)
+        model_path = tmp_path / "model.tflite"
+        model_path.write_bytes(b"stub")
+        wrapper = ImageClassifierWrapper(ImageClassifierModelConfig(
+            model_name="binary", model_location=str(model_path),
+            model_categories=["non-person", "person"],
+        ))
+        scores = wrapper.predict_image(image_path)
+        assert scores == pytest.approx({"non-person": 0.1, "person": 0.9})
+        assert wrapper.classify_image(image_path) == "person"
 
 
 class TestSigmoid:

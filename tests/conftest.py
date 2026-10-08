@@ -52,6 +52,21 @@ _src_example = os.path.join(os.path.dirname(__file__), "..", "configs", "config_
 shutil.copy(_src_example, os.path.join(os.environ["WEIDR_CONFIGS_DIR"], "config.json"))
 atexit.register(shutil.rmtree, _bootstrap_tmp, True)
 
+# get_logger() binds a logger's file handler on first call, which for module-level
+# loggers is test-collection time -- before isolated_singletons' per-test
+# get_log_dir patch exists. Bind those handlers to the bootstrap dir as well, so
+# test runs never append to (or prune) the real user log directory.
+from pathlib import Path
+import logging
+import utils.logging_setup as _logging_setup
+
+_bootstrap_log_dir = Path(_bootstrap_tmp) / "logs"
+_bootstrap_log_dir.mkdir(parents=True, exist_ok=True)
+_logging_setup.get_log_dir = lambda: _bootstrap_log_dir
+# atexit runs last-registered first: close the log files before the rmtree above,
+# which would otherwise fail on the still-open files on Windows.
+atexit.register(logging.shutdown)
+
 import pytest
 
 
@@ -215,6 +230,13 @@ def reset_app_globals():
         try:
             from files.directory_profile import DirectoryProfile
             DirectoryProfile.directory_profiles = []
+        except Exception:
+            pass
+
+        # HfModelManagerWindow — singleton dialog reference, set by its __init__
+        try:
+            from ui.compare.hf_model_manager_window_qt import HfModelManagerWindow
+            HfModelManagerWindow._instance = None
         except Exception:
             pass
 

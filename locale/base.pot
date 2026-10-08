@@ -9528,3 +9528,15 @@ msgstr ""
 msgid "Alt"
 msgstr ""
 
+
+#: src/ui/compare/hf_model_manager_window_qt.py:137
+msgid "TFLite (.tflite): inferred from the model's declared input tensor shape; only applied when that shape is dynamic."
+msgstr ""
+
+#: src/ui/compare/hf_model_manager_window_qt.py:1056
+msgid "Not a Model File?"
+msgstr ""
+
+#: src/ui/compare/hf_model_manager_window_qt.py:1057
+msgid "'{0}' does not have a recognized model file extension ({1}). Install it anyway?"
+msgstr ""

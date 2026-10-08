@@ -15,7 +15,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from image.image_classifier import BackendType, ONNXImageClassifier, _softmax
+from image.classifier_utils import softmax as _softmax
+from image.image_classifier import BackendType, ONNXImageClassifier
 from image.image_classifier import ImageClassifierWrapper
 from image.image_classifier_model_config import ImageClassifierModelConfig
 
@@ -125,3 +126,34 @@ class TestOnnxAutoDetection:
         wrapper = self._make_wrapper(tmp_path, filename="model.xyz")
         assert wrapper.backend is None
         assert wrapper.can_run is False
+
+
+class TestOnnxPredictProbabilities:
+    """ONNXImageClassifier.predict against a stub session (no onnxruntime needed)."""
+
+    def _classifier_returning(self, output):
+        class _Session:
+            def run(self, output_names, feeds):
+                return [np.array(output, dtype=np.float32)]
+
+        clf = ONNXImageClassifier.__new__(ONNXImageClassifier)
+        clf.session = _Session()
+        clf.input_name = "input"
+        clf.output_name = "output"
+        return clf
+
+    def test_single_logit_gets_sigmoid_not_constant_softmax(self):
+        clf = self._classifier_returning([[-2.0]])
+        out = clf.predict(np.zeros((1, 3, 2, 2), dtype=np.float32))
+        assert 0.0 < out[0, 0] < 0.5
+
+    def test_multi_class_logits_get_softmax(self):
+        clf = self._classifier_returning([[1.0, 3.0]])
+        out = clf.predict(np.zeros((1, 3, 2, 2), dtype=np.float32))
+        assert np.isclose(out.sum(), 1.0)
+        assert np.argmax(out[0]) == 1
+
+    def test_probabilities_pass_through(self):
+        clf = self._classifier_returning([[0.25, 0.75]])
+        out = clf.predict(np.zeros((1, 3, 2, 2), dtype=np.float32))
+        assert np.allclose(out, [[0.25, 0.75]])

@@ -17,12 +17,20 @@ handling in this project.
 from __future__ import annotations
 
 import subprocess
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 import numpy as np
 
 from image.audio_classifier_model_config import AudioClassifierModelConfig
 from image.classifier_prediction_cache import classifier_prediction_cache, model_signature
+from image.classifier_utils import (
+    derive_neutral_categories_from_positive_groups,
+    format_prediction_line,
+    logits_to_probabilities,
+    map_scores_to_categories,
+    pick_split_positive,
+    top_category,
+)
 from image.video_ops import VideoOps
 from utils.config import config
 from utils.logging_setup import get_logger
@@ -31,9 +39,8 @@ logger = get_logger("audio_classifier")
 
 # Split-positive assignment only applies when a group's combined mass exceeds
 # aggregate neutral mass by more than this margin (probability points on the
-# model's output scale). Mirrors image_classifier.py's identical constant --
-# duplicated rather than imported since the two classifier domains are kept
-# independent by design (see the design doc's sibling-condition rationale).
+# model's output scale). Kept separate from image_classifier.py's identical
+# constant so the two classifier domains can be tuned independently.
 _SPLIT_GROUP_OVER_NEUTRAL_MARGIN = 0.05
 
 
@@ -80,17 +87,6 @@ def decode_audio_waveform(audio_path: str, sample_rate: int, max_duration_second
     if waveform.size == 0:
         raise RuntimeError(f"ffmpeg produced no audio samples for {audio_path}")
     return waveform
-
-
-def derive_neutral_categories_from_positive_groups(
-    model_categories: List[str],
-    positive_groups: List[List[str]],
-) -> List[str]:
-    """Categories not present in any positive group (complement of the union of groups)."""
-    positive_categories: set[str] = set()
-    for group in positive_groups:
-        positive_categories.update(group)
-    return [cat for cat in model_categories if cat not in positive_categories]
 
 
 class AudioClassifierWrapper:
@@ -261,20 +257,9 @@ class AudioClassifierWrapper:
         with torch.no_grad():
             output = self.model(**inputs)
             logits = output.logits if hasattr(output, "logits") else output[0]
-            probabilities = torch.nn.functional.softmax(logits, dim=-1)
-        scores = probabilities.cpu().numpy()[0]
-
-        classed_predictions: Dict[str, float] = {}
-        if len(scores) != len(self.model_categories):
-            logger.warning(
-                f"Audio model {self.model_name!r} outputs {len(scores)} classes "
-                f"but expected {len(self.model_categories)}"
-            )
-            for i in range(min(len(scores), len(self.model_categories))):
-                classed_predictions[self.model_categories[i]] = float(scores[i])
-        else:
-            for i in range(len(self.model_categories)):
-                classed_predictions[self.model_categories[i]] = float(scores[i])
+        scores = logits_to_probabilities(logits.float().cpu().numpy())[0]
+        classed_predictions = map_scores_to_categories(
+            scores, self.model_categories, self.model_name, log=logger)
 
         self.predictions_cache[audio_path] = dict(classed_predictions)
         classifier_prediction_cache.put(
@@ -292,68 +277,29 @@ class AudioClassifierWrapper:
         classed_predictions = self.predict_audio(audio_path)
 
         if self.positive_groups:
-            neutral_prob = sum(
-                classed_predictions.get(cat, 0) for cat in self.neutral_categories
+            split = pick_split_positive(
+                classed_predictions, self.positive_groups, self.neutral_categories,
+                self.severity_order, _SPLIT_GROUP_OVER_NEUTRAL_MARGIN,
             )
-            split_detected = False
-            best_combined_prob = 0.0
-            best_category: Optional[str] = None
-            best_group: Optional[List[str]] = None
-
-            for group_cats in self.positive_groups:
-                if len(group_cats) <= 1:
-                    continue
-                combined_prob = sum(
-                    classed_predictions.get(cat, 0) for cat in group_cats
-                )
-                if (
-                    combined_prob > neutral_prob + _SPLIT_GROUP_OVER_NEUTRAL_MARGIN
-                    and combined_prob > best_combined_prob
-                ):
-                    split_detected = True
-                    best_combined_prob = combined_prob
-                    best_group = group_cats
-                    picked: Optional[str] = None
-                    if self.severity_order:
-                        for severe_cat in self.severity_order:
-                            if (
-                                severe_cat in group_cats
-                                and classed_predictions.get(severe_cat, 0) > 0
-                            ):
-                                picked = severe_cat
-                                break
-                    if not picked:
-                        group_predictions = [
-                            (cat, classed_predictions.get(cat, 0)) for cat in group_cats
-                        ]
-                        picked = max(group_predictions, key=lambda x: x[1])[0]
-                    best_category = picked
-
-            if split_detected and best_category:
+            if split is not None:
+                best_category, best_group, best_combined_prob = split
                 if config.debug2:
-                    ordered_pairs = sorted(
-                        classed_predictions.items(), key=lambda kv: kv[1], reverse=True
-                    )
-                    prediction_line = ", ".join(
-                        [f"{name}={score:.6f}" for name, score in ordered_pairs]
-                    )
-                    group_name = "+".join(best_group or [])
                     logger.debug(
-                        f"Audio classifier prediction map ({self.model_name}): {prediction_line}"
+                        f"Audio classifier prediction map ({self.model_name}): "
+                        f"{format_prediction_line(classed_predictions)}"
                     )
                     logger.debug(
-                        f"Split positive in group '{group_name}': "
+                        f"Split positive in group '{'+'.join(best_group)}': "
                         f"combined={best_combined_prob:.6f}, assigned={best_category}"
                     )
                 return best_category
 
-        keys = list(self.model_categories)
-        keys.sort(key=lambda c: classed_predictions[c], reverse=True)
-        classed_category = keys[0]
+        classed_category = top_category(classed_predictions, self.model_categories)
         if config.debug2:
-            ordered_pairs = sorted(classed_predictions.items(), key=lambda kv: kv[1], reverse=True)
-            prediction_line = ", ".join([f"{name}={score:.6f}" for name, score in ordered_pairs])
-            logger.debug(f"Audio classifier prediction map ({self.model_name}): {prediction_line}")
+            logger.debug(
+                f"Audio classifier prediction map ({self.model_name}): "
+                f"{format_prediction_line(classed_predictions)}"
+            )
         return classed_category
 
     def test_audio_for_categories(self, audio_path: str, categories) -> bool:
@@ -364,7 +310,7 @@ class AudioClassifierWrapper:
 
     def test_audio_for_category(self, audio_path: str, category: str, threshold: float) -> bool:
         if self.can_run:
-            return self.predict_audio(audio_path)[category] > threshold
+            return self.predict_audio(audio_path).get(category, 0.0) > threshold
         raise Exception("Invalid state: Audio classifier failed to initialize, unable to classify audio")
 
     def __str__(self) -> str:

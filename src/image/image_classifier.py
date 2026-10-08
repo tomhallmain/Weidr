@@ -11,6 +11,15 @@ from utils.config import config
 from utils.logging_setup import get_logger
 
 from image.classifier_prediction_cache import classifier_prediction_cache, model_signature
+from image.classifier_utils import (
+    derive_neutral_categories_from_positive_groups,
+    ensure_probabilities,
+    format_prediction_line,
+    logits_to_probabilities,
+    map_scores_to_categories,
+    pick_split_positive,
+    top_category,
+)
 from image.image_classifier_model_config import ImageClassifierModelConfig
 
 logger = get_logger("image_classifier")
@@ -28,6 +37,11 @@ class BackendType(Enum):
     ONNX = "onnx"
     TFLITE = "tflite"
     OTHER = "other"
+
+    @staticmethod
+    def config_values() -> List[str]:
+        """Values a model config's ``backend`` can be set to: "auto" plus every loadable backend."""
+        return ["auto"] + [b.value for b in BackendType if b is not BackendType.OTHER]
 
     @staticmethod
     def parse(backend: Union["BackendType", str, None]) -> Optional["BackendType"]:
@@ -784,23 +798,11 @@ class PyTorchImageClassifier(BaseImageClassifier):
                         raise ValueError("Expected dict model inputs for transformers auto model")
                     output = self.model(**preprocessed_image)
                     logits = output.logits if hasattr(output, "logits") else output[0]
-                    probabilities = torch.nn.functional.softmax(logits, dim=1)
-                    return probabilities.cpu().numpy()
+                    return logits_to_probabilities(logits.float().cpu().numpy())
                 output = self.model(preprocessed_image)
-                # Convert to probabilities if needed
-                if not torch.all(output >= 0) or not torch.all(output <= 1):
-                    output = torch.nn.functional.softmax(output, dim=1)
-                out = output.cpu().numpy()
-                return out
+                return ensure_probabilities(output.float().cpu().numpy())
         except Exception as e:
             raise ValueError(f"Prediction failed: {str(e)}")
-
-
-def _softmax(x: np.ndarray, axis: int = -1) -> np.ndarray:
-    """Numerically-stable softmax (no torch/tf dependency available for ONNX Runtime output)."""
-    shifted = x - np.max(x, axis=axis, keepdims=True)
-    exp = np.exp(shifted)
-    return exp / np.sum(exp, axis=axis, keepdims=True)
 
 
 class ONNXImageClassifier(BaseImageClassifier):
@@ -942,19 +944,9 @@ class ONNXImageClassifier(BaseImageClassifier):
             outputs = self.session.run(
                 [self.output_name], {self.input_name: preprocessed_image.astype(np.float32)}
             )
-            output = outputs[0]
-            # Convert to probabilities if needed (mirrors the PyTorch backend's fallback)
-            if not (np.all(output >= 0) and np.all(output <= 1)):
-                output = _softmax(output, axis=1)
-            return output
+            return ensure_probabilities(outputs[0])
         except Exception as e:
             raise ValueError(f"Prediction failed: {str(e)}")
-
-
-def _sigmoid(x: np.ndarray) -> np.ndarray:
-    """Numerically-stable logistic function."""
-    e = np.exp(-np.abs(x))
-    return np.where(x >= 0, 1.0 / (1.0 + e), e / (1.0 + e))
 
 
 class TFLiteImageClassifier(BaseImageClassifier):
@@ -963,9 +955,8 @@ class TFLiteImageClassifier(BaseImageClassifier):
     Like ONNX, a .tflite file embeds its own graph, so no architecture module is
     needed. Input is NHWC; preprocessing follows the input tensor's dtype (uint8:
     raw pixels, int8: quantized from a float range, float: ONNX-style rescale and
-    mean/std). A single-value output is treated as a binary positive score and
-    expanded to ``[1 - p, p]``, so model_categories should list the negative
-    class first.
+    mean/std). A single-value output is a binary positive score (sigmoid applied
+    when it is a logit), which ImageClassifierWrapper expands to ``[1 - p, p]``.
     """
 
     # (module to import, attribute path on it), tried in order; the first that
@@ -1179,31 +1170,9 @@ class TFLiteImageClassifier(BaseImageClassifier):
             scale, zero_point = self.output_details.get("quantization", (0.0, 0))
             if np.issubdtype(raw.dtype, np.integer) and scale:
                 output = (output - zero_point) * scale
-            output = output.reshape(1, -1)
-
-            if output.shape[1] == 1:
-                p = output[0, 0]
-                if not (0.0 <= p <= 1.0):
-                    p = float(_sigmoid(np.array(p)))
-                return np.array([[1.0 - p, p]], dtype=np.float32)
-
-            # Convert to probabilities if needed (mirrors the PyTorch backend's fallback)
-            if not (np.all(output >= 0) and np.all(output <= 1)):
-                output = _softmax(output, axis=1)
-            return output
+            return ensure_probabilities(output.reshape(1, -1))
         except Exception as e:
             raise ValueError(f"Prediction failed: {str(e)}")
-
-
-def derive_neutral_categories_from_positive_groups(
-    model_categories: List[str],
-    positive_groups: List[List[str]],
-) -> List[str]:
-    """Categories not present in any positive group (complement of the union of groups)."""
-    positive_categories: set[str] = set()
-    for group in positive_groups:
-        positive_categories.update(group)
-    return [cat for cat in model_categories if cat not in positive_categories]
 
 
 class ImageClassifierWrapper:
@@ -1432,17 +1401,8 @@ class ImageClassifierWrapper:
             raise ValueError("Classifier not initialized")
         
         predictions = self.classifier.predict_image(image_path)
-        classed_predictions = {}
-        
-        # Ensure we have the right number of outputs
-        if len(predictions[0]) != len(self.model_categories):
-            logger.warning(f"Model outputs {len(predictions[0])} classes but expected {len(self.model_categories)}")
-            # Map outputs to available categories (or use all outputs)
-            for i in range(min(len(predictions[0]), len(self.model_categories))):
-                classed_predictions[self.model_categories[i]] = float(predictions[0][i])
-        else:
-            for i in range(len(self.model_categories)):
-                classed_predictions[self.model_categories[i]] = float(predictions[0][i])
+        classed_predictions = map_scores_to_categories(
+            predictions[0], self.model_categories, self.model_name, log=logger)
         
         self.predictions_cache[image_path] = dict(classed_predictions)
         classifier_prediction_cache.put(
@@ -1460,69 +1420,29 @@ class ImageClassifierWrapper:
         classed_predictions = self.predict_image(image_path)
 
         if self.positive_groups:
-            neutral_prob = sum(
-                classed_predictions.get(cat, 0) for cat in self.neutral_categories
+            split = pick_split_positive(
+                classed_predictions, self.positive_groups, self.neutral_categories,
+                self.severity_order, _SPLIT_GROUP_OVER_NEUTRAL_MARGIN,
             )
-            split_detected = False
-            best_combined_prob = 0.0
-            best_category: Optional[str] = None
-            best_group: Optional[List[str]] = None
-
-            for group_cats in self.positive_groups:
-                if len(group_cats) <= 1:
-                    continue
-                combined_prob = sum(
-                    classed_predictions.get(cat, 0) for cat in group_cats
-                )
-                if (
-                    combined_prob > neutral_prob + _SPLIT_GROUP_OVER_NEUTRAL_MARGIN
-                    and combined_prob > best_combined_prob
-                ):
-                    split_detected = True
-                    best_combined_prob = combined_prob
-                    best_group = group_cats
-                    picked: Optional[str] = None
-                    if self.severity_order:
-                        for severe_cat in self.severity_order:
-                            if (
-                                severe_cat in group_cats
-                                and classed_predictions.get(severe_cat, 0) > 0
-                            ):
-                                picked = severe_cat
-                                break
-                    if not picked:
-                        group_predictions = [
-                            (cat, classed_predictions.get(cat, 0)) for cat in group_cats
-                        ]
-                        picked = max(group_predictions, key=lambda x: x[1])[0]
-                    best_category = picked
-
-            if split_detected and best_category:
+            if split is not None:
+                best_category, best_group, best_combined_prob = split
                 if config.debug2:
-                    ordered_pairs = sorted(
-                        classed_predictions.items(), key=lambda kv: kv[1], reverse=True
-                    )
-                    prediction_line = ", ".join(
-                        [f"{name}={score:.6f}" for name, score in ordered_pairs]
-                    )
-                    group_name = "+".join(best_group or [])
                     logger.debug(
-                        f"Image classifier prediction map ({self.model_name}): {prediction_line}"
+                        f"Image classifier prediction map ({self.model_name}): "
+                        f"{format_prediction_line(classed_predictions)}"
                     )
                     logger.debug(
-                        f"Split positive in group '{group_name}': "
+                        f"Split positive in group '{'+'.join(best_group)}': "
                         f"combined={best_combined_prob:.6f}, assigned={best_category}"
                     )
                 return best_category
 
-        keys = list(self.model_categories)
-        keys.sort(key=lambda c: classed_predictions[c], reverse=True)
-        classed_category = keys[0]
+        classed_category = top_category(classed_predictions, self.model_categories)
         if config.debug2:
-            # Keep debug output to one line while showing full category-score mapping.
-            ordered_pairs = sorted(classed_predictions.items(), key=lambda kv: kv[1], reverse=True)
-            prediction_line = ", ".join([f"{name}={score:.6f}" for name, score in ordered_pairs])
-            logger.debug(f"Image classifier prediction map ({self.model_name}): {prediction_line}")
+            logger.debug(
+                f"Image classifier prediction map ({self.model_name}): "
+                f"{format_prediction_line(classed_predictions)}"
+            )
         return classed_category
 
     def test_image_for_categories(self, image_path, categories):
@@ -1533,7 +1453,7 @@ class ImageClassifierWrapper:
 
     def test_image_for_category(self, image_path, category, threshold):
         if self.can_run:
-            return self.predict_image(image_path)[category] > threshold
+            return self.predict_image(image_path).get(category, 0.0) > threshold
         raise Exception(f"Invalid state: Image classifier details failed to initialize, unable to classify image")
 
     def __str__(self) -> str:

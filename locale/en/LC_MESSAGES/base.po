@@ -10740,3 +10740,15 @@ msgstr "ePub e-books - Cover and pages will be rendered"
 #: src/ui/files/type_configuration_window_qt.py:65
 msgid "ePub support requires pyppeteer and pypdfium2 packages"
 msgstr "ePub support requires pyppeteer and pypdfium2 packages"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:137
+msgid "TFLite (.tflite): inferred from the model's declared input tensor shape; only applied when that shape is dynamic."
+msgstr "TFLite (.tflite): inferred from the model's declared input tensor shape; only applied when that shape is dynamic."
+
+#: src/ui/compare/hf_model_manager_window_qt.py:1056
+msgid "Not a Model File?"
+msgstr "Not a Model File?"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:1057
+msgid "'{0}' does not have a recognized model file extension ({1}). Install it anyway?"
+msgstr "'{0}' does not have a recognized model file extension ({1}). Install it anyway?"

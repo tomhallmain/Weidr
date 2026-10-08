@@ -1,4 +1,5 @@
 import os
+import threading
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -25,6 +26,7 @@ class BackendType(Enum):
     PYTORCH = "pytorch"
     HDF5 = "hdf5"
     ONNX = "onnx"
+    TFLITE = "tflite"
     OTHER = "other"
 
     @staticmethod
@@ -42,6 +44,8 @@ class BackendType(Enum):
             return BackendType.PYTORCH
         if backend_str == "onnx":
             return BackendType.ONNX
+        if backend_str in ("tflite", "litert", "tf_lite"):
+            return BackendType.TFLITE
         return BackendType.OTHER
 
 
@@ -947,6 +951,231 @@ class ONNXImageClassifier(BaseImageClassifier):
             raise ValueError(f"Prediction failed: {str(e)}")
 
 
+def _sigmoid(x: np.ndarray) -> np.ndarray:
+    """Numerically-stable logistic function."""
+    e = np.exp(-np.abs(x))
+    return np.where(x >= 0, 1.0 / (1.0 + e), e / (1.0 + e))
+
+
+class TFLiteImageClassifier(BaseImageClassifier):
+    """TensorFlow Lite (LiteRT) model classifier.
+
+    Like ONNX, a .tflite file embeds its own graph, so no architecture module is
+    needed. Input is NHWC; preprocessing follows the input tensor's dtype (uint8:
+    raw pixels, int8: quantized from a float range, float: ONNX-style rescale and
+    mean/std). A single-value output is treated as a binary positive score and
+    expanded to ``[1 - p, p]``, so model_categories should list the negative
+    class first.
+    """
+
+    # Tried in order; the first importable package wins. tensorflow.lite is the
+    # fallback since tensorflow is already a core requirement.
+    _INTERPRETER_SOURCES = (
+        ("ai_edge_litert.interpreter", "Interpreter"),
+        ("tflite_runtime.interpreter", "Interpreter"),
+        ("tensorflow.lite", "Interpreter"),
+    )
+
+    def __init__(self, model_path: str,
+                 input_shape: Optional[Tuple[int, int]] = None,
+                 normalize_mean: Optional[List[float]] = None,
+                 normalize_std: Optional[List[float]] = None,
+                 rescale: Optional[bool] = None,
+                 num_threads: Optional[int] = None):
+        """TFLite model classifier
+
+        Args:
+            model_path: Path to .tflite model file
+            input_shape: Optional (width, height). Applied when the model's spatial
+                dims are dynamic (the input tensor is resized to it); ignored with a
+                warning when it conflicts with a fixed declared shape, since the
+                interpreter rejects mismatched input.
+            normalize_mean: float-input models only (default: ImageNet)
+            normalize_std: float-input models only (default: ImageNet)
+            rescale: float input: divide by 255 before mean/std (None means True).
+                int8 input: True quantizes from [0, 1], False from raw 0-255, None
+                infers the float range from the input quantization scale.
+                uint8 input: ignored, raw pixels are fed.
+            num_threads: Interpreter CPU thread count (None: runtime default)
+        """
+        super().__init__(model_path)
+        self._input_shape_override = input_shape
+        self.normalize_mean = normalize_mean or [0.485, 0.456, 0.406]
+        self.normalize_std = normalize_std or [0.229, 0.224, 0.225]
+        self.rescale = rescale
+        self.num_threads = num_threads
+        self.interpreter = None
+        self.input_details = None
+        self.output_details = None
+        # A single Interpreter instance does not support concurrent invoke() calls.
+        self._lock = threading.Lock()
+        self.load_model()
+
+    @classmethod
+    def _import_interpreter_class(cls):
+        """Return (Interpreter class, module name) from the first available runtime, or (None, None)."""
+        import importlib
+        for module_name, attr in cls._INTERPRETER_SOURCES:
+            try:
+                module = importlib.import_module(module_name)
+                return getattr(module, attr), module_name
+            except Exception:
+                continue
+        return None, None
+
+    @staticmethod
+    def _dims_with_dynamic_marked(details: dict) -> list:
+        """The input shape with dynamic dims (-1 in ``shape_signature``) replaced by None."""
+        shape = [int(d) for d in details["shape"]]
+        signature = details.get("shape_signature")
+        if signature is None or len(signature) != len(shape):
+            return shape
+        return [None if int(sig) < 0 else dim for dim, sig in zip(shape, signature)]
+
+    @staticmethod
+    def _int8_input_range(scale: float) -> Tuple[float, float]:
+        """Infer the float range an int8 input was quantized from: 256 steps of
+        ``scale`` span about 1 for [0, 1], 2 for [-1, 1] and 255 for raw pixels."""
+        span = 255.0 * scale
+        if span > 10.0:
+            return (0.0, 255.0)
+        if span > 1.5:
+            return (-1.0, 1.0)
+        return (0.0, 1.0)
+
+    def load_model(self) -> bool:
+        """Load the .tflite model into an Interpreter and read its tensor details"""
+        interpreter_cls, source = self._import_interpreter_class()
+        if interpreter_cls is None:
+            logger.error(
+                "No TFLite runtime installed. Install one of: ai-edge-litert, "
+                "tflite-runtime, or tensorflow"
+            )
+            return False
+
+        try:
+            kwargs = {"model_path": self.model_path}
+            if self.num_threads is not None:
+                kwargs["num_threads"] = int(self.num_threads)
+            self.interpreter = interpreter_cls(**kwargs)
+            self.interpreter.allocate_tensors()
+            self.input_details = self.interpreter.get_input_details()[0]
+
+            dims = self._dims_with_dynamic_marked(self.input_details)
+            inferred = ONNXImageClassifier._infer_input_shape_from_dims(dims, channels_first=False)
+            override = tuple(self._input_shape_override) if self._input_shape_override else None
+            if override and inferred and override != inferred:
+                logger.warning(
+                    f"Ignoring input_shape {override}: TFLite model declares a fixed input of {inferred}"
+                )
+                override = None
+            self.input_shape = override or inferred
+            if self.input_shape is None:
+                logger.warning(
+                    f"Could not infer input shape from TFLite model metadata {self.input_details['shape']}, "
+                    "using default (224, 224)"
+                )
+                self.input_shape = (224, 224)
+
+            if len(dims) == 4 and (dims[1] is None or dims[2] is None):
+                width, height = self.input_shape
+                channels = dims[3] or 3
+                self.interpreter.resize_tensor_input(
+                    self.input_details["index"], [1, height, width, channels])
+                self.interpreter.allocate_tensors()
+                self.input_details = self.interpreter.get_input_details()[0]
+
+            self.output_details = self.interpreter.get_output_details()[0]
+            self.is_loaded = True
+            logger.info(
+                f"TFLite model loaded via {source}: input {list(self.input_details['shape'])} "
+                f"{np.dtype(self.input_details['dtype']).name}, output {list(self.output_details['shape'])} "
+                f"{np.dtype(self.output_details['dtype']).name}"
+            )
+            return True
+        except Exception as e:
+            message = str(e)
+            lowered = message.lower()
+            if "ethos" in lowered or "custom op" in lowered:
+                logger.error(
+                    f"Failed to load TFLite model {self.model_path}: it contains a custom operator "
+                    f"that the desktop runtime cannot execute ({message}). Models compiled for an NPU "
+                    "(e.g. with Arm Vela for Ethos-U) only run on that hardware."
+                )
+            else:
+                logger.error(f"Failed to load TFLite model: {message}")
+            return False
+
+    def preprocess_image(self, image_path: str) -> np.ndarray:
+        """Preprocess image for the TFLite input tensor's dtype"""
+        if not self.is_loaded:
+            raise ValueError("Model not loaded")
+
+        try:
+            with Image.open(image_path) as img:
+                img = img.convert('RGB')
+                img = img.resize(self.input_shape)
+                pixels = np.array(img, dtype=np.float32)
+        except Exception as e:
+            raise ValueError(f"Image processing failed: {str(e)}")
+
+        dtype = np.dtype(self.input_details["dtype"])
+        if dtype == np.uint8:
+            img_array = pixels.astype(np.uint8)
+        elif dtype == np.int8:
+            scale, zero_point = self.input_details.get("quantization", (0.0, 0))
+            if not scale:
+                img_array = np.clip(pixels - 128.0, -128, 127).astype(np.int8)
+            else:
+                if self.rescale is None:
+                    low, high = self._int8_input_range(scale)
+                else:
+                    low, high = (0.0, 1.0) if self.rescale else (0.0, 255.0)
+                real = low + pixels / 255.0 * (high - low)
+                img_array = np.clip(np.round(real / scale + zero_point), -128, 127).astype(np.int8)
+        elif np.issubdtype(dtype, np.floating):
+            img_array = pixels
+            if self.rescale is None or self.rescale:
+                img_array = img_array / 255.0
+                mean = np.array(self.normalize_mean, dtype=np.float32)
+                std = np.array(self.normalize_std, dtype=np.float32)
+                img_array = (img_array - mean) / std
+            img_array = img_array.astype(dtype)
+        else:
+            raise ValueError(f"Unsupported TFLite input dtype: {dtype.name}")
+        return np.expand_dims(img_array, axis=0)
+
+    def predict(self, preprocessed_image: np.ndarray, batch_size: int = 32) -> np.ndarray:
+        """Run prediction with the TFLite interpreter (one image per invoke; batch_size is ignored)"""
+        if self.interpreter is None:
+            raise ValueError("Model not loaded")
+
+        try:
+            with self._lock:
+                self.interpreter.set_tensor(self.input_details["index"], preprocessed_image)
+                self.interpreter.invoke()
+                raw = self.interpreter.get_tensor(self.output_details["index"])
+
+            output = raw.astype(np.float32)
+            scale, zero_point = self.output_details.get("quantization", (0.0, 0))
+            if np.issubdtype(raw.dtype, np.integer) and scale:
+                output = (output - zero_point) * scale
+            output = output.reshape(1, -1)
+
+            if output.shape[1] == 1:
+                p = output[0, 0]
+                if not (0.0 <= p <= 1.0):
+                    p = float(_sigmoid(np.array(p)))
+                return np.array([[1.0 - p, p]], dtype=np.float32)
+
+            # Convert to probabilities if needed (mirrors the PyTorch backend's fallback)
+            if not (np.all(output >= 0) and np.all(output <= 1)):
+                output = _softmax(output, axis=1)
+            return output
+        except Exception as e:
+            raise ValueError(f"Prediction failed: {str(e)}")
+
+
 def derive_neutral_categories_from_positive_groups(
     model_categories: List[str],
     positive_groups: List[List[str]],
@@ -1048,6 +1277,8 @@ class ImageClassifierWrapper:
                 self.backend = BackendType.PYTORCH
             elif self.model_location.lower().endswith('.onnx'):
                 self.backend = BackendType.ONNX
+            elif self.model_location.lower().endswith('.tflite'):
+                self.backend = BackendType.TFLITE
             else:
                 self.can_run = False
                 logger.error(f"Cannot determine backend for file: {self.model_location}")
@@ -1126,6 +1357,16 @@ class ImageClassifierWrapper:
                 self.classifier = ONNXImageClassifier(
                     self.model_location,
                     **onnx_kwargs
+                )
+
+            elif self.backend == BackendType.TFLITE:
+                tflite_kwargs = self.model_kwargs.copy()
+                if self.input_shape is not None:
+                    tflite_kwargs["input_shape"] = self.input_shape
+
+                self.classifier = TFLiteImageClassifier(
+                    self.model_location,
+                    **tflite_kwargs
                 )
             else:
                 logger.error(f"Unsupported backend: {self.backend}")

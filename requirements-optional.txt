@@ -25,6 +25,10 @@ git+https://github.com/open-quantum-safe/liboqs-python.git
 # unrelated "peek" package also exists on PyPI.
 git+https://github.com/momentslab/peek
 
+# LiteRT (TensorFlow Lite) runtime for the .tflite image classifier backend.
+# Optional: tensorflow.lite (from the core tensorflow requirement) is used when absent.
+ai-edge-litert
+
 # macOS (OS X): Foundation/Cocoa for optional keychain and native integration.
 # Not required for basic keyring usage (utils/encryptor.py works without it).
 pyobjc-framework-Cocoa; sys_platform == 'darwin'

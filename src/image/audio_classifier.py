@@ -26,6 +26,7 @@ from image.classifier_prediction_cache import classifier_prediction_cache, model
 from image.classifier_utils import (
     derive_neutral_categories_from_positive_groups,
     format_prediction_line,
+    from_pretrained_checked,
     logits_to_probabilities,
     map_scores_to_categories,
     pick_split_positive,
@@ -181,8 +182,9 @@ class AudioClassifierWrapper:
         try:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             self.feature_extractor = AutoFeatureExtractor.from_pretrained(self.model_location)
-            self.model = AutoModelForAudioClassification.from_pretrained(
-                self.model_location, **self.model_kwargs
+            self.model = from_pretrained_checked(
+                AutoModelForAudioClassification, self.model_location, self.model_name,
+                log=logger, **self.model_kwargs
             ).to(self.device)
             self.model.eval()
 

@@ -131,3 +131,51 @@ def format_prediction_line(classed_predictions: Dict[str, float]) -> str:
     """One-line ``name=score`` listing, highest score first, for debug logs."""
     ordered_pairs = sorted(classed_predictions.items(), key=lambda kv: kv[1], reverse=True)
     return ", ".join(f"{name}={score:.6f}" for name, score in ordered_pairs)
+
+
+def _preview(items: List[str], limit: int = 10) -> str:
+    shown = ", ".join(items[:limit])
+    return shown + (f", ... ({len(items) - limit} more)" if len(items) > limit else "")
+
+
+def report_weight_loading(loading_info: Dict, model_name: str, log=logger) -> bool:
+    """Log a transformers ``from_pretrained(..., output_loading_info=True)`` report.
+
+    Missing or shape-mismatched weights are left randomly initialized, which can
+    make a model return near-constant predictions without raising, so they are
+    errors. Unexpected checkpoint weights are unused (often harmless, e.g. a
+    pretraining head) and only warned about. Returns True if any error was logged.
+    """
+    def keys(name: str) -> List[str]:
+        return sorted(str(k) for k in (loading_info.get(name) or []))
+
+    missing = keys("missing_keys")
+    mismatched = keys("mismatched_keys")
+    unexpected = keys("unexpected_keys")
+    errors = [str(e) for e in loading_info.get("error_msgs") or []]
+    errors += [f"{k}: {v}" for k, v in (loading_info.get("conversion_errors") or {}).items()]
+
+    if missing:
+        log.error(f"Model {model_name!r}: {len(missing)} weights missing from the checkpoint "
+                  f"(randomly initialized, predictions unreliable): {_preview(missing)}")
+    if mismatched:
+        log.error(f"Model {model_name!r}: {len(mismatched)} weights have a shape mismatch "
+                  f"(randomly initialized, predictions unreliable): {_preview(mismatched)}")
+    if errors:
+        log.error(f"Model {model_name!r}: errors while loading weights: {_preview(errors)}")
+    if unexpected:
+        log.warning(f"Model {model_name!r}: {len(unexpected)} checkpoint weights unused by the "
+                    f"model: {_preview(unexpected)}")
+    has_errors = bool(missing or mismatched or errors)
+    if not has_errors and not unexpected:
+        log.info(f"Model {model_name!r}: all weights loaded from the checkpoint")
+    return has_errors
+
+
+def from_pretrained_checked(model_cls, source: str, model_name: str, log=logger, **kwargs):
+    """``model_cls.from_pretrained(source, **kwargs)`` with its weight-loading report
+    logged (see report_weight_loading)."""
+    kwargs.pop("output_loading_info", None)
+    model, loading_info = model_cls.from_pretrained(source, output_loading_info=True, **kwargs)
+    report_weight_loading(loading_info, model_name, log=log)
+    return model

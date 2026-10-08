@@ -12,9 +12,11 @@ import pytest
 from image.classifier_utils import (
     ensure_probabilities,
     format_prediction_line,
+    from_pretrained_checked,
     logits_to_probabilities,
     map_scores_to_categories,
     pick_split_positive,
+    report_weight_loading,
     sigmoid,
     softmax,
     top_category,
@@ -151,3 +153,76 @@ class TestWrapperCountMismatch:
         wrapper, image = _wrapper_with_output(tmp_path, ["no", "yes"], [[0.2]])
         assert wrapper.predict_image(image) == pytest.approx({"no": 0.8, "yes": 0.2})
         assert wrapper.classify_image(image) == "no"
+
+
+class _RecordingLog:
+    """Stands in for a module logger (app loggers don't propagate to caplog)."""
+
+    def __init__(self):
+        self.records = []
+
+    def error(self, msg):
+        self.records.append(("error", msg))
+
+    def warning(self, msg):
+        self.records.append(("warning", msg))
+
+    def info(self, msg):
+        self.records.append(("info", msg))
+
+    def levels(self):
+        return [level for level, _msg in self.records]
+
+
+class TestReportWeightLoading:
+    def test_clean_load_logs_info_only(self):
+        log = _RecordingLog()
+        info = {"missing_keys": [], "unexpected_keys": [], "mismatched_keys": [], "error_msgs": []}
+        assert report_weight_loading(info, "m", log=log) is False
+        assert log.levels() == ["info"]
+
+    def test_missing_keys_are_errors(self):
+        log = _RecordingLog()
+        info = {"missing_keys": {"classifier.weight", "classifier.bias"}, "unexpected_keys": set()}
+        assert report_weight_loading(info, "m", log=log) is True
+        assert log.levels() == ["error"]
+        assert "classifier.bias" in log.records[0][1]
+
+    def test_mismatched_keys_are_errors(self):
+        log = _RecordingLog()
+        info = {"mismatched_keys": [("classifier.weight", (2, 768), (1000, 768))]}
+        assert report_weight_loading(info, "m", log=log) is True
+        assert log.levels() == ["error"]
+
+    def test_conversion_errors_are_errors(self):
+        log = _RecordingLog()
+        assert report_weight_loading({"conversion_errors": {"a.b": "boom"}}, "m", log=log) is True
+        assert "a.b: boom" in log.records[0][1]
+
+    def test_unexpected_keys_only_warn(self):
+        log = _RecordingLog()
+        assert report_weight_loading({"unexpected_keys": ["text_model.x"]}, "m", log=log) is False
+        assert log.levels() == ["warning"]
+
+    def test_long_key_lists_are_truncated(self):
+        log = _RecordingLog()
+        report_weight_loading({"missing_keys": [f"k{i:02d}" for i in range(25)]}, "m", log=log)
+        assert "(15 more)" in log.records[0][1]
+
+
+class TestFromPretrainedChecked:
+    def test_requests_loading_info_and_returns_model(self):
+        calls = []
+
+        class FakeModelCls:
+            @staticmethod
+            def from_pretrained(source, **kwargs):
+                calls.append((source, kwargs))
+                return "model", {"missing_keys": ["x"]}
+
+        log = _RecordingLog()
+        result = from_pretrained_checked(
+            FakeModelCls, "/repo", "m", log=log, output_loading_info=False, num_labels=2)
+        assert result == "model"
+        assert calls == [("/repo", {"output_loading_info": True, "num_labels": 2})]
+        assert log.levels() == ["error"]

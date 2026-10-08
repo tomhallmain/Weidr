@@ -15,6 +15,7 @@ from image.classifier_utils import (
     derive_neutral_categories_from_positive_groups,
     ensure_probabilities,
     format_prediction_line,
+    from_pretrained_checked,
     logits_to_probabilities,
     map_scores_to_categories,
     pick_split_positive,
@@ -547,7 +548,8 @@ class PyTorchImageClassifier(BaseImageClassifier):
 
             try:
                 self.processor = AutoImageProcessor.from_pretrained(model_root)
-                self.model = AutoModelForImageClassification.from_pretrained(model_root).to(self.device)
+                self.model = from_pretrained_checked(
+                    AutoModelForImageClassification, model_root, model_root, log=logger).to(self.device)
                 self.model.eval()
                 self.is_loaded = True
                 self.input_shape = (

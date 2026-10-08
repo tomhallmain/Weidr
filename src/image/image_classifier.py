@@ -16,9 +16,12 @@ from image.classifier_utils import (
     ensure_probabilities,
     format_prediction_line,
     from_pretrained_checked,
+    infer_processor_input_shape,
     logits_to_probabilities,
     map_scores_to_categories,
+    normalize_label,
     pick_split_positive,
+    resolve_torch_device,
     top_category,
 )
 from image.image_classifier_model_config import ImageClassifierModelConfig
@@ -37,12 +40,27 @@ class BackendType(Enum):
     HDF5 = "hdf5"
     ONNX = "onnx"
     TFLITE = "tflite"
+    DETECTION = "detection"
     OTHER = "other"
 
     @staticmethod
     def config_values() -> List[str]:
         """Values a model config's ``backend`` can be set to: "auto" plus every loadable backend."""
         return ["auto"] + [b.value for b in BackendType if b is not BackendType.OTHER]
+
+    @staticmethod
+    def from_model_location(model_location: str) -> Optional["BackendType"]:
+        """Backend implied by a model file's extension ("auto"), or None when there is none."""
+        location = str(model_location).lower()
+        if location.endswith('.h5'):
+            return BackendType.HDF5
+        if location.endswith(('.pth', '.pt', '.safetensors', '.bin')):
+            return BackendType.PYTORCH
+        if location.endswith('.onnx'):
+            return BackendType.ONNX
+        if location.endswith('.tflite'):
+            return BackendType.TFLITE
+        return None
 
     @staticmethod
     def parse(backend: Union["BackendType", str, None]) -> Optional["BackendType"]:
@@ -61,6 +79,8 @@ class BackendType(Enum):
             return BackendType.ONNX
         if backend_str in ("tflite", "litert", "tf_lite"):
             return BackendType.TFLITE
+        if backend_str in ("detection", "object_detection", "object-detection"):
+            return BackendType.DETECTION
         return BackendType.OTHER
 
 
@@ -499,13 +519,7 @@ class PyTorchImageClassifier(BaseImageClassifier):
 
     def _get_device(self, device: str):
         """Determine torch device"""
-        if device == 'auto':
-            try:
-                import torch
-                return torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-            except ImportError:
-                raise ImportError("PyTorch not installed. Install with: pip install torch torchvision")
-        return device
+        return resolve_torch_device(device)
 
     def _log_input_shape_override_if_any(self) -> None:
         """Log once when the user supplied ``input_shape`` (applies to all load paths)."""
@@ -710,22 +724,7 @@ class PyTorchImageClassifier(BaseImageClassifier):
 
     def _infer_transformers_input_shape(self) -> Tuple[int, int]:
         """Infer input shape from HF AutoImageProcessor metadata."""
-        try:
-            size = getattr(self.processor, "size", None)
-            if isinstance(size, dict):
-                if "shortest_edge" in size:
-                    edge = int(size["shortest_edge"])
-                    return (edge, edge)
-                if "height" in size and "width" in size:
-                    return (int(size["width"]), int(size["height"]))
-                if "longest_edge" in size:
-                    edge = int(size["longest_edge"])
-                    return (edge, edge)
-            if isinstance(size, int):
-                return (size, size)
-        except Exception:
-            pass
-        return (224, 224)
+        return infer_processor_input_shape(self.processor)
     
     def _infer_input_shape(self) -> Tuple[int, int]:
         """Try to infer input shape from model"""
@@ -1177,6 +1176,290 @@ class TFLiteImageClassifier(BaseImageClassifier):
             raise ValueError(f"Prediction failed: {str(e)}")
 
 
+def _as_list(values) -> list:
+    """Plain list from a tensor, array or sequence."""
+    return values.tolist() if hasattr(values, "tolist") else list(values)
+
+
+class DetectionImageClassifier(BaseImageClassifier):
+    """Object detector (transformers AutoModelForObjectDetection) scored as a classifier.
+
+    Each non-background category scores the highest confidence among detections
+    whose label maps to it, after the score and box-area filters. The background
+    category scores 1 minus the best of those, so classify_image picks a target
+    category exactly when its best detection exceeds 0.5. Categories match the
+    model's id2label via normalize_label; label_aliases maps one category to
+    several model labels.
+    """
+
+    DEFAULT_SCORE_THRESHOLD = 0.3
+    DEFAULT_MIN_BOX_AREA_RATIO = 0.0
+
+    def __init__(self, model_path: str,
+                 model_categories: List[str],
+                 background_category: Optional[str] = None,
+                 score_threshold: float = DEFAULT_SCORE_THRESHOLD,
+                 min_box_area_ratio: float = DEFAULT_MIN_BOX_AREA_RATIO,
+                 label_aliases: Optional[Dict[str, Any]] = None,
+                 hf_pretrained_path: Optional[str] = None,
+                 device: str = 'auto',
+                 input_shape: Optional[Tuple[int, int]] = None):
+        """Object detection classifier
+
+        Args:
+            model_path: Weights file in the model directory, or the directory itself
+            model_categories: Categories to score, in output order
+            background_category: The "none of the above" category, which must be one
+                of model_categories. Without one, an image with no qualifying
+                detection classifies as the first category.
+            score_threshold: Detections below this confidence are discarded
+            min_box_area_ratio: Detections whose box covers less than this fraction
+                of the image are discarded (e.g. 0.02 ignores small background figures)
+            label_aliases: {category: [model label, ...]} for categories that cover
+                several model labels or are named differently from them
+            hf_pretrained_path: Model directory (default: model_path's directory)
+            device: 'auto', 'cuda', or 'cpu'
+            input_shape: Informational only; the model's processor sets the input size
+        """
+        super().__init__(model_path)
+        self.model_categories = list(model_categories)
+        self.background_category = background_category or None
+        self.score_threshold = float(score_threshold)
+        self.min_box_area_ratio = float(min_box_area_ratio)
+        self.label_aliases = {
+            str(category): [str(label) for label in (labels if isinstance(labels, (list, tuple)) else [labels])]
+            for category, labels in (label_aliases or {}).items()
+        }
+        self.hf_pretrained_path = hf_pretrained_path
+        self._device_setting = device
+        self._input_shape_override = input_shape
+        self.device = None
+        self.processor = None
+        self._id2label: Dict[int, str] = {}
+        self._category_label_ids: Dict[str, set] = {}
+        self._last_detections: Optional[Tuple[str, List[Dict[str, Any]]]] = None
+        self.load_model()
+
+    @staticmethod
+    def read_id2label(model_root: str) -> Dict[int, str]:
+        """The id2label map from *model_root*'s config.json ({} when unreadable)."""
+        import json
+        try:
+            with open(os.path.join(model_root, "config.json"), "r", encoding="utf-8") as f:
+                id2label = json.load(f).get("id2label") or {}
+            return {int(k): str(v) for k, v in id2label.items()}
+        except Exception:
+            return {}
+
+    @staticmethod
+    def split_background_category(categories: List[str], labels) -> Tuple[Optional[str], List[str]]:
+        """(background category, categories matching no label). The background is the
+        single category that is not a model label; when several are not, none is
+        picked and all of them are returned as unmatched."""
+        known = {normalize_label(label) for label in labels}
+        unmatched = [c for c in categories if normalize_label(c) not in known]
+        if len(unmatched) == 1:
+            return unmatched[0], []
+        return None, unmatched
+
+    def _model_root(self) -> str:
+        if self.hf_pretrained_path:
+            return self.hf_pretrained_path
+        return os.path.dirname(self.model_path) if os.path.isfile(self.model_path) else self.model_path
+
+    def _load_components(self, model_root: str):
+        """(image processor, model on self.device in eval mode) from *model_root*."""
+        from transformers import AutoImageProcessor, AutoModelForObjectDetection
+        processor = AutoImageProcessor.from_pretrained(model_root)
+        model = from_pretrained_checked(AutoModelForObjectDetection, model_root, model_root, log=logger)
+        return processor, model.to(self.device).eval()
+
+    def _resolve_category_labels(self) -> Dict[str, set]:
+        """{non-background category: model label ids}. Raises ValueError for a label the
+        model does not produce or a background category outside model_categories."""
+        if self.background_category and self.background_category not in self.model_categories:
+            raise ValueError(
+                f"background_category {self.background_category!r} is not one of the model "
+                f"categories {self.model_categories}"
+            )
+        if not self.background_category:
+            logger.warning(
+                f"No background_category set for object detection model {self.model_path}: "
+                "an image without a qualifying detection classifies as the first category"
+            )
+        ids_by_label: Dict[str, set] = {}
+        for label_id, label in self._id2label.items():
+            ids_by_label.setdefault(normalize_label(label), set()).add(label_id)
+
+        resolved: Dict[str, set] = {}
+        unknown: List[str] = []
+        for category in self.model_categories:
+            if category == self.background_category:
+                continue
+            ids: set = set()
+            for label in self.label_aliases.get(category, [category]):
+                found = ids_by_label.get(normalize_label(label))
+                if found is None:
+                    unknown.append(label)
+                else:
+                    ids |= found
+            resolved[category] = ids
+        if unknown:
+            raise ValueError(
+                f"Labels not produced by this model: {unknown}. "
+                f"Model labels: {sorted(set(self._id2label.values()))}"
+            )
+        return resolved
+
+    def load_model(self) -> bool:
+        """Load the processor and model, and map categories onto model labels"""
+        model_root = self._model_root()
+        if not model_root or not os.path.isdir(model_root):
+            logger.error(f"Invalid model directory for object detection: {model_root}")
+            return False
+        try:
+            self.device = resolve_torch_device(self._device_setting)
+            self.processor, self.model = self._load_components(model_root)
+            id2label = getattr(getattr(self.model, "config", None), "id2label", None) or {}
+            self._id2label = {int(k): str(v) for k, v in id2label.items()}
+            self._category_label_ids = self._resolve_category_labels()
+            self.input_shape = self._input_shape_override or infer_processor_input_shape(self.processor)
+            self.is_loaded = True
+            logger.info(
+                f"Object detection model loaded from {model_root} on {self.device}: "
+                f"categories {self.model_categories}, background {self.background_category!r}, "
+                f"score_threshold {self.score_threshold}, min_box_area_ratio {self.min_box_area_ratio}"
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to load object detection model from {model_root}: {e}")
+            return False
+
+    def preprocess_image(self, image_path: str) -> Dict[str, Any]:
+        """Processor inputs on self.device plus the original (height, width)"""
+        if not self.is_loaded:
+            raise ValueError("Model not loaded")
+        try:
+            with Image.open(image_path) as img:
+                img = img.convert('RGB')
+                width, height = img.size
+                inputs = self.processor(images=img, return_tensors="pt")
+        except Exception as e:
+            raise ValueError(f"Image processing failed: {str(e)}")
+        inputs = {k: v.to(self.device) if hasattr(v, "to") else v for k, v in inputs.items()}
+        return {"inputs": inputs, "size": (height, width)}
+
+    def _forward(self, inputs: Dict[str, Any]):
+        import torch
+        with torch.no_grad():
+            return self.model(**inputs)
+
+    def _detections(self, preprocessed: Dict[str, Any]) -> List[Dict[str, Any]]:
+        outputs = self._forward(preprocessed["inputs"])
+        height, width = preprocessed["size"]
+        result = self.processor.post_process_object_detection(
+            outputs, threshold=self.score_threshold, target_sizes=[(height, width)]
+        )[0]
+        image_area = float(width * height) or 1.0
+        detections = []
+        for score, label_id, box in zip(
+            _as_list(result["scores"]), _as_list(result["labels"]), _as_list(result["boxes"])
+        ):
+            x0, y0, x1, y1 = (float(v) for v in box)
+            area_ratio = max(0.0, x1 - x0) * max(0.0, y1 - y0) / image_area
+            if area_ratio < self.min_box_area_ratio:
+                continue
+            label_id = int(label_id)
+            detections.append({
+                "label": self._id2label.get(label_id, str(label_id)),
+                "label_id": label_id,
+                "score": float(score),
+                "box": (x0, y0, x1, y1),
+                "area_ratio": area_ratio,
+            })
+        return detections
+
+    def detect(self, image_path: str) -> List[Dict[str, Any]]:
+        """Detections that pass the score and box-area filters, as dicts with label,
+        label_id, score, box (x0, y0, x1, y1 in pixels) and area_ratio."""
+        return self._detections(self.preprocess_image(image_path))
+
+    def predict_image(self, image_path: str) -> np.ndarray:
+        """Per-category scores for *image_path*; its detections are kept for last_detections."""
+        detections = self.detect(image_path)
+        self._last_detections = (image_path, detections)
+        return self._scores_from_detections(detections)
+
+    def last_detections(self, image_path: str) -> Optional[List[Dict[str, Any]]]:
+        """Detections behind the most recent predict_image call, if it was for
+        *image_path* (another image may have been scored since, e.g. on another thread)."""
+        last = self._last_detections
+        if last is not None and last[0] == image_path:
+            return last[1]
+        return None
+
+    def categories_for_label_id(self, label_id: int) -> List[str]:
+        """Categories a detection with *label_id* counts toward (empty if none)."""
+        return [c for c, label_ids in self._category_label_ids.items() if label_id in label_ids]
+
+    def _scores_from_detections(self, detections: List[Dict[str, Any]]) -> np.ndarray:
+        best = {category: 0.0 for category in self._category_label_ids}
+        for detection in detections:
+            for category, label_ids in self._category_label_ids.items():
+                if detection["label_id"] in label_ids and detection["score"] > best[category]:
+                    best[category] = detection["score"]
+        top = max(best.values(), default=0.0)
+        row = [1.0 - top if c == self.background_category else best[c] for c in self.model_categories]
+        return np.array([row], dtype=np.float32)
+
+    def predict(self, preprocessed_image: Dict[str, Any], batch_size: int = 32) -> np.ndarray:
+        """Per-category scores for one preprocessed image (batch_size is ignored)"""
+        if not self.is_loaded:
+            raise ValueError("Model not loaded")
+        try:
+            return self._scores_from_detections(self._detections(preprocessed_image))
+        except Exception as e:
+            raise ValueError(f"Prediction failed: {str(e)}")
+
+
+_BACKEND_CLASSES = {
+    BackendType.PYTORCH: PyTorchImageClassifier,
+    BackendType.HDF5: H5ImageClassifier,
+    BackendType.ONNX: ONNXImageClassifier,
+    BackendType.TFLITE: TFLiteImageClassifier,
+    BackendType.DETECTION: DetectionImageClassifier,
+}
+# Constructor arguments ImageClassifierWrapper supplies itself, never from model_kwargs.
+_WRAPPER_SUPPLIED_ARGS = frozenset({"self", "model_path", "model_categories", "custom_objects"})
+
+
+def accepted_model_kwargs(backend: Optional[BackendType]) -> Optional[frozenset]:
+    """model_kwargs keys *backend*'s classifier accepts, or None when it has no classifier class."""
+    import inspect
+    backend_cls = _BACKEND_CLASSES.get(backend)
+    if backend_cls is None:
+        return None
+    return frozenset(inspect.signature(backend_cls.__init__).parameters) - _WRAPPER_SUPPLIED_ARGS
+
+
+def model_kwargs_for_backend_change(
+    model_kwargs: Dict[str, Any],
+    old_backend: str, old_location: str,
+    new_backend: str, new_location: str,
+) -> Tuple[Dict[str, Any], List[str]]:
+    """(kept model_kwargs, dropped keys) when a model config moves from one backend to
+    another ("auto" resolved from each location). Keys the new backend's classifier
+    does not accept are dropped, since passing them fails the load. Nothing is dropped
+    when the backend is unchanged or the new one is unknown."""
+    old = BackendType.parse(old_backend) or BackendType.from_model_location(old_location)
+    new = BackendType.parse(new_backend) or BackendType.from_model_location(new_location)
+    accepted = accepted_model_kwargs(new)
+    if old == new or accepted is None:
+        return dict(model_kwargs), []
+    kept = {k: v for k, v in model_kwargs.items() if k in accepted}
+    return kept, sorted(k for k in model_kwargs if k not in accepted)
+
+
 class ImageClassifierWrapper:
     def __init__(self, model_config: ImageClassifierModelConfig):
         """Load and run an image classifier from a single :class:`ImageClassifierModelConfig`.
@@ -1261,21 +1544,15 @@ class ImageClassifierWrapper:
         
         # Determine backend if auto
         if self.backend is None:
-            if self.model_location.lower().endswith('.h5'):
-                self.backend = BackendType.HDF5
-            elif self.model_location.lower().endswith(('.pth', '.pt', '.safetensors', '.bin')):
-                self.backend = BackendType.PYTORCH
-            elif self.model_location.lower().endswith('.onnx'):
-                self.backend = BackendType.ONNX
-            elif self.model_location.lower().endswith('.tflite'):
-                self.backend = BackendType.TFLITE
-            else:
+            self.backend = BackendType.from_model_location(self.model_location)
+            if self.backend is None:
                 self.can_run = False
                 logger.error(f"Cannot determine backend for file: {self.model_location}")
                 return
 
-        # Special handling for safetensors: require model_architecture
-        if self.model_location.lower().endswith('.safetensors'):
+        # Special handling for safetensors: require model_architecture (a detection
+        # model's architecture comes from its config.json)
+        if self.model_location.lower().endswith('.safetensors') and self.backend != BackendType.DETECTION:
             if not self.model_kwargs.get("use_transformers_auto_model", False) and 'architecture_module_name' not in self.model_kwargs:
                 message = "For safetensors files, architecture_module_name must be provided.\n"
                 message += f"Found model_kwargs: {self.model_kwargs}\n"
@@ -1357,6 +1634,17 @@ class ImageClassifierWrapper:
                 self.classifier = TFLiteImageClassifier(
                     self.model_location,
                     **tflite_kwargs
+                )
+
+            elif self.backend == BackendType.DETECTION:
+                detection_kwargs = self.model_kwargs.copy()
+                if self.input_shape is not None:
+                    detection_kwargs["input_shape"] = self.input_shape
+
+                self.classifier = DetectionImageClassifier(
+                    self.model_location,
+                    self.model_categories,
+                    **detection_kwargs
                 )
             else:
                 logger.error(f"Unsupported backend: {self.backend}")

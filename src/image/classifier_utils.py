@@ -179,3 +179,40 @@ def from_pretrained_checked(model_cls, source: str, model_name: str, log=logger,
     model, loading_info = model_cls.from_pretrained(source, output_loading_info=True, **kwargs)
     report_weight_loading(loading_info, model_name, log=log)
     return model
+
+
+def resolve_torch_device(device: str):
+    """``torch.device`` for "auto" (CUDA when available, else CPU); any other value as given."""
+    if device == 'auto':
+        try:
+            import torch
+            return torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        except ImportError:
+            raise ImportError("PyTorch not installed. Install with: pip install torch torchvision")
+    return device
+
+
+def infer_processor_input_shape(processor) -> Tuple[int, int]:
+    """(width, height) a transformers image processor resizes to, from its ``size``
+    setting; (224, 224) when it can't be read."""
+    try:
+        size = getattr(processor, "size", None)
+        if isinstance(size, dict):
+            if "shortest_edge" in size:
+                edge = int(size["shortest_edge"])
+                return (edge, edge)
+            if "height" in size and "width" in size:
+                return (int(size["width"]), int(size["height"]))
+            if "longest_edge" in size:
+                edge = int(size["longest_edge"])
+                return (edge, edge)
+        if isinstance(size, int):
+            return (size, size)
+    except Exception:
+        pass
+    return (224, 224)
+
+
+def normalize_label(label: str) -> str:
+    """Case-insensitive label key: "_" and "-" count as spaces, runs of spaces collapse."""
+    return " ".join(str(label).replace("_", " ").replace("-", " ").lower().split())

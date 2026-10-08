@@ -657,5 +657,22 @@
       "Radio",
       "Field recording"
     ]
+  },
+  {
+    "display_name": "Person Detection (RT-DETR object detector)",
+    "model_name": "person_detection_rtdetr",
+    "description": "Detects whether an image contains a person with an RT-DETR object detector (ResNet-50, Objects365-pretrained, COCO fine-tuned) rather than a whole-image classifier, so small or partial people are found too. Raise the Min box area setting (e.g. 0.02) to ignore small background figures. Transformers, Apache-2.0 license. Requires a transformers version with RT-DETR support. Third-party model — intended behavior is not guaranteed to work well on your image set; actual accuracy may vary.\nhttps://huggingface.co/PekingU/rtdetr_r50vd_coco_o365",
+    "hf_repo_id": "PekingU/rtdetr_r50vd_coco_o365",
+    "hf_selected_filename": "model.safetensors",
+    "model_categories": [
+      "person",
+      "no person"
+    ],
+    "backend": "detection",
+    "model_kwargs": {
+      "background_category": "no person",
+      "score_threshold": 0.3,
+      "min_box_area_ratio": 0.0
+    }
   }
 ]

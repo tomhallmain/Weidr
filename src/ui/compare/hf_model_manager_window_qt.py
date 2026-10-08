@@ -8,6 +8,7 @@ from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QDoubleSpinBox,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -26,7 +27,7 @@ from extensions.hf_hub_api import HfHubApiBackend
 from image.audio_classifier_manager import audio_classifier_manager
 from image.audio_classifier_model_config import AudioClassifierModelConfig
 from image.classifier_model_files import MODEL_FILE_EXTENSIONS, is_model_file, model_file_choices
-from image.image_classifier import BackendType
+from image.image_classifier import BackendType, DetectionImageClassifier, model_kwargs_for_backend_change
 from image.image_classifier_manager import image_classifier_manager
 from image.image_classifier_model_config import ImageClassifierModelConfig
 from image.suggested_classifier_models import SUGGESTED_CLASSIFIER_MODELS, SuggestedClassifierModel
@@ -37,6 +38,28 @@ from utils.constants import HfHubModelTask, HfHubSortDirection, HfHubSortOption
 from utils.logging_setup import get_logger
 from utils.translations import _
 logger = get_logger("hf_model_manager_window_qt")
+
+
+_MAX_LISTED_DETECTIONS = 50
+
+
+def _format_detection_lines(detections: list[dict]) -> list[str]:
+    """Test-result lines for a detection backend's detections, highest score first."""
+    lines = [_("Detections (after the threshold and box-area filters):")]
+    if not detections:
+        lines.append("  " + _("(none)"))
+        return lines
+    ordered = sorted(detections, key=lambda d: d["score"], reverse=True)
+    for d in ordered[:_MAX_LISTED_DETECTIONS]:
+        line = "  " + _("{0}: {1:.2%} confidence, box covers {2:.1%} of the image").format(
+            d["label"], d["score"], d["area_ratio"])
+        categories = d.get("categories") or []
+        if categories:
+            line += " " + _("(counts toward: {0})").format(", ".join(categories))
+        lines.append(line)
+    if len(ordered) > _MAX_LISTED_DETECTIONS:
+        lines.append("  " + _("... and {0} more").format(len(ordered) - _MAX_LISTED_DETECTIONS))
+    return lines
 
 
 def _populate_repo_file_combo(
@@ -79,6 +102,16 @@ class _TextPreviewDialog(SmartDialog):
 class _InstalledModelEditDialog(SmartDialog):
     """Popup editor for local/HF installed model definitions."""
 
+    _MANAGED_MODEL_KWARGS = frozenset({
+        "use_transformers_auto_model",
+        "hf_pretrained_path",
+        "architecture_module_name",
+        "architecture_class_path",
+        "background_category",
+        "score_threshold",
+        "min_box_area_ratio",
+    })
+
     def __init__(
         self,
         parent: QWidget,
@@ -96,6 +129,9 @@ class _InstalledModelEditDialog(SmartDialog):
         self._repo_files_cache: dict[str, list[str]] = {}
 
         model_kwargs = dict(initial_model.get("model_kwargs", {}))
+        self._initial_model_kwargs = model_kwargs
+        self._initial_backend = str(initial_model.get("backend", "auto"))
+        self._initial_model_location = str(initial_model.get("model_location", ""))
 
         layout = QVBoxLayout(self)
 
@@ -137,6 +173,8 @@ class _InstalledModelEditDialog(SmartDialog):
         ) + " " + _(
             "TFLite (.tflite): inferred from the model's declared input tensor "
             "shape; only applied when that shape is dynamic."
+        ) + " " + _(
+            "Object detection: not used; the model's processor sets the input size."
         )
         lbl_input_shape = QLabel(_("Input shape (WxH)"))
         lbl_input_shape.setToolTip(input_shape_tip)
@@ -205,6 +243,41 @@ class _InstalledModelEditDialog(SmartDialog):
         row6.addWidget(self._arch_class_edit, stretch=1)
         layout.addLayout(row6)
 
+        self._detection_row = QWidget()
+        detection_layout = QHBoxLayout(self._detection_row)
+        detection_layout.setContentsMargins(0, 0, 0, 0)
+        detection_layout.addWidget(QLabel(_("Background category")))
+        self._background_category_edit = QLineEdit(str(model_kwargs.get("background_category") or ""))
+        self._background_category_edit.setToolTip(
+            _("The category for images without a qualifying detection, e.g. \"no person\". "
+              "It must also be listed in Categories; every other category must be a label of the model.")
+        )
+        detection_layout.addWidget(self._background_category_edit, stretch=1)
+        detection_layout.addWidget(QLabel(_("Detection threshold")))
+        self._score_threshold_spin = QDoubleSpinBox()
+        self._score_threshold_spin.setRange(0.0, 1.0)
+        self._score_threshold_spin.setDecimals(2)
+        self._score_threshold_spin.setSingleStep(0.05)
+        self._score_threshold_spin.setValue(float(
+            model_kwargs.get("score_threshold", DetectionImageClassifier.DEFAULT_SCORE_THRESHOLD)))
+        self._score_threshold_spin.setToolTip(_("Detections below this confidence are ignored."))
+        detection_layout.addWidget(self._score_threshold_spin)
+        detection_layout.addWidget(QLabel(_("Min box area")))
+        self._min_box_area_spin = QDoubleSpinBox()
+        self._min_box_area_spin.setRange(0.0, 1.0)
+        self._min_box_area_spin.setDecimals(3)
+        self._min_box_area_spin.setSingleStep(0.01)
+        self._min_box_area_spin.setValue(float(
+            model_kwargs.get("min_box_area_ratio", DetectionImageClassifier.DEFAULT_MIN_BOX_AREA_RATIO)))
+        self._min_box_area_spin.setToolTip(
+            _("Ignore detections whose box covers less than this fraction of the image, "
+              "e.g. 0.02 to skip small background figures.")
+        )
+        detection_layout.addWidget(self._min_box_area_spin)
+        layout.addWidget(self._detection_row)
+        self._backend_combo.currentTextChanged.connect(self._update_backend_fields)
+        self._update_backend_fields()
+
         btn_row = QHBoxLayout()
         btn_row.addStretch()
         cancel_btn = QPushButton(_("Cancel"))
@@ -214,6 +287,16 @@ class _InstalledModelEditDialog(SmartDialog):
         save_btn.clicked.connect(self._save)
         btn_row.addWidget(save_btn)
         layout.addLayout(btn_row)
+
+    def _is_detection_backend(self) -> bool:
+        return BackendType.parse(self._backend_combo.currentText()) == BackendType.DETECTION
+
+    def _update_backend_fields(self, *_args) -> None:
+        """Detection settings apply only to the detection backend, which always loads
+        through transformers, so the AutoModel option does not apply to it."""
+        is_detection = self._is_detection_backend()
+        self._detection_row.setVisible(is_detection)
+        self._use_transformers_cb.setEnabled(not is_detection)
 
     @staticmethod
     def _format_initial_input_shape(initial_model: dict[str, Any]) -> str:
@@ -341,10 +424,35 @@ class _InstalledModelEditDialog(SmartDialog):
         if selected_file:
             model_details["hf_selected_filename"] = selected_file
 
-        model_kwargs: dict[str, Any] = {}
-        if self._use_transformers_cb.isChecked():
+        # Keep model_kwargs this dialog has no field for (e.g. ONNX channels_first,
+        # detection label_aliases) unless the backend changed to one that rejects
+        # them; the ones it manages are rebuilt below.
+        model_kwargs, dropped = model_kwargs_for_backend_change(
+            {k: v for k, v in self._initial_model_kwargs.items() if k not in self._MANAGED_MODEL_KWARGS},
+            self._initial_backend, self._initial_model_location, backend, model_location,
+        )
+        if dropped:
+            logger.info(f"Dropped model_kwargs not accepted by backend {backend!r} for {model_name!r}: {dropped}")
+        hf_pretrained_path = (self._hf_pretrained_path_edit.text() or "").strip()
+        if self._is_detection_backend():
+            if hf_pretrained_path:
+                model_kwargs["hf_pretrained_path"] = hf_pretrained_path
+            background_category = (self._background_category_edit.text() or "").strip()
+            if background_category:
+                if background_category not in categories:
+                    qt_alert(
+                        self,
+                        _("Invalid background category"),
+                        _("The background category '{0}' must also be listed in Categories.").format(
+                            background_category),
+                        kind="warning",
+                    )
+                    return
+                model_kwargs["background_category"] = background_category
+            model_kwargs["score_threshold"] = round(self._score_threshold_spin.value(), 4)
+            model_kwargs["min_box_area_ratio"] = round(self._min_box_area_spin.value(), 4)
+        elif self._use_transformers_cb.isChecked():
             model_kwargs["use_transformers_auto_model"] = True
-            hf_pretrained_path = (self._hf_pretrained_path_edit.text() or "").strip()
             if hf_pretrained_path:
                 model_kwargs["hf_pretrained_path"] = hf_pretrained_path
         arch_module = (self._arch_module_edit.text() or "").strip()
@@ -414,8 +522,19 @@ class _ClassifierTestWorker(QThread):
             classifier.discard_cached_prediction(self._image_path)
             ranked = classifier.predict_image_ranked(self._image_path)
             classification = classifier.classify_image(self._image_path)
-            self.finished.emit(self._model_name, self._image_path,
-                               {"classification": classification, "ranked": ranked})
+            result = {"classification": classification, "ranked": ranked}
+            # Detection backends also report the raw detections behind the scores,
+            # reusing the prediction above when no other image was scored since.
+            backend = getattr(classifier, "classifier", None)
+            if callable(getattr(backend, "detect", None)):
+                detections = backend.last_detections(self._image_path)
+                if detections is None:
+                    detections = backend.detect(self._image_path)
+                result["detections"] = [
+                    dict(d, categories=backend.categories_for_label_id(d["label_id"]))
+                    for d in detections
+                ]
+            self.finished.emit(self._model_name, self._image_path, result)
         except Exception as exc:
             self.failed.emit(self._model_name, self._image_path, str(exc))
 
@@ -652,6 +771,7 @@ class HfModelManagerWindow(SmartDialog):
         )
         self._use_transformers_auto_model_cb.setChecked(True)
         install_row_3.addWidget(self._use_transformers_auto_model_cb)
+        self._backend_combo.currentTextChanged.connect(self._update_search_backend_fields)
 
         install_row_3.addWidget(QLabel(_("Arch module")))
         self._arch_module_edit = QLineEdit()
@@ -903,19 +1023,30 @@ class HfModelManagerWindow(SmartDialog):
             return None
         return selected[0].text(0)
 
+    # Model labels plus a background category, so not translated: "person" must
+    # match the detector's own label for it.
+    _DEFAULT_DETECTION_CATEGORIES = "person,no person"
+
     _AUDIO_TASK_VALUES = {
         HfHubModelTask.AUDIO_CLASSIFICATION.value,
         HfHubModelTask.ZERO_SHOT_AUDIO_CLASSIFICATION.value,
     }
 
-    def _selected_repo_is_audio(self) -> bool:
-        """True when the selected search result's own Task column (populated from
-        the repo's real pipeline_tag, not the search filter used to find it) is an
-        audio task -- a search run under "All tasks" can return mixed rows."""
+    def _update_search_backend_fields(self, *_args) -> None:
+        """The detection backend always loads through transformers, so the AutoModel
+        option does not apply to it."""
+        is_detection = BackendType.parse(self._backend_combo.currentText()) == BackendType.DETECTION
+        self._use_transformers_auto_model_cb.setEnabled(not is_detection)
+
+    def _selected_repo_task(self) -> str:
+        """The selected search result's own Task column (populated from the repo's
+        real pipeline_tag, not the search filter used to find it -- a search run
+        under "All tasks" can return mixed rows), or "" with no selection."""
         selected = self._search_tree.selectedItems()
-        if not selected:
-            return False
-        return selected[0].text(1) in self._AUDIO_TASK_VALUES
+        return selected[0].text(1) if selected else ""
+
+    def _selected_repo_is_audio(self) -> bool:
+        return self._selected_repo_task() in self._AUDIO_TASK_VALUES
 
     def _search(self) -> None:
         try:
@@ -987,6 +1118,11 @@ class HfModelManagerWindow(SmartDialog):
         self._use_transformers_auto_model_cb.setChecked(
             self._guess_transformers_auto_model_default(repo_id)
         )
+        if self._selected_repo_task() == HfHubModelTask.OBJECT_DETECTION.value:
+            self._backend_combo.setCurrentText(BackendType.DETECTION.value)
+            self._categories_edit.setText(self._DEFAULT_DETECTION_CATEGORIES)
+        elif BackendType.parse(self._backend_combo.currentText()) == BackendType.DETECTION:
+            self._backend_combo.setCurrentText("auto")
 
     def _set_repo_file_options(self, repo_id: str) -> None:
         try:
@@ -1047,9 +1183,13 @@ class HfModelManagerWindow(SmartDialog):
         if not filename:
             self._app_actions.warn(_("Please enter a filename to download."))
             return
-        # Transformers AutoModel loads from the snapshot directory, so the selected
-        # file only needs to be a weights file when it is the model itself.
-        if not self._use_transformers_auto_model_cb.isChecked() and not is_model_file(
+        backend = str(self._backend_combo.currentText()).strip().lower()
+        is_detection = BackendType.parse(backend) == BackendType.DETECTION
+        # Detection always loads through transformers, so the AutoModel option does not apply.
+        use_transformers_auto_model = self._use_transformers_auto_model_cb.isChecked() and not is_detection
+        # Transformers AutoModel and detection load from the snapshot directory, so the
+        # selected file only needs to be a weights file when it is the model itself.
+        if not (use_transformers_auto_model or is_detection) and not is_model_file(
             filename, self._MODEL_FILE_EXTENSIONS
         ):
             install_anyway = self._app_actions.alert(
@@ -1085,10 +1225,25 @@ class HfModelManagerWindow(SmartDialog):
             self._app_actions.warn(_("Please enter at least one category."))
             return
 
-        backend = str(self._backend_combo.currentText()).strip().lower()
-        use_transformers_auto_model = self._use_transformers_auto_model_cb.isChecked()
         model_kwargs = {}
-        if use_transformers_auto_model:
+        if is_detection:
+            background_category, unmatched = DetectionImageClassifier.split_background_category(
+                categories, DetectionImageClassifier.read_id2label(snapshot_dir).values()
+            )
+            if unmatched:
+                self._app_actions.alert(
+                    _("Invalid Model Configuration"),
+                    _("Only one category may be something other than a label of this model (the "
+                      "background category, e.g. \"no person\"). Not model labels: {0}").format(
+                        ", ".join(unmatched)),
+                    kind="error",
+                    master=self,
+                )
+                return
+            model_kwargs["hf_pretrained_path"] = snapshot_dir
+            if background_category:
+                model_kwargs["background_category"] = background_category
+        elif use_transformers_auto_model:
             model_kwargs["use_transformers_auto_model"] = True
             model_kwargs["hf_pretrained_path"] = snapshot_dir
         arch_module = (self._arch_module_edit.text() or "").strip()
@@ -1098,7 +1253,12 @@ class HfModelManagerWindow(SmartDialog):
         if arch_class:
             model_kwargs["architecture_class_path"] = arch_class
 
-        effective_backend = "pytorch" if use_transformers_auto_model else (backend if backend else "auto")
+        if is_detection:
+            effective_backend = BackendType.DETECTION.value
+        elif use_transformers_auto_model:
+            effective_backend = "pytorch"
+        else:
+            effective_backend = backend if backend else "auto"
         model_details = {
             "model_name": model_name,
             "model_location": downloaded_path,
@@ -1473,6 +1633,9 @@ class HfModelManagerWindow(SmartDialog):
         ]
         for cat, score in ranked:
             lines.append(f"  {cat}: {score:.6f}  ({score * 100:.2f}%)")
+        if "detections" in result:
+            lines.append("")
+            lines.extend(_format_detection_lines(result["detections"]))
         _TextPreviewDialog(
             parent=self,
             title=_("Classifier Test — {0}").format(model_name),

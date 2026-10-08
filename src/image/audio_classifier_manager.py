@@ -67,7 +67,9 @@ class AudioClassifierManager:
                     )
 
     def set_classifier_metadata(self, model_details_list: List[Dict[str, Any]]) -> None:
-        """Replace all configured classifier metadata and trim stale runtime classifiers."""
+        """Replace all configured classifier metadata and trim runtime classifiers whose
+        entry was removed or whose config changed, so the next lookup reloads them."""
+        previous_metadata = dict(self.classifier_metadata)
         self.classifier_metadata.clear()
         if isinstance(model_details_list, list):
             for model_details in model_details_list:
@@ -88,6 +90,13 @@ class AudioClassifierManager:
         stale_names = [name for name in self.classifiers if name not in self.classifier_metadata]
         for stale_name in stale_names:
             self.classifiers.pop(stale_name, None)
+        changed_names = [
+            name for name in self.classifiers
+            if previous_metadata.get(name) != self.classifier_metadata.get(name)
+        ]
+        for changed_name in changed_names:
+            self.classifiers.pop(changed_name, None)
+            logger.info(f"Audio classifier config changed, cached instance evicted: {changed_name}")
 
     def can_classify(self) -> bool:
         return len(self.get_model_names()) > 0
@@ -128,6 +137,9 @@ class AudioClassifierManager:
                 f"Failed to find audio classifier with model name: \"{model_name}\". "
                 f"Registered model_name keys: {keys}{suffix}"
             )
+        # A wrapper that failed to initialize stays cached too, so repeated lookups
+        # (e.g. prevalidations) neither retry nor re-log the failure; a config change
+        # through set_classifier_metadata/add_classifier_metadata evicts it.
         if key in self.classifiers:
             return self.classifiers[key]
         model_config = self.classifier_metadata[key]
@@ -146,12 +158,16 @@ class AudioClassifierManager:
         return list(self.classifier_metadata.keys())
 
     def is_loaded(self, model_name: Optional[str]) -> bool:
-        """Whether the classifier is already instantiated and cached (vs. just registered metadata)."""
+        """Whether a runnable classifier is already instantiated and cached (vs. just registered
+        metadata, or cached after failing to initialize)."""
         key = self.resolve_registered_model_name(model_name)
-        return key is not None and key in self.classifiers
+        classifier = self.classifiers.get(key) if key is not None else None
+        return classifier is not None and bool(classifier.can_run)
 
     def add_classifier_metadata(self, model_details: Dict[str, Any]) -> None:
         model_config = AudioClassifierModelConfig.from_dict(model_details, logger=logger)
+        if self.classifier_metadata.get(model_config.model_name) != model_config:
+            self.classifiers.pop(model_config.model_name, None)
         self.classifier_metadata[model_config.model_name] = model_config
 
     def remove_classifier_metadata(self, model_name: str) -> None:

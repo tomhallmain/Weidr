@@ -1043,6 +1043,16 @@ class TFLiteImageClassifier(BaseImageClassifier):
         return [None if int(sig) < 0 else dim for dim, sig in zip(shape, signature)]
 
     @staticmethod
+    def _describe_tensor(details: dict) -> str:
+        """Shape, dtype and (scale, zero_point) of a tensor, for logging."""
+        shape = [int(d) for d in details["shape"]]
+        text = f"{shape} {np.dtype(details['dtype']).name}"
+        scale, zero_point = details.get("quantization", (0.0, 0))
+        if scale:
+            text += f" (scale={float(scale):.6g}, zero_point={int(zero_point)})"
+        return text
+
+    @staticmethod
     def _int8_input_range(scale: float) -> Tuple[float, float]:
         """Infer the float range an int8 input was quantized from: 256 steps of
         ``scale`` span about 1 for [0, 1], 2 for [-1, 1] and 255 for raw pixels."""
@@ -1098,9 +1108,8 @@ class TFLiteImageClassifier(BaseImageClassifier):
             self.output_details = self.interpreter.get_output_details()[0]
             self.is_loaded = True
             logger.info(
-                f"TFLite model loaded via {source}: input {list(self.input_details['shape'])} "
-                f"{np.dtype(self.input_details['dtype']).name}, output {list(self.output_details['shape'])} "
-                f"{np.dtype(self.output_details['dtype']).name}"
+                f"TFLite model loaded via {source}: input {self._describe_tensor(self.input_details)}, "
+                f"output {self._describe_tensor(self.output_details)}"
             )
             return True
         except Exception as e:

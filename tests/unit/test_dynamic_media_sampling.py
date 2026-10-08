@@ -79,3 +79,72 @@ def test_raising_matcher_counts_as_processed_non_match():
     assert result.threshold_met is True
     assert result.processed_samples == 2
     assert result.positive_count == 1
+
+
+# ---------------------------------------------------------------------------
+# count_sample_matches / match_media / normalize_ratio
+# ---------------------------------------------------------------------------
+
+from compare.dynamic_media_sampling import (  # noqa: E402
+    FrameSampling,
+    count_sample_matches,
+    match_media,
+    normalize_ratio,
+)
+
+
+def test_count_records_first_match_with_slot_offset():
+    frames = _Frames(["f3", "f4", "f5"])
+    result = count_sample_matches(
+        frames, 3, 2, lambda p: (p in ("f4", "f5"), None), slot_offset=3)
+    assert result.threshold_met is True
+    assert (result.first_match_index, result.first_match_path) == (4, "f4")
+    assert result.last_processed_index == 5
+    assert frames.closed
+
+
+def test_count_without_match_leaves_first_match_unset():
+    result = count_sample_matches(iter(["a", "b"]), 2, 1, lambda p: (False, None))
+    assert result.first_match_index is None
+    assert result.threshold_met is False
+    assert result.processed_samples == 2
+
+
+class TestMatchMedia:
+    def test_dynamic_media_is_sampled(self, monkeypatch):
+        import utils.media_utils as mu
+        monkeypatch.setattr(mu, "is_classifier_dynamic_media_path", lambda p: True)
+        it = _Frames(["f1", "f2"])
+        with patch.object(FrameCache, "stream_frame_samples", return_value=(2, it)) as stream:
+            result = match_media("/v.mp4", lambda p: (p == "f2", "cat"), FrameSampling(0.3, 0.5))
+        assert result.matched is True
+        assert result.matched_category == "cat"
+        assert result.sampling.positive_count == 1
+        assert stream.call_args.kwargs["sample_ratio"] == 0.3
+
+    def test_still_media_uses_the_frame_cache_image(self, monkeypatch):
+        import utils.media_utils as mu
+        monkeypatch.setattr(mu, "is_classifier_dynamic_media_path", lambda p: False)
+        seen = []
+        with patch.object(FrameCache, "get_image_path", return_value="/render.png"):
+            result = match_media("/drawing.svg", lambda p: (seen.append(p) or True, None), FrameSampling())
+        assert seen == ["/render.png"]
+        assert result.matched is True
+        assert result.sampling is None
+
+    def test_no_planned_samples_falls_back_to_one_image(self, monkeypatch):
+        import utils.media_utils as mu
+        monkeypatch.setattr(mu, "is_classifier_dynamic_media_path", lambda p: True)
+        with patch.object(FrameCache, "stream_frame_samples", return_value=(0, iter([]))), \
+                patch.object(FrameCache, "get_image_path", return_value="/first.png"):
+            result = match_media("/v.mp4", lambda p: (p == "/first.png", None), FrameSampling())
+        assert result.matched is True
+        assert result.sampling is None
+
+
+def test_normalize_ratio():
+    assert normalize_ratio(0.4) == 0.4
+    assert normalize_ratio(5) == 1.0
+    assert normalize_ratio(-1) == 0.0
+    assert normalize_ratio("bad", 0.2) == 0.2
+    assert normalize_ratio(None) == 0.1

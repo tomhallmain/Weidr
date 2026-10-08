@@ -33,6 +33,7 @@ from utils.translations import _
 # modules above, but call sites across the app and test suite still import them
 # from here, and this module remains the single import point for the whole
 # pipeline model.  Keep both lists in sync when adding a condition type.
+from compare.dynamic_media_sampling import DEFAULT_RATIO, FrameSampling, normalize_ratio
 from compare.classifier_pipeline_conditions import (  # noqa: F401
     AlwaysCondition,
     AudioClassifierRankCondition,
@@ -139,8 +140,16 @@ class ClassifierPipeline:
     # empty, a relative directory is a validation error; at run time a
     # relative MOVE/COPY is skipped and a relative search is a no-match.
     output_root: str = ""
+    # Dynamic media (video, GIF, PDF, ePub) in image-content conditions
+    # (classifier rank, embedding, prototype): the share of frames/pages
+    # sampled, and the share of those samples that must match. Same meaning and
+    # defaults as a classifier action's dynamic_content_* ratios.
+    dynamic_content_sample_ratio: float = DEFAULT_RATIO
+    dynamic_content_positive_ratio: float = DEFAULT_RATIO
 
     def __post_init__(self):
+        self.dynamic_content_sample_ratio = normalize_ratio(self.dynamic_content_sample_ratio)
+        self.dynamic_content_positive_ratio = normalize_ratio(self.dynamic_content_positive_ratio)
         if self.nodes is None:
             self.nodes = []
         if self.applies_to_media_types is not None:
@@ -767,7 +776,15 @@ class ClassifierPipeline:
             d["record_node_verdicts"] = True
         if self.output_root:
             d["output_root"] = self.output_root
+        if self.dynamic_content_sample_ratio != DEFAULT_RATIO:
+            d["dynamic_content_sample_ratio"] = self.dynamic_content_sample_ratio
+        if self.dynamic_content_positive_ratio != DEFAULT_RATIO:
+            d["dynamic_content_positive_ratio"] = self.dynamic_content_positive_ratio
         return d
+
+    def frame_sampling(self) -> FrameSampling:
+        """Sampling settings for dynamic media in this pipeline's conditions."""
+        return FrameSampling(self.dynamic_content_sample_ratio, self.dynamic_content_positive_ratio)
 
     @staticmethod
     def from_dict(d: dict) -> "ClassifierPipeline":
@@ -809,6 +826,8 @@ class ClassifierPipeline:
             dedupe_stem_groups=d.get("dedupe_stem_groups", True),
             record_node_verdicts=d.get("record_node_verdicts", False),
             output_root=d.get("output_root", ""),
+            dynamic_content_sample_ratio=d.get("dynamic_content_sample_ratio", DEFAULT_RATIO),
+            dynamic_content_positive_ratio=d.get("dynamic_content_positive_ratio", DEFAULT_RATIO),
         )
 
 
@@ -891,6 +910,8 @@ class PrevalidationPipeline(ClassifierPipeline):
             dedupe_stem_groups=d.get("dedupe_stem_groups", True),
             record_node_verdicts=d.get("record_node_verdicts", False),
             output_root=d.get("output_root", ""),
+            dynamic_content_sample_ratio=d.get("dynamic_content_sample_ratio", DEFAULT_RATIO),
+            dynamic_content_positive_ratio=d.get("dynamic_content_positive_ratio", DEFAULT_RATIO),
         )
 
 

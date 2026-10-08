@@ -1,6 +1,7 @@
-"""Score handling shared by the image and audio classifier wrappers and backends:
-raw model output to probabilities, probabilities to per-category scores, and
-per-category scores to a single resulting category."""
+"""Helpers shared by the image and audio classifier wrappers and backends: raw
+model output to probabilities, probabilities to per-category scores, scores to a
+single resulting category, and transformers loading (device, processor input
+size, weight-loading report, label matching)."""
 
 from __future__ import annotations
 
@@ -143,8 +144,9 @@ def report_weight_loading(loading_info: Dict, model_name: str, log=logger) -> bo
 
     Missing or shape-mismatched weights are left randomly initialized, which can
     make a model return near-constant predictions without raising, so they are
-    errors. Unexpected checkpoint weights are unused (often harmless, e.g. a
-    pretraining head) and only warned about. Returns True if any error was logged.
+    errors. Unexpected checkpoint weights are unused by the model (e.g. a
+    pretraining head it drops) and only warned about. Returns True if any error
+    was logged.
     """
     def keys(name: str) -> List[str]:
         return sorted(str(k) for k in (loading_info.get(name) or []))

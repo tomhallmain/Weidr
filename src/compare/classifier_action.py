@@ -13,7 +13,7 @@ from typing import Callable, ClassVar, Optional
 
 from compare.action_callbacks import ActionCallbacks
 from compare.classifier_categories import model_strategy_positive_categories
-from compare.dynamic_media_sampling import evaluate_dynamic_media
+from compare.dynamic_media_sampling import count_sample_matches, evaluate_dynamic_media, normalize_ratio
 from compare.compare_embeddings_clip import CompareEmbeddingClip
 from compare.embedding_prototype import EmbeddingPrototype
 from compare.lookahead import Lookahead
@@ -235,11 +235,7 @@ class ClassifierAction:
 
     @staticmethod
     def _normalize_ratio(value, default_val: float = 0.1) -> float:
-        try:
-            normalized = float(value)
-        except Exception:
-            normalized = default_val
-        return max(0.0, min(1.0, normalized))
+        return normalize_ratio(value, default_val)
 
     def get_positives_str(self):
         if len(self.positives) > 0:
@@ -1066,38 +1062,29 @@ class ClassifierAction:
             slot_offset = 0
 
         n = len(scan_frames) if hasattr(scan_frames, "__len__") else planned_slots
-        required = max(1, math.ceil(n * self.dynamic_content_positive_ratio))
-        positive_count = 0
-        first_positive: Optional[tuple] = None  # (absolute_slot_index, frame_path)
-
-        for local_idx, frame_path in enumerate(scan_frames):
-            try:
-                is_match, _unused = self._evaluate_image_path_match_for_mode(frame_path)
-            except Exception:
-                is_match = False
-            if is_match:
-                positive_count += 1
-                if first_positive is None:
-                    first_positive = (slot_offset + local_idx, frame_path)
-                if positive_count >= required:
-                    # Re-evaluate the trigger frame with detail capture. predict_image
-                    # caches results internally so this extra call is effectively free.
-                    detail_out: list = [None]
-                    try:
-                        self._evaluate_image_path_match_for_mode(first_positive[1], _detail_out=detail_out)
-                    except Exception:
-                        pass
-                    return TriggerFrameResult(
-                        slot_index=first_positive[0],
-                        total_planned_slots=planned_slots,
-                        frame_path=first_positive[1],
-                        detail=detail_out[0],
-                    )
-            remaining = n - local_idx - 1
-            if positive_count + remaining < required:
-                break
-
-        return None
+        result = count_sample_matches(
+            scan_frames,
+            n,
+            max(1, math.ceil(n * self.dynamic_content_positive_ratio)),
+            self._evaluate_image_path_match_for_mode,
+            slot_offset=slot_offset,
+        )
+        if not result.threshold_met:
+            return None
+        # Seek to the first positive frame, not the one that crossed the threshold.
+        # Re-evaluate it with detail capture; predict_image caches results
+        # internally so this extra call is effectively free.
+        detail_out: list = [None]
+        try:
+            self._evaluate_image_path_match_for_mode(result.first_match_path, _detail_out=detail_out)
+        except Exception:
+            pass
+        return TriggerFrameResult(
+            slot_index=result.first_match_index,
+            total_planned_slots=planned_slots,
+            frame_path=result.first_match_path,
+            detail=detail_out[0],
+        )
 
     def run_on_media_path(
         self,

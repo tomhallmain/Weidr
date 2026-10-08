@@ -1224,7 +1224,11 @@ class FrameCache:
             
             # Convert HTML to PDF using Pyppeteer
             async def convert_html_to_pdf():
-                browser = await _launch_browser(headless=True)
+                # No signal handlers: they can only be installed on the main
+                # thread, and classifiers render media from worker threads.
+                browser = await _launch_browser(
+                    headless=True, handleSIGINT=False, handleSIGTERM=False, handleSIGHUP=False
+                )
                 page = await browser.newPage()
                 
                 # Read the HTML file
@@ -1249,8 +1253,12 @@ class FrameCache:
                 
                 await browser.close()
             
-            # Run the async function
-            asyncio.get_event_loop().run_until_complete(convert_html_to_pdf())
+            # A private loop, since a worker thread has no current event loop
+            loop = asyncio.new_event_loop()
+            try:
+                loop.run_until_complete(convert_html_to_pdf())
+            finally:
+                loop.close()
             
             # Now extract the first page as an image using our existing PDF extraction
             cls._extract_pdf_frame(pdf_path)

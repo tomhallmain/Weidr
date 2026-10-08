@@ -252,10 +252,8 @@ def filter_from_dict(d: Optional[dict]) -> Optional[CompareFilter]:
         if selection_mode not in (SELECTION_SELECTED_CATEGORIES, SELECTION_MODEL_STRATEGY):
             selection_mode = SELECTION_SELECTED_CATEGORIES
         def _ratio(key: str, default: float) -> float:
-            try:
-                return max(0.0, min(1.0, float(d.get(key, default))))
-            except (TypeError, ValueError):
-                return default
+            from compare.dynamic_media_sampling import normalize_ratio
+            return normalize_ratio(d.get(key, default), default)
 
         try:
             min_confidence = float(d.get("min_confidence", 0.0) or 0.0)
@@ -598,18 +596,11 @@ def validate_filter(f: Optional[CompareFilter], classifier_resolver=None) -> Lis
     return errors
 
 
-def _classifier_input_path(fp: str, domain: str) -> Optional[str]:
-    """Path to hand the classifier for *fp*, or None if *domain* doesn't apply
-    to this media type. Image classifiers see a rendered still (first frame /
-    page / render) of non-raster media that isn't frame-sampled."""
+def _classifier_applies(fp: str, domain: str) -> bool:
+    """Whether a *domain* classifier can judge *fp*: audio classifiers take audio
+    files, image classifiers everything else."""
     from utils.audio_media import is_audio_path_by_extension
-    is_audio = is_audio_path_by_extension(fp)
-    if domain == CLASSIFIER_DOMAIN_AUDIO:
-        return fp if is_audio else None
-    if is_audio:
-        return None
-    from image.frame_cache import FrameCache
-    return FrameCache.get_image_path(fp)
+    return is_audio_path_by_extension(fp) == (domain == CLASSIFIER_DOMAIN_AUDIO)
 
 
 def _classify(wrapper, domain: str, path: str) -> Tuple[str, float]:
@@ -629,17 +620,12 @@ def _file_matches(fp: str, f: ClassifierFilter, wrapper, selected: frozenset) ->
         category, score = _classify(wrapper, f.domain, path)
         return category in selected and score >= f.min_confidence, category
 
-    if f.domain == CLASSIFIER_DOMAIN_IMAGE:
-        from utils.media_utils import is_classifier_dynamic_media_path
-        if is_classifier_dynamic_media_path(fp):
-            from compare.dynamic_media_sampling import evaluate_dynamic_media
-            result = evaluate_dynamic_media(fp, frame_matches, f.sample_ratio, f.positive_ratio)
-            if result is not None:
-                return result.threshold_met
-    path = _classifier_input_path(fp, f.domain)
-    if path is None:
+    if not _classifier_applies(fp, f.domain):
         return None
-    return frame_matches(path)[0]
+    if f.domain == CLASSIFIER_DOMAIN_AUDIO:
+        return frame_matches(fp)[0]
+    from compare.dynamic_media_sampling import FrameSampling, match_media
+    return match_media(fp, frame_matches, FrameSampling(f.sample_ratio, f.positive_ratio)).matched
 
 
 def _apply_classifier(files: list, f: ClassifierFilter, classifier_resolver, progress) -> list:

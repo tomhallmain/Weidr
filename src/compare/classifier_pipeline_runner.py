@@ -18,6 +18,7 @@ from typing import Optional
 
 from compare.action_callbacks import ActionCallbacks
 from compare.debounced_generate_queue import DebouncedGenerateQueue
+from compare.dynamic_media_sampling import FrameSampling, match_media
 from compare.pipeline_decision_record import build_decision_record
 from compare.pipeline_run_report import PipelineRunReport
 from compare.classifier_pipeline import (
@@ -401,6 +402,7 @@ def run_pipeline(
                     pipeline_categories=list(pipeline.category_map.values()),
                     is_seed=is_seed_by_name,
                     output_root=pipeline.output_root,
+                    sampling=pipeline.frame_sampling(),
                 )
             except Exception:
                 logger.exception(
@@ -550,6 +552,7 @@ def run_single_node(
             pipeline_categories=list(pipeline.category_map.values()),
             is_seed=(base_stem is not None and file_stem.lower() == base_stem.lower()),
             output_root=pipeline.output_root,
+            sampling=pipeline.frame_sampling(),
         )
     except Exception:
         logger.exception(
@@ -608,11 +611,16 @@ def _evaluate_condition(
     pipeline_categories: list = [],
     is_seed: bool = False,
     output_root: str = "",
+    sampling: Optional[FrameSampling] = None,
 ) -> tuple[bool, object]:
     """Return (matched, score). Score is a raw float where available, else None.
 
     *output_root* is the pipeline's, which relative search directories resolve
     against.
+
+    *sampling* is the pipeline's dynamic media sampling: conditions on image
+    content judge video, GIF, PDF and ePub files by sampled frames/pages (see
+    _match_frames). Without it they see the file's first frame/page.
 
     *is_seed* is the filename-derived seed determination, deliberately not the
     assume_seed-influenced one used for the seed-category GENERATE guard:
@@ -625,30 +633,34 @@ def _evaluate_condition(
 
     if isinstance(condition, EmbeddingCondition):
         from compare.compare_embeddings_clip import CompareEmbeddingClip
-        result = CompareEmbeddingClip.multi_text_compare(
-            image_path, condition.positives, condition.negatives, condition.threshold
-        )
-        score = CompareEmbeddingClip.cached_multi_text_score(
-            image_path, condition.positives, condition.negatives
-        )
-        if config.debug:
-            logger.debug(
-                "Embedding[%s]: %s score=%s threshold=%.3f → %s",
-                node_name, os.path.basename(image_path),
-                f"{score:.4f}" if score is not None else "n/a",
-                condition.threshold, "MATCH" if result else "NO-MATCH",
+
+        def embedding_match(path: str) -> tuple[bool, object]:
+            result = CompareEmbeddingClip.multi_text_compare(
+                path, condition.positives, condition.negatives, condition.threshold
             )
-        return bool(result), score
+            score = CompareEmbeddingClip.cached_multi_text_score(
+                path, condition.positives, condition.negatives
+            )
+            if config.debug:
+                logger.debug(
+                    "Embedding[%s]: %s score=%s threshold=%.3f → %s",
+                    node_name, os.path.basename(path),
+                    f"{score:.4f}" if score is not None else "n/a",
+                    condition.threshold, "MATCH" if result else "NO-MATCH",
+                )
+            return bool(result), score
+
+        return _match_frames(image_path, sampling, embedding_match)
 
     if isinstance(condition, ClassifierRankCondition):
         return _eval_classifier_rank(condition, image_path, pipeline_categories=pipeline_categories,
-                                     node_name=node_name)
+                                     node_name=node_name, sampling=sampling)
 
     if isinstance(condition, AudioClassifierRankCondition):
         return _eval_audio_classifier_rank(condition, image_path, pipeline_categories=pipeline_categories)
 
     if isinstance(condition, PrototypeCondition):
-        return _eval_prototype(condition, image_path)
+        return _match_frames(image_path, sampling, lambda path: _eval_prototype(condition, path))
 
     if isinstance(condition, PromptCondition):
         return _eval_prompt(condition, image_path)
@@ -692,12 +704,13 @@ def _evaluate_condition(
     if isinstance(condition, CompositeCondition):
         return _eval_composite(condition, image_path, node_results, node_scores, base_directory,
                                report=report, pipeline_categories=pipeline_categories,
-                               is_seed=is_seed, node_name=node_name, output_root=output_root)
+                               is_seed=is_seed, node_name=node_name, output_root=output_root,
+                               sampling=sampling)
 
     if isinstance(condition, GroupCondition):
         return _eval_group(condition, node_name, image_path, node_results, node_scores,
                            base_directory, report=report, pipeline_categories=pipeline_categories,
-                           is_seed=is_seed, output_root=output_root)
+                           is_seed=is_seed, output_root=output_root, sampling=sampling)
 
     if isinstance(condition, GroupChildResultCondition):
         key = f"{condition.group_node_name}/{condition.child_node_name}"
@@ -712,11 +725,43 @@ def _evaluate_condition(
     raise ValueError(f"Unknown condition type: {type(condition).__name__}")
 
 
+def _match_frames(image_path: str, sampling: Optional[FrameSampling], evaluate) -> tuple[bool, object]:
+    """``evaluate(path) -> (matched, score)`` applied to *image_path*'s content.
+
+    With *sampling*, video, GIF, PDF and ePub files are judged by sampled
+    frames/pages (match_media), and the score is the highest numeric frame score.
+    Otherwise, and for any other file, *evaluate* sees *image_path* itself.
+    *evaluate* must not apply negation: a negated condition means the file as a
+    whole doesn't match, so negation goes on the result of this call.
+    """
+    from utils.media_utils import is_classifier_dynamic_media_path
+    if sampling is None or not is_classifier_dynamic_media_path(image_path):
+        return evaluate(image_path)
+    frame_scores: list[float] = []
+
+    def frame_matcher(frame_path: str) -> tuple[bool, None]:
+        matched, score = evaluate(frame_path)
+        if isinstance(score, (int, float)):
+            frame_scores.append(float(score))
+        return bool(matched), None
+
+    result = match_media(image_path, frame_matcher, sampling)
+    if config.debug and result.sampling is not None:
+        logger.debug(
+            "Sampled %s: %d/%d frames matched (required %d) → %s",
+            os.path.basename(image_path), result.sampling.positive_count,
+            result.sampling.processed_samples, result.sampling.required_positive_count,
+            "MATCH" if result.matched else "NO-MATCH",
+        )
+    return result.matched, (max(frame_scores) if frame_scores else None)
+
+
 def _eval_classifier_rank(
     condition: ClassifierRankCondition,
     image_path: str,
     pipeline_categories: list = [],
     node_name: str = "",
+    sampling: Optional[FrameSampling] = None,
 ) -> tuple[bool, object]:
     from image.image_classifier_manager import image_classifier_manager
     classifier = image_classifier_manager.get_classifier(condition.classifier_name)
@@ -736,39 +781,43 @@ def _eval_classifier_rank(
         # condition can't accidentally flip into "always allow".
         return False, None
 
-    ranked = classifier.predict_image_ranked(image_path)
+    def rank_match(path: str) -> tuple[bool, object]:
+        ranked = classifier.predict_image_ranked(path)
 
-    # The returned score is the highest-ranked listed category's in the rank
-    # window, whether or not it reaches min_confidence, so a run dump shows
-    # how far below the threshold a no-match was.
-    best_score = None
-    matched_score = None
-    matched_category = None
-    matched_rank = None
-    for rank_idx, (category, score) in enumerate(ranked, start=1):
-        if rank_idx > condition.max_rank:
-            break
-        if rank_idx < condition.min_rank:
-            continue
-        if category in categories and best_score is None:
-            best_score = score
-        if category in categories and score >= condition.min_confidence:
-            matched_score = score
-            matched_category = category
-            matched_rank = rank_idx
-            break
+        # The returned score is the highest-ranked listed category's in the rank
+        # window, whether or not it reaches min_confidence, so a run dump shows
+        # how far below the threshold a no-match was.
+        best_score = None
+        matched_score = None
+        matched_category = None
+        matched_rank = None
+        for rank_idx, (category, score) in enumerate(ranked, start=1):
+            if rank_idx > condition.max_rank:
+                break
+            if rank_idx < condition.min_rank:
+                continue
+            if category in categories and best_score is None:
+                best_score = score
+            if category in categories and score >= condition.min_confidence:
+                matched_score = score
+                matched_category = category
+                matched_rank = rank_idx
+                break
 
-    matched = matched_score is not None
-    if config.debug:
-        logger.debug(
-            "ClassifierRank[%s]: %s %s categories=%s ranks=%d-%d min=%.3f negate=%s "
-            "top=%s hit=%s → %s",
-            node_name, condition.classifier_name, os.path.basename(image_path), list(categories),
-            condition.min_rank, condition.max_rank, condition.min_confidence, condition.negate,
-            [(c, round(float(sc), 4)) for c, sc in ranked[:5]],
-            f"{matched_category}@{matched_rank}={matched_score:.4f}" if matched else "none",
-            "MATCH" if matched != condition.negate else "NO-MATCH",
-        )
+        matched = matched_score is not None
+        if config.debug:
+            logger.debug(
+                "ClassifierRank[%s]: %s %s categories=%s ranks=%d-%d min=%.3f "
+                "top=%s hit=%s → %s",
+                node_name, condition.classifier_name, os.path.basename(path), list(categories),
+                condition.min_rank, condition.max_rank, condition.min_confidence,
+                [(c, round(float(sc), 4)) for c, sc in ranked[:5]],
+                f"{matched_category}@{matched_rank}={matched_score:.4f}" if matched else "none",
+                "HIT" if matched else "NO HIT",
+            )
+        return matched, best_score
+
+    matched, best_score = _match_frames(image_path, sampling, rank_match)
     if condition.negate:
         return (not matched), best_score
     return matched, best_score
@@ -1305,6 +1354,7 @@ def _eval_group(
     pipeline_categories: list = [],
     is_seed: bool = False,
     output_root: str = "",
+    sampling: Optional[FrameSampling] = None,
 ) -> tuple[bool, object]:
     """Evaluate every child node and store results under '<outer>/<child>' keys."""
     for child in condition.nodes:
@@ -1313,7 +1363,7 @@ def _eval_group(
             child_result, child_score = _evaluate_condition(
                 child.condition, image_path, node_results, node_scores, base_directory,
                 node_name=key, report=report, pipeline_categories=pipeline_categories,
-                is_seed=is_seed, output_root=output_root,
+                is_seed=is_seed, output_root=output_root, sampling=sampling,
             )
         except Exception:
             logger.exception(
@@ -1348,12 +1398,13 @@ def _eval_composite(
     is_seed: bool = False,
     node_name: str = "",
     output_root: str = "",
+    sampling: Optional[FrameSampling] = None,
 ) -> tuple[bool, object]:
     sub_results = [
         _evaluate_condition(sub, image_path, node_results, node_scores, base_directory,
                             node_name=node_name, report=report,
                             pipeline_categories=pipeline_categories, is_seed=is_seed,
-                            output_root=output_root)[0]
+                            output_root=output_root, sampling=sampling)[0]
         for sub in condition.sub_conditions
     ]
     op = condition.operator

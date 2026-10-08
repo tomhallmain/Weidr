@@ -1,8 +1,8 @@
 """
 Unit tests for the TFLite classifier backend (image/image_classifier.py):
 BackendType.TFLITE parsing, extension-based auto-detection in
-ImageClassifierWrapper.load_classifier(), and TFLiteImageClassifier's
-dtype-driven preprocessing and output handling.
+ImageClassifierWrapper.load_classifier(), TFLite runtime resolution, and
+TFLiteImageClassifier's dtype-driven preprocessing and output handling.
 
 No real .tflite file or TFLite runtime is needed: TFLiteImageClassifier is
 exercised against a stub interpreter patched in through

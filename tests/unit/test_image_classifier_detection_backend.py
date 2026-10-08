@@ -1,7 +1,8 @@
 """
 Unit tests for the object detection classifier backend (image/image_classifier.py):
 BackendType.DETECTION parsing, category-to-label resolution, detections-to-scores
-aggregation, the box-area and score filters, and the ImageClassifierWrapper path.
+aggregation, the box-area and score filters, install-time label helpers, the
+ImageClassifierWrapper path, and model_kwargs filtering on a backend change.
 
 The transformers processor and model are replaced with stubs through
 DetectionImageClassifier._load_components and _forward, so neither

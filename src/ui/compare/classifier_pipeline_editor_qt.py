@@ -2151,6 +2151,19 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._dedupe_stem_groups_cb.stateChanged.connect(self._on_field_changed)
         form.addRow("", self._dedupe_stem_groups_cb)
 
+        self._sample_ratio_spin = self._ratio_spin(
+            p.dynamic_content_sample_ratio,
+            _("For video, GIF, PDF and ePub files, the share of frames or pages "
+              "that classifier, embedding and prototype conditions sample."),
+        )
+        form.addRow(_("Dynamic media sample ratio:"), self._sample_ratio_spin)
+        self._positive_ratio_spin = self._ratio_spin(
+            p.dynamic_content_positive_ratio,
+            _("The share of sampled frames or pages that must match for such a "
+              "condition to match the file."),
+        )
+        form.addRow(_("Dynamic media positive ratio:"), self._positive_ratio_spin)
+
         self._record_node_verdicts_cb = QCheckBox(_("Record per-node decisions"))
         self._record_node_verdicts_cb.setChecked(p.record_node_verdicts)
         self._record_node_verdicts_cb.setToolTip(
@@ -2339,6 +2352,16 @@ class ClassifierPipelineEditorDialog(SmartDialog):
     def _on_field_changed(self) -> None:
         if not self._suppress_refresh:
             self._refresh_flow_preview()
+
+    def _ratio_spin(self, value: float, tooltip: str) -> QDoubleSpinBox:
+        spin = QDoubleSpinBox()
+        spin.setRange(0.01, 1.0)
+        spin.setDecimals(2)
+        spin.setSingleStep(0.05)
+        spin.setValue(value)
+        spin.setToolTip(tooltip)
+        spin.valueChanged.connect(self._on_field_changed)
+        return spin
 
     def _browse_output_root(self) -> None:
         current = self._output_root_edit.text() or os.path.expanduser("~")
@@ -3067,6 +3090,8 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         final.seed_category = self._seed_category_combo.currentData() or ""
         final.run_sort_by = self._run_sort_by_combo.currentData()
         final.dedupe_stem_groups = self._dedupe_stem_groups_cb.isChecked()
+        final.dynamic_content_sample_ratio = round(self._sample_ratio_spin.value(), 4)
+        final.dynamic_content_positive_ratio = round(self._positive_ratio_spin.value(), 4)
         final.record_node_verdicts = self._record_node_verdicts_cb.isChecked()
         final.output_root = self._output_root_edit.text().strip()
 

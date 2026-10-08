@@ -1,8 +1,9 @@
 """
 Unit tests for image/classifier_utils.py: output-to-probability conversion,
 mapping scores onto configured categories (including the single-output binary
-case and count mismatches), top-category selection and split-positive
-assignment, plus the wrappers' use of them on mismatched model output.
+case and count mismatches), top-category selection, split-positive assignment
+and the transformers weight-loading report, plus the wrappers' use of them on
+mismatched model output.
 """
 from __future__ import annotations
 

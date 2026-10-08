@@ -1,8 +1,8 @@
 """
 UI tests for object detection support in the HF Model Manager: search-tab
 presets for object-detection repos, the detection install path (background
-category inferred from the downloaded model's labels), and the edit dialog's
-detection fields and model_kwargs preservation.
+category inferred from the downloaded model's labels), the edit dialog's
+detection fields and model_kwargs handling, and detections in the Test result.
 """
 
 import json
@@ -205,12 +205,14 @@ class _FakeDetectionBackend:
     def __init__(self, last=None):
         self.last = last
         self.detect_calls = 0
+        self.detect_paths = []
 
     def last_detections(self, image_path):
         return self.last
 
     def detect(self, image_path):
         self.detect_calls += 1
+        self.detect_paths.append(image_path)
         return [
             {"label": "dog", "label_id": 2, "score": 0.6, "box": (0, 0, 1, 1), "area_ratio": 0.1},
             {"label": "person", "label_id": 0, "score": 0.9, "box": (0, 0, 1, 1), "area_ratio": 0.25},
@@ -225,21 +227,33 @@ class _FakeWrapper:
 
     def __init__(self, backend):
         self.classifier = backend
+        self.paths = []
+
+    @staticmethod
+    def input_image_path(media_path):
+        return media_path.replace(".svg", "_render.png")
 
     def discard_cached_prediction(self, path):
-        pass
+        self.paths.append(path)
 
     def predict_image_ranked(self, path):
+        self.paths.append(path)
         return [("person", 0.9), ("no person", 0.1)]
 
     def classify_image(self, path):
+        self.paths.append(path)
         return "person"
 
 
-def _run_test_worker(monkeypatch, backend):
-    monkeypatch.setattr(hf_window.image_classifier_manager, "get_classifier",
-                        lambda name: _FakeWrapper(backend))
-    worker = _ClassifierTestWorker("detector", "img.png")
+def _run_test_worker(monkeypatch, backend, media_path="img.png", wrappers=None):
+    def get_classifier(name):
+        wrapper = _FakeWrapper(backend)
+        if wrappers is not None:
+            wrappers.append(wrapper)
+        return wrapper
+
+    monkeypatch.setattr(hf_window.image_classifier_manager, "get_classifier", get_classifier)
+    worker = _ClassifierTestWorker("detector", media_path)
     results = []
     worker.finished.connect(lambda name, path, result: results.append(result))
     worker.run()
@@ -258,6 +272,13 @@ class TestClassifierTestDetections:
         result = _run_test_worker(monkeypatch, backend)
         assert [d["label"] for d in result["detections"]] == ["cat"]
         assert backend.detect_calls == 0
+
+    def test_worker_classifies_and_detects_on_the_rendered_image(self, qtbot, monkeypatch):
+        backend = _FakeDetectionBackend()
+        wrappers = []
+        _run_test_worker(monkeypatch, backend, media_path="drawing.svg", wrappers=wrappers)
+        assert set(wrappers[0].paths) == {"drawing_render.png"}
+        assert backend.detect_paths == ["drawing_render.png"]
 
     def test_worker_omits_detections_for_classifier_backends(self, qtbot, monkeypatch):
         result = _run_test_worker(monkeypatch, object())

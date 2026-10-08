@@ -518,18 +518,21 @@ class _ClassifierTestWorker(QThread):
                 self.failed.emit(self._model_name, self._image_path,
                                  "Model failed to initialize (can_run=False).")
                 return
+            # Non-raster media (SVG, PDF, video, ...) is classified from its rendered
+            # image; the detection backend below must read that same image.
+            image_path = classifier.input_image_path(self._image_path)
             # Evict cached scores so we always get a live result.
-            classifier.discard_cached_prediction(self._image_path)
-            ranked = classifier.predict_image_ranked(self._image_path)
-            classification = classifier.classify_image(self._image_path)
+            classifier.discard_cached_prediction(image_path)
+            ranked = classifier.predict_image_ranked(image_path)
+            classification = classifier.classify_image(image_path)
             result = {"classification": classification, "ranked": ranked}
             # Detection backends also report the raw detections behind the scores,
             # reusing the prediction above when no other image was scored since.
             backend = getattr(classifier, "classifier", None)
             if callable(getattr(backend, "detect", None)):
-                detections = backend.last_detections(self._image_path)
+                detections = backend.last_detections(image_path)
                 if detections is None:
-                    detections = backend.detect(self._image_path)
+                    detections = backend.detect(image_path)
                 result["detections"] = [
                     dict(d, categories=backend.categories_for_label_id(d["label_id"]))
                     for d in detections

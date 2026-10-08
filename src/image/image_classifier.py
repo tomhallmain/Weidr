@@ -1670,13 +1670,25 @@ class ImageClassifierWrapper:
             })
         return f"image:{self.model_name}", self._prediction_signature
 
+    @staticmethod
+    def input_image_path(media_path: str) -> str:
+        """The raster image a classifier reads for *media_path*: the rendered first
+        frame/page (FrameCache) for video, GIF, PDF, ePub, SVG and HTML, else the
+        path itself. A FrameCache render passes through unchanged."""
+        from image.frame_cache import FrameCache
+        return FrameCache.get_image_path(media_path)
+
     def discard_cached_prediction(self, image_path) -> None:
         """Forget the session and persisted scores for *image_path*."""
+        image_path = self.input_image_path(image_path)
         self.predictions_cache.pop(image_path, None)
         model_key, _sig = self._persisted_prediction_key()
         classifier_prediction_cache.discard(model_key, image_path)
 
     def predict_image(self, image_path):
+        # Callers may pass any media path; scores are kept under the rendered
+        # image's path, which the persisted cache maps back to the source file.
+        image_path = self.input_image_path(image_path)
         if image_path in self.predictions_cache:
             return self.predictions_cache[image_path]
 

@@ -151,6 +151,20 @@ class GimpWrapper:
         self._original_file_path = None
         self._temp_file_path = None
         self._original_file_hash = None
+        self._completion_lock = threading.Lock()
+        self._completion_claimed = False
+
+    def _claim_completion(self) -> bool:
+        """Claim the one-time handling of this wrapper's GIMP session; False if it
+        was already claimed. Both this wrapper's monitor thread (GIMP exited) and a
+        newer wrapper opening another file (on the main thread) try to claim it.
+        The loser returns at once instead of waiting, since the winner's toasts and
+        alerts block until the main thread is free."""
+        with self._completion_lock:
+            if self._completion_claimed:
+                return False
+            self._completion_claimed = True
+            return True
 
     @staticmethod
     def _build_gimp_launch_env() -> Dict[str, str]:
@@ -181,6 +195,8 @@ class GimpWrapper:
         Returns:
             True if file was released, False if timeout exceeded
         """
+        if not filepath:
+            return True
         start_time = time.time()
         while time.time() - start_time < max_wait_seconds:
             try:
@@ -188,6 +204,10 @@ class GimpWrapper:
                 with open(filepath, 'r+b') as f:
                     pass  # If we can open it, it's released
                 logger.debug(f"File {filepath} released after {time.time() - start_time:.1f}s")
+                return True
+            except FileNotFoundError:
+                # Nothing holds a file that is gone (e.g. already moved back).
+                logger.debug(f"File {filepath} no longer exists, nothing to wait for")
                 return True
             except (PermissionError, OSError, IOError):
                 # File is still locked, wait a bit before retry
@@ -258,6 +278,9 @@ class GimpWrapper:
             if _current_wrapper != self:
                 logger.info("This wrapper is no longer active, skipping completion handling")
                 return
+            if not self._claim_completion():
+                logger.info("GIMP completion for this file is already being handled, skipping")
+                return
             
             # Additional check: ensure file handles are released
             if not self._wait_for_file_release(self._temp_file_path):
@@ -285,6 +308,9 @@ class GimpWrapper:
             previous_wrapper: The previous wrapper instance to handle (type: GimpWrapper)
         """
         try:
+            if not previous_wrapper._claim_completion():
+                logger.info("Previous wrapper's completion is already being handled by its own thread")
+                return
             logger.info("Processing previous wrapper completion to preserve user changes")
             
             # If the previous wrapper was using temp directory, we need to handle its completion
@@ -351,10 +377,14 @@ class GimpWrapper:
             
             # If GIMP is already running with a different file, handle wrapper transition
             if _is_gimp_running and _current_filepath != filepath:
-                logger.info(f"Opening different file in existing GIMP process: {filepath}")
-                
-                # Try to unload current file from GIMP before processing previous wrapper
-                self.unload_current_file_from_gimp(gimp_exe_loc)
+                if _gimp_process is not None and _gimp_process.poll() is not None:
+                    # Exited but not yet noticed by its monitor (it polls once a
+                    # second). An unload call would start a new GIMP, so skip it.
+                    logger.info(f"Previous GIMP process has exited, opening in a new process: {filepath}")
+                else:
+                    logger.info(f"Opening different file in existing GIMP process: {filepath}")
+                    # Try to unload current file from GIMP before processing previous wrapper
+                    self.unload_current_file_from_gimp(gimp_exe_loc)
                 
                 # Handle the previous wrapper properly to avoid data loss
                 if _current_wrapper is not None:
@@ -441,12 +471,13 @@ class GimpWrapper:
                     kind="error"
                 )
             finally:
-                # Clear process tracking
+                # Clear process tracking, unless a newer wrapper already owns it
                 with _gimp_process_lock:
-                    _gimp_process = None
-                    _current_filepath = None
-                    _is_gimp_running = False
-                    _current_wrapper = None
+                    if _current_wrapper is self:
+                        _gimp_process = None
+                        _current_filepath = None
+                        _is_gimp_running = False
+                        _current_wrapper = None
         
         start_thread(gimp_process)
     
@@ -501,12 +532,13 @@ class GimpWrapper:
                     )
                     self._cleanup_temp_directory()
                 finally:
-                    # Clear process tracking
+                    # Clear process tracking, unless a newer wrapper already owns it
                     with _gimp_process_lock:
-                        _gimp_process = None
-                        _current_filepath = None
-                        _is_gimp_running = False
-                        _current_wrapper = None
+                        if _current_wrapper is self:
+                            _gimp_process = None
+                            _current_filepath = None
+                            _is_gimp_running = False
+                            _current_wrapper = None
             
             start_thread(gimp_process)
             

@@ -8,6 +8,7 @@ import tempfile
 import pytest
 
 from utils.utils import Utils
+from utils import repo_paths
 
 
 class TestAlphanumericSort:
@@ -294,21 +295,27 @@ class TestRoundUp:
 
 class TestGetNoDirectoryCompareCacheDir:
     """Designated cache location for compares with no real base_dir (e.g.
-    FileActionsWindow's "Search in New Window"). Redirects get_user_dir() to
-    tmp_path so the test never touches the real invoking user's home dir."""
+    FileActionsWindow's "Search in New Window"), with the other caches."""
 
     def test_creates_and_returns_a_stable_directory(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(Utils, "get_user_dir", staticmethod(lambda: str(tmp_path)))
+        monkeypatch.setenv("WEIDR_CACHE_DIR", str(tmp_path))
 
         result = Utils.get_no_directory_compare_cache_dir()
 
         assert os.path.isdir(result)
         assert result == Utils.get_no_directory_compare_cache_dir()
 
-    def test_is_under_the_user_dir_in_a_dedicated_subfolder(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(Utils, "get_user_dir", staticmethod(lambda: str(tmp_path)))
+    def test_is_under_the_cache_dir_override(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("WEIDR_CACHE_DIR", str(tmp_path))
 
         result = Utils.get_no_directory_compare_cache_dir()
 
-        assert result.startswith(str(tmp_path))
-        assert ".weidr" in result
+        assert result == os.path.join(str(tmp_path), repo_paths.NO_DIRECTORY_COMPARE_CACHE_NAME)
+
+    def test_is_under_the_user_root_without_an_override(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("WEIDR_CACHE_DIR", raising=False)
+        monkeypatch.setenv(repo_paths.APP_DATA_DIR_ENV, str(tmp_path))
+
+        result = Utils.get_no_directory_compare_cache_dir()
+
+        assert result == os.path.join(str(tmp_path), repo_paths.NO_DIRECTORY_COMPARE_CACHE_NAME)

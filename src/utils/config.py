@@ -293,7 +293,7 @@ class Config:
         self.threshold_potential_duplicate_color = 50
         self.threshold_potential_duplicate_embedding = 0.99
         self.use_file_paths_json = False # TODO update the JSON for this
-        self.file_paths_json_path = "file_paths.json" # TODO update the JSON for this
+        self.file_paths_json_path = os.path.join(user_root(), "file_paths.json") # TODO update the JSON for this
         self.text_embedding_search_presets = []
         self.text_embedding_search_preset_index = -1
         self.text_embedding_search_presets_exclusive = False
@@ -500,6 +500,11 @@ class Config:
                             "slideshow_dynamic_gif_max_seconds")
 
             self._rebuild_file_types()
+
+            # Relative to the working directory, it would land wherever the
+            # app was started from (the repo, or anywhere for a build).
+            if self.file_paths_json_path and not os.path.isabs(self.file_paths_json_path):
+                self.file_paths_json_path = os.path.join(user_root(), self.file_paths_json_path)
 
             if not os.environ.get("PYTEST_CURRENT_TEST"):
                 try:

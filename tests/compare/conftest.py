@@ -8,6 +8,7 @@ if "WEIDR_CACHE_DIR" not in os.environ:
     _tmp = tempfile.mkdtemp(prefix="weidr_compare_")
     os.environ["WEIDR_CACHE_DIR"] = os.path.join(_tmp, "cache")
     os.environ["WEIDR_CONFIGS_DIR"] = os.path.join(_tmp, "configs")
+    os.environ["WEIDR_APP_DATA_DIR"] = os.path.join(_tmp, "app_data")
     os.makedirs(os.environ["WEIDR_CACHE_DIR"], exist_ok=True)
     os.makedirs(os.environ["WEIDR_CONFIGS_DIR"], exist_ok=True)
     _src = os.path.join(os.path.dirname(__file__), "..", "..", "configs", "config_example.json")

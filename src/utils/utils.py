@@ -10,6 +10,7 @@ import sys
 import threading
 
 from utils.logging_setup import get_logger
+from utils.repo_paths import NO_DIRECTORY_COMPARE_CACHE_NAME, user_root
 
 class Utils:
     _logger = get_logger("utils")
@@ -95,7 +96,8 @@ class Utils:
         matching (ClassifierActionsManager.prevalidate_media), which should
         keep seeing no directory at all so no profile is ever scoped to it.
         """
-        cache_dir = os.path.join(Utils.get_user_dir(), ".weidr", "compare_cache_no_dir")
+        cache_root = os.environ.get("WEIDR_CACHE_DIR") or user_root()
+        cache_dir = os.path.join(cache_root, NO_DIRECTORY_COMPARE_CACHE_NAME)
         os.makedirs(cache_dir, exist_ok=True)
         return cache_dir
 

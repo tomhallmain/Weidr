@@ -2191,7 +2191,8 @@ class TestExamplePipelineFiles:
 
     def test_category_fill_builder_matches_its_file(self):
         from compare.classifier_pipeline import CATEGORY_FILL_EXAMPLE_FILE
-        from compare.example_pipelines import EXAMPLE_PIPELINES_DIRECTORY
+        from compare.example_pipelines import EXAMPLE_PIPELINES_DIRECTORY, ensure_extracted
+        ensure_extracted()
         path = os.path.join(EXAMPLE_PIPELINES_DIRECTORY, CATEGORY_FILL_EXAMPLE_FILE)
         (from_file,) = ClassifierPipelines.read_json_file(path)
         assert ClassifierPipelines.build_category_fill_pipeline().to_dict() == from_file.to_dict()

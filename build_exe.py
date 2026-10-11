@@ -61,7 +61,7 @@ PACKAGE_CONFIG = os.path.join(REPO_ROOT, "nuitka-package.config.yml")
 EXE_BASE_NAME = "Weidr"
 EXE_NAME = f"{EXE_BASE_NAME}.exe" if sys.platform == "win32" else EXE_BASE_NAME
 EXE_PATH = os.path.join(DIST_DIR, EXE_NAME)
-# utils.repo_paths.app_data_dir() spelled for Nuitka, which has no variable
+# utils.repo_paths.default_app_data_dir() spelled for Nuitka, which has no variable
 # for %APPDATA%. utils/unpack_cleanup.py expects the folder names used below.
 APP_DATA_SPEC = "{HOME}/AppData/Roaming/Weidr" if sys.platform == "win32" else "{HOME}/.local/share/Weidr"
 VERSION_FILE = os.path.join("src", "utils", "version.py")

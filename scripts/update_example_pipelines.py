@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-Pack the example pipeline JSON files (assets/pipelines/*.json) into the
-encrypted archive the app extracts them from (assets/example_pipelines.enc).
+Pack the example pipeline JSON files (assets/pipelines/*.json in Weidr's data
+directory, utils.repo_paths.user_root()) into the encrypted archive the app
+extracts them from (assets/example_pipelines.enc in the repo).
 
-Edit or add the JSON files in assets/pipelines, then run this and commit the
-archive; the JSON files themselves are not tracked. Every file must load as a
+Edit or add the JSON files there, then run this and commit the archive; the
+JSON files themselves are not tracked. Every file must load as a
 pipeline, or nothing is written. After writing, the archive is decrypted again
 and compared with the files.
 

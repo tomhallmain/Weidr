@@ -71,6 +71,19 @@ class TestRemoveStaleUnpackDirs:
         unpack_cleanup.remove_stale_unpack_dirs()
         assert not old.exists()
 
+    def test_keeps_the_running_folder_seen_under_another_name(self, unpacked, platform, monkeypatch):
+        # A symlink stands in for the Windows 8.3 short name of the running folder.
+        alias = unpacked / "weidr-~1"
+        try:
+            alias.symlink_to(unpacked / CURRENT, target_is_directory=True)
+        except OSError:
+            pytest.skip("symlinks unavailable")
+        in_build(monkeypatch, alias)
+        old = _build_folder(unpacked, "weidr-20261001-090000")
+        unpack_cleanup.remove_stale_unpack_dirs()
+        assert (unpacked / CURRENT).is_dir()
+        assert not old.exists()
+
     def test_leaves_other_entries_alone(self, unpacked, platform):
         other = _build_folder(unpacked, "something-else")
         stray_file = unpacked / "weidr-notes.txt"

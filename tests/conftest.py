@@ -45,7 +45,9 @@ if _src_dir not in sys.path:
 _bootstrap_tmp = tempfile.mkdtemp(prefix="weidr_tests_")
 os.environ.setdefault("WEIDR_CACHE_DIR", os.path.join(_bootstrap_tmp, "cache"))
 os.environ.setdefault("WEIDR_CONFIGS_DIR", os.path.join(_bootstrap_tmp, "configs"))
-os.environ.setdefault("WEIDR_APP_DATA_DIR", os.path.join(_bootstrap_tmp, "app_data"))
+# Assigned, not setdefault: user_root() resolves to this directory, and a value
+# inherited from the shell could be the real one.
+os.environ["WEIDR_APP_DATA_DIR"] = os.path.join(_bootstrap_tmp, "app_data")
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.makedirs(os.environ["WEIDR_CACHE_DIR"], exist_ok=True)
 os.makedirs(os.environ["WEIDR_CONFIGS_DIR"], exist_ok=True)
@@ -60,6 +62,11 @@ atexit.register(shutil.rmtree, _bootstrap_tmp, True)
 from pathlib import Path
 import logging
 import utils.logging_setup as _logging_setup
+from utils import repo_paths as _repo_paths
+# A process's first user_root() call moves user files out of the repo when no
+# override is set. The overrides above already prevent that; this keeps it
+# prevented if one of them is ever dropped.
+_repo_paths._migration_done = True
 
 _bootstrap_log_dir = Path(_bootstrap_tmp) / "logs"
 _bootstrap_log_dir.mkdir(parents=True, exist_ok=True)

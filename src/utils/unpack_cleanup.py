@@ -50,15 +50,24 @@ def _holds_running_executable(folder: str, executables: set) -> bool:
     return any(exe.startswith(prefix) for exe in executables)
 
 
+def _is_same_folder(path: str, other: str) -> bool:
+    # A Windows build can see its own folder under its 8.3 short name
+    # (WEIDR-~1), which no string comparison matches.
+    try:
+        return os.path.samefile(path, other)
+    except OSError:
+        return _normalize(path) == _normalize(other)
+
+
 def remove_stale_unpack_dirs() -> list:
     """Delete sibling build folders of the running build's; returns the paths removed."""
     if not is_compiled():
         return []
-    current = _normalize(resource_root())
-    parent = os.path.dirname(current)
+    current = resource_root()
+    parent = os.path.dirname(_normalize(current))
     if (os.path.basename(parent) != UNPACK_PARENT_NAME
-            or not os.path.basename(current).startswith(UNPACK_DIR_PREFIX)):
-        logger.warning(f"Not cleaning up old build folders: {resource_root()} is not an unpack folder")
+            or not os.path.basename(_normalize(current)).startswith(UNPACK_DIR_PREFIX)):
+        logger.warning(f"Not cleaning up old build folders: {current} is not an unpack folder")
         return []
     executables = _running_executables()
     if executables is None:
@@ -74,8 +83,8 @@ def remove_stale_unpack_dirs() -> list:
     removed = []
     for name in names:
         path = os.path.join(parent, name)
-        if (_normalize(path) == current or not name.startswith(UNPACK_DIR_PREFIX)
-                or not os.path.isdir(path)):
+        if (not name.startswith(UNPACK_DIR_PREFIX) or not os.path.isdir(path)
+                or _is_same_folder(path, current)):
             continue
         if _holds_running_executable(path, executables):
             logger.info(f"Not removing {path}: a running build uses it")

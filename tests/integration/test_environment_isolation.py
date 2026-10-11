@@ -12,6 +12,14 @@ import pytest
 
 import utils.config as cfg
 import utils.app_info_cache as aic
+from utils import repo_paths
+
+# The user's real files: in the app data dir, and at the repo locations a
+# checkout wrote them to before moving them there.
+PROD_CONFIGS_DIR = os.path.join(repo_paths.default_app_data_dir(), "configs")
+PROD_CACHE_LOC = os.path.join(repo_paths.default_app_data_dir(), "app_info_cache.enc")
+LEGACY_CONFIG = os.path.join(repo_paths.repo_root(), "configs", "config.json")
+LEGACY_CACHE_LOC = os.path.join(repo_paths.repo_root(), "app_info_cache.enc")
 
 
 # ---------------------------------------------------------------------------
@@ -25,10 +33,8 @@ def prod_file_mtimes():
     Skips silently for files that do not exist (fresh checkout, CI).
     Returns a dict of {path: mtime_ns} for files that were present.
     """
-    candidates = [
-        cfg.Config.CONFIGS_DIR_LOC and os.path.join(cfg.Config.CONFIGS_DIR_LOC, "config.json"),
-        aic.AppInfoCache.CACHE_LOC,
-    ]
+    candidates = [os.path.join(PROD_CONFIGS_DIR, "config.json"), PROD_CACHE_LOC,
+                  LEGACY_CONFIG, LEGACY_CACHE_LOC]
     return {
         p: os.stat(p).st_mtime_ns
         for p in candidates
@@ -52,10 +58,11 @@ class TestConfigIsolation:
 
     def test_config_path_not_in_repo_configs(self):
         """config.config_path must not point into the real repo configs/ directory."""
-        assert cfg.Config.CONFIGS_DIR_LOC not in cfg.config.config_path, (
-            f"config.config_path ({cfg.config.config_path!r}) points into the "
-            f"production configs directory ({cfg.Config.CONFIGS_DIR_LOC!r})."
-        )
+        for prod_dir in (PROD_CONFIGS_DIR, os.path.dirname(LEGACY_CONFIG)):
+            assert not cfg.config.config_path.startswith(prod_dir), (
+                f"config.config_path ({cfg.config.config_path!r}) points into the "
+                f"production configs directory ({prod_dir!r})."
+            )
 
     def test_weidr_configs_dir_env_var_is_set(self, tmp_path):
         """WEIDR_CONFIGS_DIR must be set to a per-test path during tests."""
@@ -63,6 +70,40 @@ class TestConfigIsolation:
         assert configs_dir, "WEIDR_CONFIGS_DIR is not set — bootstrap did not run."
         assert configs_dir.startswith(str(tmp_path)), (
             f"WEIDR_CONFIGS_DIR ({configs_dir!r}) is not under tmp_path ({tmp_path})."
+        )
+
+
+class TestUserRootIsolation:
+    def test_user_root_is_not_a_production_location(self):
+        """user_root() (example pipelines and anything else without its own
+        override) must not resolve to the real app data dir or the repo."""
+        root = os.path.normcase(os.path.abspath(repo_paths.user_root()))
+        for prod in (repo_paths.default_app_data_dir(), repo_paths.repo_root()):
+            assert root != os.path.normcase(os.path.abspath(prod)), (
+                f"user_root() ({root!r}) is a production location; "
+                "WEIDR_APP_DATA_DIR is not set by the bootstrap."
+            )
+
+    def test_example_pipelines_are_extracted_outside_production_locations(self):
+        from compare.example_pipelines import EXAMPLE_PIPELINES_DIRECTORY
+        directory = os.path.normcase(os.path.abspath(EXAMPLE_PIPELINES_DIRECTORY))
+        for prod in (repo_paths.default_app_data_dir(), repo_paths.repo_root()):
+            assert not directory.startswith(os.path.normcase(os.path.abspath(prod)) + os.sep), (
+                f"EXAMPLE_PIPELINES_DIRECTORY ({directory!r}) is under {prod!r}."
+            )
+
+    def test_no_directory_compare_cache_is_outside_production_locations(self):
+        from utils.utils import Utils
+        directory = os.path.normcase(os.path.abspath(Utils.get_no_directory_compare_cache_dir()))
+        for prod in (repo_paths.default_app_data_dir(), repo_paths.repo_root(),
+                     os.path.join(os.path.expanduser("~"), ".weidr")):
+            assert not directory.startswith(os.path.normcase(os.path.abspath(prod)) + os.sep), (
+                f"get_no_directory_compare_cache_dir() ({directory!r}) is under {prod!r}."
+            )
+
+    def test_legacy_file_migration_is_off(self):
+        assert repo_paths._migration_done, (
+            "The repo-to-app-data migration could still run in this process."
         )
 
 
@@ -78,7 +119,7 @@ class TestCacheIsolation:
 
     def test_cache_loc_not_at_production_path(self):
         """app_info_cache._cache_loc must not equal the production cache file."""
-        assert aic.app_info_cache._cache_loc != aic.AppInfoCache.CACHE_LOC, (
+        assert aic.app_info_cache._cache_loc not in (PROD_CACHE_LOC, LEGACY_CACHE_LOC), (
             "app_info_cache._cache_loc points to the production cache file. "
             "isolated_singletons fixture may not be running."
         )
@@ -140,26 +181,26 @@ class TestCachePersistenceFingerprint:
 
 
 class TestProductionFilesUntouched:
-    def test_production_config_mtime_unchanged(self, prod_file_mtimes):
+    @pytest.mark.parametrize("prod_config", [os.path.join(PROD_CONFIGS_DIR, "config.json"), LEGACY_CONFIG])
+    def test_production_config_mtime_unchanged(self, prod_file_mtimes, prod_config):
         """
         Production config.json mtime must not have changed since session start.
         Skipped when the file does not exist (CI / fresh checkout).
         """
-        prod_config = os.path.join(cfg.Config.CONFIGS_DIR_LOC, "config.json")
         if prod_config not in prod_file_mtimes:
             pytest.skip("No production config.json present — skipping mtime check.")
         current = os.stat(prod_config).st_mtime_ns
         assert current == prod_file_mtimes[prod_config], (
-            "Production configs/config.json was modified during the test session. "
+            f"Production {prod_config} was modified during the test session. "
             "A test wrote to the real config file — isolation is broken."
         )
 
-    def test_production_cache_mtime_unchanged(self, prod_file_mtimes):
+    @pytest.mark.parametrize("prod_cache", [PROD_CACHE_LOC, LEGACY_CACHE_LOC])
+    def test_production_cache_mtime_unchanged(self, prod_file_mtimes, prod_cache):
         """
         Production app_info_cache.enc mtime must not have changed since session start.
         Skipped when the file does not exist.
         """
-        prod_cache = aic.AppInfoCache.CACHE_LOC
         if prod_cache not in prod_file_mtimes:
             pytest.skip("No production app_info_cache.enc present — skipping mtime check.")
         current = os.stat(prod_cache).st_mtime_ns

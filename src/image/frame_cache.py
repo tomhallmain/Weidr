@@ -134,6 +134,8 @@ _SAMPLING_WARN_MISSING_RATIO = 0.5
 _EPUB_PAGE_FORMAT = "A5"
 _EPUB_PAGE_MARGIN = "12mm"
 _EPUB_NAVIGATION_TIMEOUT_MS = 60000
+# How long an HTML page may keep loading resources before it is rendered as is.
+_HTML_NETWORK_IDLE_TIMEOUT_MS = 15000
 _ZERO_MARGINS = {"top": "0", "right": "0", "bottom": "0", "left": "0"}
 
 _EPUB_COVER_HTML = """<!DOCTYPE html>
@@ -1229,29 +1231,28 @@ class FrameCache:
                 browser = await _launch_browser(
                     headless=True, handleSIGINT=False, handleSIGTERM=False, handleSIGHUP=False
                 )
-                page = await browser.newPage()
-                
-                # Read the HTML file
-                with open(html_path, 'r', encoding='utf-8') as f:
-                    html_content = f.read()
-                
-                # Set the content and wait for network idle
-                await page.setContent(html_content, {'waitUntil': 'networkidle0'})
-                
-                # Generate PDF with good quality settings
-                await page.pdf({
-                    'path': pdf_path,
-                    'format': 'A4',
-                    'printBackground': True,
-                    'margin': {
-                        'top': '0',
-                        'right': '0',
-                        'bottom': '0',
-                        'left': '0'
-                    }
-                })
-                
-                await browser.close()
+                # A browser left open on failure would outlive the private
+                # loop, and pyppeteer's atexit kill then fails on it.
+                try:
+                    page = await browser.newPage()
+                    # Loaded from its file URL so relative images and styles
+                    # resolve and Chromium detects the page's encoding.
+                    try:
+                        await page.goto(Path(html_path).as_uri(), {
+                            'waitUntil': 'networkidle0',
+                            'timeout': _HTML_NETWORK_IDLE_TIMEOUT_MS,
+                        })
+                    except asyncio.TimeoutError:
+                        logger.warning(f"HTML still loading after {_HTML_NETWORK_IDLE_TIMEOUT_MS} ms, "
+                                       f"rendering it as is: {html_path}")
+                    await page.pdf({
+                        'path': pdf_path,
+                        'format': 'A4',
+                        'printBackground': True,
+                        'margin': _ZERO_MARGINS,
+                    })
+                finally:
+                    await browser.close()
             
             # A private loop, since a worker thread has no current event loop
             loop = asyncio.new_event_loop()

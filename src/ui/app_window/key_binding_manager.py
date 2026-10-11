@@ -47,6 +47,7 @@ Keybinding map  (■ = bound  · = free | cols: Shift | Ctrl | Ctrl+Shift)
 
 from __future__ import annotations
 
+import functools
 from typing import TYPE_CHECKING, Callable
 
 from PySide6.QtGui import QKeySequence, QShortcut
@@ -79,6 +80,7 @@ class KeyBindingManager:
     @staticmethod
     def _guarded(func: Callable) -> Callable:
         """Wrap *func* so it only fires when no AwareEntry has focus."""
+        @functools.wraps(func)
         def wrapper():
             if not AwareEntry.an_entry_has_focus:
                 func()

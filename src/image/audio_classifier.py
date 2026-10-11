@@ -35,6 +35,7 @@ from image.classifier_utils import (
 from image.video_ops import VideoOps
 from utils.config import config
 from utils.logging_setup import get_logger
+from utils.subprocess_flags import NO_CONSOLE_WINDOW
 
 logger = get_logger("audio_classifier")
 
@@ -72,7 +73,7 @@ def decode_audio_waveform(audio_path: str, sample_rate: int, max_duration_second
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             stdin=subprocess.DEVNULL,
-            timeout=120,
+            timeout=120, creationflags=NO_CONSOLE_WINDOW,
         )
     except subprocess.TimeoutExpired as e:
         raise RuntimeError(f"ffmpeg timed out decoding audio: {audio_path}") from e

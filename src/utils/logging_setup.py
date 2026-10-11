@@ -1,11 +1,10 @@
 import logging
-import os
-import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List
 
 from utils.custom_formatter import CustomFormatter
+from utils.repo_paths import logs_dir
 
 def _cleanup_old_logs(log_dir: Path, logger: logging.Logger) -> None:
     """
@@ -40,10 +39,7 @@ def _cleanup_old_logs(log_dir: Path, logger: logging.Logger) -> None:
 
 def get_log_dir() -> Path:
     """Return the application log directory, creating it if necessary."""
-    appdata_dir: str = os.getenv('APPDATA') if sys.platform == 'win32' else os.path.expanduser('~/.local/share')
-    log_dir: Path = Path(appdata_dir) / 'Weidr' / 'logs'
-    log_dir.mkdir(parents=True, exist_ok=True)
-    return log_dir
+    return Path(logs_dir())
 
 
 def get_logger(module_name: str) -> logging.Logger:

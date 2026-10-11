@@ -1,6 +1,7 @@
 
 
 import asyncio
+import functools
 import threading
 
 from utils.logging_setup import get_logger
@@ -58,6 +59,7 @@ def start_thread(callable, use_asyncio=True, args=None):
 
 def periodic(registry_attr_name):
     def scheduler(fcn):
+        @functools.wraps(fcn)
         async def wrapper(*args, **kwargs):
             registry_id = getattr(getattr(args[0], registry_attr_name), "registry_id")
             # print(f'Started periodic task: {running_tasks_registry.name(registry_id)}')

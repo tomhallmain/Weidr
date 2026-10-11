@@ -14,6 +14,7 @@ from typing import Dict, List, Tuple, Optional, Any
 
 from utils.config import config
 from utils.logging_setup import get_logger
+from utils.subprocess_flags import NO_CONSOLE_WINDOW
 
 logger = get_logger("gimp_gegl_validator")
 
@@ -103,7 +104,7 @@ class GimpGeglValidator:
                 [config.gimp_version_probe_executable(gimp_path), "--version"],
                 capture_output=True, 
                 text=True, 
-                timeout=10
+                timeout=10, creationflags=NO_CONSOLE_WINDOW
             )
             
             if result.returncode != 0:
@@ -372,7 +373,7 @@ class GimpGeglValidator:
                     [config.gimp_version_probe_executable(config.gimp_exe_loc), "--version"],
                     capture_output=True, 
                     text=True, 
-                    timeout=5
+                    timeout=5, creationflags=NO_CONSOLE_WINDOW
                 )
                 if result.returncode == 0:
                     info["gimp_version"] = result.stdout.strip()

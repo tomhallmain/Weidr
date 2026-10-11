@@ -6,7 +6,12 @@ It has no dependencies on other password modules to avoid circular imports.
 
 from utils.constants import AppInfo, ProtectedActions
 from utils.app_info_cache import app_info_cache
-from utils.encryptor import store_encrypted_password, retrieve_encrypted_password, delete_stored_password
+from utils.encryptor import (
+    delete_stored_password,
+    retrieve_encrypted_password,
+    store_encrypted_password,
+    stored_keys_need_unavailable_oqs,
+)
 from utils.logging_setup import get_logger
 
 logger = get_logger("ui.auth.password_core")
@@ -135,10 +140,23 @@ class PasswordManager:
     _security_configured_cache = None
 
     @staticmethod
+    def is_password_unreadable():
+        """True when a stored password, if any, cannot be decrypted: the keys
+        are quantum (OQS) keys and this process has no OQS."""
+        try:
+            return stored_keys_need_unavailable_oqs(AppInfo.SERVICE_NAME, AppInfo.APP_IDENTIFIER)
+        except Exception as e:
+            logger.error(f"Could not read the stored encryption key type: {e}")
+            return False
+
+    @staticmethod
     def is_security_configured():
-        """Check if a password is configured."""
+        """Check if a password is configured. An unreadable one counts as configured."""
         if PasswordManager._security_configured_cache is not None:
             return PasswordManager._security_configured_cache
+        if PasswordManager.is_password_unreadable():
+            PasswordManager._security_configured_cache = True
+            return True
         try:
             # Check if password exists in encrypted storage
             stored_password = retrieve_encrypted_password(

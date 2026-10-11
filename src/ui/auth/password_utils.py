@@ -4,10 +4,14 @@ This module provides the authentication flow logic and decorators.
 It imports from password_core.py and password_dialog.py to avoid circular dependencies.
 """
 
+import functools
+
+from lib.qt_alert import qt_alert
 from ui.auth.password_core import get_security_config, PasswordManager
 from ui.auth.password_dialog import PasswordDialog
 from ui.auth.password_session_manager import PasswordSessionManager
 from utils.constants import ProtectedActions
+from utils.translations import _
 
 
 
@@ -60,6 +64,19 @@ def check_session_expired(*action_names: ProtectedActions) -> bool:
         return True
 
 
+def show_password_unavailable(master) -> None:
+    """Tell the user a protected action is refused because the password is
+    stored with OQS keys this process cannot use."""
+    qt_alert(
+        master,
+        _("Password Unavailable"),
+        _("The password is stored with quantum-safe (OQS) encryption, which this build "
+          "does not include, so protected actions are unavailable. Use a build made "
+          "with OQS support."),
+        kind="error",
+    )
+
+
 def check_password_required(
     action_names: list[ProtectedActions],
     master,
@@ -83,7 +100,17 @@ def check_password_required(
         bool: True if password was verified or not required, False if cancelled
     """
     config = get_security_config()
-    
+
+    # The password cannot be verified, so a protected action is refused rather
+    # than allowed without one.
+    if (
+        _check_all_actions_protection(action_names, config) or not allow_unauthenticated
+    ) and PasswordManager.is_password_unreadable():
+        show_password_unavailable(master)
+        if callback:
+            callback(False)
+        return False
+
     # Check if any of the actions require password protection
     if not _check_all_actions_protection(action_names, config):
         # No actions are protected, but check if we need to enforce authentication anyway
@@ -170,6 +197,9 @@ def require_password(
             pass
     """
     def decorator(func):
+        # Keeps the method's own name: in a Nuitka build, signals connected to
+        # several methods all named "wrapper" ran only the last one connected.
+        @functools.wraps(func)
         def wrapper(self, *args, **kwargs):
             # Resolve the parent window for the password dialog.
             # Different classes store it under different names:

@@ -1,6 +1,7 @@
 import hashlib
 import os
 import queue
+import sys
 import threading
 import time
 from multiprocessing.connection import Client
@@ -9,6 +10,7 @@ from image.image_data_extractor import image_data_extractor
 from utils.config import config
 from utils.constants import ImageGenerationType
 from utils.logging_setup import get_logger
+from utils.repo_paths import is_compiled
 from utils.translations import _
 logger = get_logger("sd_runner_client")
 
@@ -38,7 +40,9 @@ def _default_client_id() -> str:
     configured = getattr(config, "sd_runner_client_id", None)
     if configured:
         return str(configured).strip()[:MAX_CLIENT_ID_LEN]
-    root = os.path.dirname(os.path.abspath(__file__))
+    # A onefile build runs from an unpack folder that is new per build; the
+    # executable's own location stays put across rebuilds.
+    root = os.path.dirname(os.path.abspath(sys.argv[0] if is_compiled() else __file__))
     digest = hashlib.sha1(root.encode("utf-8", "replace")).hexdigest()[:8]
     return f"{CLIENT_NAME}-{digest}"[:MAX_CLIENT_ID_LEN]
 

@@ -27,6 +27,7 @@ from utils.logging_setup import get_logger
 from utils.media_utils import is_video_file
 from utils.translations import _
 from utils.utils import Utils
+from utils.subprocess_flags import NO_CONSOLE_WINDOW
 
 logger = get_logger("video_ops")
 
@@ -153,7 +154,7 @@ class VideoOps:
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,
-                timeout=3600,
+                timeout=3600, creationflags=NO_CONSOLE_WINDOW,
             )
         except subprocess.TimeoutExpired as e:
             try:
@@ -224,7 +225,7 @@ class VideoOps:
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,
-                timeout=3600,
+                timeout=3600, creationflags=NO_CONSOLE_WINDOW,
             )
         except subprocess.TimeoutExpired as e:
             try:
@@ -297,7 +298,7 @@ class VideoOps:
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,
-                timeout=3600,
+                timeout=3600, creationflags=NO_CONSOLE_WINDOW,
             )
         except subprocess.TimeoutExpired as e:
             try:
@@ -377,7 +378,7 @@ class VideoOps:
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,
-                timeout=3600,
+                timeout=3600, creationflags=NO_CONSOLE_WINDOW,
             )
         except subprocess.TimeoutExpired as e:
             try:
@@ -448,7 +449,7 @@ class VideoOps:
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,
-                timeout=3600,
+                timeout=3600, creationflags=NO_CONSOLE_WINDOW,
             )
         except subprocess.TimeoutExpired as e:
             try:
@@ -522,7 +523,7 @@ class VideoOps:
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,
-                timeout=3600,
+                timeout=3600, creationflags=NO_CONSOLE_WINDOW,
             )
         except subprocess.TimeoutExpired as e:
             try:
@@ -608,7 +609,7 @@ class VideoOps:
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,
-                timeout=3600,
+                timeout=3600, creationflags=NO_CONSOLE_WINDOW,
             )
         except subprocess.TimeoutExpired:
             try:
@@ -736,7 +737,7 @@ class VideoOps:
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,
-                timeout=3600,
+                timeout=3600, creationflags=NO_CONSOLE_WINDOW,
             )
         except subprocess.TimeoutExpired:
             try:
@@ -832,7 +833,7 @@ class VideoOps:
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,
-                timeout=3600,
+                timeout=3600, creationflags=NO_CONSOLE_WINDOW,
             )
         except subprocess.TimeoutExpired:
             try:
@@ -895,7 +896,7 @@ class VideoOps:
                 encoding="utf-8",
                 errors="replace",
                 stdin=subprocess.DEVNULL,
-                timeout=120,
+                timeout=120, creationflags=NO_CONSOLE_WINDOW,
             )
         except (subprocess.TimeoutExpired, OSError) as e:
             raise RuntimeError(f"ffprobe failed: {e}") from e
@@ -1105,7 +1106,7 @@ class VideoOps:
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,
-                timeout=60,
+                timeout=60, creationflags=NO_CONSOLE_WINDOW,
             )
         except (subprocess.TimeoutExpired, OSError) as e:
             logger.debug("ffmpeg attached_pic extraction failed for %s: %s", media_path, e)

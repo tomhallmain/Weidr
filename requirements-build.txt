@@ -2,6 +2,8 @@
 # the test packages (pytest, pytest-qt) and ttkthemes, which src/ never imports.
 # Keep the runtime lines in step with requirements.txt.
 nuitka>=2.4
+# Compresses the onefile payload; without it Nuitka stores it uncompressed.
+zstandard
 # Nuitka (4.2.2) reads lazy_loader._StubVisitor to resolve scikit-image's lazy
 # imports; lazy_loader 0.6 made it local to attach_stub().
 lazy_loader>=0.4,<0.6

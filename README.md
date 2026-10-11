@@ -29,7 +29,9 @@ It runs against a throwaway directory of generated images with the app cache red
 
 ### Building an executable
 
-`python build_exe.py` compiles `app_qt.py` with [Nuitka](https://nuitka.net) into `dist/Weidr/`, a folder holding the `Weidr` executable (`Weidr.exe` on Windows) beside its libraries and data files. Distribute the whole folder, e.g. as a zip. Running from source (`python app_qt.py`, `start_qt.bat`) is unaffected.
+`python build_exe.py` compiles `app_qt.py` with [Nuitka](https://nuitka.net) into a single executable, `dist/Weidr` (`dist\Weidr.exe` on Windows). Running from source (`python app_qt.py`, `start_qt.bat`) is unaffected.
+
+The first start of each build unpacks it to `unpacked/weidr-<build time>` in the Weidr data folder (`%APPDATA%\Weidr` on Windows, `~/.local/share/Weidr` elsewhere). This takes a while and several GB; later starts reuse the folder. Each start removes the folders of older builds that are not running.
 
 Requirements:
 - A C compiler: on Windows, Visual Studio Build Tools (or Nuitka downloads MinGW itself); on macOS, the Xcode Command Line Tools; on Linux, gcc.
@@ -38,13 +40,17 @@ Requirements:
 
 The script installs `requirements-build.txt` into its own `.venv-build`, so nothing from your active environment is bundled. pip installs the CPU build of torch there on Windows; for CUDA torch, install it into `.venv-build` from [pytorch.org](https://pytorch.org) first, or pass `--current-env` to build with the running interpreter. Other arguments are passed to Nuitka. Nuitka does not cross-compile: build on each target OS. Each build ends with `Weidr --smoke-test`, which loads the configuration, translations, image plugins and compare modules without opening a window.
 
+Post-quantum (OQS) encryption is left out by default. `python build_exe.py --with-oqs` includes it: it installs liboqs-python into `.venv-build` and bundles the liboqs library (liboqs-python builds liboqs on first use when none is installed, which needs git, CMake and a C compiler; or set `OQS_INSTALL_PATH` to an existing install). If your encryption keys were created with OQS, which happens whenever liboqs-python was installed when you first ran Weidr, a build without it cannot read your encrypted data: it starts with an empty cache, leaves the encrypted files untouched, saves to `app_info_cache.no_oqs.json` instead, and refuses password-protected actions.
+
+Each build records its environment in `build/nuitka/`: `build-requirements.lock.txt` (the build venv's `pip freeze`) and `build_info.json` (version, build id, package versions, and this checkout's commit and uncommitted changes), which is bundled. To repeat a known good build, delete `.venv-build` and run `python build_exe.py --lock=<saved lock file>`. The executable logs its build at startup, and warns with a toast when the checkout it was built from has changed since. The version comes from `APP_VERSION` in `src/utils/version.py`.
+
 Not included in the build, as when running from source:
 - libVLC: install [VLC](https://www.videolan.org) for video playback.
 - GIMP, diff-pdf, sd-runner and other external programs.
 - Model weights: downloaded to the Hugging Face cache on first use.
-- `requirements-optional.txt` packages (OCR, MCP server, post-quantum encryption, PEEK).
+- `requirements-optional.txt` packages (OCR, MCP server, PEEK); post-quantum encryption only with `--with-oqs`.
 
-The executable keeps its configuration and caches in the user data directory, not beside the program: `%LOCALAPPDATA%\Weidr` on Windows, `~/Library/Application Support/Weidr` on macOS, `$XDG_DATA_HOME/Weidr` (default `~/.local/share/Weidr`) on Linux. On first start it creates `configs/config.json` there from the example config. To carry over a source checkout's setup, close Weidr and copy `configs/config.json`, `app_info_cache.enc` and `classifier_prediction_cache.enc` from the checkout to the same relative paths in that directory.
+The executable keeps its configuration and caches in Weidr's data directory, not beside the program: `%APPDATA%\Weidr` on Windows, `~/.local/share/Weidr` elsewhere (macOS included). Logs go to its `logs` folder, from source too; native crashes are recorded in `logs/weidr_faults.log`. On first start it creates `configs/config.json` there from the example config. To carry over a source checkout's setup, close Weidr and copy `configs/config.json`, `app_info_cache.enc` and `classifier_prediction_cache.enc` from the checkout to the same relative paths in that directory.
 
 ---
 

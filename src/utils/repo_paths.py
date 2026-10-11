@@ -13,17 +13,20 @@ A Nuitka build splits those files in two:
 - user_root(): files the app writes (configs/config.json, app_info_cache.*,
   the classifier prediction cache, the extracted example pipelines). In a
   build these must not live beside the shipped files, which a new build
-  replaces and which may not be writable.
+  replaces and which may not be writable, so they go to app_data_dir().
 
-From a source checkout both are the repo root.
+From a source checkout both are the repo root. Logs go to app_data_dir() in
+both.
 """
 
 import os
+import sys
 
 # Nuitka defines __compiled__ in the globals of every module it compiles.
 _COMPILED = "__compiled__" in globals()
 
 APP_DIR_NAME = "Weidr"
+APP_DATA_DIR_ENV = "WEIDR_APP_DATA_DIR"
 
 
 def is_compiled() -> bool:
@@ -47,6 +50,31 @@ def resource_root() -> str:
     return repo_root()
 
 
+def app_data_dir() -> str:
+    """Weidr's per-user data directory; not created here.
+
+    %APPDATA%\\Weidr (the roaming profile) on Windows, ~/.local/share/Weidr
+    elsewhere, macOS included. WEIDR_APP_DATA_DIR overrides it, for tests and
+    the build's smoke test. Distinct from Utils.user_data_dir(), the base of
+    the encryptor's key store, which other apps share.
+    """
+    override = os.environ.get(APP_DATA_DIR_ENV)
+    if override:
+        return override
+    if sys.platform == "win32":
+        base = os.environ.get("APPDATA") or os.path.join(os.path.expanduser("~"), "AppData", "Roaming")
+    else:
+        base = os.path.join(os.path.expanduser("~"), ".local", "share")
+    return os.path.join(base, APP_DIR_NAME)
+
+
+def logs_dir() -> str:
+    """Directory for log files, created if missing."""
+    path = os.path.join(app_data_dir(), "logs")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
 def user_root() -> str:
     """Directory for files the app writes; not created here.
 
@@ -54,6 +82,5 @@ def user_root() -> str:
     call sites.
     """
     if _COMPILED:
-        from utils.utils import Utils
-        return os.path.join(Utils.user_data_dir(), APP_DIR_NAME)
+        return app_data_dir()
     return repo_root()

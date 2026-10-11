@@ -1088,7 +1088,7 @@ def main(compare_class):
                 confirm = input("Confirm overwriting image data (y/n): ")
                 if confirm != "y" and confirm != "Y":
                     print("No change made.")
-                    exit()
+                    sys.exit()
             elif o == "--search":
                 search_media_path = Utils.get_valid_file(base_dir, a)
                 if search_media_path is None:
@@ -1103,7 +1103,7 @@ def main(compare_class):
             print(e)
             print("")
             usage()
-            exit(1)
+            sys.exit(1)
 
     compare = compare_class.__init__(base_dir,
                                search_media_path=search_media_path,

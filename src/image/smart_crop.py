@@ -801,13 +801,13 @@ if __name__ == '__main__':
 
 #   Cropper.smart_crop_simple(sys.argv[1], "")
     Cropper.smart_crop_multi_detect(sys.argv[1], "")
-    exit()
+    sys.exit()
 
     extensions = [".jpg", ".jpeg", ".png", ".webp", ".tiff"]
     directory_to_process = sys.argv[1]
     if not os.path.isdir(directory_to_process):
         logger.error('not a directory: "' + directory_to_process + '"')
-        exit()
+        sys.exit()
     files_to_crop = []
     for f in os.listdir(directory_to_process):
         for ext in extensions:

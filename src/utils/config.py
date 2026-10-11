@@ -10,6 +10,7 @@ from utils.logging_setup import get_logger
 from utils.repo_paths import is_compiled, resource_root, user_root
 from utils.running_tasks_registry import running_tasks_registry
 from utils.utils import Utils
+from utils.subprocess_flags import NO_CONSOLE_WINDOW
 
 logger = get_logger("config")
 
@@ -623,7 +624,7 @@ class Config:
 
             # Test if the executable can be run (version check)
             result = subprocess.run([self.gimp_version_probe_executable(executable_path), "--version"],
-                                  capture_output=True, text=True, timeout=10)
+                                  capture_output=True, text=True, timeout=10, creationflags=NO_CONSOLE_WINDOW)
             if result.returncode == 0 and "GNU Image Manipulation Program" in result.stdout:
                 logger.debug("GIMP validation successful")
                 return True
@@ -711,7 +712,7 @@ class Config:
 
             # Test if the executable can be run (version check)
             result = subprocess.run([self.gimp_version_probe_executable(executable_path), "--version"],
-                                  capture_output=True, text=True, timeout=10)
+                                  capture_output=True, text=True, timeout=10, creationflags=NO_CONSOLE_WINDOW)
             if result.returncode != 0:
                 return False
             

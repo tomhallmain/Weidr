@@ -24,3 +24,12 @@
   implicit-imports:
     - depends:
         - 'torchvision.image_stable'
+
+# huggingface_hub.utils (as of huggingface_hub 1.33) is a lazy facade: its
+# __getattr__ imports submodules by name, which Nuitka does not follow, so a
+# submodule nothing imports directly (e.g. _headers, behind
+# build_hf_headers) is left out.
+- module-name: 'huggingface_hub.utils'
+  implicit-imports:
+    - depends:
+        - 'huggingface_hub.utils.*'

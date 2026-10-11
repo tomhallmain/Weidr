@@ -29,6 +29,7 @@ from typing import Dict, Any, Optional, List, Union
 
 from utils.config import config
 from utils.logging_setup import get_logger
+from utils.subprocess_flags import NO_CONSOLE_WINDOW
 from extensions.gimp.gimp_gegl_validator import validate_gegl_operation
 
 logger = get_logger("gimp_gegl_client")
@@ -204,7 +205,7 @@ class GimpGeglClient:
         try:
             # Check if GIMP is accessible
             result = subprocess.run([self.gimp_exe, "--version"], 
-                                 capture_output=True, text=True, timeout=10)
+                                 capture_output=True, text=True, timeout=10, creationflags=NO_CONSOLE_WINDOW)
             if result.returncode != 0:
                 raise RuntimeError(f"GIMP executable failed: {result.stderr}")
             
@@ -454,7 +455,7 @@ if __name__ == "__main__":
             logger.debug(f"Running GIMP command: {' '.join(cmd)}")
             
             # Execute GIMP script
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, creationflags=NO_CONSOLE_WINDOW)
             
             if result.returncode != 0:
                 raise RuntimeError(f"GIMP execution failed: {result.stderr}")

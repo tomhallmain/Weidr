@@ -10,7 +10,12 @@ from typing import Any, Dict, List
 from lib.equivalence import are_equivalent
 
 from utils.constants import AppInfo
-from utils.encryptor import encrypt_data_to_file, decrypt_data_from_file
+from utils.encryptor import (
+    decrypt_data_from_file,
+    encrypt_data_to_file,
+    key_store_path,
+    stored_keys_need_unavailable_oqs,
+)
 from utils.logging_setup import get_logger
 from utils.repo_paths import user_root
 
@@ -212,6 +217,12 @@ class AppInfoCache(InflationMonitor):
         _override = os.environ.get("WEIDR_CACHE_DIR")
         self._cache_loc = os.path.join(_override, "app_info_cache.enc") if _override else self.CACHE_LOC
         self._json_loc  = os.path.join(_override, "app_info_cache.json") if _override else self.JSON_LOC
+        # Plaintext saves while the stored keys are quantum (OQS) keys and this
+        # process has no OQS. load() never migrates this file into the
+        # encrypted cache: it holds only what was saved in that state, and
+        # would replace the encrypted cache's contents. Kept for manual recovery.
+        self._no_oqs_json_loc = os.path.join(os.path.dirname(self._cache_loc), "app_info_cache.no_oqs.json")
+        self._encrypted_cache_unreadable = False
         self.load()
         self.validate()
 
@@ -293,15 +304,20 @@ class AppInfoCache(InflationMonitor):
             except Exception as e:
                 raise Exception(f"Error compiling application cache: {e}")
 
-            try:
-                self._encrypt_to_path_atomically(cache_data, self._cache_loc)
-                self._has_changes = False
-                return True  # Encryption successful
-            except Exception as e:
-                logger.error(f"Error encrypting cache: {e}")
+            if self._encrypted_cache_unreadable:
+                # Encrypting fails the same way loading would; go straight to the fallback.
+                json_loc = self._no_oqs_json_loc
+            else:
+                json_loc = self._json_loc
+                try:
+                    self._encrypt_to_path_atomically(cache_data, self._cache_loc)
+                    self._has_changes = False
+                    return True  # Encryption successful
+                except Exception as e:
+                    logger.error(f"Error encrypting cache: {e}")
 
             try:
-                with open(self._json_loc, "w", encoding="utf-8") as f:
+                with open(json_loc, "w", encoding="utf-8") as f:
                     json.dump(self._cache, f)
                 self._has_changes = False
                 return False  # Encryption failed, but JSON fallback succeeded
@@ -339,6 +355,10 @@ class AppInfoCache(InflationMonitor):
     def load(self):
         with self._lock:
             try:
+                if self._keys_need_unavailable_oqs():
+                    self._start_without_encrypted_cache()
+                    return
+
                 if os.path.exists(self._json_loc):
                     logger.info(f"Detected JSON-format application cache, will attempt migration to encrypted store")
                     with open(self._json_loc, "r", encoding="utf-8") as f:
@@ -392,6 +412,38 @@ class AppInfoCache(InflationMonitor):
             except Exception as e:
                 logger.error(f"Error loading cache: {e}")
                 raise e
+
+    def _keys_need_unavailable_oqs(self) -> bool:
+        # Only when there are keys or an encrypted cache to protect: with
+        # neither, the key type lookup would fall back to the OS keychain.
+        has_encrypted_state = os.path.exists(key_store_path(AppInfo.SERVICE_NAME, AppInfo.APP_IDENTIFIER)) or any(
+            os.path.exists(path) for path in [self._cache_loc] + self._get_backup_paths()
+        )
+        if not has_encrypted_state:
+            return False
+        try:
+            return stored_keys_need_unavailable_oqs(AppInfo.SERVICE_NAME, AppInfo.APP_IDENTIFIER)
+        except Exception as e:
+            logger.error(f"Could not read the stored encryption key type: {e}")
+            return False
+
+    def _start_without_encrypted_cache(self):
+        """Continue from the last no-OQS session's saves, or from an empty cache,
+        leaving the encrypted cache and its backups untouched (no rotation) for
+        a process with OQS."""
+        self._encrypted_cache_unreadable = True
+        logger.warning(
+            f"The encryption keys are quantum (OQS) keys and this process has no OQS "
+            f"(a build needs --with-oqs). Starting without {self._cache_loc}; it is left "
+            f"untouched, and this session's changes are saved to {self._no_oqs_json_loc} only."
+        )
+        if os.path.exists(self._no_oqs_json_loc):
+            try:
+                with open(self._no_oqs_json_loc, "r", encoding="utf-8") as f:
+                    self._cache = json.load(f)
+                logger.info(f"Loaded cache from {self._no_oqs_json_loc}")
+            except (OSError, ValueError) as e:
+                logger.error(f"Could not read {self._no_oqs_json_loc}, starting empty: {e}")
 
     def validate(self):
         with self._lock:

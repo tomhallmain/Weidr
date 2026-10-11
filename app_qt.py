@@ -5,23 +5,71 @@ Creates the QApplication, handles startup authentication, signal handlers,
 single-instance locking, and launches the main AppWindow.
 """
 
+import logging
 import os
 import signal
 import sys
+import threading
 import traceback
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
 
+from PySide6.QtCore import QtMsgType, qInstallMessageHandler
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QIcon
 
 from ui.app_style import AppStyle
 from utils.config import config
 from utils.logging_setup import get_logger
-from utils.repo_paths import resource_root
+from utils.repo_paths import is_compiled, resource_root
 from utils.translations import I18N, _
+from utils.unpack_cleanup import remove_stale_unpack_dirs
 from utils.utils import Utils
+from utils.version import APP_VERSION, build_info, describe as describe_version, source_drift
 logger = get_logger("app_qt")
+
+
+_QT_MSG_LOG_LEVELS = {
+    QtMsgType.QtDebugMsg: logging.DEBUG,
+    QtMsgType.QtInfoMsg: logging.INFO,
+    QtMsgType.QtWarningMsg: logging.WARNING,
+    QtMsgType.QtCriticalMsg: logging.ERROR,
+    QtMsgType.QtFatalMsg: logging.CRITICAL,
+}
+
+
+def _log_qt_message(msg_type, context, message):
+    logger.log(_QT_MSG_LOG_LEVELS.get(msg_type, logging.WARNING), "Qt: %s", message)
+
+
+def _route_qt_messages_to_logger():
+    """Send Qt's own warnings and errors through the app logger.
+
+    Call before creating the QApplication. Qt's default handler writes byte
+    strings to the C-level stderr. A Nuitka build with
+    --windows-console-mode=attach puts that stream in wide-character
+    (_O_U8TEXT) mode, and the C runtime aborts the process (0xc0000409 in
+    ucrtbase.dll) on a byte write to it, so any Qt warning would end the app.
+    """
+    qInstallMessageHandler(_log_qt_message)
+
+
+def _report_source_drift(app_window):
+    """In a build, log whether the source checkout it was built from has
+    changed since, and tell the user with a toast when it has."""
+    try:
+        result = source_drift()
+    except Exception as e:
+        logger.error(f"Could not compare this build with its source checkout: {e}")
+        return
+    if result:
+        drifted, message = result
+        if drifted:
+            logger.warning(message)
+            app_window.notification_ctrl.toast(
+                _("This build no longer matches its source code. See the log for details."))
+        else:
+            logger.info(message)
 
 
 def _start_mcp_server():
@@ -65,16 +113,35 @@ _SMOKE_TEST_DATA_FILES = (
 )
 
 
-def _smoke_test_checks() -> list[str]:
+def _smoke_test_checks(expect_oqs: bool = False) -> list[str]:
     """Problems found by run_smoke_test(); empty when there are none."""
     import importlib.util
 
     import keyring
     from keyring.backends import fail as keyring_fail
 
-    from utils import pillow_plugins
+    from utils import encryptor, pillow_plugins
+    from utils.crash_log import enable_fault_log
 
     problems = []
+    logger.info("Smoke test: %s", describe_version())
+    if is_compiled():
+        info = build_info()
+        if not info:
+            problems.append("Build info missing")
+        elif info.get("version") != APP_VERSION:
+            problems.append(f"Build info names version {info.get('version')}, expected {APP_VERSION}")
+    try:
+        logger.info("Smoke test: fault log at %s", enable_fault_log())
+    except Exception as e:
+        problems.append(f"Fault log cannot be opened: {e}")
+
+    if encryptor.KeyEncapsulation is None:
+        if expect_oqs:
+            problems.append("OQS not available, but the build was made with --with-oqs")
+    else:
+        logger.info("Smoke test: OQS available")
+
     I18N.install_locale(config.locale, verbose=False)
 
     pillow_plugins.ensure_pillow_plugins_registered()
@@ -89,9 +156,12 @@ def _smoke_test_checks() -> list[str]:
     problems += [f"Module missing: {name}" for name in _SMOKE_TEST_LAZY_MODULES
                  if importlib.util.find_spec(name) is None]
 
-    if isinstance(keyring.get_keyring(), keyring_fail.Keyring):
+    backend = keyring.get_keyring()
+    logger.info("Smoke test: keyring backend %s", type(backend).__name__)
+    if isinstance(backend, keyring_fail.Keyring):
         problems.append("No keyring backend available")
 
+    _route_qt_messages_to_logger()
     qt_app = QApplication(sys.argv[:1])
     if QIcon(os.path.join(resource_root(), "assets", "icon.png")).isNull():
         problems.append("Qt cannot load assets/icon.png (image format plugins missing?)")
@@ -110,15 +180,16 @@ def _smoke_test_checks() -> list[str]:
     return problems
 
 
-def run_smoke_test() -> int:
-    """Check that a build starts: config, translations, Pillow plugins, data
-    files, compare modules and a QApplication on the offscreen platform.
-    Takes no single-instance lock, asks for no password, opens no window and
-    loads no model. Returns the process exit code.
+def run_smoke_test(expect_oqs: bool = False) -> int:
+    """Check that a build starts: build info, fault log, OQS (with
+    *expect_oqs*), config, translations, Pillow plugins, data files, keyring,
+    compare modules and a QApplication on the offscreen platform. Takes no
+    single-instance lock, asks for no password, opens no window and loads no
+    model. Returns the process exit code.
     """
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     try:
-        problems = _smoke_test_checks()
+        problems = _smoke_test_checks(expect_oqs)
     except BaseException:
         logger.exception("Smoke test failed")
         traceback.print_exc()
@@ -136,9 +207,19 @@ def main():
     # Single instance check -- prevent multiple instances from running
     lock_file, cleanup_lock = Utils.check_single_instance("Weidr")
 
+    logger.info(describe_version())
+    try:
+        from utils.crash_log import enable_fault_log
+        enable_fault_log()
+    except Exception as e:
+        logger.error(f"Could not open the fault log: {e}")
+    # Deleting an older build's unpack folder can take a while (several GB).
+    threading.Thread(target=remove_stale_unpack_dirs, name="unpack-cleanup", daemon=True).start()
+
     I18N.install_locale(config.locale, verbose=config.print_settings)
 
     # Create QApplication (must exist before any widgets)
+    _route_qt_messages_to_logger()
     qt_app = QApplication(sys.argv)
     qt_app.setApplicationName("Weidr")
     qt_app.setStyleSheet(AppStyle.get_stylesheet())
@@ -191,6 +272,9 @@ def main():
             app_window.activateWindow()
 
             _start_mcp_server()
+            # Runs git, which can take a moment.
+            threading.Thread(target=_report_source_drift, args=(app_window,),
+                             name="source-drift", daemon=True).start()
         except Exception as e:
             logger.critical(f"Failed to create main window: {e}", exc_info=True)
             from PySide6.QtWidgets import QMessageBox
@@ -222,7 +306,7 @@ def main():
 
 if __name__ == "__main__":
     if "--smoke-test" in sys.argv[1:]:
-        sys.exit(run_smoke_test())
+        sys.exit(run_smoke_test(expect_oqs="--expect-oqs" in sys.argv[1:]))
     try:
         main()
     except KeyboardInterrupt:

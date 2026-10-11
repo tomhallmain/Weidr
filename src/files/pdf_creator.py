@@ -10,6 +10,7 @@ from image.frame_cache import FrameCache
 from utils.logging_setup import get_logger
 from utils.media_utils import get_paged_document_pdf, is_epub_path, is_paged_document_path
 from utils.translations import _
+from utils.subprocess_flags import NO_CONSOLE_WINDOW
 logger = get_logger("pdf_creator")
 
 
@@ -255,7 +256,7 @@ class PDFCreator:
                     cmd,
                     check=False,
                     capture_output=True,
-                    text=True,
+                    text=True, creationflags=NO_CONSOLE_WINDOW,
                 )
             except Exception as e:
                 app_actions.alert(

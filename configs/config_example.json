@@ -185,6 +185,7 @@
       }
     }
   ],
+  "audio_classifier_models": [],
   "text_embedding_search_presets_exclusive": false,
   "enable_prevalidations": true,
   "prevalidate_on_direct_media_display": true,

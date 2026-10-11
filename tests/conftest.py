@@ -45,6 +45,7 @@ if _src_dir not in sys.path:
 _bootstrap_tmp = tempfile.mkdtemp(prefix="weidr_tests_")
 os.environ.setdefault("WEIDR_CACHE_DIR", os.path.join(_bootstrap_tmp, "cache"))
 os.environ.setdefault("WEIDR_CONFIGS_DIR", os.path.join(_bootstrap_tmp, "configs"))
+os.environ.setdefault("WEIDR_APP_DATA_DIR", os.path.join(_bootstrap_tmp, "app_data"))
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.makedirs(os.environ["WEIDR_CACHE_DIR"], exist_ok=True)
 os.makedirs(os.environ["WEIDR_CONFIGS_DIR"], exist_ok=True)

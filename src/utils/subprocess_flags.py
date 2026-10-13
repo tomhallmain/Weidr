@@ -6,6 +6,11 @@ starts a new console window, which flashes up for the program's lifetime.
 Pass ``creationflags=NO_CONSOLE_WINDOW`` to ``subprocess`` calls that run a
 console program (ffmpeg, ffprobe, ``gimp --version``) and capture or discard
 its output. Programs meant to open a window of their own do not need it.
+
+Such a process can also have invalid standard handles. A call that redirects
+stdout or stderr but not stdin makes Python duplicate the missing handle,
+which fails with ``[WinError 6] The handle is invalid`` before the child
+starts, so pass ``stdin=subprocess.DEVNULL`` wherever output is redirected.
 """
 
 import subprocess

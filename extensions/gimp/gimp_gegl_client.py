@@ -205,7 +205,7 @@ class GimpGeglClient:
         try:
             # Check if GIMP is accessible
             result = subprocess.run([self.gimp_exe, "--version"], 
-                                 capture_output=True, text=True, timeout=10, creationflags=NO_CONSOLE_WINDOW)
+                                 capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=10, creationflags=NO_CONSOLE_WINDOW)
             if result.returncode != 0:
                 raise RuntimeError(f"GIMP executable failed: {result.stderr}")
             
@@ -455,7 +455,7 @@ if __name__ == "__main__":
             logger.debug(f"Running GIMP command: {' '.join(cmd)}")
             
             # Execute GIMP script
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, creationflags=NO_CONSOLE_WINDOW)
+            result = subprocess.run(cmd, capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=60, creationflags=NO_CONSOLE_WINDOW)
             
             if result.returncode != 0:
                 raise RuntimeError(f"GIMP execution failed: {result.stderr}")

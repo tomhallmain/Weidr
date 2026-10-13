@@ -103,7 +103,7 @@ class GimpGeglValidator:
             result = subprocess.run(
                 [config.gimp_version_probe_executable(gimp_path), "--version"],
                 capture_output=True, 
-                text=True, 
+                text=True, stdin=subprocess.DEVNULL,
                 timeout=10, creationflags=NO_CONSOLE_WINDOW
             )
             
@@ -372,7 +372,7 @@ class GimpGeglValidator:
                 result = subprocess.run(
                     [config.gimp_version_probe_executable(config.gimp_exe_loc), "--version"],
                     capture_output=True, 
-                    text=True, 
+                    text=True, stdin=subprocess.DEVNULL,
                     timeout=5, creationflags=NO_CONSOLE_WINDOW
                 )
                 if result.returncode == 0:

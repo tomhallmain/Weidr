@@ -256,6 +256,7 @@ class PDFCreator:
                     cmd,
                     check=False,
                     capture_output=True,
+                    stdin=subprocess.DEVNULL,
                     text=True, creationflags=NO_CONSOLE_WINDOW,
                 )
             except Exception as e:

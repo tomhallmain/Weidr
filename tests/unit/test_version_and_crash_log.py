@@ -11,18 +11,19 @@ from utils import crash_log, repo_paths, version
 @pytest.fixture
 def resources(monkeypatch, tmp_path):
     monkeypatch.setattr(repo_paths, "resource_root", lambda: str(tmp_path))
+    (tmp_path / version.VERSION_FILE).write_text("1.2.3\n", encoding="utf-8")
     return tmp_path
 
 
 def test_checkout_has_no_build_info(resources):
     assert version.build_info() == {}
-    assert version.describe() == f"Weidr {version.APP_VERSION} (source checkout)"
+    assert version.describe() == "Weidr 1.2.3 (source checkout)"
     assert version.source_drift() is None
 
 
 def test_describe_names_build_and_commit(resources):
     (resources / version.BUILD_INFO_FILE).write_text(json.dumps({
-        "version": version.APP_VERSION, "build_id": "20261010-120000", "python": "3.11.13",
+        "version": "1.2.3", "build_id": "20261010-120000", "python": "3.11.13",
         "packages": {"torch": "2.14.1"}, "source": {"commit": "a" * 40, "changes": "x"},
     }), encoding="utf-8")
     line = version.describe()
@@ -58,6 +59,33 @@ def test_source_drift_reports_a_missing_checkout(resources, tmp_path):
     drifted, message = version.source_drift()
     assert drifted is False
     assert "not found" in message
+
+
+def _build_from_rewritten_commit(resources, tmp_path, monkeypatch, current_tree):
+    """A build from commit d..., whose checkout is now at e... with tree *current_tree*,
+    and in which git finds no commit d... (history rewritten, then gc)."""
+    checkout = tmp_path / "checkout"
+    (checkout / ".git").mkdir(parents=True)
+    (resources / version.BUILD_INFO_FILE).write_text(json.dumps({
+        "source": {"repo": str(checkout), "commit": "d" * 40, "tree": "t" * 40, "changes": ""},
+    }), encoding="utf-8")
+    monkeypatch.setattr(version, "source_state",
+                        lambda repo: {"commit": "e" * 40, "tree": current_tree, "changes": ""})
+    monkeypatch.setattr(version, "run_git", lambda repo, *args: None)
+
+
+def test_source_drift_accepts_a_rewritten_commit_with_the_same_files(resources, tmp_path, monkeypatch):
+    _build_from_rewritten_commit(resources, tmp_path, monkeypatch, current_tree="t" * 40)
+    drifted, message = version.source_drift()
+    assert drifted is False
+    assert "same files" in message
+
+
+def test_source_drift_names_a_commit_missing_from_the_history(resources, tmp_path, monkeypatch):
+    _build_from_rewritten_commit(resources, tmp_path, monkeypatch, current_tree="u" * 40)
+    drifted, message = version.source_drift()
+    assert drifted is True
+    assert "not in its history" in message
 
 
 def test_fault_log_writes_a_start_line(monkeypatch, tmp_path):

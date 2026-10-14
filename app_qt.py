@@ -25,7 +25,7 @@ from utils.repo_paths import is_compiled, resource_root
 from utils.translations import I18N, _
 from utils.unpack_cleanup import remove_stale_unpack_dirs
 from utils.utils import Utils
-from utils.version import APP_VERSION, build_info, describe as describe_version, source_drift
+from utils.version import app_version, build_info, describe as describe_version, source_drift
 logger = get_logger("app_qt")
 
 
@@ -104,6 +104,7 @@ _SMOKE_TEST_LAZY_MODULES = (
 )
 
 _SMOKE_TEST_DATA_FILES = (
+    ("VERSION",),
     ("assets", "icon.png"),
     ("assets", "example_pipelines.enc"),
     ("assets", "sounds"),
@@ -129,8 +130,8 @@ def _smoke_test_checks(expect_oqs: bool = False) -> list[str]:
         info = build_info()
         if not info:
             problems.append("Build info missing")
-        elif info.get("version") != APP_VERSION:
-            problems.append(f"Build info names version {info.get('version')}, expected {APP_VERSION}")
+        elif info.get("version") != app_version():
+            problems.append(f"Build info names version {info.get('version')}, expected {app_version()}")
     try:
         logger.info("Smoke test: fault log at %s", enable_fault_log())
     except Exception as e:

@@ -30,11 +30,11 @@ existing install. Without the option the build has no OQS: it cannot read
 data encrypted with OQS keys, and refuses password-protected actions when the
 stored keys are OQS keys.
 
-The executable's version information comes from ``APP_VERSION`` in
-src/utils/version.py, with the build id (build time) in its description. Each
-build writes ``build/nuitka/build_info.json`` (version, build id, Python and
-key package versions, and this checkout's path, commit and a fingerprint of
-its uncommitted changes), bundled so the app logs it at startup and compares
+The executable's version information comes from the VERSION file at the repo
+root, which is also bundled, with the build id (build time) in its description. Each
+build writes ``build/nuitka/build_info.json`` (version, build id, whether it
+has OQS, Python and key package versions, and this checkout's path, commit,
+the commit's tree and a fingerprint of its uncommitted changes), bundled so the app logs it at startup and compares
 itself with this checkout, and ``build/nuitka/build-requirements.lock.txt``,
 the build venv's ``pip freeze``. ``--lock=<file>`` installs the build venv
 from such a file instead of requirements-build.txt, to repeat a known good
@@ -64,7 +64,8 @@ EXE_PATH = os.path.join(DIST_DIR, EXE_NAME)
 # utils.repo_paths.default_app_data_dir() spelled for Nuitka, which has no variable
 # for %APPDATA%. utils/unpack_cleanup.py expects the folder names used below.
 APP_DATA_SPEC = "{HOME}/AppData/Roaming/Weidr" if sys.platform == "win32" else "{HOME}/.local/share/Weidr"
-VERSION_FILE = os.path.join("src", "utils", "version.py")
+VERSION_FILE = "VERSION"
+VERSION_MODULE = os.path.join("src", "utils", "version.py")
 BUILD_INFO_PATH = os.path.join(BUILD_DIR, "build_info.json")
 LOCK_PATH = os.path.join(BUILD_DIR, "build-requirements.lock.txt")
 # Versions the build output and build_info.json record.
@@ -81,6 +82,7 @@ DATA_FILES = (
     os.path.join("assets", "example_pipelines.enc"),
     os.path.join("configs", "config_example.json"),
     os.path.join("configs", "suggested_classifier_models.json"),
+    VERSION_FILE,
 )
 
 # transformers reads the installed version of these packages when it finds
@@ -137,13 +139,14 @@ def _ensure_build_venv(extra_packages=(), requirements=None) -> str:
 
 def _version_module() -> dict:
     """src/utils/version.py's globals, loaded without importing the app."""
-    return runpy.run_path(os.path.join(REPO_ROOT, VERSION_FILE))
+    return runpy.run_path(os.path.join(REPO_ROOT, VERSION_MODULE))
 
 
 def _app_version() -> str:
-    version = _version_module()["APP_VERSION"]
+    with open(os.path.join(REPO_ROOT, VERSION_FILE), "r", encoding="utf-8") as f:
+        version = f.read().strip()
     if not re.fullmatch(r"\d+(\.\d+){0,3}", version):
-        sys.exit(f"APP_VERSION {version!r} in {VERSION_FILE} must be up to four dot-separated numbers.")
+        sys.exit(f"{VERSION_FILE} holds {version!r}; it must be up to four dot-separated numbers.")
     return version
 
 
@@ -187,11 +190,12 @@ def _check_transformers_version(packages: dict) -> None:
         )
 
 
-def _write_build_info(version: str, build_id: str, environment: dict) -> None:
+def _write_build_info(version: str, build_id: str, environment: dict, with_oqs: bool) -> None:
     """build_info.json, bundled at the resource root (utils/version.py reads it)."""
     info = {
         "version": version,
         "build_id": build_id,
+        "with_oqs": with_oqs,
         "python": environment["python"],
         "packages": {name: v for name, v in environment["packages"].items() if v},
         # Lets the build compare itself with this checkout at startup.
@@ -365,7 +369,7 @@ if __name__ == "__main__":
     _write_lock_file(python)
     environment = _environment_versions(python)
     _check_transformers_version(environment["packages"])
-    _write_build_info(version, build_id, environment)
+    _write_build_info(version, build_id, environment, with_oqs)
     nuitka_args = [*_nuitka_args(version, build_id), *_oqs_args(python, with_oqs), *args, ENTRY]
     subprocess.run([python, "-m", "nuitka", *nuitka_args], cwd=REPO_ROOT, env=_nuitka_env(), check=True)
     _copy_to_dist()

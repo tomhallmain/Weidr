@@ -25,6 +25,13 @@ older builds' folders (utils/unpack_cleanup.py). Each is smoke-tested with
 ``--smoke-test``. Other args are forwarded to Nuitka, e.g. ``--show-scons`` or
 ``--jobs=4``.
 
+Before compressing the onefile payload, the last step of each compile, the
+build waits for enough free memory (scripts/nuitka_memory_wait.py), since a
+failed allocation there loses the whole compile. ``--min-free-memory=<GiB>``
+sets the amount instead of the estimate; 0 turns the wait off. Each step is
+timed, and the log goes to ``build/logs/build_exe-<build id>.log`` as well
+(Nuitka's own output only to the console).
+
 ``--with-oqs`` adds quantum-safe (OQS) key encapsulation: it installs
 liboqs-python, finds the liboqs shared library the build interpreter loads, and
 bundles it. liboqs-python builds liboqs on first import if none is installed,
@@ -44,7 +51,9 @@ from such a file instead of requirements-build.txt, to repeat a known good
 build; packages already in the venv but absent from the file stay installed,
 so delete .venv-build first for an exact copy.
 """
+import contextlib
 import json
+import logging
 import os
 import re
 import runpy
@@ -67,6 +76,10 @@ VERSION_FILE = "VERSION"
 VERSION_MODULE = os.path.join("src", "utils", "version.py")
 BUILD_INFO_PATH = os.path.join(BUILD_DIR, "build_info.json")
 LOCK_PATH = os.path.join(BUILD_DIR, "build-requirements.lock.txt")
+LOG_DIR = os.path.join(REPO_ROOT, "build", "logs")
+MEMORY_WAIT_PLUGIN = os.path.join(REPO_ROOT, "scripts", "nuitka_memory_wait.py")
+# Read by MEMORY_WAIT_PLUGIN.
+MIN_FREE_MEMORY_ENV = "BUILD_MIN_FREE_MEMORY_GB"
 # Versions the build output and build_info.json record.
 RECORDED_DISTRIBUTIONS = (
     "Nuitka", "PySide6", "torch", "torchvision", "transformers", "tensorflow", "onnxruntime-gpu", "mcp",
@@ -114,6 +127,53 @@ _LIBOQS_PROBE = (
     "print(lib._name)\n"
 )
 
+logger = logging.getLogger("build_exe")
+
+
+class _LevelPrefix(logging.Filter):
+    def filter(self, record):
+        record.level_prefix = "" if record.levelno == logging.INFO else f"{record.levelname}: "
+        return True
+
+
+def _setup_logging(build_id: str) -> str:
+    """Log to the console and to a file for this build; returns the file's path."""
+    os.makedirs(LOG_DIR, exist_ok=True)
+    path = os.path.join(LOG_DIR, f"build_exe-{build_id}.log")
+    console = logging.StreamHandler(sys.stdout)
+    console.setFormatter(logging.Formatter("[%(asctime)s] %(level_prefix)s%(message)s", "%H:%M:%S"))
+    log_file = logging.FileHandler(path, encoding="utf-8")
+    log_file.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    for handler in (console, log_file):
+        handler.addFilter(_LevelPrefix())
+        logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    return path
+
+
+def _duration(seconds: float) -> str:
+    seconds = int(round(seconds))
+    hours, rest = divmod(seconds, 3600)
+    minutes, seconds = divmod(rest, 60)
+    if hours:
+        return f"{hours}h {minutes:02d}m {seconds:02d}s"
+    if minutes:
+        return f"{minutes}m {seconds:02d}s"
+    return f"{seconds}s"
+
+
+@contextlib.contextmanager
+def _timed(step: str):
+    """Log how long *step* took, or after how long it failed."""
+    started = time.monotonic()
+    logger.info(f"{step}...")
+    try:
+        yield
+    except BaseException:
+        logger.error(f"{step} failed after {_duration(time.monotonic() - started)}")
+        raise
+    logger.info(f"{step} done in {_duration(time.monotonic() - started)}")
+
 
 def _exe_name(base_name: str) -> str:
     return f"{base_name}.exe" if sys.platform == "win32" else base_name
@@ -130,7 +190,7 @@ def _ensure_build_venv(extra_packages=(), requirements=None) -> str:
     (requirements-build.txt by default, or a lock file) and *extra_packages*."""
     python = _venv_python(VENV_DIR)
     if not os.path.exists(python):
-        print(f"Creating build venv at {VENV_DIR}")
+        logger.info(f"Creating build venv at {VENV_DIR}")
         venv.create(VENV_DIR, with_pip=True)
     requirements = requirements or os.path.join(REPO_ROOT, "requirements-build.txt")
     subprocess.run(
@@ -172,7 +232,7 @@ def _write_lock_file(python: str) -> None:
     os.makedirs(BUILD_DIR, exist_ok=True)
     with open(LOCK_PATH, "w", encoding="utf-8") as f:
         f.write(freeze.stdout)
-    print(f"Build environment recorded in {LOCK_PATH}")
+    logger.info(f"Build environment recorded in {LOCK_PATH}")
 
 
 def _environment_versions(python: str) -> dict:
@@ -185,8 +245,8 @@ def _environment_versions(python: str) -> dict:
 def _check_transformers_version(packages: dict) -> None:
     installed = packages.get("transformers")
     if installed and installed.split(".")[:2] != TRANSFORMERS_PROBED_VERSION.split("."):
-        print(
-            f"WARNING: transformers {installed} is installed, but TRANSFORMERS_PROBED_DISTRIBUTIONS "
+        logger.warning(
+            f"transformers {installed} is installed, but TRANSFORMERS_PROBED_DISTRIBUTIONS "
             f"was taken from transformers {TRANSFORMERS_PROBED_VERSION}. If the smoke test exits at a "
             "package metadata lookup, update the list from transformers' "
             "_is_package_available(..., return_version=True) calls."
@@ -207,7 +267,7 @@ def _write_build_info(version: str, build_id: str, environment: dict, with_oqs: 
     os.makedirs(BUILD_DIR, exist_ok=True)
     with open(BUILD_INFO_PATH, "w", encoding="utf-8") as f:
         json.dump(info, f, indent=2)
-    print("Building " + ", ".join(
+    logger.info("Building " + ", ".join(
         [f"Weidr {version}", f"build {build_id}",
          f"from {info['source']['commit'][:10] or 'unknown commit'}"
          + (" with uncommitted changes" if info["source"]["changes"] else ""),
@@ -258,6 +318,7 @@ def _common_args(exe_name: str, unpack_prefix: str, version: str, build_id: str)
         "--include-package-data=clip",
         "--include-package-data=open_clip",
         f"--user-package-configuration-file={PACKAGE_CONFIG}",
+        f"--user-plugin={MEMORY_WAIT_PLUGIN}",
         "--nofollow-import-to=pytest",
         "--nofollow-import-to=_pytest",
         "--nofollow-import-to=pytestqt",
@@ -305,7 +366,7 @@ def _oqs_args(python: str, with_oqs: bool) -> list:
     # The layout liboqs-python searches under OQS_INSTALL_PATH, which
     # utils/encryptor.py points at this folder in the build.
     lib_dir = "bin" if sys.platform == "win32" else "lib"
-    print(f"Bundling liboqs: {library}")
+    logger.info(f"Bundling liboqs: {library}")
     return [
         "--include-package=oqs",
         "--include-distribution-metadata=liboqs-python",
@@ -313,7 +374,7 @@ def _oqs_args(python: str, with_oqs: bool) -> list:
     ]
 
 
-def _nuitka_env() -> dict:
+def _nuitka_env(min_free_memory=None) -> dict:
     # The entry scripts put src/ on sys.path at runtime; Nuitka resolves imports at
     # build time and needs it there already.
     env = dict(os.environ)
@@ -321,14 +382,28 @@ def _nuitka_env() -> dict:
     if env.get("PYTHONPATH"):
         paths.append(env["PYTHONPATH"])
     env["PYTHONPATH"] = os.pathsep.join(paths)
+    if min_free_memory is not None:
+        env[MIN_FREE_MEMORY_ENV] = min_free_memory
     return env
+
+
+def _min_free_memory(value):
+    """``--min-free-memory``'s value, checked, or None when not given."""
+    if value is None:
+        return None
+    try:
+        if float(value) >= 0:
+            return value
+    except ValueError:
+        pass
+    sys.exit(f"--min-free-memory={value}: give a number of GiB, or 0 to not wait for memory.")
 
 
 def _copy_to_dist(exe_name: str) -> str:
     exe_path = os.path.join(DIST_DIR, exe_name)
     if os.path.isdir(exe_path):
         # Left by a folder build; on macOS/Linux it has the executable's name.
-        print(f"Removing the folder build at {exe_path}")
+        logger.info(f"Removing the folder build at {exe_path}")
         shutil.rmtree(exe_path)
     os.makedirs(DIST_DIR, exist_ok=True)
     shutil.copy2(os.path.join(BUILD_DIR, exe_name), exe_path)
@@ -373,7 +448,7 @@ def _targets(with_headless: bool) -> tuple:
     return tuple(t for t in TARGETS if with_headless or t[0] != HEADLESS_TARGET)
 
 
-if __name__ == "__main__":
+def main() -> None:
     args = sys.argv[1:]
     with_oqs = "--with-oqs" in args
     if with_oqs:
@@ -382,8 +457,10 @@ if __name__ == "__main__":
     if with_headless:
         args.remove("--with-headless")
     lock = _pop_option(args, "--lock")
+    min_free_memory = _min_free_memory(_pop_option(args, "--min-free-memory"))
     version = _app_version()
     build_id = time.strftime("%Y%m%d-%H%M%S")
+    logger.info(f"Log: {_setup_logging(build_id)}")
 
     if "--current-env" in args:
         args.remove("--current-env")
@@ -397,7 +474,8 @@ if __name__ == "__main__":
                 sys.exit(f"--lock: {lock} not found.")
         # A lock file from an OQS build already pins liboqs-python.
         needs_liboqs = with_oqs and not (lock and _lock_has(lock, "liboqs-python"))
-        python = _ensure_build_venv((LIBOQS_PYTHON,) if needs_liboqs else (), requirements=lock)
+        with _timed("Installing the build venv"):
+            python = _ensure_build_venv((LIBOQS_PYTHON,) if needs_liboqs else (), requirements=lock)
 
     _write_lock_file(python)
     environment = _environment_versions(python)
@@ -411,7 +489,32 @@ if __name__ == "__main__":
             *_common_args(exe_name, unpack_prefix, version, build_id), *target_args(), *oqs_args,
             *args, os.path.join(REPO_ROOT, entry),
         ]
-        subprocess.run([python, "-m", "nuitka", *nuitka_args], cwd=REPO_ROOT, env=_nuitka_env(), check=True)
+        with _timed(f"Compiling {base_name} with Nuitka"):
+            result = subprocess.run([python, "-m", "nuitka", *nuitka_args], cwd=REPO_ROOT,
+                                    env=_nuitka_env(min_free_memory))
+            if result.returncode != 0:
+                sys.exit(f"Nuitka exited {result.returncode} compiling {base_name}; its output is above.")
         exe_path = _copy_to_dist(exe_name)
-        _smoke_test(exe_path, with_oqs)
-        print(f"Built {exe_path}")
+        with _timed(f"Smoke-testing {exe_name}"):
+            _smoke_test(exe_path, with_oqs)
+        logger.info(f"Built {exe_path}")
+
+
+if __name__ == "__main__":
+    started = time.monotonic()
+    try:
+        main()
+    except SystemExit as e:
+        if e.code not in (None, 0):
+            if isinstance(e.code, str):
+                logger.error(e.code)
+            logger.error(f"Build failed after {_duration(time.monotonic() - started)}")
+            sys.exit(1)
+        raise
+    except KeyboardInterrupt:
+        logger.error(f"Build stopped after {_duration(time.monotonic() - started)}")
+        sys.exit(1)
+    except BaseException:
+        logger.exception(f"Build failed after {_duration(time.monotonic() - started)}")
+        sys.exit(1)
+    logger.info(f"Build finished in {_duration(time.monotonic() - started)}")

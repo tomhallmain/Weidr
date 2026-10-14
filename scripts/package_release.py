@@ -39,12 +39,17 @@ than any executable it ships, and that tag v<version>, if it exists, points at
 that commit. ``--force`` packages
 despite failed checks.
 
+Each step is timed. The log goes to the console and to
+build/logs/package_release-<time>.log; a build it runs writes its own log.
+
 Standard library only and imports nothing from the repo, so the same file
 works in each app's repo.
 """
 import argparse
+import contextlib
 import hashlib
 import json
+import logging
 import os
 import platform
 import re
@@ -52,10 +57,59 @@ import shlex
 import shutil
 import subprocess
 import sys
+import time
 
 VERSION_PATTERN = r"\d+(\.\d+){0,3}"
 # GitHub refuses release assets of 2 GiB or more.
 MAX_ASSET_BYTES = 2 * 1024 ** 3
+
+logger = logging.getLogger("package_release")
+
+
+class _LevelPrefix(logging.Filter):
+    def filter(self, record):
+        record.level_prefix = "" if record.levelno == logging.INFO else f"{record.levelname}: "
+        return True
+
+
+def _setup_logging(repo: str) -> str:
+    """Log to the console and to a file for this run; returns the file's path."""
+    log_dir = os.path.join(repo, "build", "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    path = os.path.join(log_dir, f"package_release-{time.strftime('%Y%m%d-%H%M%S')}.log")
+    console = logging.StreamHandler(sys.stdout)
+    console.setFormatter(logging.Formatter("[%(asctime)s] %(level_prefix)s%(message)s", "%H:%M:%S"))
+    log_file = logging.FileHandler(path, encoding="utf-8")
+    log_file.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    for handler in (console, log_file):
+        handler.addFilter(_LevelPrefix())
+        logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    return path
+
+
+def _duration(seconds: float) -> str:
+    seconds = int(round(seconds))
+    hours, rest = divmod(seconds, 3600)
+    minutes, seconds = divmod(rest, 60)
+    if hours:
+        return f"{hours}h {minutes:02d}m {seconds:02d}s"
+    if minutes:
+        return f"{minutes}m {seconds:02d}s"
+    return f"{seconds}s"
+
+
+@contextlib.contextmanager
+def _timed(step: str):
+    """Log how long *step* took, or after how long it failed."""
+    started = time.monotonic()
+    logger.info(f"{step}...")
+    try:
+        yield
+    except BaseException:
+        logger.error(f"{step} failed after {_duration(time.monotonic() - started)}")
+        raise
+    logger.info(f"{step} done in {_duration(time.monotonic() - started)}")
 
 
 def _platform_tag() -> str:
@@ -183,19 +237,19 @@ def _rebuild_stale(repo, version, executables, app_name, info_path, build_args) 
     for product, path in executables.items():
         reason = _behind(repo, path, version, info, info_path, head, head_tree, int(head_time))
         if reason:
-            print(f"{product} is behind: {reason}.")
+            logger.info(f"{product} is behind: {reason}.")
             stale[product] = reason
     if not stale:
-        print(f"Every executable was built from {head[:10]} or a commit with its files; nothing to rebuild.")
+        logger.info(f"Every executable was built from {head[:10]} or a commit with its files; nothing to rebuild.")
         return
     if dirty:
         sys.exit("Tracked files have uncommitted changes; commit or stash them, so the build "
                  "matches a commit, and run this again.")
     for target_args in _build_runs(repo, app_name, stale):
         command = [sys.executable, os.path.join(repo, "build_exe.py"), *target_args, *build_args]
-        print(f"Building: {_command_line(command)}")
-        if subprocess.run(command, cwd=repo).returncode != 0:
-            sys.exit("The build failed; nothing packaged.")
+        with _timed(f"Building: {_command_line(command)}"):
+            if subprocess.run(command, cwd=repo).returncode != 0:
+                sys.exit("The build failed; nothing packaged.")
 
 
 def _sha256(path: str) -> str:
@@ -310,10 +364,10 @@ def _edit(path: str) -> None:
         else:
             result = subprocess.run([*shlex.split(editor), path])
     except OSError as e:
-        print(f"Cannot start the editor {editor!r}: {e}")
+        logger.warning(f"Cannot start the editor {editor!r}: {e}")
         return
     if result.returncode != 0:
-        print(f"The editor {editor!r} exited with code {result.returncode}.")
+        logger.warning(f"The editor {editor!r} exited with code {result.returncode}.")
 
 
 def _approve_notes(path: str) -> None:
@@ -383,6 +437,7 @@ def main() -> None:
     opts = parser.parse_args(argv)
 
     repo = os.path.abspath(opts.repo)
+    logger.info(f"Log: {_setup_logging(repo)}")
     version = _read_version(repo)
     tag = f"v{version}"
     dist = os.path.join(repo, "dist")
@@ -409,9 +464,9 @@ def main() -> None:
     info = _load_build_info(info_path)
     errors, warnings = _check(repo, version, tag, info, info_path, executables, opts.variant)
     for message in warnings:
-        print(f"WARNING: {message}")
+        logger.warning(message)
     for message in errors:
-        print(f"ERROR: {message}")
+        logger.error(message)
     if errors and not opts.force:
         sys.exit("Nothing packaged; fix the errors above or pass --force.")
     commit = (info or {}).get("source", {}).get("commit") or _git(repo, "rev-parse", "HEAD")
@@ -422,20 +477,21 @@ def main() -> None:
     out_dir = os.path.join(dist, "release", tag)
     os.makedirs(out_dir, exist_ok=True)
     assets = []
-    for product, path in executables.items():
-        name = f"{product}-{suffix}{os.path.splitext(path)[1]}"
-        print(f"Copying {path} -> {name}")
-        shutil.copy2(path, os.path.join(out_dir, name))
-        assets.append((name, os.path.join(out_dir, name)))
-    lock = os.path.join(repo, "build", "nuitka", "build-requirements.lock.txt")
-    if os.path.isfile(lock):
-        name = f"{app_name}-{suffix}-requirements.lock.txt"
-        shutil.copy2(lock, os.path.join(out_dir, name))
-        assets.append((name, os.path.join(out_dir, name)))
     sums_name = f"SHA256SUMS-{suffix}.txt"
-    with open(os.path.join(out_dir, sums_name), "w", encoding="utf-8", newline="\n") as f:
-        for name, path in assets:
-            f.write(f"{_sha256(path)}  {name}\n")
+    with _timed(f"Staging the assets in {out_dir}"):
+        for product, path in executables.items():
+            name = f"{product}-{suffix}{os.path.splitext(path)[1]}"
+            logger.info(f"Copying {path} -> {name}")
+            shutil.copy2(path, os.path.join(out_dir, name))
+            assets.append((name, os.path.join(out_dir, name)))
+        lock = os.path.join(repo, "build", "nuitka", "build-requirements.lock.txt")
+        if os.path.isfile(lock):
+            name = f"{app_name}-{suffix}-requirements.lock.txt"
+            shutil.copy2(lock, os.path.join(out_dir, name))
+            assets.append((name, os.path.join(out_dir, name)))
+        with open(os.path.join(out_dir, sums_name), "w", encoding="utf-8", newline="\n") as f:
+            for name, path in assets:
+                f.write(f"{_sha256(path)}  {name}\n")
     downloads = list(assets)
     assets.append((sums_name, os.path.join(out_dir, sums_name)))
 
@@ -443,8 +499,8 @@ def main() -> None:
     notes = os.path.abspath(opts.notes) if opts.notes else os.path.join(out_dir, "RELEASE_NOTES.md")
     if not opts.notes:
         if not _write_generated_notes(notes, _release_notes(repo, title, _platform_tag(), info, commit, downloads)):
-            print(f"Keeping the edited release notes in {notes}; delete the file to regenerate them.")
-    print(f"Staged in {out_dir}; release notes: {notes}")
+            logger.info(f"Keeping the edited release notes in {notes}; delete the file to regenerate them.")
+    logger.info(f"Staged in {out_dir}; release notes: {notes}")
 
     files = [os.path.relpath(path, repo).replace(os.sep, "/") for _, path in assets]
     notes_rel = os.path.relpath(notes, repo).replace(os.sep, "/")
@@ -458,7 +514,7 @@ def main() -> None:
 
     steps = _publish_steps(repo, tag, commit, opts.remote, title, files, notes_rel, opts.publish)
     if not steps:
-        print(f"\n{title} already has these assets.")
+        logger.info(f"{title} already has these assets.")
         return
     confirm = not opts.yes and sys.stdin.isatty()
     # Only `gh release create` reads the notes; an existing release keeps its own.
@@ -473,14 +529,30 @@ def main() -> None:
         if input("Run these? [y/N] ").strip().lower() not in ("y", "yes"):
             sys.exit("Not run.")
     for step in steps:
-        print(f"> {_command_line(step)}")
-        if subprocess.run(step, cwd=repo).returncode != 0:
-            sys.exit("Stopped: the command above failed. Running this script again resumes from there.")
+        with _timed(f"> {_command_line(step)}"):
+            if subprocess.run(step, cwd=repo).returncode != 0:
+                sys.exit("Stopped: the command above failed. Running this script again resumes from there.")
     if opts.publish:
-        print(f"Published {title}.")
+        logger.info(f"Published {title}.")
     else:
-        print(f"{title} is a draft release; publish it on GitHub, or run this again with --publish.")
+        logger.info(f"{title} is a draft release; publish it on GitHub, or run this again with --publish.")
 
 
 if __name__ == "__main__":
-    main()
+    started = time.monotonic()
+    try:
+        main()
+    except SystemExit as e:
+        if e.code not in (None, 0):
+            if isinstance(e.code, str):
+                logger.error(e.code)
+            logger.error(f"Stopped after {_duration(time.monotonic() - started)}")
+            sys.exit(1)
+        raise
+    except KeyboardInterrupt:
+        logger.error(f"Interrupted after {_duration(time.monotonic() - started)}")
+        sys.exit(1)
+    except BaseException:
+        logger.exception(f"Failed after {_duration(time.monotonic() - started)}")
+        sys.exit(1)
+    logger.info(f"Done in {_duration(time.monotonic() - started)}")

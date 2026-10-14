@@ -216,3 +216,25 @@ def test_check_refuses_a_tag_on_another_commit(package_release, tmp_path, monkey
     errors, _ = _check(package_release, tmp_path, info, info_path, exe)
     assert len(errors) == 1
     assert "v1.0.0" in errors[0]
+
+
+# timing
+
+def test_timed_logs_the_duration_of_a_step(package_release, caplog):
+    with caplog.at_level("INFO", logger="package_release"):
+        with package_release._timed("Uploading"):
+            pass
+    assert caplog.messages[0] == "Uploading..."
+    assert caplog.messages[-1].startswith("Uploading done in ")
+
+
+def test_timed_logs_a_failed_step(package_release, caplog):
+    with caplog.at_level("INFO", logger="package_release"):
+        with pytest.raises(SystemExit):
+            with package_release._timed("Uploading"):
+                raise SystemExit("broken")
+    assert caplog.messages[-1].startswith("Uploading failed after ")
+
+
+def test_duration(package_release):
+    assert package_release._duration(3 * 3600 + 4 * 60 + 5) == "3h 04m 05s"

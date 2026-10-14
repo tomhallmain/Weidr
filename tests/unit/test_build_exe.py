@@ -84,3 +84,55 @@ def test_build_without_oqs_leaves_it_out(build_exe):
 
 def test_app_version_is_numeric(build_exe):
     assert build_exe._app_version().replace(".", "").isdigit()
+
+
+def test_memory_wait_plugin_is_loaded(build_exe):
+    args = build_exe._common_args("Weidr.exe", "weidr", "1.2.3", "20261010-120000")
+    plugin = build_exe._pop_option(args, "--user-plugin")
+    assert plugin == build_exe.MEMORY_WAIT_PLUGIN
+    assert os.path.isfile(plugin)
+
+
+def test_min_free_memory_reaches_nuitka(build_exe, monkeypatch):
+    monkeypatch.delenv(build_exe.MIN_FREE_MEMORY_ENV, raising=False)
+    assert build_exe._nuitka_env("12")[build_exe.MIN_FREE_MEMORY_ENV] == "12"
+    assert build_exe.MIN_FREE_MEMORY_ENV not in build_exe._nuitka_env(None)
+
+
+@pytest.mark.parametrize("value", ["0", "12", "2.5"])
+def test_min_free_memory_accepts_gib(build_exe, value):
+    assert build_exe._min_free_memory(value) == value
+
+
+@pytest.mark.parametrize("value", ["-1", "lots", ""])
+def test_min_free_memory_refuses_other_values(build_exe, value):
+    with pytest.raises(SystemExit):
+        build_exe._min_free_memory(value)
+
+
+@pytest.mark.parametrize("seconds, text", [
+    (0, "0s"), (59.6, "1m 00s"), (125, "2m 05s"), (2 * 3600 + 5, "2h 00m 05s"),
+])
+def test_duration(build_exe, seconds, text):
+    assert build_exe._duration(seconds) == text
+
+
+def test_timed_logs_the_duration_of_a_step(build_exe, caplog):
+    with caplog.at_level("INFO", logger="build_exe"):
+        with build_exe._timed("Compiling"):
+            pass
+    assert caplog.messages[0] == "Compiling..."
+    assert caplog.messages[-1].startswith("Compiling done in ")
+
+
+def test_timed_logs_a_failed_step(build_exe, caplog):
+    with caplog.at_level("INFO", logger="build_exe"):
+        with pytest.raises(SystemExit):
+            with build_exe._timed("Compiling"):
+                raise SystemExit("broken")
+    assert caplog.messages[-1].startswith("Compiling failed after ")
+
+
+def test_min_free_memory_variable_matches_the_plugin(build_exe):
+    with open(build_exe.MEMORY_WAIT_PLUGIN, "r", encoding="utf-8") as f:
+        assert f'MIN_FREE_ENV = "{build_exe.MIN_FREE_MEMORY_ENV}"' in f.read()

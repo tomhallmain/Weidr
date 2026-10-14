@@ -20,7 +20,8 @@ The first user_root() call in a process moves user files left at their old
 locations into app_data_dir(), replacing older files there (_move_path()),
 and not while an override variable is set: from the repo (a checkout only; a
 build cannot see it, so running from the checkout once is what migrates
-them) and from ~/.weidr (checkout and build).
+them) and from ~/.weidr (checkout and build). It also removes the old
+per-window file lists from the no-directory compare cache folder.
 """
 
 import glob
@@ -28,6 +29,7 @@ import os
 import shutil
 import sys
 import threading
+import time
 
 # Nuitka defines __compiled__ in the globals of every module it compiles.
 _COMPILED = "__compiled__" in globals()
@@ -58,6 +60,12 @@ NO_DIRECTORY_COMPARE_CACHE_NAME = "compare_cache_no_dir"
 # Where it was before, under the home directory; the folder is removed once empty.
 _LEGACY_HOME_DIR = ".weidr"
 _LEGACY_HOME_ENTRIES = (NO_DIRECTORY_COMPARE_CACHE_NAME,)
+# Explicit file lists that FileBrowser.enable_explicit_file_list() wrote into
+# that folder, one per file-list window, and never removed. Nothing writes them
+# now; those modified within the age limit are kept, since a window of an older
+# Weidr still running may be reading one.
+_STALE_FILE_LIST_PATTERN = "file_list_*.json"
+_STALE_FILE_LIST_MIN_AGE_SECONDS = 24 * 3600
 
 _migration_done = False
 _migration_lock = threading.Lock()
@@ -148,6 +156,10 @@ def _migrate_legacy_user_files(target: str) -> None:
         except Exception as e:
             _logger().error(f"Moving user files from {os.path.join(home, _LEGACY_HOME_DIR)} "
                             f"to {target} failed: {e}")
+        try:
+            _remove_stale_file_lists(target)
+        except Exception as e:
+            _logger().error(f"Removing old file lists from {target} failed: {e}")
 
 
 def _move_legacy_user_files(source_root: str, target_root: str) -> None:
@@ -173,6 +185,21 @@ def _move_legacy_home_files(home: str, target_root: str) -> None:
         _logger().info(f"Removed the empty folder {legacy}")
     except OSError:
         pass  # Not empty: something else is still there.
+
+
+def _remove_stale_file_lists(target_root: str) -> None:
+    folder = os.path.join(target_root, NO_DIRECTORY_COMPARE_CACHE_NAME)
+    cutoff = time.time() - _STALE_FILE_LIST_MIN_AGE_SECONDS
+    removed = 0
+    for path in glob.glob(os.path.join(glob.escape(folder), _STALE_FILE_LIST_PATTERN)):
+        try:
+            if os.path.getmtime(path) < cutoff:
+                os.remove(path)
+                removed += 1
+        except OSError as e:
+            _logger().error(f"Could not remove {path}: {e}")
+    if removed:
+        _logger().info(f"Removed {removed} old file list(s) from {folder}")
 
 
 def _move_entries(source_root: str, target_root: str, relative_paths: list) -> None:

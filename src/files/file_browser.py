@@ -7,7 +7,6 @@ import re
 import threading
 from time import sleep
 from typing import Dict, List, Optional, Tuple
-import uuid
 
 from files.sortable_file import SortableFile
 from utils.config import config
@@ -102,6 +101,8 @@ class FileBrowser:
         self.file_paths_json_path = (
             config.file_paths_json_path if file_paths_json_path is None else file_paths_json_path
         )
+        # The list set by enable_explicit_file_list(); read in place of the JSON file.
+        self._explicit_files: Optional[List[str]] = None
         self._preferred_initial_file: Optional[str] = None
         self.is_incremental_loading = False
         self._incremental_thread: Optional[threading.Thread] = None
@@ -318,6 +319,8 @@ class FileBrowser:
         return files[self.file_cursor]
 
     def load_file_paths_json(self) -> List[str]:
+        if self._explicit_files is not None:
+            return list(self._explicit_files)
         logger.info(f"Loading external file paths from JSON: {self.file_paths_json_path}")
         try:
             with open(self.file_paths_json_path, "r", encoding="utf-8") as f:
@@ -330,6 +333,11 @@ class FileBrowser:
         if len(removed_file_paths) == 0:
             return
 
+        if self._explicit_files is not None:
+            removed = set(removed_file_paths)
+            self._explicit_files = [f for f in self._explicit_files if f not in removed]
+            return
+
         files = list(self.get_files())
         for removed_filepath in removed_file_paths:
             files.remove(removed_filepath)
@@ -338,7 +346,7 @@ class FileBrowser:
             json.dump(files, f, indent=4)
             logger.info(f"JSON file updated: {self.file_paths_json_path}")
 
-    def enable_explicit_file_list(self, files: List[str], json_path: Optional[str] = None) -> List[str]:
+    def enable_explicit_file_list(self, files: List[str]) -> List[str]:
         """
         Switch this browser to an explicit, caller-supplied file list instead
         of scanning self.directory -- e.g. a secondary window opened from
@@ -355,18 +363,10 @@ class FileBrowser:
         needed to become real per-instance attributes (see __init__) instead
         of a couple of stray direct `config.*` reads.
 
-        json_path defaults to a freshly-named file under
-        Utils.get_no_directory_compare_cache_dir() (same designated,
-        non-media directory used when the compare engine itself has no real
-        base_dir) so concurrent/sequential file-list windows never collide.
+        The list is kept on this instance, not written to a JSON file: it
+        lives only as long as the window, and each window keeps its own.
         """
-        if json_path is None:
-            json_path = os.path.join(
-                Utils.get_no_directory_compare_cache_dir(), f"file_list_{uuid.uuid4().hex}.json"
-            )
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(list(files), f, indent=4)
-        self.file_paths_json_path = json_path
+        self._explicit_files = list(files)
         self.use_file_paths_json = True
         self._files_cache = {}
         self.checking_files = True
@@ -551,6 +551,7 @@ class FileBrowser:
                 use_file_paths_json=self.use_file_paths_json,
                 file_paths_json_path=self.file_paths_json_path,
             )
+            temp_browser._explicit_files = self._explicit_files
             temp_browser._files = self._files.copy()  # Use the same file cache
             temp_browser._get_sortable_files()
             # Return SortableFile objects to avoid re-creating them in _find_closest methods

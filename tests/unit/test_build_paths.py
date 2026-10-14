@@ -222,3 +222,26 @@ def test_relative_file_paths_json_path_resolves_under_the_user_root():
     assert cfg.config.file_paths_json_path == os.path.join(repo_paths.user_root(), "file_paths.json")
     # The config file keeps what the user wrote.
     assert cfg.config._build_persisted_config_dict()["file_paths_json_path"] == "file_paths.json"
+
+
+def test_old_file_lists_are_removed_from_the_no_directory_compare_cache(tmp_path):
+    folder = tmp_path / repo_paths.NO_DIRECTORY_COMPARE_CACHE_NAME
+    old_list = folder / "file_list_0123abcd.json"
+    recent_list = folder / "file_list_4567ef01.json"
+    cache = folder / "image_embeddings_clip.pkl"
+    for path in (old_list, recent_list, cache):
+        _write(path)
+    _age(old_list, repo_paths._STALE_FILE_LIST_MIN_AGE_SECONDS + 3600)
+    _age(cache, repo_paths._STALE_FILE_LIST_MIN_AGE_SECONDS + 3600)
+    repo_paths._remove_stale_file_lists(str(tmp_path))
+    assert not old_list.exists()
+    # A recent one may belong to a window of an older Weidr that is still open.
+    assert recent_list.is_file()
+    assert cache.is_file()
+
+
+def test_removing_old_file_lists_without_the_folder_does_nothing(tmp_path):
+    target = tmp_path / "app_data"
+    target.mkdir()
+    repo_paths._remove_stale_file_lists(str(target))
+    assert list(target.iterdir()) == []

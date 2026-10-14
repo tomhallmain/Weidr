@@ -21,8 +21,8 @@ release notes (commit subjects since the previous v* tag, versions, OQS),
 unless ``--notes`` names a file to use. A rerun regenerates the notes only
 while the file is as last generated, so edits to it are kept.
 
-Last, it tags the build's commit v<version>, pushes the tag to ``--remote``,
-and with the GitHub CLI (gh, logged in) creates a draft release with the
+Last, it tags the build's commit v<version>, pushes the current branch to
+``--remote`` when the remote's copy of it lacks that commit, pushes the tag, and with the GitHub CLI (gh, logged in) creates a draft release with the
 assets, or adds them to the release when it exists. Before creating the
 release it shows the notes to approve, edit in $EDITOR (Notepad on Windows
 when unset) or abort, then asks once to run the commands; ``--yes`` skips
@@ -392,12 +392,24 @@ def _publish_steps(repo, tag, commit, remote, title, files, notes, publish) -> l
     if not shutil.which("gh"):
         sys.exit("gh (GitHub CLI) is not installed; install it, run `gh auth login`, "
                  "or pass --no-upload.")
+    # Checked before anything runs, so a missing login cannot stop the run after the tag is pushed.
+    if subprocess.run(["gh", "auth", "status"], cwd=repo, capture_output=True).returncode != 0:
+        sys.exit("gh is not logged in to GitHub; run `gh auth login` (or set GH_TOKEN) and run this again.")
     on_remote = _git(repo, "ls-remote", "--tags", remote, f"refs/tags/{tag}")
     if on_remote is None:
         sys.exit(f"Cannot reach the git remote {remote}.")
     steps = []
     if not _git(repo, "rev-parse", "-q", "--verify", f"refs/tags/{tag}"):
         steps.append(["git", "tag", tag, commit])
+    # A pushed tag carries its commits, but the branch on the remote stays where it was.
+    branch = _git(repo, "symbolic-ref", "--short", "-q", "HEAD")
+    if not branch:
+        logger.warning(f"HEAD is not on a branch; push the branch with {commit[:10]} to {remote} yourself.")
+    else:
+        remote_head = (_git(repo, "ls-remote", remote, f"refs/heads/{branch}") or "").split("\t")[0]
+        # False also when the remote has commits not fetched here; the push then fails and says so.
+        if not remote_head or not _in_history(repo, commit, remote_head):
+            steps.append(["git", "push", remote, f"refs/heads/{branch}"])
     if not on_remote:
         steps.append(["git", "push", remote, f"refs/tags/{tag}"])
     release = subprocess.run(["gh", "release", "view", tag, "--json", "assets"],
@@ -505,7 +517,8 @@ def main() -> None:
     files = [os.path.relpath(path, repo).replace(os.sep, "/") for _, path in assets]
     notes_rel = os.path.relpath(notes, repo).replace(os.sep, "/")
     if opts.no_upload:
-        print(f"\nTo publish, from {repo}, tag {commit[:10]} as {tag}, push the tag, then run")
+        print(f"\nTo publish, from {repo}, tag {commit[:10]} as {tag}, push the branch with "
+              "that commit and the tag, then run")
         print("  " + _command_line(["gh", "release", "create", tag, *files, "--title", title,
                                     "--notes-file", notes_rel, "--draft", "--verify-tag"]))
         print("or, for a release that exists already,")

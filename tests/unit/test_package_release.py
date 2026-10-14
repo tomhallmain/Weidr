@@ -238,3 +238,71 @@ def test_timed_logs_a_failed_step(package_release, caplog):
 
 def test_duration(package_release):
     assert package_release._duration(3 * 3600 + 4 * 60 + 5) == "3h 04m 05s"
+
+
+# _publish_steps
+
+REMOTE_HEAD = "r" * 40
+
+
+def _gh(monkeypatch, package_release, logged_in=True):
+    """Stubs gh: logged in or not, and no release exists yet. Returns the commands run."""
+    import subprocess
+
+    calls = []
+
+    def fake_run(args, **kwargs):
+        calls.append(args)
+        code = 0 if args == ["gh", "auth", "status"] and logged_in else 1
+        return subprocess.CompletedProcess(args, code, stdout="", stderr="")
+
+    monkeypatch.setattr(package_release.shutil, "which", lambda name: "gh")
+    monkeypatch.setattr(package_release.subprocess, "run", fake_run)
+    return calls
+
+
+def _publish_git(remote_has_commit, branch="master"):
+    def git(repo, *args):
+        if args[:2] == ("symbolic-ref", "--short"):
+            return branch
+        if args[:2] == ("ls-remote", "--tags"):
+            return ""
+        if args[0] == "ls-remote":
+            return f"{REMOTE_HEAD}\trefs/heads/{branch}"
+        if args[:2] == ("merge-base", "--is-ancestor"):
+            return "" if remote_has_commit and args[3] == REMOTE_HEAD else None
+        return None
+    return git
+
+
+def _steps(package_release, tmp_path):
+    return package_release._publish_steps(str(tmp_path), "v1.0.0", HEAD, "origin", "Weidr 1.0.0",
+                                          [], "RELEASE_NOTES.md", publish=False)
+
+
+def test_publish_stops_before_tagging_when_gh_is_not_logged_in(package_release, tmp_path, monkeypatch):
+    calls = _gh(monkeypatch, package_release, logged_in=False)
+    monkeypatch.setattr(package_release, "_git", _publish_git(remote_has_commit=False))
+    with pytest.raises(SystemExit) as excinfo:
+        _steps(package_release, tmp_path)
+    assert "gh auth login" in str(excinfo.value)
+    assert calls == [["gh", "auth", "status"]]
+
+
+def test_branch_is_pushed_before_the_tag_when_the_remote_lacks_the_commit(package_release, tmp_path,
+                                                                           monkeypatch):
+    _gh(monkeypatch, package_release)
+    monkeypatch.setattr(package_release, "_git", _publish_git(remote_has_commit=False))
+    steps = _steps(package_release, tmp_path)
+    assert steps[:3] == [["git", "tag", "v1.0.0", HEAD],
+                         ["git", "push", "origin", "refs/heads/master"],
+                         ["git", "push", "origin", "refs/tags/v1.0.0"]]
+    assert steps[3][:3] == ["gh", "release", "create"]
+
+
+def test_branch_is_not_pushed_when_the_remote_has_the_commit(package_release, tmp_path, monkeypatch):
+    _gh(monkeypatch, package_release)
+    monkeypatch.setattr(package_release, "_git", _publish_git(remote_has_commit=True))
+    steps = _steps(package_release, tmp_path)
+    assert ["git", "push", "origin", "refs/heads/master"] not in steps
+    assert ["git", "push", "origin", "refs/tags/v1.0.0"] in steps

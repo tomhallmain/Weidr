@@ -32,9 +32,11 @@ def test_lock_has(build_exe, tmp_path):
     assert not build_exe._lock_has(str(lock), "torchvision")
 
 
-def test_nuitka_args(build_exe):
-    args = build_exe._nuitka_args("1.2.3", "20261010-120000")
+def test_common_args(build_exe):
+    args = build_exe._common_args("Weidr.exe", "weidr", "1.2.3", "20261010-120000")
+    assert "--output-filename=Weidr.exe" in args
     assert "--include-distribution-metadata=keyring" in args
+    assert "--include-distribution-metadata=mcp" in args
     assert "--module-parameter=torch-disable-jit=yes" in args
     assert "--file-version=1.2.3" in args
     assert any("build 20261010-120000" in a for a in args if a.startswith("--file-description="))
@@ -42,15 +44,38 @@ def test_nuitka_args(build_exe):
         assert f"--include-distribution-metadata={name}" in args
 
 
-def test_onefile_unpacks_to_a_folder_unpack_cleanup_recognizes(build_exe):
+@pytest.mark.parametrize("base_name, expected_prefix", [
+    ("Weidr", "UNPACK_DIR_PREFIX"),
+    ("WeidrHeadless", "HEADLESS_UNPACK_DIR_PREFIX"),
+])
+def test_onefile_unpacks_to_a_folder_unpack_cleanup_recognizes(build_exe, base_name, expected_prefix):
     from utils import unpack_cleanup
 
-    args = build_exe._nuitka_args("1.2.3", "20261010-120000")
+    (_base, _entry, unpack_prefix, _target_args), = [t for t in build_exe.TARGETS if t[0] == base_name]
+    args = build_exe._common_args(base_name, unpack_prefix, "1.2.3", "20261010-120000")
     assert "--onefile" in args and "--standalone" not in args
     spec = build_exe._pop_option(args, "--onefile-tempdir-spec")
     parent, folder = spec.split("/")[-2:]
     assert parent == unpack_cleanup.UNPACK_PARENT_NAME
-    assert folder == unpack_cleanup.UNPACK_DIR_PREFIX + "20261010-120000"
+    assert folder == getattr(unpack_cleanup, expected_prefix) + "20261010-120000"
+    assert unpack_cleanup._unpack_dir_kind(folder) == getattr(unpack_cleanup, expected_prefix)
+
+
+def test_headless_target_is_built_only_on_request(build_exe):
+    assert [t[0] for t in build_exe._targets(with_headless=False)] == ["Weidr"]
+    assert [t[0] for t in build_exe._targets(with_headless=True)] == ["Weidr", "WeidrHeadless"]
+
+
+def test_entry_scripts_exist(build_exe):
+    for _base, entry, _prefix, _target_args in build_exe.TARGETS:
+        assert os.path.isfile(os.path.join(build_exe.REPO_ROOT, entry))
+
+
+def test_only_the_gui_target_bundles_qt(build_exe):
+    assert "--enable-plugin=pyside6" in build_exe._gui_args()
+    headless = build_exe._headless_args()
+    assert "--nofollow-import-to=PySide6" in headless
+    assert not any("pyside6" in a.lower() and a != "--nofollow-import-to=PySide6" for a in headless)
 
 
 def test_build_without_oqs_leaves_it_out(build_exe):

@@ -15,12 +15,15 @@ which on Windows is the CPU build; for CUDA torch, install it into
 builds with the running interpreter instead (it must already have
 requirements-build.txt installed).
 
-The output is a single file, dist/Weidr (dist\\Weidr.exe on Windows). At its
-first start it unpacks its runtime to ``unpacked/weidr-<build id>`` in the
-Weidr data directory; later starts of the same build reuse that folder, and
-the app removes older builds' folders (utils/unpack_cleanup.py). It is
-smoke-tested with ``Weidr --smoke-test``. Other args are forwarded to Nuitka,
-e.g. ``--show-scons`` or ``--jobs=4``.
+Builds a single-file executable in dist/ (``.exe`` on Windows), Weidr from
+app_qt.py. ``--with-headless`` also builds WeidrHeadless from app_headless.py,
+which serves a browsing/comparison session over MCP with no window and
+contains no Qt; it is a second full Nuitka compile. At its first start each unpacks
+its runtime to ``unpacked/<prefix>-<build id>`` in the Weidr data directory;
+later starts of the same build reuse that folder, and each removes its own
+older builds' folders (utils/unpack_cleanup.py). Each is smoke-tested with
+``--smoke-test``. Other args are forwarded to Nuitka, e.g. ``--show-scons`` or
+``--jobs=4``.
 
 ``--with-oqs`` adds quantum-safe (OQS) key encapsulation: it installs
 liboqs-python, finds the liboqs shared library the build interpreter loads, and
@@ -54,15 +57,11 @@ import venv
 
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 VENV_DIR = os.path.join(REPO_ROOT, ".venv-build")
-ENTRY = os.path.join(REPO_ROOT, "app_qt.py")
 BUILD_DIR = os.path.join(REPO_ROOT, "build", "nuitka")
 DIST_DIR = os.path.join(REPO_ROOT, "dist")
 PACKAGE_CONFIG = os.path.join(REPO_ROOT, "nuitka-package.config.yml")
-EXE_BASE_NAME = "Weidr"
-EXE_NAME = f"{EXE_BASE_NAME}.exe" if sys.platform == "win32" else EXE_BASE_NAME
-EXE_PATH = os.path.join(DIST_DIR, EXE_NAME)
 # utils.repo_paths.default_app_data_dir() spelled for Nuitka, which has no variable
-# for %APPDATA%. utils/unpack_cleanup.py expects the folder names used below.
+# for %APPDATA%. utils/unpack_cleanup.py expects the folder names TARGETS gives.
 APP_DATA_SPEC = "{HOME}/AppData/Roaming/Weidr" if sys.platform == "win32" else "{HOME}/.local/share/Weidr"
 VERSION_FILE = "VERSION"
 VERSION_MODULE = os.path.join("src", "utils", "version.py")
@@ -70,7 +69,7 @@ BUILD_INFO_PATH = os.path.join(BUILD_DIR, "build_info.json")
 LOCK_PATH = os.path.join(BUILD_DIR, "build-requirements.lock.txt")
 # Versions the build output and build_info.json record.
 RECORDED_DISTRIBUTIONS = (
-    "Nuitka", "PySide6", "torch", "torchvision", "transformers", "tensorflow", "onnxruntime-gpu",
+    "Nuitka", "PySide6", "torch", "torchvision", "transformers", "tensorflow", "onnxruntime-gpu", "mcp",
 )
 
 # Shipped files, at the same relative paths utils.repo_paths.resource_root()
@@ -114,6 +113,10 @@ _LIBOQS_PROBE = (
     "lib = m.native() if hasattr(m, 'native') else m._liboqs\n"
     "print(lib._name)\n"
 )
+
+
+def _exe_name(base_name: str) -> str:
+    return f"{base_name}.exe" if sys.platform == "win32" else base_name
 
 
 def _venv_python(venv_dir: str) -> str:
@@ -213,7 +216,7 @@ def _write_build_info(version: str, build_id: str, environment: dict, with_oqs: 
     ))
 
 
-def _nuitka_args(version: str, build_id: str) -> list:
+def _common_args(exe_name: str, unpack_prefix: str, version: str, build_id: str) -> list:
     args = [
         "--onefile",
         # The exe unpacks its runtime to this folder. A fixed path (no
@@ -221,22 +224,19 @@ def _nuitka_args(version: str, build_id: str) -> list:
         # run pays the unpacking cost; the build id gives each build its own
         # folder, so a rebuilt exe never reuses a previous build's files.
         # Nothing the app writes goes under unpacked/.
-        f"--onefile-tempdir-spec={APP_DATA_SPEC}/unpacked/weidr-{build_id}",
+        f"--onefile-tempdir-spec={APP_DATA_SPEC}/unpacked/{unpack_prefix}-{build_id}",
         f"--output-dir={BUILD_DIR}",
-        f"--output-filename={EXE_NAME}",
+        f"--output-filename={exe_name}",
         # Lets Nuitka fetch build helpers (e.g. MinGW on Windows) without prompting.
         "--assume-yes-for-downloads",
         # Version information; Windows shows it in the executable's properties
         # and crash reports. The file version takes numbers only, so the build
         # id goes in the description.
-        f"--product-name={EXE_BASE_NAME}",
+        "--product-name=Weidr",
         f"--product-version={version}",
         f"--file-version={version}",
         f"--file-description=Weidr media browser, build {build_id}",
         f"--include-data-files={BUILD_INFO_PATH}=build_info.json",
-        "--enable-plugin=pyside6",
-        # sound_player uses QSoundEffect.
-        "--include-qt-plugins=multimedia",
         # keyring finds its backends, including the OS one, through package
         # metadata entry points; without it encrypted saves cannot work.
         "--include-distribution-metadata=keyring",
@@ -244,6 +244,10 @@ def _nuitka_args(version: str, build_id: str) -> list:
         # TorchScript compiles Python functions from their source, which a
         # build does not ship; nothing in Weidr uses it.
         "--module-parameter=torch-disable-jit=yes",
+        # The MCP SDK reads its own version from package metadata, and uvicorn
+        # loads its protocol and event-loop modules by name.
+        "--include-distribution-metadata=mcp",
+        "--include-package=uvicorn",
         # utils/pillow_plugins.py imports these by name, which Nuitka can't follow.
         "--include-package=pillow_avif",
         "--include-package=pillow_heif",
@@ -261,13 +265,27 @@ def _nuitka_args(version: str, build_id: str) -> list:
     args += [f"--include-data-dir={d}={d}" for d in DATA_DIRS]
     args += [f"--include-data-files={f}={f}" for f in DATA_FILES]
     if sys.platform == "win32":
-        args += [
-            # No console window when started from Explorer; when started from
-            # a terminal, output (e.g. the smoke test's) goes to that terminal.
-            "--windows-console-mode=attach",
-            f"--windows-icon-from-ico={os.path.join('assets', 'icon.ico')}",
-        ]
+        args.append(f"--windows-icon-from-ico={os.path.join('assets', 'icon.ico')}")
     return args
+
+
+def _gui_args() -> list:
+    args = [
+        "--enable-plugin=pyside6",
+        # sound_player uses QSoundEffect.
+        "--include-qt-plugins=multimedia",
+    ]
+    if sys.platform == "win32":
+        # No console window when started from Explorer; when started from a
+        # terminal, output (e.g. the smoke test's) goes to that terminal.
+        args.append("--windows-console-mode=attach")
+    return args
+
+
+def _headless_args() -> list:
+    # app_headless.py's import chain imports no Qt at load time
+    # (tests/unit/test_app_headless_qt_freedom.py); it keeps its console window.
+    return ["--nofollow-import-to=PySide6"]
 
 
 def _oqs_args(python: str, with_oqs: bool) -> list:
@@ -296,7 +314,7 @@ def _oqs_args(python: str, with_oqs: bool) -> list:
 
 
 def _nuitka_env() -> dict:
-    # app_qt.py puts src/ on sys.path at runtime; Nuitka resolves imports at
+    # The entry scripts put src/ on sys.path at runtime; Nuitka resolves imports at
     # build time and needs it there already.
     env = dict(os.environ)
     paths = [os.path.join(REPO_ROOT, "src"), REPO_ROOT]
@@ -306,32 +324,32 @@ def _nuitka_env() -> dict:
     return env
 
 
-def _copy_to_dist() -> None:
-    if os.path.isdir(EXE_PATH):
+def _copy_to_dist(exe_name: str) -> str:
+    exe_path = os.path.join(DIST_DIR, exe_name)
+    if os.path.isdir(exe_path):
         # Left by a folder build; on macOS/Linux it has the executable's name.
-        print(f"Removing the folder build at {EXE_PATH}")
-        shutil.rmtree(EXE_PATH)
+        print(f"Removing the folder build at {exe_path}")
+        shutil.rmtree(exe_path)
     os.makedirs(DIST_DIR, exist_ok=True)
-    shutil.copy2(os.path.join(BUILD_DIR, EXE_NAME), EXE_PATH)
+    shutil.copy2(os.path.join(BUILD_DIR, exe_name), exe_path)
+    return exe_path
 
 
-def _smoke_test(with_oqs: bool) -> None:
+def _smoke_test(exe_path: str, with_oqs: bool) -> None:
     # Run from outside the repo so a passing test can't depend on the checkout,
     # with all app data (logs included), config, caches and the key store in a
     # scratch directory so the user's are untouched. The exe still unpacks to
     # the real unpacked/ folder, which a later start of this build reuses.
+    command = [exe_path, "--smoke-test", *(["--expect-oqs"] if with_oqs else [])]
     with tempfile.TemporaryDirectory(prefix="weidr-smoke-") as scratch:
         env = dict(os.environ)
         env["QT_QPA_PLATFORM"] = "offscreen"
         env["WEIDR_APP_DATA_DIR"] = scratch
         env["WEIDR_CACHE_DIR"] = os.path.join(scratch, "cache")
         env["WEIDR_CONFIGS_DIR"] = os.path.join(scratch, "configs")
-        result = subprocess.run(
-            [EXE_PATH, "--smoke-test", *(["--expect-oqs"] if with_oqs else [])],
-            cwd=os.path.expanduser("~"), env=env,
-        )
+        result = subprocess.run(command, cwd=os.path.expanduser("~"), env=env)
     if result.returncode != 0:
-        sys.exit(f"Smoke test failed: `{EXE_PATH} --smoke-test` exited {result.returncode}.")
+        sys.exit(f"Smoke test failed: `{' '.join(command)}` exited {result.returncode}.")
 
 
 def _pop_option(args: list, name: str):
@@ -343,11 +361,26 @@ def _pop_option(args: list, name: str):
     return None
 
 
+# exe base name, entry script, unpack folder prefix, target-specific args
+TARGETS = (
+    ("Weidr", "app_qt.py", "weidr", _gui_args),
+    ("WeidrHeadless", "app_headless.py", "weidr-headless", _headless_args),
+)
+HEADLESS_TARGET = "WeidrHeadless"
+
+
+def _targets(with_headless: bool) -> tuple:
+    return tuple(t for t in TARGETS if with_headless or t[0] != HEADLESS_TARGET)
+
+
 if __name__ == "__main__":
     args = sys.argv[1:]
     with_oqs = "--with-oqs" in args
     if with_oqs:
         args.remove("--with-oqs")
+    with_headless = "--with-headless" in args
+    if with_headless:
+        args.remove("--with-headless")
     lock = _pop_option(args, "--lock")
     version = _app_version()
     build_id = time.strftime("%Y%m%d-%H%M%S")
@@ -370,8 +403,15 @@ if __name__ == "__main__":
     environment = _environment_versions(python)
     _check_transformers_version(environment["packages"])
     _write_build_info(version, build_id, environment, with_oqs)
-    nuitka_args = [*_nuitka_args(version, build_id), *_oqs_args(python, with_oqs), *args, ENTRY]
-    subprocess.run([python, "-m", "nuitka", *nuitka_args], cwd=REPO_ROOT, env=_nuitka_env(), check=True)
-    _copy_to_dist()
-    _smoke_test(with_oqs)
-    print(f"Built {EXE_PATH}")
+    oqs_args = _oqs_args(python, with_oqs)
+
+    for base_name, entry, unpack_prefix, target_args in _targets(with_headless):
+        exe_name = _exe_name(base_name)
+        nuitka_args = [
+            *_common_args(exe_name, unpack_prefix, version, build_id), *target_args(), *oqs_args,
+            *args, os.path.join(REPO_ROOT, entry),
+        ]
+        subprocess.run([python, "-m", "nuitka", *nuitka_args], cwd=REPO_ROOT, env=_nuitka_env(), check=True)
+        exe_path = _copy_to_dist(exe_name)
+        _smoke_test(exe_path, with_oqs)
+        print(f"Built {exe_path}")

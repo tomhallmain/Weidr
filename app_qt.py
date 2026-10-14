@@ -19,13 +19,14 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QIcon
 
 from ui.app_style import AppStyle
+from utils import smoke_test
 from utils.config import config
 from utils.logging_setup import get_logger
-from utils.repo_paths import is_compiled, resource_root
+from utils.repo_paths import resource_root
 from utils.translations import I18N, _
 from utils.unpack_cleanup import remove_stale_unpack_dirs
 from utils.utils import Utils
-from utils.version import app_version, build_info, describe as describe_version, source_drift
+from utils.version import describe as describe_version, source_drift
 logger = get_logger("app_qt")
 
 
@@ -96,112 +97,35 @@ def _start_mcp_server():
     ).start()
 
 
-# Third-party modules imported only when a feature is first used; a build
-# that left one out would fail then rather than at startup.
-_SMOKE_TEST_LAZY_MODULES = (
-    "av", "cairosvg", "insightface", "onnxruntime", "open_clip", "pyppeteer",
-    "pypdfium2", "send2trash", "tensorflow", "tensorflow_hub", "tf_keras", "vlc",
-)
-
-_SMOKE_TEST_DATA_FILES = (
-    ("VERSION",),
-    ("assets", "icon.png"),
-    ("assets", "example_pipelines.enc"),
-    ("assets", "sounds"),
-    ("configs", "config_example.json"),
-    ("configs", "suggested_classifier_models.json"),
-    ("locale", "en", "LC_MESSAGES", "base.mo"),
-)
+# python-vlc is imported by the media frame only, which the headless build leaves out.
+_SMOKE_TEST_LAZY_MODULES = (*smoke_test.LAZY_MODULES, "vlc")
 
 
 def _smoke_test_checks(expect_oqs: bool = False) -> list[str]:
     """Problems found by run_smoke_test(); empty when there are none."""
-    import importlib.util
-
-    import keyring
-    from keyring.backends import fail as keyring_fail
-
-    from utils import encryptor, pillow_plugins
-    from utils.crash_log import enable_fault_log
-
-    problems = []
-    logger.info("Smoke test: %s", describe_version())
-    if is_compiled():
-        info = build_info()
-        if not info:
-            problems.append("Build info missing")
-        elif info.get("version") != app_version():
-            problems.append(f"Build info names version {info.get('version')}, expected {app_version()}")
-    try:
-        logger.info("Smoke test: fault log at %s", enable_fault_log())
-    except Exception as e:
-        problems.append(f"Fault log cannot be opened: {e}")
-
-    if encryptor.KeyEncapsulation is None:
-        if expect_oqs:
-            problems.append("OQS not available, but the build was made with --with-oqs")
-    else:
-        logger.info("Smoke test: OQS available")
-
-    I18N.install_locale(config.locale, verbose=False)
-
-    pillow_plugins.ensure_pillow_plugins_registered()
-    problems += [f"Pillow plugin not importable: {name}"
-                 for name in ("pillow_avif", "pillow_heif", "pillow_jxl")
-                 if name not in sys.modules]
-
-    problems += [f"Data file missing: {os.path.join(*parts)}"
-                 for parts in _SMOKE_TEST_DATA_FILES
-                 if not os.path.exists(os.path.join(resource_root(), *parts))]
-
-    problems += [f"Module missing: {name}" for name in _SMOKE_TEST_LAZY_MODULES
-                 if importlib.util.find_spec(name) is None]
-
-    backend = keyring.get_keyring()
-    logger.info("Smoke test: keyring backend %s", type(backend).__name__)
-    if isinstance(backend, keyring_fail.Keyring):
-        problems.append("No keyring backend available")
+    problems = smoke_test.startup_checks(expect_oqs, _SMOKE_TEST_LAZY_MODULES)
 
     _route_qt_messages_to_logger()
     qt_app = QApplication(sys.argv[:1])
     if QIcon(os.path.join(resource_root(), "assets", "icon.png")).isNull():
         problems.append("Qt cannot load assets/icon.png (image format plugins missing?)")
 
-    # Imports every compare engine and the main window's import graph; no
-    # model is loaded and no window is created.
-    from compare import model
-    import compare.compare_manager  # noqa: F401
+    problems += smoke_test.compare_engine_checks()
+    # The main window's import graph; no window is created.
     import ui.app_window.app_window  # noqa: F401
-    if not model.eva_clip_loaded:
-        problems.append("open_clip failed to import")
-    if not model.insightface_loaded:
-        problems.append("insightface failed to import")
 
     qt_app.quit()
     return problems
 
 
 def run_smoke_test(expect_oqs: bool = False) -> int:
-    """Check that a build starts: build info, fault log, OQS (with
-    *expect_oqs*), config, translations, Pillow plugins, data files, keyring,
-    compare modules and a QApplication on the offscreen platform. Takes no
+    """Check that a build starts: utils.smoke_test's checks, a QApplication
+    on the offscreen platform, and the main window's imports. Takes no
     single-instance lock, asks for no password, opens no window and loads no
     model. Returns the process exit code.
     """
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    try:
-        problems = _smoke_test_checks(expect_oqs)
-    except BaseException:
-        logger.exception("Smoke test failed")
-        traceback.print_exc()
-        return 1
-    for problem in problems:
-        logger.error("Smoke test: %s", problem)
-        print(f"Smoke test: {problem}", file=sys.stderr)
-    if problems:
-        return 1
-    print("Smoke test passed")
-    return 0
+    return smoke_test.run(lambda: _smoke_test_checks(expect_oqs))
 
 
 def main():

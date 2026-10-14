@@ -1,9 +1,11 @@
 """Removes folders older builds unpacked to.
 
-A onefile build unpacks to ``<app data>/unpacked/weidr-<build id>``
-(``build_exe.py``), one folder of several GB per build, and Nuitka never
-removes them. A build runs its executable from its own folder, so a folder
-holding the executable of a running process is skipped. On Windows each
+A onefile build unpacks to ``<app data>/unpacked/weidr-<build id>``, and the
+headless build to ``weidr-headless-<build id>`` (``build_exe.py``), one folder
+of several GB per build, and Nuitka never removes them. Each executable
+removes only folders of its own kind, so the GUI never deletes the headless
+build's folder, nor the reverse. A build runs its executable from its own
+folder, so a folder holding the executable of a running process is skipped. On Windows each
 folder is also renamed before it is deleted, which Windows refuses while a
 running exe holds files in it; macOS and Linux allow that rename, so there
 the process check alone decides, and nothing is removed when processes
@@ -22,6 +24,9 @@ logger = get_logger("unpack_cleanup")
 
 UNPACK_PARENT_NAME = "unpacked"
 UNPACK_DIR_PREFIX = "weidr-"
+HEADLESS_UNPACK_DIR_PREFIX = "weidr-headless-"
+# Longest first: a headless folder name also starts with UNPACK_DIR_PREFIX.
+_UNPACK_DIR_PREFIXES = (HEADLESS_UNPACK_DIR_PREFIX, UNPACK_DIR_PREFIX)
 _REMOVING_SUFFIX = ".removing"
 _IS_WINDOWS = sys.platform == "win32"
 
@@ -59,14 +64,21 @@ def _is_same_folder(path: str, other: str) -> bool:
         return _normalize(path) == _normalize(other)
 
 
-def remove_stale_unpack_dirs() -> list:
-    """Delete sibling build folders of the running build's; returns the paths removed."""
+def _unpack_dir_kind(name: str) -> Optional[str]:
+    """The prefix of the kind of build folder *name* is, or None."""
+    return next((prefix for prefix in _UNPACK_DIR_PREFIXES if name.startswith(prefix)), None)
+
+
+def remove_stale_unpack_dirs(prefix: str = UNPACK_DIR_PREFIX) -> list:
+    """Delete sibling build folders of the running build's whose kind is
+    *prefix* (UNPACK_DIR_PREFIX or HEADLESS_UNPACK_DIR_PREFIX); returns the
+    paths removed."""
     if not is_compiled():
         return []
     current = resource_root()
     parent = os.path.dirname(_normalize(current))
     if (os.path.basename(parent) != UNPACK_PARENT_NAME
-            or not os.path.basename(_normalize(current)).startswith(UNPACK_DIR_PREFIX)):
+            or _unpack_dir_kind(os.path.basename(_normalize(current))) != prefix):
         logger.warning(f"Not cleaning up old build folders: {current} is not an unpack folder")
         return []
     executables = _running_executables()
@@ -83,7 +95,7 @@ def remove_stale_unpack_dirs() -> list:
     removed = []
     for name in names:
         path = os.path.join(parent, name)
-        if (not name.startswith(UNPACK_DIR_PREFIX) or not os.path.isdir(path)
+        if (_unpack_dir_kind(name) != prefix or not os.path.isdir(path)
                 or _is_same_folder(path, current)):
             continue
         if _holds_running_executable(path, executables):

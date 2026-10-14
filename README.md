@@ -29,7 +29,7 @@ It runs against a throwaway directory of generated images with the app cache red
 
 ### Building an executable
 
-`python build_exe.py` compiles `app_qt.py` with [Nuitka](https://nuitka.net) into a single executable, `dist/Weidr` (`dist\Weidr.exe` on Windows). Running from source (`python app_qt.py`, `start_qt.bat`) is unaffected.
+`python build_exe.py` compiles `app_qt.py` with [Nuitka](https://nuitka.net) into a single executable, `dist/Weidr` (`dist\Weidr.exe` on Windows). `--with-headless` also compiles `app_headless.py` into `dist/WeidrHeadless`, which takes the same arguments as `python app_headless.py` and has no Qt; it is a second full compile. Running from source (`python app_qt.py`, `start_qt.bat`) is unaffected.
 
 The first start of each build unpacks it to `unpacked/weidr-<build time>` in the Weidr data folder (`%APPDATA%\Weidr` on Windows, `~/.local/share/Weidr` elsewhere). This takes a while and several GB; later starts reuse the folder. Each start removes the folders of older builds that are not running.
 
@@ -38,7 +38,7 @@ Requirements:
 - Disk space for the build environment and output: the ML stack (torch, TensorFlow, transformers, ...) makes both several GB.
 - Time: compiling this dependency tree takes a long time.
 
-The script installs `requirements-build.txt` into its own `.venv-build`, so nothing from your active environment is bundled. pip installs the CPU build of torch there on Windows; for CUDA torch, install it into `.venv-build` from [pytorch.org](https://pytorch.org) first, or pass `--current-env` to build with the running interpreter. Other arguments are passed to Nuitka. Nuitka does not cross-compile: build on each target OS. Each build ends with `Weidr --smoke-test`, which loads the configuration, translations, image plugins and compare modules without opening a window.
+The script installs `requirements-build.txt` into its own `.venv-build`, so nothing from your active environment is bundled. pip installs the CPU build of torch there on Windows; for CUDA torch, install it into `.venv-build` from [pytorch.org](https://pytorch.org) first, or pass `--current-env` to build with the running interpreter. Other arguments are passed to Nuitka. Nuitka does not cross-compile: build on each target OS. Each executable built ends with its `--smoke-test`, which loads the configuration, translations, image plugins and compare modules without opening a window or starting a server.
 
 Post-quantum (OQS) encryption is left out by default. `python build_exe.py --with-oqs` includes it: it installs liboqs-python into `.venv-build` and bundles the liboqs library (liboqs-python builds liboqs on first use when none is installed, which needs git, CMake and a C compiler; or set `OQS_INSTALL_PATH` to an existing install). If your encryption keys were created with OQS, which happens whenever liboqs-python was installed when you first ran Weidr, a build without it cannot read your encrypted data: it starts with an empty cache, leaves the encrypted files untouched, saves to `app_info_cache.no_oqs.json` instead, and refuses password-protected actions.
 
@@ -48,7 +48,7 @@ Not included in the build, as when running from source:
 - libVLC: install [VLC](https://www.videolan.org) for video playback.
 - GIMP, diff-pdf, sd-runner and other external programs.
 - Model weights: downloaded to the Hugging Face cache on first use.
-- `requirements-optional.txt` packages (OCR, MCP server, PEEK); post-quantum encryption only with `--with-oqs`.
+- `requirements-optional.txt` packages (OCR, PEEK), except the MCP server's `mcp`, which is included; post-quantum encryption only with `--with-oqs`.
 
 Weidr keeps its configuration, caches and logs in its data directory, both when run from source and as an executable: `%APPDATA%\Weidr` on Windows, `~/.local/share/Weidr` elsewhere (macOS included). Native crashes are recorded in `logs/weidr_faults.log` there. Running from source moves files that earlier versions kept in the checkout (`configs/config.json` and any other user configs in `configs/`, `app_info_cache.enc` with its backups, `classifier_prediction_cache.enc`, `file_paths.json`, `assets/pipelines/`) into that directory at the same relative paths, and the compare cache for windows without a base directory from `~/.weidr/compare_cache_no_dir` (the executable does this too). A file already there is replaced, unless the old copy was modified more recently: then both stay where they are and the log says so. Folders are merged file by file the same way. No backup of a replaced file is kept. Run from source once before the first start of an executable to bring your setup over; the executable cannot see the checkout, and on its first start without a configuration it creates `configs/config.json` from the example config.
 

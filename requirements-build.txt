@@ -7,6 +7,8 @@ zstandard
 # Nuitka (4.2.2) reads lazy_loader._StubVisitor to resolve scikit-image's lazy
 # imports; lazy_loader 0.6 made it local to attach_stub().
 lazy_loader>=0.4,<0.6
+# From requirements-optional.txt: the MCP server, which WeidrHeadless exists to serve.
+mcp
 
 cairosvg
 cryptography

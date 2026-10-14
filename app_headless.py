@@ -13,6 +13,9 @@ utils/headless_app_actions.py.
 
 Run it:
     python app_headless.py --base-dir /path/to/media --port 6200
+
+``--smoke-test [--expect-oqs]`` checks that a build of it starts, and
+serves nothing.
 """
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import threading
 from typing import Optional
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
@@ -42,9 +46,12 @@ from utils.app_info_cache import app_info_cache
 from utils.background_runner import ThreadedTaskRunner
 from utils.config import config
 from utils.constants import CompareMode, ImageGenerationType, Mode
+from utils import smoke_test
 from utils.headless_app_actions import build_headless_app_actions
 from utils.logging_setup import get_logger
 from utils.ui_responsiveness import NullResponsiveness
+from utils.unpack_cleanup import HEADLESS_UNPACK_DIR_PREFIX, remove_stale_unpack_dirs
+from utils.version import describe as describe_version
 
 logger = get_logger("app_headless")
 
@@ -654,6 +661,14 @@ class HeadlessMCPSession:
         self.run_image_generation(edit_suffix, target_dir, media_path=media_path)
 
 
+def run_smoke_test(expect_oqs: bool = False) -> int:
+    """Check that a build starts: utils.smoke_test's checks and the compare
+    engines' imports. Builds no session, starts no server and loads no
+    model. Returns the process exit code."""
+    return smoke_test.run(
+        lambda: smoke_test.startup_checks(expect_oqs) + smoke_test.compare_engine_checks())
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         description="Serve a Weidr browsing/comparison session over MCP, with no GUI.",
@@ -666,6 +681,10 @@ def main(argv=None) -> int:
 
     if not os.path.isdir(args.base_dir):
         parser.error(f"not a directory: {args.base_dir}")
+
+    logger.info(describe_version())
+    threading.Thread(target=remove_stale_unpack_dirs, args=(HEADLESS_UNPACK_DIR_PREFIX,),
+                     name="unpack-cleanup", daemon=True).start()
 
     # Before the session builds a FileBrowser, which starts constructing
     # SortableFile objects against this cache immediately.
@@ -692,4 +711,6 @@ def main(argv=None) -> int:
 
 
 if __name__ == "__main__":
+    if "--smoke-test" in sys.argv[1:]:
+        sys.exit(run_smoke_test(expect_oqs="--expect-oqs" in sys.argv[1:]))
     sys.exit(main())

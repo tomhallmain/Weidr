@@ -137,6 +137,33 @@ class TestRemoveStaleUnpackDirs:
         assert old.is_dir()
 
 
+class TestBuildKinds:
+    """The GUI and headless builds share unpacked/; each cleans up only its own folders."""
+
+    def test_the_gui_leaves_headless_folders_alone(self, unpacked, platform):
+        headless = _build_folder(unpacked, "weidr-headless-20261001-090000")
+        old_gui = _build_folder(unpacked, "weidr-20261001-090000")
+        unpack_cleanup.remove_stale_unpack_dirs()
+        assert headless.is_dir()
+        assert not old_gui.exists()
+
+    def test_the_headless_build_removes_only_headless_folders(self, unpacked, platform, monkeypatch):
+        current = _build_folder(unpacked, "weidr-headless-20261009-120000")
+        in_build(monkeypatch, current)
+        old_headless = _build_folder(unpacked, "weidr-headless-20261001-090000")
+        unpack_cleanup.remove_stale_unpack_dirs(unpack_cleanup.HEADLESS_UNPACK_DIR_PREFIX)
+        assert current.is_dir()
+        assert not old_headless.exists()
+        assert (unpacked / CURRENT).is_dir()
+
+    def test_a_prefix_that_does_not_match_the_running_folder_removes_nothing(
+            self, unpacked, platform):
+        headless = _build_folder(unpacked, "weidr-headless-20261001-090000")
+        # The running folder is a GUI one.
+        assert unpack_cleanup.remove_stale_unpack_dirs(unpack_cleanup.HEADLESS_UNPACK_DIR_PREFIX) == []
+        assert headless.is_dir()
+
+
 class TestRunningExecutables:
     def test_lists_this_process(self):
         psutil = pytest.importorskip("psutil")

@@ -2,9 +2,14 @@
 
 Run on the machine that builds, from any directory:
 
-    python scripts/package_release.py [--variant cuda] [--products Weidr ...]
-        [--no-build] [--force] [--notes FILE] [--no-upload] [--publish] [--yes]
-        [-- <build_exe.py args>]
+    python scripts/package_release.py [--bump major|minor|patch] [--variant cuda]
+        [--products Weidr ...] [--no-build] [--force] [--notes FILE] [--no-upload]
+        [--publish] [--yes] [-- <build_exe.py args>]
+
+``--bump`` first raises that part of the version (1.4.2 -> 2.0.0, 1.5.0 or
+1.4.3) and commits the version file alone, once tag v<version> exists: a rerun
+before the new version is tagged keeps it. It needs a clean checkout, and the
+executables are then rebuilt, since they embed the version.
 
 First it rebuilds those executables in dist/ that are behind the checkout's
 HEAD, by running build_exe.py with the arguments after ``--`` (e.g.
@@ -60,6 +65,8 @@ import sys
 import time
 
 VERSION_PATTERN = r"\d+(\.\d+){0,3}"
+BUMP_PARTS = ("major", "minor", "patch")
+_APP_VERSION_LINE = r"^(APP_VERSION\s*=\s*[\"'])([^\"']+)([\"'])"
 # GitHub refuses release assets of 2 GiB or more.
 MAX_ASSET_BYTES = 2 * 1024 ** 3
 
@@ -119,11 +126,11 @@ def _platform_tag() -> str:
     return f"{os_name}-{arch}"
 
 
-def _read_version(repo: str) -> str:
+def _version_file(repo: str) -> str:
+    """VERSION at the repo root, or the .py module holding APP_VERSION."""
     path = os.path.join(repo, "VERSION")
     if os.path.isfile(path):
-        with open(path, "r", encoding="utf-8") as f:
-            return f.read().strip()
+        return path
     # A repo that keeps the version in a module: build_exe.py names that
     # module as VERSION_FILE = os.path.join("...", "version.py").
     build_exe = os.path.join(repo, "build_exe.py")
@@ -134,10 +141,67 @@ def _read_version(repo: str) -> str:
         module = os.path.join(repo, *parts) if parts else ""
         if module.endswith(".py") and os.path.isfile(module):
             with open(module, "r", encoding="utf-8") as f:
-                match = re.search(r"^APP_VERSION\s*=\s*[\"']([^\"']+)[\"']", f.read(), re.M)
-            if match:
-                return match.group(1)
+                if re.search(_APP_VERSION_LINE, f.read(), re.M):
+                    return module
     sys.exit(f"No version found: put it in {path}.")
+
+
+def _read_version(repo: str) -> str:
+    path = _version_file(repo)
+    with open(path, "r", encoding="utf-8") as f:
+        text = f.read()
+    if path.endswith(".py"):
+        return re.search(_APP_VERSION_LINE, text, re.M).group(2)
+    return text.strip()
+
+
+def _write_version(path: str, version: str) -> None:
+    with open(path, "r", encoding="utf-8", newline="") as f:
+        text = f.read()
+    if path.endswith(".py"):
+        text = re.sub(_APP_VERSION_LINE, rf"\g<1>{version}\g<3>", text, count=1, flags=re.M)
+    else:
+        text = version + text[len(text.rstrip()):]
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        f.write(text)
+
+
+def _bumped(version: str, part: str) -> str:
+    """*version* with *part* raised by one and the parts after it zeroed."""
+    numbers = [int(n) for n in version.split(".")]
+    numbers += [0] * (3 - len(numbers))
+    index = BUMP_PARTS.index(part)
+    numbers[index] += 1
+    numbers[index + 1:] = [0] * (len(numbers) - index - 1)
+    return ".".join(map(str, numbers))
+
+
+def _bump_version(repo: str, version: str, part: str, no_build: bool) -> str:
+    """Commit *version* bumped by *part* to the version file and return the new
+    version, or *version* while tag v<version> does not exist."""
+    if not re.fullmatch(VERSION_PATTERN, version):
+        sys.exit(f"Version {version!r} is not up to four dot-separated numbers; cannot bump it.")
+    if not _git(repo, "rev-parse", "HEAD"):
+        sys.exit("git cannot tell which commit the checkout is at; cannot bump the version.")
+    if not _git(repo, "rev-parse", "-q", "--verify", f"refs/tags/v{version}"):
+        logger.info(f"Tag v{version} does not exist yet; keeping version {version}.")
+        return version
+    new = _bumped(version, part)
+    if no_build:
+        sys.exit(f"--bump to {new} needs a rebuild, since the executables embed the version; "
+                 "leave out --no-build.")
+    dirty = _git(repo, "status", "--porcelain", "--untracked-files=no")
+    if dirty is None or dirty:
+        sys.exit("Tracked files have uncommitted changes; commit or stash them before --bump.")
+    if _git(repo, "rev-parse", "-q", "--verify", f"refs/tags/v{new}"):
+        sys.exit(f"Tag v{new} exists already; set the version yourself.")
+    path = _version_file(repo)
+    _write_version(path, new)
+    if _git(repo, "commit", "-m", f"Version {new}", "--", path) is None:
+        _write_version(path, version)
+        sys.exit(f"git commit of {path} failed; the version stays {version}.")
+    logger.info(f"Version {version} -> {new}, committed as {_git(repo, 'rev-parse', '--short=10', 'HEAD')}.")
+    return new
 
 
 def _executables(dist: str) -> dict:
@@ -432,6 +496,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--repo", default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                         help="repo root (default: the parent of this script's folder)")
+    parser.add_argument("--bump", choices=BUMP_PARTS,
+                        help="raise this part of the version and commit it once the current one is tagged")
     parser.add_argument("--variant", help="suffix for a build variant, e.g. cuda")
     parser.add_argument("--products", nargs="+", help="package only these executables (names without .exe)")
     parser.add_argument("--no-build", action="store_true", help="package dist/ as it is, without rebuilding")
@@ -451,7 +517,6 @@ def main() -> None:
     repo = os.path.abspath(opts.repo)
     logger.info(f"Log: {_setup_logging(repo)}")
     version = _read_version(repo)
-    tag = f"v{version}"
     dist = os.path.join(repo, "dist")
     executables = _executables(dist) if os.path.isdir(dist) else {}
     if opts.products:
@@ -463,6 +528,10 @@ def main() -> None:
         sys.exit(f"No executables in {dist}; run build_exe.py first.")
     if opts.notes and not os.path.isfile(opts.notes):
         sys.exit(f"--notes: {opts.notes} not found.")
+
+    if opts.bump:
+        version = _bump_version(repo, version, opts.bump, opts.no_build)
+    tag = f"v{version}"
 
     # The app's own name: Weidr for both Weidr and WeidrHeadless.
     app_name = min(executables, key=len).removesuffix("Headless")

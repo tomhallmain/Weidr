@@ -306,3 +306,98 @@ def test_branch_is_not_pushed_when_the_remote_has_the_commit(package_release, tm
     steps = _steps(package_release, tmp_path)
     assert ["git", "push", "origin", "refs/heads/master"] not in steps
     assert ["git", "push", "origin", "refs/tags/v1.0.0"] in steps
+
+
+# --bump
+
+@pytest.mark.parametrize("version, part, expected", [
+    ("1.4.2", "major", "2.0.0"),
+    ("1.4.2", "minor", "1.5.0"),
+    ("1.4.2", "patch", "1.4.3"),
+    ("1.4", "patch", "1.4.1"),
+    ("1", "minor", "1.1.0"),
+    ("1.4.2.7", "minor", "1.5.0.0"),
+])
+def test_bumped(package_release, version, part, expected):
+    assert package_release._bumped(version, part) == expected
+
+
+def test_write_version_keeps_the_version_files_line_ending(package_release, tmp_path):
+    path = tmp_path / "VERSION"
+    path.write_bytes(b"1.0.0\r\n")
+    package_release._write_version(str(path), "1.0.1")
+    assert path.read_bytes() == b"1.0.1\r\n"
+
+
+def test_write_version_replaces_app_version_in_a_module(package_release, tmp_path):
+    path = tmp_path / "version.py"
+    path.write_text('"""Version."""\nAPP_VERSION = "1.0.0"\nOTHER = "1.0.0"\n', encoding="utf-8")
+    package_release._write_version(str(path), "1.1.0")
+    assert path.read_text(encoding="utf-8") == '"""Version."""\nAPP_VERSION = "1.1.0"\nOTHER = "1.0.0"\n'
+
+
+def _bump_git(tags=(), dirty="", commit_ok=True):
+    calls = []
+
+    def git(repo, *args):
+        calls.append(args)
+        if args == ("rev-parse", "HEAD") or args[:2] == ("rev-parse", "--short=10"):
+            return HEAD
+        if args[:3] == ("rev-parse", "-q", "--verify"):
+            return HEAD if args[3].removeprefix("refs/tags/") in tags else None
+        if args[0] == "status":
+            return dirty
+        if args[0] == "commit":
+            return "" if commit_ok else None
+        return None
+    return git, calls
+
+
+def _version_repo(tmp_path, version="1.0.0"):
+    (tmp_path / "VERSION").write_text(version + "\n", encoding="utf-8")
+    return str(tmp_path)
+
+
+def test_bump_commits_the_new_version_once_the_current_one_is_tagged(package_release, tmp_path,
+                                                                     monkeypatch):
+    git, calls = _bump_git(tags={"v1.0.0"})
+    monkeypatch.setattr(package_release, "_git", git)
+    repo = _version_repo(tmp_path)
+    assert package_release._bump_version(repo, "1.0.0", "patch", no_build=False) == "1.0.1"
+    assert (tmp_path / "VERSION").read_text(encoding="utf-8") == "1.0.1\n"
+    assert ("commit", "-m", "Version 1.0.1", "--", os.path.join(repo, "VERSION")) in calls
+
+
+def test_bump_keeps_a_version_that_is_not_tagged_yet(package_release, tmp_path, monkeypatch):
+    git, calls = _bump_git()
+    monkeypatch.setattr(package_release, "_git", git)
+    repo = _version_repo(tmp_path, "1.0.1")
+    assert package_release._bump_version(repo, "1.0.1", "patch", no_build=False) == "1.0.1"
+    assert (tmp_path / "VERSION").read_text(encoding="utf-8") == "1.0.1\n"
+    assert not any(args[0] == "commit" for args in calls)
+
+
+@pytest.mark.parametrize("kwargs, git_kwargs, message", [
+    ({"no_build": True}, {"tags": {"v1.0.0"}}, "--no-build"),
+    ({"no_build": False}, {"tags": {"v1.0.0"}, "dirty": " M src/x.py"}, "uncommitted"),
+    ({"no_build": False}, {"tags": {"v1.0.0", "v1.0.1"}}, "v1.0.1 exists"),
+])
+def test_bump_refuses_without_touching_the_version(package_release, tmp_path, monkeypatch,
+                                                   kwargs, git_kwargs, message):
+    git, calls = _bump_git(**git_kwargs)
+    monkeypatch.setattr(package_release, "_git", git)
+    repo = _version_repo(tmp_path)
+    with pytest.raises(SystemExit) as excinfo:
+        package_release._bump_version(repo, "1.0.0", "patch", **kwargs)
+    assert message in str(excinfo.value)
+    assert (tmp_path / "VERSION").read_text(encoding="utf-8") == "1.0.0\n"
+    assert not any(args[0] == "commit" for args in calls)
+
+
+def test_bump_restores_the_version_when_the_commit_fails(package_release, tmp_path, monkeypatch):
+    git, _ = _bump_git(tags={"v1.0.0"}, commit_ok=False)
+    monkeypatch.setattr(package_release, "_git", git)
+    repo = _version_repo(tmp_path)
+    with pytest.raises(SystemExit):
+        package_release._bump_version(repo, "1.0.0", "patch", no_build=False)
+    assert (tmp_path / "VERSION").read_text(encoding="utf-8") == "1.0.0\n"

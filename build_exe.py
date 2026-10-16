@@ -92,6 +92,7 @@ DATA_DIRS = ("locale", os.path.join("assets", "sounds"))
 DATA_FILES = (
     os.path.join("assets", "icon.png"),
     os.path.join("assets", "example_pipelines.enc"),
+    os.path.join("assets", "clip_reference_embedding.json"),
     os.path.join("configs", "config_example.json"),
     os.path.join("configs", "suggested_classifier_models.json"),
     VERSION_FILE,
@@ -302,7 +303,8 @@ def _common_args(exe_name: str, unpack_prefix: str, version: str, build_id: str)
         "--include-distribution-metadata=keyring",
         *[f"--include-distribution-metadata={p}" for p in TRANSFORMERS_PROBED_DISTRIBUTIONS],
         # TorchScript compiles Python functions from their source, which a
-        # build does not ship; nothing in Weidr uses it.
+        # build does not ship. This also breaks torch.jit.load, which OpenAI's
+        # CLIP weights need; compare/model.py loads those without it.
         "--module-parameter=torch-disable-jit=yes",
         # The MCP SDK reads its own version from package metadata, and uvicorn
         # loads its protocol and event-loop modules by name.

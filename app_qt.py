@@ -111,6 +111,7 @@ def _smoke_test_checks(expect_oqs: bool = False) -> list[str]:
         problems.append("Qt cannot load assets/icon.png (image format plugins missing?)")
 
     problems += smoke_test.compare_engine_checks()
+    problems += smoke_test.embedding_checks()
     # The main window's import graph; no window is created.
     import ui.app_window.app_window  # noqa: F401
 
@@ -121,8 +122,8 @@ def _smoke_test_checks(expect_oqs: bool = False) -> list[str]:
 def run_smoke_test(expect_oqs: bool = False) -> int:
     """Check that a build starts: utils.smoke_test's checks, a QApplication
     on the offscreen platform, and the main window's imports. Takes no
-    single-instance lock, asks for no password, opens no window and loads no
-    model. Returns the process exit code.
+    single-instance lock, asks for no password and opens no window; loads
+    only CLIP ViT-B/32. Returns the process exit code.
     """
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     return smoke_test.run(lambda: _smoke_test_checks(expect_oqs))

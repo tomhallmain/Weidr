@@ -1,7 +1,8 @@
 """The checks behind ``--smoke-test``, which build_exe.py runs on each
 executable it builds (app_qt.py's and app_headless.py's): build info, fault
 log, OQS, translations, Pillow plugins, data files, lazily imported modules,
-keyring and the compare engines. Each entry point adds its own checks.
+keyring, the compare engines and a CLIP embedding. Each entry point adds its
+own checks.
 """
 
 import importlib.util
@@ -27,6 +28,7 @@ DATA_FILES = (
     ("assets", "icon.png"),
     ("assets", "example_pipelines.enc"),
     ("assets", "sounds"),
+    ("assets", "clip_reference_embedding.json"),
     ("configs", "config_example.json"),
     ("configs", "suggested_classifier_models.json"),
     ("locale", "en", "LC_MESSAGES", "base.mo"),
@@ -97,6 +99,15 @@ def compare_engine_checks() -> list[str]:
     if not model.insightface_loaded:
         problems.append("insightface failed to import")
     return problems
+
+
+def embedding_checks() -> list[str]:
+    """Load CLIP ViT-B/32 (downloaded to ~/.cache/clip if missing) and compare
+    an embedding with the recorded one; problems found."""
+    from compare import clip_reference
+
+    logger.info("Smoke test: computing the CLIP reference embedding")
+    return clip_reference.check()
 
 
 def run(checks: Callable[[], list]) -> int:

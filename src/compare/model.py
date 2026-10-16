@@ -135,16 +135,64 @@ EVA_CLIP_PRETRAINED = {
 
 # Model and processor access functions
 
+def _script_module_state_dict(cpp_module, prefix=""):
+    state_dict = {}
+    for name, tensor in torch._C.ParameterDict(cpp_module).items():
+        state_dict[prefix + name] = tensor
+    for name, tensor in torch._C.BufferDict(cpp_module).items():
+        if tensor is not None:
+            state_dict[prefix + name] = tensor
+    for name, child in torch._C.ModuleDict(cpp_module).items():
+        state_dict.update(_script_module_state_dict(child, f"{prefix}{name}."))
+    return state_dict
+
+
+def load_clip(name, device=device):
+    """CLIP model and preprocess for *name*, as clip.load(jit=False) returns them."""
+    if hasattr(torch.jit.RecursiveScriptModule, "_construct"):
+        return clip.load(name, device=device)
+    return load_clip_without_torchscript(name, device)
+
+
+def load_clip_without_torchscript(name, device=device):
+    # OpenAI's CLIP weights are TorchScript archives. With PYTORCH_JIT=0 (set in
+    # the packaged build, which ships no Python source for TorchScript to compile)
+    # torch.jit.load fails wrapping the loaded module, since RecursiveScriptModule
+    # is a stub without _construct. clip.load(jit=False) only takes the state dict
+    # from the archive, so read it from the C++ module and build the model the
+    # same way.
+    from clip.clip import _MODELS, _download, _transform
+    from clip.model import build_model
+    if name in _MODELS:
+        model_path = _download(_MODELS[name], os.path.expanduser("~/.cache/clip"))
+    elif os.path.isfile(name):
+        model_path = name
+    else:
+        raise RuntimeError(f"Model {name} not found; available models = {clip.available_models()}")
+    try:
+        cpp_module = torch._C.import_ir_module(
+            torch._C.CompilationUnit(), model_path, torch.device("cpu"), {}, False)
+        state_dict = _script_module_state_dict(cpp_module)
+    except RuntimeError:
+        # Not a TorchScript archive: a plain saved state dict.
+        state_dict = torch.load(model_path, map_location="cpu")
+    model = build_model(state_dict).to(device)
+    if str(device) == "cpu":
+        model.float()
+    return model, _transform(model.visual.input_resolution)
+
+
+def _ensure_clip_loaded():
+    global _clip_model, _clip_preprocess
+    if _clip_model is None or _clip_preprocess is None:
+        _clip_model, _clip_preprocess = load_clip(config.clip_model)
+
 def _get_clip_model():
-    global _clip_model
-    if _clip_model is None:
-        _clip_model, _ = clip.load(config.clip_model, device=device)
+    _ensure_clip_loaded()
     return _clip_model
 
 def _get_clip_preprocess():
-    global _clip_preprocess
-    if _clip_preprocess is None:
-        _, _clip_preprocess = clip.load(config.clip_model, device=device)
+    _ensure_clip_loaded()
     return _clip_preprocess
 
 def _get_siglip_model():

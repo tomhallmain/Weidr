@@ -662,11 +662,12 @@ class HeadlessMCPSession:
 
 
 def run_smoke_test(expect_oqs: bool = False) -> int:
-    """Check that a build starts: utils.smoke_test's checks and the compare
-    engines' imports. Builds no session, starts no server and loads no
-    model. Returns the process exit code."""
+    """Check that a build starts: utils.smoke_test's checks, the compare
+    engines' imports and a CLIP embedding. Builds no session and starts no
+    server. Returns the process exit code."""
     return smoke_test.run(
-        lambda: smoke_test.startup_checks(expect_oqs) + smoke_test.compare_engine_checks())
+        lambda: smoke_test.startup_checks(expect_oqs) + smoke_test.compare_engine_checks()
+        + smoke_test.embedding_checks())
 
 
 def main(argv=None) -> int:

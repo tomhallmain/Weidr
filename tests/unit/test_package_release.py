@@ -182,9 +182,9 @@ def test_an_executable_older_than_the_build_info_is_behind(package_release, tmp_
 
 # _check
 
-def _check(package_release, tmp_path, info, info_path, exe):
+def _check(package_release, tmp_path, info, info_path, exe, **kwargs):
     return package_release._check(str(tmp_path), "1.0.0", "v1.0.0", info, info_path,
-                                  {"Weidr": exe}, variant=None)
+                                  {"Weidr": exe}, variant=None, **kwargs)
 
 
 def test_check_accepts_an_ancestor_with_the_same_tree(package_release, tmp_path, monkeypatch):
@@ -216,6 +216,54 @@ def test_check_refuses_a_tag_on_another_commit(package_release, tmp_path, monkey
     errors, _ = _check(package_release, tmp_path, info, info_path, exe)
     assert len(errors) == 1
     assert "v1.0.0" in errors[0]
+
+
+def test_check_warns_of_a_tag_on_another_commit_with_retag(package_release, tmp_path, monkeypatch):
+    monkeypatch.setattr(package_release, "_git", _fake_git(tag="c" * 40))
+    info, info_path, exe = _build(tmp_path, commit=HEAD)
+    errors, warnings = _check(package_release, tmp_path, info, info_path, exe, retag=True)
+    assert errors == []
+    assert any("v1.0.0" in w and "--retag" in w for w in warnings)
+
+
+def test_check_accepts_an_older_ancestor_build_with_no_build(package_release, tmp_path, monkeypatch):
+    monkeypatch.setattr(package_release, "_git", _fake_git(tree="u" * 40, ancestors={BUILT}))
+    info, info_path, exe = _build(tmp_path)
+    errors, warnings = _check(package_release, tmp_path, info, info_path, exe, no_build=True)
+    assert errors == []
+    assert any(BUILT[:10] in w and "--no-build" in w for w in warnings)
+
+
+def test_check_refuses_a_build_outside_the_history_even_with_no_build(package_release, tmp_path,
+                                                                      monkeypatch):
+    monkeypatch.setattr(package_release, "_git", _fake_git(tree="u" * 40))
+    info, info_path, exe = _build(tmp_path)
+    errors, _ = _check(package_release, tmp_path, info, info_path, exe, no_build=True)
+    assert len(errors) == 1
+
+
+# _restore_build_info
+
+def test_restore_build_info_dates_the_file_before_the_executables(package_release, tmp_path):
+    exe = tmp_path / "Weidr.exe"
+    exe.write_bytes(b"exe")
+    source = tmp_path / "unpacked_build_info.json"
+    source.write_text(json.dumps({"version": "1.0.0", "source": {"commit": BUILT}}), encoding="utf-8")
+    info_path = tmp_path / "build" / "build_info.json"
+    package_release._restore_build_info(str(source), str(info_path), {"Weidr": str(exe)})
+    assert json.loads(info_path.read_text(encoding="utf-8"))["source"]["commit"] == BUILT
+    assert os.path.getmtime(info_path) < os.path.getmtime(exe)
+
+
+def test_restore_build_info_refuses_another_file(package_release, tmp_path):
+    exe = tmp_path / "Weidr.exe"
+    exe.write_bytes(b"exe")
+    source = tmp_path / "other.json"
+    source.write_text(json.dumps({"name": "x"}), encoding="utf-8")
+    info_path = tmp_path / "build_info.json"
+    with pytest.raises(SystemExit):
+        package_release._restore_build_info(str(source), str(info_path), {"Weidr": str(exe)})
+    assert not info_path.exists()
 
 
 # timing
@@ -275,9 +323,9 @@ def _publish_git(remote_has_commit, branch="master"):
     return git
 
 
-def _steps(package_release, tmp_path):
+def _steps(package_release, tmp_path, **kwargs):
     return package_release._publish_steps(str(tmp_path), "v1.0.0", HEAD, "origin", "Weidr 1.0.0",
-                                          [], "RELEASE_NOTES.md", publish=False)
+                                          [], "RELEASE_NOTES.md", publish=False, **kwargs)
 
 
 def test_publish_stops_before_tagging_when_gh_is_not_logged_in(package_release, tmp_path, monkeypatch):
@@ -401,3 +449,39 @@ def test_bump_restores_the_version_when_the_commit_fails(package_release, tmp_pa
     with pytest.raises(SystemExit):
         package_release._bump_version(repo, "1.0.0", "patch", no_build=False)
     assert (tmp_path / "VERSION").read_text(encoding="utf-8") == "1.0.0\n"
+
+
+# --retag
+
+def _tagged_git(local_tag, remote_tag):
+    base = _publish_git(remote_has_commit=True)
+
+    def git(repo, *args):
+        if args[:3] == ("rev-parse", "-q", "--verify"):
+            return local_tag
+        if args[:2] == ("ls-remote", "--tags"):
+            return f"{remote_tag}\trefs/tags/v1.0.0" if remote_tag else ""
+        return base(repo, *args)
+    return git
+
+
+def test_retag_moves_the_tag_locally_and_on_the_remote(package_release, tmp_path, monkeypatch):
+    _gh(monkeypatch, package_release)
+    monkeypatch.setattr(package_release, "_git", _tagged_git("c" * 40, "c" * 40))
+    steps = _steps(package_release, tmp_path, retag=True)
+    assert steps[:2] == [["git", "tag", "-f", "v1.0.0", HEAD],
+                         ["git", "push", "--force", "origin", "refs/tags/v1.0.0"]]
+
+
+def test_retag_leaves_a_tag_on_the_builds_commit(package_release, tmp_path, monkeypatch):
+    _gh(monkeypatch, package_release)
+    monkeypatch.setattr(package_release, "_git", _tagged_git(HEAD, HEAD))
+    steps = _steps(package_release, tmp_path, retag=True)
+    assert not any(step[0] == "git" for step in steps)
+
+
+def test_a_tag_elsewhere_is_left_without_retag(package_release, tmp_path, monkeypatch):
+    _gh(monkeypatch, package_release)
+    monkeypatch.setattr(package_release, "_git", _tagged_git("c" * 40, "c" * 40))
+    steps = _steps(package_release, tmp_path)
+    assert not any(step[0] == "git" for step in steps)

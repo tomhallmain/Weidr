@@ -3,13 +3,20 @@
 Run on the machine that builds, from any directory:
 
     python scripts/package_release.py [--bump major|minor|patch] [--variant cuda]
-        [--products Weidr ...] [--no-build] [--force] [--notes FILE] [--no-upload]
-        [--publish] [--yes] [-- <build_exe.py args>]
+        [--products Weidr ...] [--no-build] [--build-info FILE] [--retag] [--force]
+        [--notes FILE] [--no-upload] [--publish] [--yes] [-- <build_exe.py args>]
 
 ``--bump`` first raises that part of the version (1.4.2 -> 2.0.0, 1.5.0 or
 1.4.3) and commits the version file alone, once tag v<version> exists: a rerun
 before the new version is tagged keeps it. It needs a clean checkout, and the
 executables are then rebuilt, since they embed the version.
+
+``--build-info FILE`` puts back the build_info.json the executables in dist/
+were built with, e.g. from the folder an executable unpacks to, after a
+build_exe.py run rewrote it and stopped before replacing them. ``--retag``
+moves tag v<version>, locally and on the remote, to the build's commit when it
+points elsewhere; an existing GitHub release keeps its notes, and assets with
+the same names are replaced.
 
 First it rebuilds those executables in dist/ that are behind the checkout's
 HEAD, by running build_exe.py with the arguments after ``--`` (e.g.
@@ -39,7 +46,8 @@ The version comes from VERSION at the repo root or, in a repo that has none,
 from ``APP_VERSION`` in the module build_exe.py's ``VERSION_FILE`` names.
 Before copying, it checks against build/nuitka/build_info.json, when the build
 wrote one, that the build has this version, had no uncommitted changes, came
-from the checkout's HEAD or an ancestor with the same files, and is not older
+from the checkout's HEAD or an ancestor with the same files (with --no-build,
+any ancestor), and is not older
 than any executable it ships, and that tag v<version>, if it exists, points at
 that commit. ``--force`` packages
 despite failed checks.
@@ -316,6 +324,26 @@ def _rebuild_stale(repo, version, executables, app_name, info_path, build_args) 
                 sys.exit("The build failed; nothing packaged.")
 
 
+def _restore_build_info(source: str, info_path: str, executables: dict) -> None:
+    """Copy *source* to *info_path*, dated before the oldest executable, so the
+    checks take it as the build_info.json those executables were built with."""
+    try:
+        with open(source, "r", encoding="utf-8") as f:
+            info = json.load(f)
+    except (OSError, ValueError) as e:
+        sys.exit(f"--build-info: cannot read {source}: {e}")
+    commit = info.get("source", {}).get("commit") if isinstance(info, dict) else None
+    if not commit or not info.get("version"):
+        sys.exit(f"--build-info: {source} names no version and commit; is it a build_info.json?")
+    if os.path.abspath(source) != os.path.abspath(info_path):
+        os.makedirs(os.path.dirname(info_path), exist_ok=True)
+        shutil.copyfile(source, info_path)
+    oldest = min(os.path.getmtime(p) for p in executables.values())
+    os.utime(info_path, (oldest - 1, oldest - 1))
+    logger.info(f"Restored {info_path} from {source}: version {info['version']}, "
+                f"build {info.get('build_id', '?')}, commit {commit[:10]}.")
+
+
 def _sha256(path: str) -> str:
     digest = hashlib.sha256()
     with open(path, "rb") as f:
@@ -328,7 +356,7 @@ def _command_line(args: list) -> str:
     return subprocess.list2cmdline(args) if sys.platform == "win32" else shlex.join(args)
 
 
-def _check(repo, version, tag, info, info_path, executables, variant):
+def _check(repo, version, tag, info, info_path, executables, variant, retag=False, no_build=False):
     """(errors, warnings) found before packaging."""
     errors, warnings = [], []
     if not re.fullmatch(VERSION_PATTERN, version):
@@ -349,7 +377,12 @@ def _check(repo, version, tag, info, info_path, executables, variant):
         if built and head and built != head:
             tree = info.get("source", {}).get("tree")
             if not tree or tree != _git(repo, "rev-parse", "HEAD^{tree}"):
-                errors.append(f"The build is from commit {built[:10]}, the checkout is at {head[:10]}.")
+                message = f"The build is from commit {built[:10]}, the checkout is at {head[:10]}."
+                # Its tag goes on the build's commit, which a later checkout contains.
+                if no_build and _in_history(repo, built, head):
+                    warnings.append(message + " Packaging it as it is (--no-build).")
+                else:
+                    errors.append(message)
             elif not _in_history(repo, built, head):
                 errors.append(f"The build is from commit {built[:10]}, which has the checkout's files but "
                               "is not in its history (rewritten since the build), so it cannot be tagged; "
@@ -367,7 +400,11 @@ def _check(repo, version, tag, info, info_path, executables, variant):
     tagged = _git(repo, "rev-parse", "-q", "--verify", f"refs/tags/{tag}^{{commit}}")
     expected = built or head
     if tagged and expected and tagged != expected:
-        errors.append(f"Tag {tag} points at {tagged[:10]}, not the build's commit {expected[:10]}.")
+        if retag:
+            warnings.append(f"Tag {tag} points at {tagged[:10]}; --retag moves it to {expected[:10]}.")
+        else:
+            errors.append(f"Tag {tag} points at {tagged[:10]}, not the build's commit {expected[:10]}; "
+                          "--retag moves it.")
     for path in executables.values():
         if os.path.getsize(path) >= MAX_ASSET_BYTES:
             errors.append(f"{path} is 2 GiB or larger, which GitHub does not accept as a release asset.")
@@ -450,7 +487,7 @@ def _approve_notes(path: str) -> None:
         _edit(path)
 
 
-def _publish_steps(repo, tag, commit, remote, title, files, notes, publish) -> list:
+def _publish_steps(repo, tag, commit, remote, title, files, notes, publish, retag=False) -> list:
     """The git and gh commands that put *files* on release *tag*, leaving out
     what is done already, so that a rerun resumes."""
     if not shutil.which("gh"):
@@ -463,8 +500,11 @@ def _publish_steps(repo, tag, commit, remote, title, files, notes, publish) -> l
     if on_remote is None:
         sys.exit(f"Cannot reach the git remote {remote}.")
     steps = []
-    if not _git(repo, "rev-parse", "-q", "--verify", f"refs/tags/{tag}"):
+    local = _git(repo, "rev-parse", "-q", "--verify", f"refs/tags/{tag}^{{commit}}")
+    if not local:
         steps.append(["git", "tag", tag, commit])
+    elif retag and local != commit:
+        steps.append(["git", "tag", "-f", tag, commit])
     # A pushed tag carries its commits, but the branch on the remote stays where it was.
     branch = _git(repo, "symbolic-ref", "--short", "-q", "HEAD")
     if not branch:
@@ -476,6 +516,8 @@ def _publish_steps(repo, tag, commit, remote, title, files, notes, publish) -> l
             steps.append(["git", "push", remote, f"refs/heads/{branch}"])
     if not on_remote:
         steps.append(["git", "push", remote, f"refs/tags/{tag}"])
+    elif retag and on_remote.split("\t")[0] != commit:
+        steps.append(["git", "push", "--force", remote, f"refs/tags/{tag}"])
     release = subprocess.run(["gh", "release", "view", tag, "--json", "assets"],
                              cwd=repo, capture_output=True, text=True)
     if release.returncode == 0:
@@ -501,6 +543,10 @@ def main() -> None:
     parser.add_argument("--variant", help="suffix for a build variant, e.g. cuda")
     parser.add_argument("--products", nargs="+", help="package only these executables (names without .exe)")
     parser.add_argument("--no-build", action="store_true", help="package dist/ as it is, without rebuilding")
+    parser.add_argument("--build-info", metavar="FILE",
+                        help="build_info.json the executables in dist/ were built with, to put back in place")
+    parser.add_argument("--retag", action="store_true",
+                        help="move tag v<version> to the build's commit when it points elsewhere")
     parser.add_argument("--force", action="store_true", help="package even when checks fail")
     parser.add_argument("--notes", help="release notes file to use instead of the generated one")
     parser.add_argument("--no-upload", action="store_true", help="stage the assets and print the commands only")
@@ -536,6 +582,8 @@ def main() -> None:
     # The app's own name: Weidr for both Weidr and WeidrHeadless.
     app_name = min(executables, key=len).removesuffix("Headless")
     info_path = os.path.join(repo, "build", "nuitka", "build_info.json")
+    if opts.build_info:
+        _restore_build_info(opts.build_info, info_path, executables)
     if not opts.no_build:
         info = _load_build_info(info_path)
         # Keep the OQS choice of the build being replaced.
@@ -543,7 +591,8 @@ def main() -> None:
             build_args = [*build_args, "--with-oqs"]
         _rebuild_stale(repo, version, executables, app_name, info_path, build_args)
     info = _load_build_info(info_path)
-    errors, warnings = _check(repo, version, tag, info, info_path, executables, opts.variant)
+    errors, warnings = _check(repo, version, tag, info, info_path, executables, opts.variant,
+                              opts.retag, opts.no_build)
     for message in warnings:
         logger.warning(message)
     for message in errors:
@@ -586,7 +635,8 @@ def main() -> None:
     files = [os.path.relpath(path, repo).replace(os.sep, "/") for _, path in assets]
     notes_rel = os.path.relpath(notes, repo).replace(os.sep, "/")
     if opts.no_upload:
-        print(f"\nTo publish, from {repo}, tag {commit[:10]} as {tag}, push the branch with "
+        moved = " (git tag -f, and git push --force for the tag)" if opts.retag else ""
+        print(f"\nTo publish, from {repo}, tag {commit[:10]} as {tag}{moved}, push the branch with "
               "that commit and the tag, then run")
         print("  " + _command_line(["gh", "release", "create", tag, *files, "--title", title,
                                     "--notes-file", notes_rel, "--draft", "--verify-tag"]))
@@ -594,7 +644,7 @@ def main() -> None:
         print("  " + _command_line(["gh", "release", "upload", tag, *files, "--clobber"]))
         return
 
-    steps = _publish_steps(repo, tag, commit, opts.remote, title, files, notes_rel, opts.publish)
+    steps = _publish_steps(repo, tag, commit, opts.remote, title, files, notes_rel, opts.publish, opts.retag)
     if not steps:
         logger.info(f"{title} already has these assets.")
         return

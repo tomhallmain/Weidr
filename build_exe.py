@@ -26,8 +26,9 @@ older builds' folders (utils/unpack_cleanup.py). Each is smoke-tested with
 ``--jobs=4``.
 
 Before compressing the onefile payload, the last step of each compile, the
-build waits for enough free memory (scripts/nuitka_memory_wait.py), since a
-failed allocation there loses the whole compile. ``--min-free-memory=<GiB>``
+build waits for enough free memory (the memory-wait plugin, from
+app-release when installed), since a failed allocation there loses the whole
+compile. ``--min-free-memory=<GiB>``
 sets the amount instead of the estimate; 0 turns the wait off. Each step is
 timed, and the log goes to ``build/logs/build_exe-<build id>.log`` as well
 (Nuitka's own output only to the console).
@@ -49,7 +50,8 @@ itself with this checkout, and ``build/nuitka/build-requirements.lock.txt``,
 the build venv's ``pip freeze``. ``--lock=<file>`` installs the build venv
 from such a file instead of requirements-build.txt, to repeat a known good
 build; packages already in the venv but absent from the file stay installed,
-so delete .venv-build first for an exact copy.
+so delete .venv-build first for an exact copy. app-release publishes the
+executables in dist/ as a GitHub release.
 """
 import contextlib
 import json
@@ -77,8 +79,9 @@ VERSION_MODULE = os.path.join("src", "utils", "version.py")
 BUILD_INFO_PATH = os.path.join(BUILD_DIR, "build_info.json")
 LOCK_PATH = os.path.join(BUILD_DIR, "build-requirements.lock.txt")
 LOG_DIR = os.path.join(REPO_ROOT, "build", "logs")
-MEMORY_WAIT_PLUGIN = os.path.join(REPO_ROOT, "scripts", "nuitka_memory_wait.py")
-# Read by MEMORY_WAIT_PLUGIN.
+# Set by app-release, which ships the memory-wait plugin, when it runs this script.
+MEMORY_WAIT_PLUGIN_ENV = "NUITKA_MEMORY_WAIT_PLUGIN"
+# Read by the memory-wait plugin.
 MIN_FREE_MEMORY_ENV = "BUILD_MIN_FREE_MEMORY_GB"
 # Versions the build output and build_info.json record.
 RECORDED_DISTRIBUTIONS = (
@@ -277,7 +280,30 @@ def _write_build_info(version: str, build_id: str, environment: dict, with_oqs: 
     ))
 
 
-def _common_args(exe_name: str, unpack_prefix: str, version: str, build_id: str) -> list:
+def _memory_wait_plugin():
+    """The memory-wait plugin's path: from app-release's variable, else from an
+    installed app-release, else None (the build does not wait)."""
+    path = os.environ.get(MEMORY_WAIT_PLUGIN_ENV)
+    tool = None if path else shutil.which("app-release")
+    if tool:
+        try:
+            result = subprocess.run([tool, "--memory-wait-plugin"], capture_output=True, text=True,
+                                    stdin=subprocess.DEVNULL, timeout=60)
+        except (OSError, subprocess.SubprocessError) as e:
+            logger.warning(f"Cannot ask {tool} for the memory-wait plugin: {e}")
+        else:
+            if result.returncode == 0:
+                path = result.stdout.strip()
+    if path and os.path.isfile(path):
+        logger.info(f"Memory-wait plugin: {path}")
+        return path
+    logger.warning("No memory-wait plugin: the onefile step will not wait for free memory. "
+                   "Install app-release, or build through it.")
+    return None
+
+
+def _common_args(exe_name: str, unpack_prefix: str, version: str, build_id: str,
+                 memory_wait_plugin=None) -> list:
     args = [
         "--onefile",
         # The exe unpacks its runtime to this folder. A fixed path (no
@@ -320,7 +346,7 @@ def _common_args(exe_name: str, unpack_prefix: str, version: str, build_id: str)
         "--include-package-data=clip",
         "--include-package-data=open_clip",
         f"--user-package-configuration-file={PACKAGE_CONFIG}",
-        f"--user-plugin={MEMORY_WAIT_PLUGIN}",
+        *([f"--user-plugin={memory_wait_plugin}"] if memory_wait_plugin else []),
         "--nofollow-import-to=pytest",
         "--nofollow-import-to=_pytest",
         "--nofollow-import-to=pytestqt",
@@ -484,11 +510,13 @@ def main() -> None:
     _check_transformers_version(environment["packages"])
     _write_build_info(version, build_id, environment, with_oqs)
     oqs_args = _oqs_args(python, with_oqs)
+    memory_wait_plugin = _memory_wait_plugin()
 
     for base_name, entry, unpack_prefix, target_args in _targets(with_headless):
         exe_name = _exe_name(base_name)
         nuitka_args = [
-            *_common_args(exe_name, unpack_prefix, version, build_id), *target_args(), *oqs_args,
+            *_common_args(exe_name, unpack_prefix, version, build_id, memory_wait_plugin),
+            *target_args(), *oqs_args,
             *args, os.path.join(REPO_ROOT, entry),
         ]
         with _timed(f"Compiling {base_name} with Nuitka"):

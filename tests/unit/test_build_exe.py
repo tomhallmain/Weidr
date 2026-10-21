@@ -131,6 +131,12 @@ class TestMemoryWaitPluginLookup:
         assert any("app-release" in message for message in caplog.messages)
 
 
+def test_nuitka_env_preloads_windows_icu_before_pyside(build_exe):
+    first = build_exe._nuitka_env(None)["PYTHONPATH"].split(os.pathsep)[0]
+    assert first == os.path.join(build_exe.REPO_ROOT, "scripts", "nuitka_sitecustomize")
+    assert os.path.isfile(os.path.join(first, "sitecustomize.py"))
+
+
 def test_min_free_memory_reaches_nuitka(build_exe, monkeypatch):
     monkeypatch.delenv(build_exe.MIN_FREE_MEMORY_ENV, raising=False)
     assert build_exe._nuitka_env("12")[build_exe.MIN_FREE_MEMORY_ENV] == "12"

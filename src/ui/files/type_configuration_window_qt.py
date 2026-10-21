@@ -24,11 +24,29 @@ from utils.config import config
 from utils.constants import CompareMediaType
 from utils.translations import _
 
+import image.frame_cache as frame_cache
 from image.frame_cache import (
     has_imported_pypdfium2,
-    has_imported_cairosvg,
     has_imported_pyppeteer,
 )
+
+
+def svg_dependency_info() -> dict:
+    """SVG row for the media-type window, including why conversion is unavailable."""
+    info = {
+        "available": frame_cache.has_imported_cairosvg,
+        "package": "cairosvg",
+        "description": _("SVG support requires cairosvg package"),
+    }
+    if frame_cache.cairosvg_unavailable_reason != "library":
+        return info
+    message = frame_cache.svg_conversion_unavailable_message()
+    hint = frame_cache.svg_conversion_install_hint()
+    if message:
+        info["description"] = message
+    if hint:
+        info["detail"] = hint
+    return info
 
 
 class TypeConfigurationWindow(SmartDialog):
@@ -64,11 +82,7 @@ class TypeConfigurationWindow(SmartDialog):
             "package": "pyppeteer pypdfium2",
             "description": _("ePub support requires pyppeteer and pypdfium2 packages"),
         },
-        CompareMediaType.SVG: {
-            "available": has_imported_cairosvg,
-            "package": "cairosvg",
-            "description": _("SVG support requires cairosvg package"),
-        },
+        CompareMediaType.SVG: svg_dependency_info(),
         CompareMediaType.HTML: {
             "available": has_imported_pyppeteer,
             "package": "pyppeteer",
@@ -216,9 +230,15 @@ class TypeConfigurationWindow(SmartDialog):
 
             # Dependency warning
             if dep and not dep["available"]:
-                warn = QLabel(
-                    f"\u26a0\ufe0f {dep['description']} (pip install {dep['package']})"
-                )
+                detail = dep.get("detail")
+                if detail:
+                    warning_text = f"\u26a0\ufe0f {dep['description']} {detail}"
+                else:
+                    warning_text = (
+                        f"\u26a0\ufe0f {dep['description']} (pip install {dep['package']})"
+                    )
+                warn = QLabel(warning_text)
+                warn.setWordWrap(True)
                 warn.setStyleSheet("color: #FFA500; font-size: 9pt; padding-left: 24px;")
                 root.addWidget(warn)
 

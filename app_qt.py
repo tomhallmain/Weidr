@@ -14,6 +14,12 @@ import traceback
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
 
+from utils.windows_dll_compat import prefer_system_icu
+
+# conda-forge cairo installs ICU into Library\bin, which conda Python searches
+# before the Windows ICU that pip PySide6 was built against.
+prefer_system_icu()
+
 from PySide6.QtCore import QtMsgType, qInstallMessageHandler
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QIcon
@@ -53,6 +59,29 @@ def _route_qt_messages_to_logger():
     ucrtbase.dll) on a byte write to it, so any Qt warning would end the app.
     """
     qInstallMessageHandler(_log_qt_message)
+
+
+def _report_optional_runtime_limits(app_window):
+    """Tell the user which optional native libraries failed to load.
+
+    SVG conversion and video playback both keep the rest of the app usable.
+    One toast covers every missing library so the notices do not stack.
+    """
+    from image.frame_cache import svg_conversion_unavailable_message
+    from ui.app_window.media_frame import video_playback_unavailable_message
+
+    notices = [
+        message
+        for message in (
+            svg_conversion_unavailable_message(),
+            video_playback_unavailable_message(),
+        )
+        if message
+    ]
+    if notices:
+        app_window.notification_ctrl.toast(
+            "\n".join(notices), time_in_seconds=8, kind="warning",
+        )
 
 
 def _report_source_drift(app_window):
@@ -181,11 +210,13 @@ def main():
             cleanup_lock()
             sys.exit(0)
 
-        # Password verified or not required -- create the main window
-        from ui.app_window.app_window import AppWindow
-        from ui.files.type_configuration_window_qt import TypeConfigurationWindow
-
+        # Password verified or not required -- create the main window.
+        # Imports stay inside the handler: a windowed build has no console, so an
+        # exception here has to reach the dialog below to be visible at all.
         try:
+            from ui.app_window.app_window import AppWindow
+            from ui.files.type_configuration_window_qt import TypeConfigurationWindow
+
             # Keep behavior in sync with Tk startup: apply persisted type toggles
             # before FileBrowser and windows are initialized.
             TypeConfigurationWindow.load_pending_changes()
@@ -197,6 +228,7 @@ def main():
             app_window.raise_()
             app_window.activateWindow()
 
+            _report_optional_runtime_limits(app_window)
             _start_mcp_server()
             # Runs git, which can take a moment.
             threading.Thread(target=_report_source_drift, args=(app_window,),

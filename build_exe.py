@@ -404,9 +404,15 @@ def _oqs_args(python: str, with_oqs: bool) -> list:
 
 def _nuitka_env(min_free_memory=None) -> dict:
     # The entry scripts put src/ on sys.path at runtime; Nuitka resolves imports at
-    # build time and needs it there already.
+    # build time and needs it there already. sitecustomize is first so the
+    # compile-time interpreter, and the child process that imports PySide6,
+    # load the Windows ICU before a conda ICU in Library\bin.
     env = dict(os.environ)
-    paths = [os.path.join(REPO_ROOT, "src"), REPO_ROOT]
+    paths = [
+        os.path.join(REPO_ROOT, "scripts", "nuitka_sitecustomize"),
+        os.path.join(REPO_ROOT, "src"),
+        REPO_ROOT,
+    ]
     if env.get("PYTHONPATH"):
         paths.append(env["PYTHONPATH"])
     env["PYTHONPATH"] = os.pathsep.join(paths)

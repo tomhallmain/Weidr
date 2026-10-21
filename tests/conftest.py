@@ -40,6 +40,11 @@ _src_dir = os.path.join(_project_root, "src")
 if _src_dir not in sys.path:
     sys.path.insert(0, _src_dir)
 
+from utils.windows_dll_compat import prefer_system_icu
+
+# Before any test module imports PySide6. See windows_dll_compat.
+prefer_system_icu()
+
 # Bootstrap a safe temporary location so that the singletons created during
 # initial import never touch the real cache or config files.
 _bootstrap_tmp = tempfile.mkdtemp(prefix="weidr_tests_")

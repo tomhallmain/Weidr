@@ -9,6 +9,18 @@ Combines embedding-driven search/classification with batch file actions, format 
 
 Clone this repository and ensure Python 3 and the required packages are installed from requirements.txt. Optionally, run `pip install -r requirements-optional.txt` for platform-specific extras (e.g. keychain integration, EXIF tools). Note: some dependencies in requirements.txt (e.g. **torch**) may need to be installed from the provider’s site (e.g. [pytorch.org](https://pytorch.org)) for GPU support specific to your system.
 
+Two native libraries are not installed by that pip command. If either is missing, Weidr still starts and shows a warning toast. From the activated environment, install both and restart:
+
+```bash
+python scripts/install_native_extras.py
+```
+
+On Windows, `install_native_extras.bat` does the same thing. `--check` only reports what is missing. The script installs Cairo with conda on Windows (into the active environment), Homebrew on macOS, or the distro package on Linux. It installs VLC with winget, Homebrew, or the distro package. Windows may ask for administrator approval for VLC.
+
+- **Cairo**, for SVG conversion. The toast says "SVG conversion is unavailable because the Cairo library was not found." `cairosvg` is already listed in requirements.txt; it loads the Cairo shared library when it is imported. The media-type window (`Ctrl+V`) shows the same install hint and leaves SVG disabled until the library is found. On Windows, conda-forge Cairo also installs a newer ICU, and a defaults-channel GLib can replace gettext's `intl-8.dll` with a copy Cairo cannot load. Weidr loads the Windows ICU before Qt and the packaged gettext library before Cairo, so that clash does not have to be fixed by hand. Leave the conda package cache in place; the gettext DLL is loaded from there.
+
+- **VLC**, for video and audio playback. The toast says "Video playback is unavailable because VLC was not found." A built executable needs VLC too: libVLC is not bundled. The script installs it from the [VideoLAN](https://www.videolan.org) package.
+
 Run `app_qt.py` to start the PySide6 (Qt) UI. For more details, see [USAGE.md](https://www.github.com/tomhallmain/Weidr/blob/master/USAGE.md).
 
 ### Driving the app without the UI
@@ -48,7 +60,8 @@ Each build records its environment in `build/nuitka/`: `build-requirements.lock.
 Releasing is `app-release <checkout>`, a separate tool (installed with pipx) that rebuilds the executables behind the checkout, stages them in `dist/release/v<version>/` and publishes them as a GitHub release; see the [release-tools README](https://github.com/tomhallmain/release-tools) for its options.
 
 Not included in the build, as when running from source:
-- libVLC: install [VLC](https://www.videolan.org) for video playback.
+- Cairo: SVG conversion needs the Cairo shared library. Run `python scripts/install_native_extras.py` from the checkout. It is not bundled.
+- libVLC: the same script installs VLC for video playback.
 - GIMP, diff-pdf, sd-runner and other external programs.
 - Model weights: downloaded to the Hugging Face cache on first use.
 - `requirements-optional.txt` packages (OCR, PEEK), except the MCP server's `mcp`, which is included; post-quantum encryption only with `--with-oqs`.

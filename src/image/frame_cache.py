@@ -30,11 +30,27 @@ except ImportError:
     pass
 
 has_imported_cairosvg = False
+# "package" when cairosvg itself is missing, "library" when the Cairo DLL is.
+cairosvg_unavailable_reason: Optional[str] = None
+_cairosvg_import_error: Optional[BaseException] = None
+from utils.windows_dll_compat import prefer_packaged_libintl
+
+# defaults libglib can overwrite conda-forge libintl's intl-8.dll.
+# fontconfig needs the packaged copy's libintl_* exports.
+prefer_packaged_libintl()
 try:
     import cairosvg
     has_imported_cairosvg = True
-except ImportError:
-    pass
+except ImportError as exc:
+    cairosvg = None  # type: ignore[assignment]
+    cairosvg_unavailable_reason = "package"
+    _cairosvg_import_error = exc
+except OSError as exc:
+    # cairocffi raises OSError when libcairo is not installed. The Python
+    # package can be present and still fail this way.
+    cairosvg = None  # type: ignore[assignment]
+    cairosvg_unavailable_reason = "library"
+    _cairosvg_import_error = exc
 
 has_imported_pyppeteer = False
 try:
@@ -77,6 +93,49 @@ from image.epub_document import (
 )
 
 logger = get_logger("frame_cache")
+
+if cairosvg_unavailable_reason == "library":
+    logger.warning(
+        "SVG conversion is unavailable because the Cairo library was not found (%s). "
+        "Run python scripts/install_native_extras.py from the repository, then restart.",
+        _cairosvg_import_error,
+    )
+elif cairosvg_unavailable_reason == "package":
+    logger.warning(
+        "SVG conversion is unavailable because cairosvg is not installed (%s).",
+        _cairosvg_import_error,
+    )
+
+
+def svg_conversion_unavailable_message() -> Optional[str]:
+    """Short notice when SVG files cannot be converted. None when they can."""
+    if has_imported_cairosvg:
+        return None
+    if cairosvg_unavailable_reason == "library":
+        return _("SVG conversion is unavailable because the Cairo library was not found.")
+    return _("SVG conversion is unavailable because cairosvg is not installed.")
+
+
+def svg_conversion_install_hint() -> Optional[str]:
+    """How to restore SVG conversion. None when it is already available."""
+    if has_imported_cairosvg:
+        return None
+    if cairosvg_unavailable_reason == "library":
+        return _("Run python scripts/install_native_extras.py from the repository, then restart.")
+    return _("pip install cairosvg")
+
+
+def svg_conversion_unavailable_notice() -> Optional[str]:
+    """Notice plus install hint, for errors and the media-type window."""
+    message = svg_conversion_unavailable_message()
+    if message is None:
+        return None
+    hint = svg_conversion_install_hint()
+    if not hint:
+        return message
+    if cairosvg_unavailable_reason == "package":
+        return f"{message} ({hint})"
+    return f"{message} {hint}"
 
 # On macOS, freeing a PyAV codec context that was decoded with frame-threading
 # (thread_type="AUTO") has been observed to hang indefinitely — the native
@@ -744,7 +803,10 @@ class FrameCache:
                 if has_imported_cairosvg:
                     return cls.get_first_frame(media_path, CompareMediaType.SVG)
                 else:
-                    raise ImportError("Unable to convert SVG to PNG: cairosvg is not installed")
+                    raise ImportError(
+                        svg_conversion_unavailable_notice()
+                        or "Unable to convert SVG to PNG"
+                    )
             else:
                 return media_path
 

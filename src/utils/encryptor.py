@@ -517,6 +517,37 @@ def get_key_base(app_identifier, key, encryptor_type=None):
 # Passphrases and Passwords
 # =============================================================================
 
+def windows_credential_targets(service_name: str, username: str) -> tuple[str, str]:
+    """Credential Manager targets WinVaultKeyring uses for one username.
+
+    The password written most recently for a service is stored under the
+    service name. When another username already holds that slot, this
+    username is kept as ``username@service``.
+    """
+    return service_name, f"{username}@{service_name}"
+
+
+def read_windows_credential(service_name: str, username: str):
+    """Return the generic credential for this service username, or None.
+
+    Tries the same two targets as keyring's Windows backend. A missing
+    target (CredRead error 1168) is skipped.
+    """
+    import pywintypes
+    import win32cred
+
+    for target in windows_credential_targets(service_name, username):
+        try:
+            cred = win32cred.CredRead(target, win32cred.CRED_TYPE_GENERIC, 0)
+        except pywintypes.error as exc:
+            if exc.winerror == 1168 and exc.funcname == "CredRead":
+                continue
+            raise
+        if cred.get("UserName") == username:
+            return cred
+    return None
+
+
 class PassphraseManager:
     @staticmethod
     def get_passphrase(service_name="MyApp", app_identifier="main_app"):
@@ -560,18 +591,33 @@ class PassphraseManager:
             # Generate and store new passphrase
             passphrase = os.urandom(32).hex()
             keyring.set_password(service_name, key, passphrase)
-            
-            # Lock down permissions (Windows specific)
+
+            # Lock down the credential keyring just wrote. That step is optional:
+            # a missing pywin32, or a CredRead miss, must not abort key creation.
+            # The target is the service name, or username@service when that slot
+            # is already held by another username.
             try:
                 import win32security
                 import win32cred
-                cred = win32cred.CredRead(f"{service_name}/{app_identifier}", 
-                                         win32cred.CRED_TYPE_GENERIC, 0)
-                sd = win32security.SECURITY_DESCRIPTOR()
-                sd.SetSecurityDescriptorOwner(win32security.LookupAccountName(None, os.getlogin())[0], True)
-                win32cred.CredWrite(cred, win32cred.CRED_PRESERVE_CREDENTIAL_BLOB)
+                cred = read_windows_credential(service_name, key)
+                if cred is None:
+                    print(
+                        f"Passphrase for {service_name}:{app_identifier} was stored, "
+                        f"but Credential Manager has no entry under "
+                        f"{' or '.join(windows_credential_targets(service_name, key))} "
+                        f"to lock down."
+                    )
+                else:
+                    sd = win32security.SECURITY_DESCRIPTOR()
+                    sd.SetSecurityDescriptorOwner(win32security.LookupAccountName(None, os.getlogin())[0], True)
+                    win32cred.CredWrite(cred, win32cred.CRED_PRESERVE_CREDENTIAL_BLOB)
             except ImportError:
                 pass  # Fallback if pywin32 not available
+            except Exception as exc:
+                print(
+                    f"Could not lock down the passphrase credential for "
+                    f"{service_name}:{app_identifier}: {exc}"
+                )
         
         return passphrase
 

@@ -88,14 +88,23 @@ class TestShowMediaPanZoom:
         assert view._zoom_factor == 1.0
 
     def test_video_mode_disables_pan_zoom_interaction(
-        self, media_frame, show_media_files, monkeypatch
+        self, media_frame, tmp_path, monkeypatch
     ):
-        """Avoid real VLC play (can block headless runs); assert show_video wiring."""
+        """Avoid real VLC play (can block headless runs); assert show_video wiring.
+
+        show_media returns immediately when the path does not exist, which is
+        what the old ``clip.mp4`` fallback did on a machine without ffmpeg.
+        """
+        from types import MethodType
+
+        import ui.app_window.media_frame as media_frame_mod
         from ui.app_window.media_frame import VideoUI
 
-        mp4 = show_media_files.get("mp4") or "clip.mp4"
-
-        from types import MethodType
+        mp4 = tmp_path / "clip.mp4"
+        mp4.write_bytes(b"")
+        monkeypatch.setattr(media_frame_mod, "_VLC_AVAILABLE", True)
+        if not media_frame.vlc_media_player:
+            media_frame.vlc_media_player = object()
 
         def _fake_show_video(_self, path, freeze_frame=False):
             if not freeze_frame:
@@ -105,7 +114,7 @@ class TestShowMediaPanZoom:
         monkeypatch.setattr(
             media_frame, "show_video", MethodType(_fake_show_video, media_frame)
         )
-        media_frame.show_media(mp4)
+        media_frame.show_media(str(mp4))
 
         assert isinstance(media_frame._video_ui, VideoUI)
         assert media_frame._graphics_view._interaction_enabled is False

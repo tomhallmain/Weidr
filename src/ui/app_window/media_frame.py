@@ -65,8 +65,22 @@ except ImportError:
 try:
     import vlc
     _VLC_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError) as exc:
+    # python-vlc raises OSError (FileNotFoundError) when libvlc.dll is absent.
+    vlc = None  # type: ignore[assignment]
     _VLC_AVAILABLE = False
+    logger.warning(
+        "Video playback is unavailable because VLC was not found (%s). "
+        "Run python scripts/install_native_extras.py from the repository, then restart.",
+        exc,
+    )
+
+
+def video_playback_unavailable_message() -> str | None:
+    """Short notice when video cannot be played. None when VLC loaded."""
+    if _VLC_AVAILABLE:
+        return None
+    return _("Video playback is unavailable because VLC was not found.")
 
 # Holds VLC Instance objects whose release() must be deferred because a hung
 # stop() thread is still running inside libvlc.  Keeps the C-level instance

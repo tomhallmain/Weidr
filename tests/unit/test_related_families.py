@@ -65,11 +65,37 @@ class TestGroupRelatedFamilies:
         derived = _make_png(str(tmp_path / "ComfyUI_00001_.png"), related_image=seed)
         assert group_related_families([seed, derived]) == {"seed_image.png": [seed, derived]}
 
-    def test_external_seed_groups_derivatives(self, tmp_path):
+    def test_external_seed_does_not_form_a_family(self, tmp_path):
+        """Derivatives pointing straight outside the set are each their own seed;
+        they are not grouped under the external source."""
         outside = str(tmp_path / "elsewhere" / "origin_image.png")
         a = _make_png(str(tmp_path / "origin_image_edit.png"), related_image=outside)
         b = _make_png(str(tmp_path / "origin_image_up.png"), related_image=outside)
-        assert group_related_families([a, b]) == {"origin_image.png": [a, b]}
+        assert group_related_families([a, b]) == {
+            "origin_image_edit.png": [a],
+            "origin_image_up.png": [b],
+        }
+
+    def test_chain_stops_at_last_member_inside_the_set(self, tmp_path):
+        """B points outside; B's own derivatives make B the family seed."""
+        outside = str(tmp_path / "elsewhere" / "A.png")
+        b = _make_png(str(tmp_path / "bravo_seed.png"), related_image=outside)
+        b_edit = _make_png(str(tmp_path / "bravo_seed_edit.png"))
+        b_meta = _make_png(str(tmp_path / "ComfyUI_00009_.png"), related_image=b)
+        assert group_related_families([b, b_edit, b_meta]) == {
+            "bravo_seed.png": [b, b_edit, b_meta],
+        }
+
+    def test_default_origin_resolution_still_crosses_boundary(self, tmp_path):
+        """stop_at_boundary is opt-in: the related-image sort keeps keying
+        on the external source."""
+        from files.related_image import get_origin_basename
+        from files.sortable_file import SortableFile
+        outside = str(tmp_path / "elsewhere" / "A.png")
+        b = SortableFile(_make_png(str(tmp_path / "bravo_seed.png"), related_image=outside))
+        lookup = {b.basename: b}
+        assert get_origin_basename(b, lookup) == "A.png"
+        assert get_origin_basename(b, lookup, stop_at_boundary=True) == "bravo_seed.png"
 
 
 class TestFamilyHasAllSuffixes:
@@ -102,6 +128,23 @@ class TestGetFamiliesWithAllSuffixes:
     def test_preserves_input_order(self, tmp_path):
         paths = _paths(tmp_path, "b_up.png", "a.png", "b.png", "a_up.png")
         assert get_families_with_all_suffixes(paths, ["up"]) == paths
+
+    def test_external_seed_derivatives_never_qualify(self, tmp_path):
+        outside = str(tmp_path / "elsewhere" / "origin_image.png")
+        paths = [
+            _make_png(str(tmp_path / "origin_image_edit.png"), related_image=outside),
+            _make_png(str(tmp_path / "origin_image_up.png"), related_image=outside),
+        ]
+        assert get_families_with_all_suffixes(paths, ["edit", "up"]) == []
+
+    def test_boundary_seed_family_qualifies(self, tmp_path):
+        outside = str(tmp_path / "elsewhere" / "A.png")
+        paths = [
+            _make_png(str(tmp_path / "bravo_seed.png"), related_image=outside),
+            _make_png(str(tmp_path / "bravo_seed_edit.png")),
+            _make_png(str(tmp_path / "bravo_seed_up.png")),
+        ]
+        assert get_families_with_all_suffixes(paths, ["edit", "up"]) == paths
 
     def test_metadata_linked_derivative_counts_on_full_stem(self, tmp_path):
         seed = _make_png(str(tmp_path / "seed_image.png"))

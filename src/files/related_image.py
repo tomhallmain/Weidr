@@ -120,14 +120,18 @@ def _ensure_related_path(entry) -> str:
     return entry.related_image_path or ""
 
 
-def get_origin_basename(entry, basename_lookup: dict, visited: set = None) -> str:
+def get_origin_basename(
+    entry, basename_lookup: dict, visited: set = None, stop_at_boundary: bool = False
+) -> str:
     """
     Return the basename of the root origin image for entry within basename_lookup.
 
     Resolution order:
       1. Follow the metadata-stored related_image chain within the lookup.
          If the chain leads outside the lookup, return that basename as-is
-         (the chain is broken at the directory boundary).
+         (the chain is broken at the directory boundary) -- or, with
+         stop_at_boundary, the basename of the last entry inside the lookup,
+         so the result is always a key of basename_lookup.
       2. When no metadata chain exists, attempt filename-pattern inference by
          stripping a trailing variant suffix (_[A-Za-z0-9]{1,8}) to find a
          parent in the lookup, then continue the chain from there.
@@ -146,7 +150,10 @@ def get_origin_basename(entry, basename_lookup: dict, visited: set = None) -> st
     if related_path:
         related_basename = os.path.basename(related_path)
         if related_basename not in visited and related_basename in basename_lookup:
-            return get_origin_basename(basename_lookup[related_basename], basename_lookup, visited)
+            return get_origin_basename(
+                basename_lookup[related_basename], basename_lookup, visited, stop_at_boundary)
+        if stop_at_boundary and related_basename not in basename_lookup:
+            return entry.basename
         return related_basename
 
     # No metadata chain — try stripping a variant suffix to infer a parent.
@@ -155,7 +162,8 @@ def get_origin_basename(entry, basename_lookup: dict, visited: set = None) -> st
     if m:
         candidate = m.group(1) + ext
         if candidate in basename_lookup and candidate not in visited:
-            return get_origin_basename(basename_lookup[candidate], basename_lookup, visited)
+            return get_origin_basename(
+                basename_lookup[candidate], basename_lookup, visited, stop_at_boundary)
 
     return entry.basename
 
@@ -165,16 +173,17 @@ def group_related_families(paths: list[str]) -> dict[str, list[str]]:
 
     A family is a seed image plus every path whose origin resolves to it via
     get_origin_basename (metadata chain first, then filename-pattern
-    inference). The seed need not be among *paths*: derivatives whose chain
-    leaves the set are grouped under the external source's basename. Members
-    keep their order from *paths*.
+    inference). The seed is always one of *paths*: a chain that leaves the set
+    stops at its last member inside it, which becomes the seed. Members keep
+    their order from *paths*.
     """
     from files.sortable_file import SortableFile
     entries = [SortableFile(p) for p in paths]
     lookup = {e.basename: e for e in entries}
     families: dict[str, list[str]] = {}
     for e in entries:
-        families.setdefault(get_origin_basename(e, lookup), []).append(e.full_file_path)
+        origin = get_origin_basename(e, lookup, stop_at_boundary=True)
+        families.setdefault(origin, []).append(e.full_file_path)
     return families
 
 

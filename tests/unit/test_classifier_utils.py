@@ -96,12 +96,20 @@ class TestPickSplitPositive:
         )
         assert result == ("mild", ["mild", "explicit"], pytest.approx(0.6))
 
-    def test_severity_order_takes_precedence(self):
-        result = pick_split_positive(
+    def test_severity_order_breaks_ties_only(self):
+        tied = pick_split_positive(
+            {"safe": 0.1, "mild": 0.45, "explicit": 0.45},
+            [["mild", "explicit"]], ["safe"], ["explicit", "mild"], 0.05,
+        )
+        assert tied[0] == "explicit"
+        # A lower score on a more severe class must not override the group's top score.
+        # Softmax leaves every class above 0, so "any positive score" would always
+        # assign the first severity name.
+        lower = pick_split_positive(
             {"safe": 0.1, "mild": 0.6, "explicit": 0.3},
             [["mild", "explicit"]], ["safe"], ["explicit", "mild"], 0.05,
         )
-        assert result[0] == "explicit"
+        assert lower[0] == "mild"
 
     def test_margin_not_exceeded_returns_none(self):
         assert pick_split_positive(

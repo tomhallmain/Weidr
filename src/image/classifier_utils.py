@@ -98,12 +98,15 @@ def pick_split_positive(
     """Split-positive assignment: among positive groups of two or more categories,
     the one whose combined score beats the aggregate neutral score by more than
     *margin* and is highest. Returns (assigned category, group, combined score), or
-    None when no group qualifies. The assigned category is the first in
-    *severity_order* that belongs to the group and scored above 0, else the group's
-    highest-scoring category."""
+    None when no group qualifies. The assigned category is the group's
+    highest-scoring category. *severity_order* breaks ties only: an earlier name
+    wins when two categories share that top score. A softmax leaves every class
+    above 0, so treating any positive score as a hit would always assign the
+    first name in *severity_order*."""
     neutral_prob = sum(classed_predictions.get(cat, 0) for cat in neutral_categories)
     best: Optional[Tuple[str, List[str], float]] = None
     best_combined_prob = 0.0
+    severity_rank = {cat: index for index, cat in enumerate(severity_order or [])}
 
     for group_cats in positive_groups:
         if len(group_cats) <= 1:
@@ -111,16 +114,13 @@ def pick_split_positive(
         combined_prob = sum(classed_predictions.get(cat, 0) for cat in group_cats)
         if combined_prob > neutral_prob + margin and combined_prob > best_combined_prob:
             best_combined_prob = combined_prob
-            picked: Optional[str] = None
-            for severe_cat in severity_order or []:
-                if severe_cat in group_cats and classed_predictions.get(severe_cat, 0) > 0:
-                    picked = severe_cat
-                    break
-            if not picked:
-                picked = max(
-                    ((cat, classed_predictions.get(cat, 0)) for cat in group_cats),
-                    key=lambda x: x[1],
-                )[0]
+            picked = min(
+                group_cats,
+                key=lambda cat: (
+                    -classed_predictions.get(cat, 0),
+                    severity_rank.get(cat, len(severity_rank)),
+                ),
+            )
             best = (picked, group_cats, combined_prob)
 
     if best is None or not best[0]:

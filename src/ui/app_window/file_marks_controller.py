@@ -12,7 +12,9 @@ from files.file_action import FileAction
 from files.related_image import (
     get_downstream_related_images,
     get_downstream_files_for_sources,
+    get_families_with_all_suffixes,
     get_sources_with_downstream_in_dir,
+    parse_suffix_list,
     validate_related_image_suffix,
 )
 from files.marked_files import MarkedFiles
@@ -696,6 +698,61 @@ class FileMarksController:
         self._notify_related_result(
             message, label, found=len(unrelated), base_dir=base_dir,
             scanned=len(source_paths), files=unrelated)
+        self.go_to_mark()
+        self._app.media_frame.setFocus()
+
+    @require_password(ProtectedActions.VIEW_MEDIA_DETAILS)
+    def mark_families_with_all_suffixes_in_dir(
+        self, event=None, suffixes_text: str = ""
+    ) -> None:
+        """Mark every image family in the current directory that has at least
+        one related image for each suffix in *suffixes_text*.
+
+        The whole family is marked: the seed and every related image, including
+        repeats of a required suffix and members carrying other suffixes.
+        """
+        label = _("Mark families with all suffixes")
+        suffixes, errors = parse_suffix_list(suffixes_text)
+        if errors or not suffixes:
+            message = "\n".join(errors) if errors else _("Enter at least one suffix.")
+            self._app.notification_ctrl.toast(message)
+            self._notify_related_result(message, label, outcome="blocked")
+            return
+
+        base_dir = self._app.get_base_dir()
+        source_paths = self._fb.filepaths
+        if not source_paths:
+            message = _("No files in current directory.")
+            self._app.notification_ctrl.toast(message)
+            self._notify_related_result(message, label, outcome="no_files")
+            return
+
+        stats: dict = {}
+        family_files = get_families_with_all_suffixes(source_paths, suffixes, stats=stats)
+        suffix_list = ", ".join(suffixes)
+
+        if not family_files:
+            message = _("No image families with all of these suffixes found: {0}").format(
+                suffix_list)
+            self._app.notification_ctrl.toast(message)
+            self._notify_related_result(
+                message, label, found=0, base_dir=base_dir,
+                scanned=len(source_paths))
+            return
+
+        if not MarkedFiles.guard_mark_mutation(self._app.app_actions, label):
+            self._notify_related_result(
+                _("Cancelled: marks were not changed."), label,
+                outcome="blocked", base_dir=base_dir)
+            return
+
+        MarkedFiles.file_marks = family_files
+        message = _("{0} file(s) in {1} of {2} image families marked ({3})").format(
+            len(family_files), stats["matched_families"], stats["families"], suffix_list)
+        self._app.notification_ctrl.toast(message)
+        self._notify_related_result(
+            message, label, found=len(family_files), base_dir=base_dir,
+            scanned=len(source_paths), files=family_files)
         self.go_to_mark()
         self._app.media_frame.setFocus()
 

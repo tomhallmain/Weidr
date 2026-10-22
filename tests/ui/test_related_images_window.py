@@ -70,9 +70,27 @@ class TestRelatedImagesWindow:
         rw = _open_window(win, qtbot)
         texts = [b.text() for b in rw.findChildren(QPushButton)]
         rw.close()
-        assert len(texts) == 7
+        assert len(texts) == 8
         assert _("Search all open windows for downstream images") in texts
         assert _("Mark files without a related image in current directory") in texts
+        assert _("Mark families with all suffixes") in texts
+
+    def test_suffix_entry_feeds_family_action(self, window_with_dir, qtbot):
+        win, _media_dir = window_with_dir
+        calls: list = []
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(
+                win.file_marks_ctrl, "mark_families_with_all_suffixes_in_dir",
+                lambda suffixes_text="": calls.append(suffixes_text),
+            )
+            rw = _open_window(win, qtbot)
+            rw._suffix_entry.setText("edit, up")
+            rw._suffix_entry.returnPressed.emit()
+            btn = next(b for b in rw.findChildren(QPushButton)
+                       if b.text() == _("Mark families with all suffixes"))
+            btn.click()
+            rw.close()
+        assert calls == ["edit, up", "edit, up"]
 
     def test_shows_source_window_directory(self, window_with_dir, qtbot):
         """The opener's directory is displayed — that window's current media
@@ -423,3 +441,76 @@ class TestMarkFilesWithoutRelatedImages:
             win.file_marks_ctrl.mark_files_without_related_images_in_dir()
 
         assert toasts == [_("No files in current directory.")]
+
+
+class TestMarkFamiliesWithAllSuffixes:
+    """mark_families_with_all_suffixes_in_dir: suffix parsing/validation,
+    marks mutation and reporting. Family grouping itself is covered against
+    real files in test_related_families.py."""
+
+    _TARGET = "ui.app_window.file_marks_controller.get_families_with_all_suffixes"
+
+    def test_marks_returned_family_files_and_reports(self, window_with_dir, qtbot):
+        win, media_dir = window_with_dir
+        files = win.file_browser.get_files()
+        seen_suffixes: list = []
+        reports: list = []
+
+        def _fake(paths, suffixes, stats=None):
+            seen_suffixes.append(suffixes)
+            stats.update(families=3, matched_families=1)
+            return files[:2]
+
+        def _capture(message, action_label, data):
+            reports.append((action_label, data))
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(self._TARGET, _fake)
+            mp.setattr(win.file_marks_ctrl, "go_to_mark", lambda: None)
+            MarkedFiles.file_marks = []
+            win.app_actions.related_images_signals().result.connect(_capture)
+            try:
+                win.file_marks_ctrl.mark_families_with_all_suffixes_in_dir(
+                    suffixes_text="_edit, up EDIT")
+            finally:
+                win.app_actions.related_images_signals().result.disconnect(_capture)
+            marks = MarkedFiles.file_marks[:]
+            MarkedFiles.file_marks = []
+
+        assert seen_suffixes == [["edit", "up"]]
+        assert marks == files[:2]
+        assert len(reports) == 1
+        action_label, data = reports[0]
+        assert action_label == _("Mark families with all suffixes")
+        assert data["found"] == 2
+        assert data["base_dir"] == media_dir
+
+    @pytest.mark.parametrize("text", ["", "  ,  ", "ab-c", "123"])
+    def test_invalid_or_empty_suffixes_do_not_search(self, window_with_dir, qtbot, text):
+        win, _media_dir = window_with_dir
+        searched: list = []
+        toasts: list = []
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(self._TARGET, lambda *a, **kw: searched.append(True) or [])
+            mp.setattr(win.notification_ctrl, "toast", lambda msg, **kw: toasts.append(msg))
+            MarkedFiles.file_marks = []
+            win.file_marks_ctrl.mark_families_with_all_suffixes_in_dir(suffixes_text=text)
+
+        assert searched == []
+        assert MarkedFiles.file_marks == []
+        assert len(toasts) == 1
+
+    def test_no_matching_families_leaves_marks_unchanged(self, window_with_dir, qtbot):
+        win, _media_dir = window_with_dir
+        toasts: list = []
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(self._TARGET, lambda paths, suffixes, stats=None: [])
+            mp.setattr(win.notification_ctrl, "toast", lambda msg, **kw: toasts.append(msg))
+            MarkedFiles.file_marks = []
+            win.file_marks_ctrl.mark_families_with_all_suffixes_in_dir(suffixes_text="edit")
+
+        assert MarkedFiles.file_marks == []
+        assert toasts == [
+            _("No image families with all of these suffixes found: {0}").format("edit")]

@@ -160,6 +160,104 @@ def get_origin_basename(entry, basename_lookup: dict, visited: set = None) -> st
     return entry.basename
 
 
+def group_related_families(paths: list[str]) -> dict[str, list[str]]:
+    """Group *paths* into related-image families keyed by origin basename.
+
+    A family is a seed image plus every path whose origin resolves to it via
+    get_origin_basename (metadata chain first, then filename-pattern
+    inference). The seed need not be among *paths*: derivatives whose chain
+    leaves the set are grouped under the external source's basename. Members
+    keep their order from *paths*.
+    """
+    from files.sortable_file import SortableFile
+    entries = [SortableFile(p) for p in paths]
+    lookup = {e.basename: e for e in entries}
+    families: dict[str, list[str]] = {}
+    for e in entries:
+        families.setdefault(get_origin_basename(e, lookup), []).append(e.full_file_path)
+    return families
+
+
+def _family_member_suffix_stem(member_path: str, origin_basename: str) -> str | None:
+    """The part of member_path's stem to test against suffixes, or None for the seed.
+
+    When the member is named after the origin, only the tail past the origin
+    stem counts, so a seed named e.g. ``cat_apple`` cannot satisfy ``apple``
+    for its own derivatives. Members named otherwise (linked by metadata) are
+    tested on their whole stem.
+    """
+    stem = os.path.splitext(os.path.basename(member_path))[0]
+    origin_stem = os.path.splitext(origin_basename)[0]
+    if stem.lower() == origin_stem.lower():
+        return None
+    if stem.lower().startswith(origin_stem.lower()):
+        return stem[len(origin_stem):]
+    return stem
+
+
+def family_has_all_suffixes(members: list[str], origin_basename: str, suffixes: list[str]) -> bool:
+    """True when every suffix in *suffixes* is carried by at least one non-seed member.
+
+    Extra members, repeated suffixes and members with other suffixes do not
+    disqualify a family. Suffix matching follows _stem_matches_any_suffix
+    (case-insensitive, truncation and trailing variant digits accepted).
+    """
+    tails = [
+        t for t in (_family_member_suffix_stem(m, origin_basename) for m in members)
+        if t is not None
+    ]
+    return bool(suffixes) and all(
+        any(_stem_matches_any_suffix(t, [sf]) for t in tails) for sf in suffixes
+    )
+
+
+def get_families_with_all_suffixes(
+    paths: list[str],
+    suffixes: list[str],
+    stats: dict | None = None,
+) -> list[str]:
+    """Return every member (seed and all related images) of each family in
+    *paths* that has at least one related image for each of *suffixes*.
+
+    stats: when given, receives {"families": total family count,
+    "matched_families": qualifying family count}.
+    """
+    families = group_related_families(paths)
+    qualifying = [
+        members for origin, members in families.items()
+        if family_has_all_suffixes(members, origin, suffixes)
+    ]
+    if stats is not None:
+        stats["families"] = len(families)
+        stats["matched_families"] = len(qualifying)
+    matched = {p for members in qualifying for p in members}
+    return [p for p in paths if p in matched]
+
+
+def parse_suffix_list(text: str) -> tuple[list[str], list[str]]:
+    """Split user-entered suffixes on commas/whitespace.
+
+    Leading separators are dropped (``_edit`` == ``edit``) and duplicates
+    removed case-insensitively. Returns (suffixes, errors) where errors are
+    translated messages for entries failing validate_related_image_suffix.
+    """
+    suffixes: list[str] = []
+    errors: list[str] = []
+    seen: set[str] = set()
+    for raw in re.split(r"[,\s]+", text or ""):
+        sf = raw.lstrip("_ ")
+        if not sf:
+            continue
+        error = validate_related_image_suffix(sf)
+        if error:
+            errors.append(f"{raw}: {error}")
+            continue
+        if sf.lower() not in seen:
+            seen.add(sf.lower())
+            suffixes.append(sf)
+    return suffixes, errors
+
+
 def _find_same_directory_related_alias(image_path: str, related_image_path: str) -> str | None:
     """Rescue a stale related-image pointer whose path prefix moved.
 

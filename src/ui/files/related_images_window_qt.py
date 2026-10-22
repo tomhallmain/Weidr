@@ -23,7 +23,9 @@ import time
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence, QShortcut
-from PySide6.QtWidgets import QGridLayout, QLabel, QPushButton, QVBoxLayout
+from PySide6.QtWidgets import (
+    QGridLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout,
+)
 
 from lib.multi_display_qt import SmartDialog
 from ui.app_style import AppStyle
@@ -42,7 +44,7 @@ class RelatedImagesWindow(SmartDialog):
 
     _MAX_RESULT_LINES = 3
 
-    def __init__(self, app_window, geometry: str = "620x460") -> None:
+    def __init__(self, app_window, geometry: str = "620x500") -> None:
         super().__init__(
             parent=app_window,
             position_parent=app_window,
@@ -111,6 +113,24 @@ class RelatedImagesWindow(SmartDialog):
             chord_lbl.setAlignment(Qt.AlignCenter)
             grid.addWidget(chord_lbl, row, 1)
         outer.addLayout(grid)
+
+        suffix_row = QHBoxLayout()
+        suffix_row.setSpacing(4)
+        self._suffix_entry = QLineEdit()
+        self._suffix_entry.setPlaceholderText(_("Suffixes, e.g. edit, upscale"))
+        self._suffix_entry.setToolTip(
+            _("Comma- or space-separated suffixes. Every image family in the "
+              "current directory with at least one related image per suffix "
+              "is marked in full: the seed and all its related images.")
+        )
+        suffix_btn = QPushButton(_("Mark families with all suffixes"))
+        run_suffix_action = lambda: app.file_marks_ctrl.mark_families_with_all_suffixes_in_dir(
+            suffixes_text=self._suffix_entry.text())
+        suffix_btn.clicked.connect(lambda _=False: run_suffix_action())
+        self._suffix_entry.returnPressed.connect(run_suffix_action)
+        suffix_row.addWidget(self._suffix_entry, 3)
+        suffix_row.addWidget(suffix_btn, 2)
+        outer.addLayout(suffix_row)
 
         results_header = QLabel(_("Results"))
         results_header.setStyleSheet(

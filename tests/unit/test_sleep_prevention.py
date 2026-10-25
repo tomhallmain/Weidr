@@ -170,3 +170,18 @@ class TestSharedStateAcrossApplications:
 
         assert "other_app" not in requests
         assert requests["weidr"][live_pid]["SYSTEM"] == 1
+
+
+class TestCaffeinateEndsWithThisProcess:
+    """Without -w, a process that is killed or crashes skips its atexit release
+    and leaves caffeinate asserting forever."""
+
+    @pytest.mark.parametrize("level", [sp.WakeLevel.SYSTEM, sp.WakeLevel.DISPLAY, sp.WakeLevel.FULL])
+    def test_waits_on_this_pid(self, monkeypatch, level):
+        monkeypatch.setattr(sp.shutil, "which", lambda name: "/usr/bin/caffeinate")
+        argv = sp._darwin_argv_for(level)
+        assert argv[-2:] == ("-w", str(os.getpid()))
+
+    def test_no_process_for_none(self, monkeypatch):
+        monkeypatch.setattr(sp.shutil, "which", lambda name: "/usr/bin/caffeinate")
+        assert sp._darwin_argv_for(sp.WakeLevel.NONE) is None

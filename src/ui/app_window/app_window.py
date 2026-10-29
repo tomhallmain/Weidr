@@ -1388,17 +1388,24 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
             self._is_refreshing = False
 
     def _show_next_queued_media(self) -> bool:
-        """Pop and display the next file from the show-new-media queue."""
-        if not self._new_media_queue:
-            return False
-        next_file = self._new_media_queue.popleft()
-        self._new_media_queue_set.discard(next_file)
-        if not os.path.isfile(next_file):
-            return self._show_next_queued_media()
-        self.file_browser.go_to_file(next_file)
-        self.media_navigator.create_media(next_file)
-        self._update_queue_notification()
-        return True
+        """Pop and display the next file from the show-new-media queue.
+
+        Each candidate goes through skip_media, the same prevalidation/hidden
+        check as ordinary navigation; vetoed or missing files are dropped and
+        the next queued file is tried.
+        """
+        while self._new_media_queue:
+            next_file = self._new_media_queue.popleft()
+            self._new_media_queue_set.discard(next_file)
+            if not os.path.isfile(next_file):
+                continue
+            if self.compare_manager.skip_media(next_file):
+                continue
+            self.file_browser.go_to_file(next_file)
+            self.media_navigator.create_media(next_file)
+            self._update_queue_notification()
+            return True
+        return False
 
     def _update_queue_notification(self) -> None:
         remaining = len(self._new_media_queue)

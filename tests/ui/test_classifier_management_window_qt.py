@@ -9,10 +9,11 @@ prevalidations_running cache key and CompareManager, not the window UI.
 Tab indices expected:
   0  Classifier Actions
   1  Pipelines
-  2  Prevalidations
-  3  Seek to Trigger
-  4  Lookaheads
-  5  Directory Profiles
+  2  History
+  3  Prevalidations
+  4  Seek to Trigger
+  5  Lookaheads
+  6  Directory Profiles
 """
 
 from __future__ import annotations
@@ -48,9 +49,9 @@ def _make_window(qtbot):
 # ---------------------------------------------------------------------------
 
 class TestTabLayout:
-    def test_six_tabs(self, qtbot):
+    def test_seven_tabs(self, qtbot):
         win = _make_window(qtbot)
-        assert win._tabs.count() == 6
+        assert win._tabs.count() == 7
 
     def test_tab_labels(self, qtbot):
         from utils.translations import _
@@ -58,10 +59,11 @@ class TestTabLayout:
         labels = [win._tabs.tabText(i) for i in range(win._tabs.count())]
         assert labels[0] == _("Classifier Actions")
         assert labels[1] == _("Pipelines")
-        assert labels[2] == _("Prevalidations")
-        assert labels[3] == _("Seek to Trigger")
-        assert labels[4] == _("Lookaheads")
-        assert labels[5] == _("Directory Profiles")
+        assert labels[2] == _("History")
+        assert labels[3] == _("Prevalidations")
+        assert labels[4] == _("Seek to Trigger")
+        assert labels[5] == _("Lookaheads")
+        assert labels[6] == _("Directory Profiles")
 
     def test_classifier_actions_tab_is_enabled(self, qtbot):
         win = _make_window(qtbot)
@@ -71,9 +73,13 @@ class TestTabLayout:
         win = _make_window(qtbot)
         assert win._tabs.isTabEnabled(1)
 
+    def test_history_tab_is_enabled(self, qtbot):
+        win = _make_window(qtbot)
+        assert win._tabs.isTabEnabled(2)
+
     def test_seek_to_trigger_tab_is_enabled(self, qtbot):
         win = _make_window(qtbot)
-        assert win._tabs.isTabEnabled(3)
+        assert win._tabs.isTabEnabled(4)
 
 
 # ---------------------------------------------------------------------------
@@ -101,8 +107,10 @@ class TestTabEnabledState:
 
 class TestTabPersistence:
     def test_defaults_to_prevalidations_tab_when_no_cached_value(self, qtbot):
+        from utils.translations import _
         win = _make_window(qtbot)
-        assert win._tabs.currentIndex() == 2
+        assert win._tabs.currentIndex() == 3
+        assert win._tabs.tabText(3) == _("Prevalidations")
 
     def test_restores_saved_tab_index(self, qtbot):
         import ui.compare.classifier_management_window_qt as _cmw

@@ -1794,6 +1794,11 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
         # Ensure VLC playback is fully torn down before window destruction.
         self.media_frame.dispose_vlc()
 
+        if not self.is_secondary():
+            # Stopped runs are recorded as interrupted, resumable on the next start.
+            from compare import pipeline_run_service
+            pipeline_run_service.shutdown(timeout=3.0)
+
         self.cache_ctrl.store_info_cache(store_window_state=not self.is_secondary())
 
         if self.is_secondary():

@@ -702,6 +702,7 @@ class ClassifierManagementWindow(SmartDialog):
         from ui.compare.classifier_pipelines_tab_qt import ClassifierPipelinesTab
         from ui.compare.directory_profiles_tab_qt import DirectoryProfilesTab
         from ui.compare.lookaheads_tab_qt import LookaheadsTab
+        from ui.compare.pipeline_history_tab_qt import PipelineHistoryTab
         from ui.compare.prevalidations_tab_qt import PrevalidationsTab
         from ui.compare.seek_to_trigger_tab_qt import SeekToTriggerTab
 
@@ -723,20 +724,24 @@ class ClassifierManagementWindow(SmartDialog):
         self._seek_to_trigger_tab = SeekToTriggerTab(
             self._tabs, app_actions
         )
+        self._pipeline_history_tab = PipelineHistoryTab(
+            self._tabs, app_actions
+        )
 
-        # Tab indices: 0=Classifier Actions, 1=Pipelines,
-        #              2=Prevalidations, 3=Seek to Trigger,
-        #              4=Lookaheads, 5=Directory Profiles
+        # Tab indices: 0=Classifier Actions, 1=Pipelines, 2=History,
+        #              3=Prevalidations, 4=Seek to Trigger,
+        #              5=Lookaheads, 6=Directory Profiles
         self._tabs.addTab(self._classifier_actions_tab, _("Classifier Actions"))
         self._tabs.addTab(self._classifier_pipelines_tab, _("Pipelines"))
+        self._tabs.addTab(self._pipeline_history_tab, _("History"))
         self._tabs.addTab(self._prevalidations_tab, _("Prevalidations"))
         self._tabs.addTab(self._seek_to_trigger_tab, _("Seek to Trigger"))
         self._tabs.addTab(self._lookaheads_tab, _("Lookaheads"))
         self._tabs.addTab(self._directory_profiles_tab, _("Directory Profiles"))
 
         # Restore last-selected tab, then persist any future changes.
-        # Default is 2 (Prevalidations) so first-time opens land there.
-        saved_tab = app_info_cache.get_meta(_CMW_TAB_CACHE_KEY, 2)
+        # Default is 3 (Prevalidations) so first-time opens land there.
+        saved_tab = app_info_cache.get_meta(_CMW_TAB_CACHE_KEY, 3)
         if isinstance(saved_tab, int) and 0 <= saved_tab < self._tabs.count():
             self._tabs.setCurrentIndex(saved_tab)
         self._tabs.currentChanged.connect(

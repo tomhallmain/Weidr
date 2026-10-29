@@ -299,6 +299,18 @@ def reset_app_globals():
         except Exception:
             pass
 
+        # Pipeline run history and active-run registry — process-wide
+        try:
+            from compare.pipeline_run_history import pipeline_run_history
+            pipeline_run_history.reset()
+        except Exception:
+            pass
+        try:
+            from compare import pipeline_run_service
+            pipeline_run_service.reset()
+        except Exception:
+            pass
+
         # FrameCache — clear in-memory dicts only; leave temp dir intact
         try:
             from image.frame_cache import FrameCache

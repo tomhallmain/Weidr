@@ -251,6 +251,21 @@ class _FakeSession:
     def pipeline_status(self):
         return {"running": bool(self.pipeline_runs), "pipeline": None}
 
+    def stop_pipeline(self, run_id=None):
+        if run_id == "unknown":
+            raise ValueError("run 'unknown' is not active in this process")
+        self.pipeline_runs.append(("stop", run_id))
+        return {"status": "stopping", "run_id": run_id or "r1"}
+
+    def resume_pipeline(self, run_id=None, continue_without_sd_runner=False):
+        if run_id == "unknown":
+            raise ValueError("run 'unknown' cannot be resumed")
+        self.pipeline_runs.append(("resume", run_id, continue_without_sd_runner))
+        return {"status": "started", "run_id": "r2", "resumed_from": run_id or "r1"}
+
+    def pipeline_history(self):
+        return {"runs": [{"run_id": "r1", "status": "cancelled", "resumable": True}]}
+
     def list_pipelines(self):
         return {"pipelines": [{"name": "Sorter", "is_active": True, "kind": "action",
                                "last_profile": None}], "selected_profile": "Photos"}
@@ -677,6 +692,28 @@ class TestDispatch:
         with pytest.raises(MCPToolError):
             ext.dispatch("run_pipeline", {"pipeline_name": "Missing"})
 
+    def test_stop_pipeline_defaults_and_argument(self):
+        ext, session = _extension()
+        assert ext.dispatch("stop_pipeline")["status"] == "stopping"
+        ext.dispatch("stop_pipeline", {"run_id": "r9"})
+        assert session.pipeline_runs == [("stop", None), ("stop", "r9")]
+
+    def test_stop_pipeline_wraps_value_error_as_tool_error(self):
+        ext, _ = _extension()
+        with pytest.raises(MCPToolError):
+            ext.dispatch("stop_pipeline", {"run_id": "unknown"})
+
+    def test_resume_pipeline_defaults_and_arguments(self):
+        ext, session = _extension()
+        assert ext.dispatch("resume_pipeline")["resumed_from"] == "r1"
+        ext.dispatch("resume_pipeline", {"run_id": "r7", "continue_without_sd_runner": True})
+        assert session.pipeline_runs == [("resume", None, False), ("resume", "r7", True)]
+
+    def test_resume_pipeline_wraps_value_error_as_tool_error(self):
+        ext, _ = _extension()
+        with pytest.raises(MCPToolError):
+            ext.dispatch("resume_pipeline", {"run_id": "unknown"})
+
     @pytest.mark.parametrize("tool_name, arguments", [
         ("delete_file", {"path": "/base/a.png"}),
         ("move_marks", {"target_dir": "/out"}),
@@ -685,6 +722,8 @@ class TestDispatch:
         ("run_image_generation", {}),
         ("set_prevalidations_running", {"enabled": False}),
         ("run_pipeline", {"pipeline_name": "Sorter"}),
+        ("stop_pipeline", {}),
+        ("resume_pipeline", {}),
     ])
     def test_gated_tool_is_refused_while_its_password_is_required(self, tool_name, arguments):
         ext, session = _extension()
@@ -788,6 +827,10 @@ class TestReadResource:
     def test_pipeline_status(self):
         ext, _ = _extension()
         assert ext.read_resource("pipeline_status") == {"running": False, "pipeline": None}
+
+    def test_pipeline_history(self):
+        ext, _ = _extension()
+        assert ext.read_resource("pipeline_history")["runs"][0]["run_id"] == "r1"
 
     def test_compare_settings(self):
         ext, _ = _extension()

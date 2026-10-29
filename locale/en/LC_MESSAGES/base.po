@@ -11157,3 +11157,259 @@ msgid ""
 msgstr ""
 "Only one category may be something other than a label of this model (the "
 "background category, e.g. \"no person\"). Not model labels: {0}"
+
+#: src/compare/pipeline_run_history.py:77
+msgid "Running"
+msgstr "Running"
+
+#: src/compare/pipeline_run_history.py:78
+msgid "Completed"
+msgstr "Completed"
+
+#: src/compare/pipeline_run_history.py:79
+msgid "Completed with errors"
+msgstr "Completed with errors"
+
+#: src/compare/pipeline_run_history.py:80
+msgid "Cancelled"
+msgstr "Cancelled"
+
+#: src/compare/pipeline_run_history.py:81
+msgid "Failed"
+msgstr "Failed"
+
+#: src/compare/pipeline_run_history.py:82
+msgid "Interrupted"
+msgstr "Interrupted"
+
+#: src/compare/pipeline_run_service.py:248
+msgid "This run was already resumed."
+msgstr "This run was already resumed."
+
+#: src/compare/pipeline_run_service.py:251
+msgid ""
+"Only cancelled, failed or interrupted runs with saved progress can be resumed."
+msgstr ""
+"Only cancelled, failed or interrupted runs with saved progress can be resumed."
+
+#: src/compare/pipeline_run_service.py:245
+msgid "This run is no longer in the history."
+msgstr "This run is no longer in the history."
+
+#: src/compare/pipeline_run_service.py:255
+msgid "Pipeline '{0}' no longer exists."
+msgstr "Pipeline '{0}' no longer exists."
+
+#: src/compare/pipeline_run_report.py:160
+msgid "Pipeline {0} — run cancelled"
+msgstr "Pipeline {0} — run cancelled"
+
+#: src/compare/pipeline_run_report.py:195
+msgid "Resumed run: {0} file(s) already processed earlier were skipped"
+msgstr "Resumed run: {0} file(s) already processed earlier were skipped"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:619 src/ui/compare/classifier_pipelines_tab_qt.py:616 src/ui/compare/classifier_pipelines_tab_qt.py:638 src/ui/compare/pipeline_history_tab_qt.py:259
+msgid "Resume Pipeline Run"
+msgstr "Resume Pipeline Run"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:568
+msgid ""
+"Last run of this pipeline on these directories: {date} ({status}, profile '{profile}')"
+msgstr ""
+"Last run of this pipeline on these directories: {date} ({status}, profile '{profile}')"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:570
+msgid ""
+"Last run of this pipeline on overlapping directories: {date} ({status}, profile '{profile}')"
+msgstr ""
+"Last run of this pipeline on overlapping directories: {date} ({status}, profile '{profile}')"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:623
+msgid ""
+"The pipeline was edited since this run; the current definition will be used."
+msgstr ""
+"The pipeline was edited since this run; the current definition will be used."
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:630
+msgid ""
+"Resume pipeline '{name}' from {date}? {count} file(s) already processed will be skipped.\n"
+"\n"
+"Directories:\n"
+"{dirs}"
+msgstr ""
+"Resume pipeline '{name}' from {date}? {count} file(s) already processed will be skipped.\n"
+"\n"
+"Directories:\n"
+"{dirs}"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:596
+msgid "Resume the unfinished run, or start a new run from the beginning?"
+msgstr "Resume the unfinished run, or start a new run from the beginning?"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:597 src/ui/compare/pipeline_history_tab_qt.py:87
+msgid "Resume"
+msgstr "Resume"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:597
+msgid "Start New Run"
+msgstr "Start New Run"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:606
+msgid "Run Anyway"
+msgstr "Run Anyway"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:577
+msgid ""
+"WARNING: pipeline '{name}' is running on overlapping directories (started {date})."
+msgstr ""
+"WARNING: pipeline '{name}' is running on overlapping directories (started {date})."
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:580
+msgid ""
+"The last run on these directories did not finish ({status}, {count} file(s) processed)."
+msgstr ""
+"The last run on these directories did not finish ({status}, {count} file(s) processed)."
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:625
+msgid "Missing directories (skipped): {0}"
+msgstr "Missing directories (skipped): {0}"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:628
+msgid ""
+"Profile '{0}' has changed since this run; the directories recorded at that time are used."
+msgstr ""
+"Profile '{0}' has changed since this run; the directories recorded at that time are used."
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:575
+msgid "  Overlap: {0} ↔ {1}"
+msgstr "  Overlap: {0} ↔ {1}"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:688
+msgid ""
+"This run cannot start:\n"
+"{0}"
+msgstr ""
+"This run cannot start:\n"
+"{0}"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:705
+msgid "Pipeline {0} failed: {1}"
+msgstr "Pipeline {0} failed: {1}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:57
+msgid "Pipeline Run History"
+msgstr "Pipeline Run History"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:84
+msgid "Stop"
+msgstr "Stop"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:90
+msgid "Resume Last Incomplete"
+msgstr "Resume Last Incomplete"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:141
+msgid "Stopping…"
+msgstr "Stopping…"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:172
+msgid "Other process"
+msgstr "Other process"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:173
+msgid "MCP"
+msgstr "MCP"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:173
+msgid "This app"
+msgstr "This app"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:176
+msgid "Directories at run time:"
+msgstr "Directories at run time:"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:65
+msgid "Started"
+msgstr "Started"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Finished / Updated"
+msgstr "Finished / Updated"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Progress"
+msgstr "Progress"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Errors"
+msgstr "Errors"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Source"
+msgstr "Source"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:239 src/ui/compare/pipeline_history_tab_qt.py:246
+msgid "Stop Pipeline Run"
+msgstr "Stop Pipeline Run"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:247
+msgid "This run is not running in this app."
+msgstr "This run is not running in this app."
+
+#: src/ui/compare/pipeline_history_tab_qt.py:259
+msgid "There is no unfinished run to resume."
+msgstr "There is no unfinished run to resume."
+
+#: src/ui/compare/pipeline_history_tab_qt.py:273
+msgid "Remove Run"
+msgstr "Remove Run"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:143
+msgid "Dir {0}/{1} · {2}/{3} files"
+msgstr "Dir {0}/{1} · {2}/{3} files"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:148
+msgid "{0} files"
+msgstr "{0} files"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:179
+msgid "Current directory: {0}"
+msgstr "Current directory: {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:181
+msgid "Skipped (processed by the earlier run): {0}"
+msgstr "Skipped (processed by the earlier run): {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:183
+msgid "Actions: {0}"
+msgstr "Actions: {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:186
+msgid "Error: {0}"
+msgstr "Error: {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:188
+msgid "Resumes run {0}"
+msgstr "Resumes run {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:190
+msgid "Resumed by run {0}"
+msgstr "Resumed by run {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:192
+msgid "Run data: {0}"
+msgstr "Run data: {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:240
+msgid ""
+"Stop pipeline run '{0}'? Files already processed keep their actions; the run can be resumed later."
+msgstr ""
+"Stop pipeline run '{0}'? Files already processed keep their actions; the run can be resumed later."
+
+#: src/ui/compare/pipeline_history_tab_qt.py:274
+msgid "Remove this run of '{0}' from the history?"
+msgstr "Remove this run of '{0}' from the history?"
+
+#: src/ui/compare/classifier_management_window_qt.py:736
+msgid "History"
+msgstr "History"

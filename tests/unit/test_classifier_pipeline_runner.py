@@ -1544,6 +1544,16 @@ class TestPipelineRunReport:
         assert ClassifierActionType.GENERATE.get_translation() in text
         assert "\n" in text
 
+    def test_format_completion_report_cancelled_and_resumed(self):
+        from utils.translations import _
+        r = PipelineRunReport()
+        text = r.format_completion_report(
+            PipelineRunStats(pipeline_name="p", files_evaluated=5, cancelled=True, files_skipped=2)
+        )
+        assert _("Pipeline {0} — run cancelled").format("p") in text
+        assert _("Pipeline {0} — run complete").format("p") not in text
+        assert _("Resumed run: {0} file(s) already processed earlier were skipped").format(2) in text
+
     def test_format_completion_report_includes_message_sections(self):
         from utils.translations import _
         r = PipelineRunReport()

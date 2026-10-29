@@ -301,3 +301,36 @@ class TestDecisionsField:
         report.add_decision({"path": "/a/img.jpg"})
         data = _call_write_dump(tmp_path / "logs", _make_stats(), report=report)
         assert data["messages"] == []
+
+
+# ---------------------------------------------------------------------------
+# run block and return value
+# ---------------------------------------------------------------------------
+
+class TestRunBlock:
+    def test_no_run_block_without_run_info(self, tmp_path):
+        data = _call_write_dump(tmp_path / "logs", _make_stats())
+        assert "run" not in data
+        assert data["stats"]["cancelled"] is False
+        assert data["stats"]["files_skipped"] == 0
+
+    def test_run_block_and_stats_identity(self, tmp_path):
+        from compare import classifier_pipeline_batch as pipeline_batch
+
+        stats = _make_stats(cancelled=True, run_id="r1", resumed_from="r0", files_skipped=4)
+        info = {"run_id": "r1", "status": "cancelled", "started_at": 1.5, "resumed_from": "r0"}
+        path = pipeline_batch.write_pipeline_run_dump(
+            _fake_pipeline(), stats, PipelineRunReport(), run_info=info)
+        assert path is not None and path.exists()
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert data["run"] == info
+        assert data["stats"]["run_id"] == "r1"
+        assert data["stats"]["resumed_from"] == "r0"
+        assert data["stats"]["files_skipped"] == 4
+
+    def test_failed_write_returns_none(self, monkeypatch):
+        from compare import classifier_pipeline_batch as pipeline_batch
+
+        pipeline = _fake_pipeline()
+        pipeline.to_dict.side_effect = RuntimeError("boom")
+        assert pipeline_batch.write_pipeline_run_dump(pipeline, _make_stats(), PipelineRunReport()) is None

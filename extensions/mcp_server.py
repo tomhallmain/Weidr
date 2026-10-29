@@ -66,6 +66,8 @@ PASSWORD_GATES = {
     "run_image_generation": ("run_image_generation",),
     "set_prevalidations_running": ("run_prevalidations",),
     "run_pipeline": ("edit_prevalidations",),
+    "stop_pipeline": ("edit_prevalidations",),
+    "resume_pipeline": ("edit_prevalidations",),
 }
 
 
@@ -349,11 +351,33 @@ def tool_descriptors() -> list:
             "description": (
                 "Run a classifier pipeline over every file in a directory profile's "
                 "directories, as the Pipelines tab's Run on Profile does. profile_name "
-                "defaults to the profile selected in that tab. Returns once started; read "
-                "the pipeline_status resource for progress and the final stats. A pipeline "
+                "defaults to the profile selected in that tab. Returns once started, with "
+                "the run_id and warnings that include earlier runs on the same or "
+                "overlapping directories; read the pipeline_status resource for progress "
+                "and the final stats. Refused while any pipeline run (from the app or "
+                "here) is running on overlapping directories. A pipeline "
                 "with GENERATE actions is refused while SD Runner is unreachable unless "
                 "continue_without_sd_runner is true. See the pipelines and "
                 "directory_profiles resources for names."
+            ),
+        },
+        {
+            "name": "stop_pipeline",
+            "description": (
+                "Stop a running pipeline run after its current file. run_id defaults to "
+                "the run started by run_pipeline/resume_pipeline, else the only active "
+                "run. Files already processed keep their actions; the run is recorded as "
+                "cancelled and resume_pipeline can continue it."
+            ),
+        },
+        {
+            "name": "resume_pipeline",
+            "description": (
+                "Continue an unfinished (cancelled, failed or interrupted) pipeline run "
+                "over the directories it recorded, skipping files it already processed. "
+                "run_id defaults to the newest resumable run (see the pipeline_history "
+                "resource). Refused if the pipeline was edited since that run. "
+                "continue_without_sd_runner works as for run_pipeline."
             ),
         },
         {
@@ -443,8 +467,19 @@ def resource_descriptors() -> list:
             "name": "pipeline_status",
             "uri": "weidr://pipelines/status",
             "description": (
-                "The latest run_pipeline run: whether it's still running, its pipeline, "
-                "profile and directories, and once finished its stats and summary, or error."
+                "The latest run_pipeline/resume_pipeline run: whether it's still running, "
+                "its run_id, pipeline, profile and directories, live progress, and once "
+                "finished its stats and summary, or error."
+            ),
+        },
+        {
+            "name": "pipeline_history",
+            "uri": "weidr://pipelines/history",
+            "description": (
+                "Recorded pipeline runs, newest first, from the app and MCP: status "
+                "(running, completed, completed_with_errors, cancelled, failed, "
+                "interrupted), timing, progress, the directories each ran on at the time, "
+                "and whether it can be resumed."
             ),
         },
     ]
@@ -721,6 +756,19 @@ class MCPServerExtension:
                 )
             except ValueError as e:
                 raise MCPToolError(str(e))
+        if tool_name == "stop_pipeline":
+            try:
+                return session.stop_pipeline(arguments.get("run_id") or None)
+            except ValueError as e:
+                raise MCPToolError(str(e))
+        if tool_name == "resume_pipeline":
+            try:
+                return session.resume_pipeline(
+                    arguments.get("run_id") or None,
+                    continue_without_sd_runner=bool(arguments.get("continue_without_sd_runner", False)),
+                )
+            except ValueError as e:
+                raise MCPToolError(str(e))
         if tool_name == "health_check":
             return {"session_available": True, "compare_running": session.is_compare_running()}
         raise MCPToolError(f"unknown tool: {tool_name}")
@@ -755,6 +803,8 @@ class MCPServerExtension:
             return session.list_directory_profiles()
         if name == "pipeline_status":
             return session.pipeline_status()
+        if name == "pipeline_history":
+            return session.pipeline_history()
         raise MCPToolError(f"unknown resource: {name}")
 
     # ------------------------------------------------------------------
@@ -1008,6 +1058,16 @@ class MCPServerExtension:
             return self.dispatch("run_pipeline", {
                 "pipeline_name": pipeline_name, "profile_name": profile_name,
                 "continue_without_sd_runner": continue_without_sd_runner,
+            })
+
+        @server.tool(name="stop_pipeline", description=described["stop_pipeline"])
+        def stop_pipeline(run_id: str | None = None) -> dict:
+            return self.dispatch("stop_pipeline", {"run_id": run_id})
+
+        @server.tool(name="resume_pipeline", description=described["resume_pipeline"])
+        def resume_pipeline(run_id: str | None = None, continue_without_sd_runner: bool = False) -> dict:
+            return self.dispatch("resume_pipeline", {
+                "run_id": run_id, "continue_without_sd_runner": continue_without_sd_runner,
             })
 
         @server.tool(name="health_check", description=described["health_check"])

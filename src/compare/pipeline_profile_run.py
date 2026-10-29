@@ -70,19 +70,54 @@ def list_directory_profiles() -> dict:
     }
 
 
+def history_warnings(pipeline_name: str, directories) -> list:
+    """English notes on earlier and running runs that touch *directories*."""
+    from compare import pipeline_run_service
+    from compare.pipeline_run_history import format_run_time
+
+    plan = pipeline_run_service.plan_run(pipeline_name, directories)
+    notes = []
+    last = plan.last_run
+    if last is not None:
+        where = "these directories" if plan.last_run_same_set else "overlapping directories"
+        notes.append(
+            f"pipeline {pipeline_name!r} last ran on {where} at {format_run_time(last.started_at)} "
+            f"({last.status.value}, profile {last.profile_name!r}, run {last.run_id})"
+        )
+    for r in plan.running:
+        notes.append(
+            f"pipeline {r.pipeline_name!r} is running on overlapping directories "
+            f"(run {r.run_id}, started {format_run_time(r.started_at)})"
+        )
+    if plan.resumable is not None:
+        notes.append(
+            f"run {plan.resumable.run_id} on these directories did not finish "
+            f"({plan.resumable.status.value}); resume_pipeline can continue it"
+        )
+    return notes
+
+
 class PipelineProfileRuns:
     """At most one pipeline run started this way at a time, and the latest
-    run's outcome. The Pipelines tab starts its runs independently."""
+    run's outcome. Runs go through pipeline_run_service like the Pipelines
+    tab's, so they share one history and refuse to start on directories a
+    running run (from either) overlaps."""
 
     def __init__(self) -> None:
         self._runner = ThreadedTaskRunner()
         self._lock = threading.Lock()          # guards _status
         self._start_lock = threading.Lock()    # makes check-then-start atomic
-        self._status: dict = {"running": False, "pipeline": None}
+        self._status: dict = {"running": False, "pipeline": None, "run_id": None}
 
     def status(self) -> dict:
         with self._lock:
-            return {**self._status, "running": self._runner.is_running()}
+            status = {**self._status, "running": self._runner.is_running()}
+        run_id = status.get("run_id")
+        if run_id:
+            from compare.pipeline_run_history import pipeline_run_history
+            record = pipeline_run_history.get(run_id)
+            status["progress"] = record.to_public_dict() if record is not None else None
+        return status
 
     def start(
         self, pipeline_name: str, profile_name: Optional[str], *,
@@ -108,12 +143,84 @@ class PipelineProfileRuns:
                 blur_callback=blur_callback,
             )
 
+    def resume(
+        self, run_id: Optional[str], *,
+        continue_without_sd_runner: bool,
+        fallback_generation_type,
+        hide_callback: Optional[Callable],
+        notify_callback: Optional[Callable],
+        blur_callback: Optional[Callable],
+    ) -> dict:
+        """Continue the unfinished run *run_id* (default: the newest
+        resumable one) over its recorded directories, skipping the files it
+        already processed. Raises ValueError when it can't be resumed."""
+        from compare import pipeline_run_service
+        from compare.pipeline_run_history import pipeline_run_history
+
+        with self._start_lock:
+            if self._runner.is_running():
+                raise ValueError("a pipeline run is already in progress")
+            ensure_pipelines_loaded()
+            pipeline_run_history.sync_from_disk()
+            if not run_id:
+                latest = pipeline_run_history.latest_resumable()
+                if latest is None:
+                    raise ValueError("no unfinished run to resume")
+                run_id = latest.run_id
+            check = pipeline_run_service.check_resume(run_id)
+            if check.problem:
+                raise ValueError(f"run {run_id!r} cannot be resumed: {check.problem}")
+            if check.pipeline_changed:
+                raise ValueError(
+                    f"pipeline {check.record.pipeline_name!r} was edited since run {run_id!r}; "
+                    "start a new run instead"
+                )
+            pipeline = check.pipeline
+            errors = pipeline.validate()
+            if errors:
+                raise pipeline_batch.PipelineValidationError(pipeline.name, errors)
+            warnings = [f"directory no longer exists: {d}" for d in check.missing_directories]
+            return self._launch(
+                pipeline, check.record.profile_name, list(check.record.directories),
+                warnings=warnings, resume_from=run_id,
+                continue_without_sd_runner=continue_without_sd_runner,
+                fallback_generation_type=fallback_generation_type,
+                hide_callback=hide_callback, notify_callback=notify_callback,
+                blur_callback=blur_callback,
+            )
+
+    def stop(self, run_id: Optional[str] = None) -> dict:
+        """Ask a run active in this process to stop after its current file.
+        *run_id* defaults to the run started here last, else the only
+        active run. Raises ValueError when there is nothing to stop."""
+        from compare import pipeline_run_service
+
+        if not run_id:
+            with self._lock:
+                run_id = self._status.get("run_id") if self._runner.is_running() else None
+            if not run_id:
+                active = pipeline_run_service.active_run_ids()
+                if len(active) != 1:
+                    raise ValueError(
+                        "no pipeline run is active" if not active
+                        else "several pipeline runs are active; pass run_id"
+                    )
+                run_id = active[0]
+        if not pipeline_run_service.request_stop(run_id):
+            raise ValueError(f"run {run_id!r} is not active in this process")
+        return {"status": "stopping", "run_id": run_id}
+
+    def history(self, limit: int = 50) -> dict:
+        from compare.pipeline_run_history import pipeline_run_history
+
+        pipeline_run_history.sync_from_disk()
+        records = pipeline_run_history.records()[:max(0, int(limit))]
+        return {"runs": [r.to_public_dict() for r in records]}
+
     def _start(
         self, pipeline_name, profile_name, *, continue_without_sd_runner,
         fallback_generation_type, hide_callback, notify_callback, blur_callback,
     ) -> dict:
-        from files.marked_files import MarkedFiles
-
         if self._runner.is_running():
             raise ValueError("a pipeline run is already in progress")
         ensure_pipelines_loaded()
@@ -132,14 +239,30 @@ class PipelineProfileRuns:
         if profile is None:
             raise ValueError(f"no directory profile named {profile_name!r}")
         directories = list(profile.directories)
+        return self._launch(
+            pipeline, profile_name, directories,
+            warnings=history_warnings(pipeline.name, directories), resume_from=None,
+            continue_without_sd_runner=continue_without_sd_runner,
+            fallback_generation_type=fallback_generation_type,
+            hide_callback=hide_callback, notify_callback=notify_callback,
+            blur_callback=blur_callback,
+        )
 
-        warnings = []
+    def _launch(
+        self, pipeline, profile_name, directories, *, warnings, resume_from,
+        continue_without_sd_runner, fallback_generation_type,
+        hide_callback, notify_callback, blur_callback,
+    ) -> dict:
+        from compare import pipeline_run_service
+        from files.marked_files import MarkedFiles
+
+        warnings = list(warnings)
         if pipeline.has_generate_action():
             from extensions.sd_runner_client import SDRunnerClient
             if not SDRunnerClient.is_reachable():
                 if not continue_without_sd_runner:
                     raise ValueError(
-                        f"pipeline {pipeline_name!r} has GENERATE actions but SD Runner is not "
+                        f"pipeline {pipeline.name!r} has GENERATE actions but SD Runner is not "
                         "reachable; pass continue_without_sd_runner=true to run anyway"
                     )
                 warnings.append(
@@ -151,13 +274,18 @@ class PipelineProfileRuns:
             pipeline.generation_type if pipeline.generation_type is not None
             else fallback_generation_type
         )
-        app_info_cache.set_meta(last_profile_meta_key(pipeline.name), profile_name)
+        # RunRefused is a ValueError: overlap with a running run.
+        active = pipeline_run_service.begin_run(
+            pipeline, directories, profile_name=profile_name, source="mcp",
+            resume_from=resume_from,
+        )
+        if profile_name:
+            app_info_cache.set_meta(last_profile_meta_key(pipeline.name), profile_name)
 
         def run() -> None:
-            outcome = pipeline_batch.run_pipeline_over_directories(
-                pipeline, directories,
+            outcome = pipeline_run_service.execute_run(
+                active,
                 generation_type=generation_type,
-                profile_name=profile_name,
                 hide_callback=hide_callback,
                 notify_callback=notify_callback,
                 add_mark_callback=MarkedFiles.add_mark_if_not_present,
@@ -166,6 +294,7 @@ class PipelineProfileRuns:
             with self._lock:
                 self._status["stats"] = dataclasses.asdict(outcome.stats)
                 self._status["summary"] = outcome.summary
+                self._status["cancelled"] = getattr(outcome, "cancelled", False)
             if notify_callback is not None:
                 try:
                     notify_callback(outcome.summary)
@@ -181,17 +310,24 @@ class PipelineProfileRuns:
                 self._status["finished_at"] = time.time()
 
         started = {
+            "run_id": active.run_id,
             "pipeline": pipeline.name,
             "profile": profile_name,
             "directories": directories,
             "warnings": warnings,
         }
+        if resume_from:
+            started["resumed_from"] = resume_from
         with self._lock:
             self._status = {
                 **started, "started_at": time.time(), "finished_at": None,
-                "stats": None, "summary": None, "error": None,
+                "stats": None, "summary": None, "error": None, "cancelled": False,
             }
-        self._runner.start(run, on_error=on_error, on_finished=on_finished)
+        try:
+            self._runner.start(run, on_error=on_error, on_finished=on_finished)
+        except Exception as e:
+            pipeline_run_service.abandon(active, str(e))
+            raise
         return {"status": "started", **started}
 
 

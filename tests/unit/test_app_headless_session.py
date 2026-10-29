@@ -411,6 +411,38 @@ def test_run_pipeline_uses_the_non_navigating_hide_and_the_persisted_generation_
     assert captured["hide_callback"] == session._hide_media
 
 
+def test_resume_pipeline_uses_the_same_callbacks_as_run_pipeline(tmp_path, monkeypatch):
+    from compare import pipeline_profile_run
+    from utils.app_info_cache import app_info_cache
+    from utils.constants import ImageGenerationType
+
+    app_info_cache.set_meta("image_generation_mode", ImageGenerationType.IP_ADAPTER.value)
+    session = _session(tmp_path)
+    captured = {}
+    monkeypatch.setattr(pipeline_profile_run.pipeline_runs, "resume",
+                        lambda run_id, **kwargs: captured.update(kwargs, run_id=run_id))
+
+    session.resume_pipeline("r1", continue_without_sd_runner=True)
+
+    assert captured["run_id"] == "r1"
+    assert captured["continue_without_sd_runner"] is True
+    assert captured["fallback_generation_type"] == ImageGenerationType.IP_ADAPTER
+    assert captured["hide_callback"] == session._hide_media
+
+
+def test_stop_pipeline_and_history_delegate(tmp_path, monkeypatch):
+    from compare import pipeline_profile_run
+
+    session = _session(tmp_path)
+    monkeypatch.setattr(pipeline_profile_run.pipeline_runs, "stop",
+                        lambda run_id=None: {"status": "stopping", "run_id": run_id})
+    monkeypatch.setattr(pipeline_profile_run.pipeline_runs, "history",
+                        lambda limit=50: {"runs": []})
+
+    assert session.stop_pipeline("r1") == {"status": "stopping", "run_id": "r1"}
+    assert session.pipeline_history() == {"runs": []}
+
+
 def test_persisted_generation_type_falls_back_to_control_net():
     from utils.app_info_cache import app_info_cache
     from utils.constants import ImageGenerationType

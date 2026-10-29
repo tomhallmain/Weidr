@@ -182,3 +182,30 @@ class TestRunSinglePipeline:
         tab = self._tab_with_profile(qtbot)
         tab._run_single_pipeline(_relative_move_pipeline(str(tmp_path)))
         assert batch_runs == []
+
+
+class TestRunSinglePipelineHistory:
+    def test_confirmation_lists_the_last_run_on_these_directories(
+            self, qtbot, isolated_singletons, alerts, batch_runs, tmp_path):
+        from compare.pipeline_run_control import RunCheckpoint
+        from compare.pipeline_run_history import (
+            PipelineRunRecord, RunStatus, format_run_time, pipeline_run_history,
+        )
+        from utils.translations import _
+        DirectoryProfile.directory_profiles.append(DirectoryProfile(name="P", directories=["/d1", "/d2"]))
+        tab = _make_tab(qtbot)
+        tab._profile_combo.setCurrentText("P")
+        p = _relative_move_pipeline(str(tmp_path))
+        record = PipelineRunRecord.new(p.name, ["/d2", "/d1"], profile_name="P", source="gui",
+                                       owner=pipeline_run_history.owner)
+        pipeline_run_history.add_run(record)
+        pipeline_run_history.finish_run(record.run_id, RunStatus.COMPLETED, counters=RunCheckpoint())
+
+        tab._run_single_pipeline(p)
+
+        (msg, kind), = alerts
+        assert kind == "askokcancel"
+        assert _("Last run of this pipeline on these directories: {date} ({status}, profile '{profile}')").format(
+            date=format_run_time(record.started_at), status=RunStatus.COMPLETED.label(),
+            profile="P") in msg
+        assert batch_runs == [(p, ["/d1", "/d2"], "P")]

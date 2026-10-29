@@ -410,11 +410,19 @@ class ClassifierActionsTab(QWidget):
             return
         if ClassifierPipelinesTab.refuse_if_invalid(self, pipeline, _("Run Pipeline")):
             return
+        directories = list(profile.directories)
         msg = _("Run pipeline '{0}' on profile '{1}'?").format(pipeline.name, profile.name)
-        if not qt_alert(self, _("Run Pipeline"), msg, kind="askokcancel"):
+        notes, plan = ClassifierPipelinesTab.history_notes(pipeline.name, directories)
+        if notes:
+            msg += "\n\n" + "\n".join(notes)
+        choice = ClassifierPipelinesTab.confirm_run(self, _("Run Pipeline"), msg, plan, alert=qt_alert)
+        if choice is None:
+            return
+        if choice == "resume":
+            ClassifierPipelinesTab.resume_run(self, self._app_actions, plan.resumable.run_id)
             return
         ClassifierPipelinesTab.start_batch_run(
-            self, self._app_actions, pipeline, list(profile.directories), profile.name
+            self, self._app_actions, pipeline, directories, profile.name
         )
 
     def _run_all(self) -> None:

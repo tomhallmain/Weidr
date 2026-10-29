@@ -78,6 +78,8 @@ def test_run_goes_over_the_profile_directories_and_records_the_outcome(installed
 
     started = _start(runs, notify_callback=notified.append)
 
+    run_id = started.pop("run_id")
+    assert run_id
     assert started == {"status": "started", "pipeline": "Sorter", "profile": "Photos",
                        "directories": ["/p/a", "/p/b"], "warnings": []}
     (call,) = batch_calls
@@ -206,3 +208,132 @@ def test_loaded_pipelines_are_not_reloaded(installed, monkeypatch):
 def test_image_specific_generation_type():
     assert ImageGenerationType.image_specific(ImageGenerationType.IP_ADAPTER) == ImageGenerationType.IP_ADAPTER
     assert ImageGenerationType.image_specific(ImageGenerationType.RENOISER) == ImageGenerationType.CONTROL_NET
+
+
+# ---------------------------------------------------------------------------
+# Run history: overlap refusal, stop, resume, status
+# ---------------------------------------------------------------------------
+
+def _blocking_batch(monkeypatch, calls):
+    """A batch that runs until its run_control is cancelled."""
+    import threading
+    import time
+
+    entered = threading.Event()
+
+    def blocking_run(pipeline, directories, *, run_control=None, **kwargs):
+        calls.append({"directories": list(directories), "run_control": run_control, **kwargs})
+        entered.set()
+        while not run_control.is_cancelled():
+            time.sleep(0.01)
+        stats = PipelineRunStats(pipeline_name=pipeline.name, cancelled=True)
+        return SimpleNamespace(stats=stats, summary="cancelled", cancelled=True)
+
+    monkeypatch.setattr(ppr.pipeline_batch, "run_pipeline_over_directories", blocking_run)
+    return entered
+
+
+def _kwargs(**overrides):
+    kwargs = dict(continue_without_sd_runner=False, fallback_generation_type=None,
+                  hide_callback=None, notify_callback=None, blur_callback=None)
+    kwargs.update(overrides)
+    return kwargs
+
+
+def test_run_is_refused_on_directories_a_running_run_overlaps(installed, batch_calls):
+    from compare import pipeline_run_service
+
+    pipeline = _Pipeline()
+    installed(pipelines=[pipeline], profiles=[DirectoryProfile("Photos", ["/p/a"])])
+    # A run the Pipelines tab started on a parent directory, still running.
+    pipeline_run_service.begin_run(pipeline, ["/p"], profile_name=None, source="gui",
+                                   allow_running_overlap=True)
+    with pytest.raises(ValueError):
+        ppr.PipelineProfileRuns().start("Sorter", "Photos", **_kwargs())
+    assert batch_calls == []
+
+
+def test_status_carries_run_id_and_progress(installed, batch_calls):
+    installed(pipelines=[_Pipeline()], profiles=[DirectoryProfile("Photos", ["/p"])])
+    runs = ppr.PipelineProfileRuns()
+    started = _start(runs)
+    status = runs.status()
+    assert status["run_id"] == started["run_id"]
+    assert status["progress"]["status"] == "completed"
+    assert status["progress"]["directories"] == ["/p"]
+
+
+def test_second_run_warns_about_the_earlier_run(installed, batch_calls):
+    installed(pipelines=[_Pipeline()], profiles=[DirectoryProfile("Photos", ["/p"])])
+    runs = ppr.PipelineProfileRuns()
+    first = _start(runs)
+    second = _start(runs)
+    assert any(first["run_id"] in w and "these directories" in w for w in second["warnings"])
+
+
+def test_stop_then_resume_continues_the_cancelled_run(installed, monkeypatch):
+    from compare.pipeline_run_history import RunStatus, pipeline_run_history
+
+    installed(pipelines=[_Pipeline()], profiles=[DirectoryProfile("Photos", ["/p/a", "/p/b"])])
+    calls = []
+    entered = _blocking_batch(monkeypatch, calls)
+    runs = ppr.PipelineProfileRuns()
+    started = runs.start("Sorter", "Photos", **_kwargs())
+    assert entered.wait(5)
+
+    assert runs.stop() == {"status": "stopping", "run_id": started["run_id"]}
+    assert runs._runner.wait(5)
+    record = pipeline_run_history.get(started["run_id"])
+    assert record.status is RunStatus.CANCELLED
+    assert record.is_resumable
+    assert runs.status()["cancelled"] is True
+
+    entered.clear()
+    resumed = runs.resume(None, **_kwargs())
+    assert entered.wait(5)
+    assert resumed["resumed_from"] == started["run_id"]
+    assert resumed["directories"] == ["/p/a", "/p/b"]
+    assert calls[-1]["run_control"].resumed_from == started["run_id"]
+    assert pipeline_run_history.get(started["run_id"]).resumed_by == resumed["run_id"]
+    runs.stop(resumed["run_id"])
+    assert runs._runner.wait(5)
+
+
+def test_stop_without_an_active_run_raises(installed):
+    with pytest.raises(ValueError):
+        ppr.PipelineProfileRuns().stop()
+
+
+def test_resume_refused_when_the_pipeline_was_edited(installed, monkeypatch):
+    from compare import pipeline_run_service
+
+    installed(pipelines=[_Pipeline()], profiles=[DirectoryProfile("Photos", ["/p"])])
+    calls = []
+    entered = _blocking_batch(monkeypatch, calls)
+    runs = ppr.PipelineProfileRuns()
+    # Recorded at start, then computed again when resuming.
+    fingerprints = iter(["before", "after"])
+    monkeypatch.setattr(pipeline_run_service, "pipeline_fingerprint", lambda p: next(fingerprints))
+    started = runs.start("Sorter", "Photos", **_kwargs())
+    assert entered.wait(5)
+    runs.stop()
+    assert runs._runner.wait(5)
+
+    with pytest.raises(ValueError, match="edited"):
+        runs.resume(started["run_id"], **_kwargs())
+
+
+def test_resume_without_unfinished_run_raises(installed):
+    with pytest.raises(ValueError):
+        ppr.PipelineProfileRuns().resume(None, **_kwargs())
+
+
+def test_history_lists_every_run(installed, batch_calls):
+    installed(pipelines=[_Pipeline()], profiles=[DirectoryProfile("Photos", ["/p"])])
+    runs = ppr.PipelineProfileRuns()
+    first = _start(runs)
+    second = _start(runs)
+    listed = runs.history()["runs"]
+    assert {r["run_id"] for r in listed} == {first["run_id"], second["run_id"]}
+    assert all(r["status"] == "completed" for r in listed)
+    assert runs.history(limit=1)["runs"] == listed[:1]

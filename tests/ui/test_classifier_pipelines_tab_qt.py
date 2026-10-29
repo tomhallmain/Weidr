@@ -1128,3 +1128,196 @@ class TestActivationValidation:
         tab._toggle_active(p, False)
         assert p.is_active is False
         assert shown == []
+
+
+# ---------------------------------------------------------------------------
+# Run history in the confirmation, resume, and start_batch_run registration
+# ---------------------------------------------------------------------------
+
+def _seed_run(name, directories, status, profile="OldProfile"):
+    from compare.pipeline_run_control import RunCheckpoint
+    from compare.pipeline_run_history import PipelineRunRecord, RunStatus, pipeline_run_history
+    record = PipelineRunRecord.new(name, directories, profile_name=profile, source="gui",
+                                   owner=pipeline_run_history.owner)
+    pipeline_run_history.add_run(record)
+    if status is not RunStatus.RUNNING:
+        pipeline_run_history.finish_run(record.run_id, status,
+                                        counters=RunCheckpoint(files_evaluated=3))
+    return pipeline_run_history.get(record.run_id)
+
+
+class TestRunOnProfileHistory:
+    def _setup(self, qtbot, monkeypatch, answer=False, directories=("/data/a",)):
+        from files.directory_profile import DirectoryProfile
+        DirectoryProfile.directory_profiles.append(
+            DirectoryProfile(name="HistProfile", directories=list(directories)))
+        pipeline = _make_pipeline("HistPipe")
+        ClassifierPipelines.add_pipeline(pipeline)
+
+        calls: list = []
+        import ui.compare.classifier_pipelines_tab_qt as _mod
+
+        def _fake_alert(_parent, _title, msg, kind="info", **kw):
+            calls.append({"msg": msg, "kind": kind, **kw})
+            return answer
+        monkeypatch.setattr(_mod, "qt_alert", _fake_alert)
+        tab = _make_tab(qtbot)
+        tab._profile_combo.setCurrentText("HistProfile")
+        return tab, pipeline, calls
+
+    def test_last_run_on_same_directories_is_shown_with_date_and_status(self, qtbot, monkeypatch):
+        from compare.pipeline_run_history import RunStatus, format_run_time
+        from utils.translations import _
+        tab, pipeline, calls = self._setup(qtbot, monkeypatch)
+        earlier = _seed_run("HistPipe", ["/data/a"], RunStatus.COMPLETED)
+        tab._run_on_profile(pipeline)
+        (call,) = calls
+        assert call["kind"] == "askokcancel"
+        assert _("Last run of this pipeline on these directories: {date} ({status}, profile '{profile}')").format(
+            date=format_run_time(earlier.started_at), status=RunStatus.COMPLETED.label(),
+            profile="OldProfile") in call["msg"]
+
+    def test_overlapping_last_run_lists_the_overlap(self, qtbot, monkeypatch):
+        from compare.pipeline_run_history import RunStatus
+        from utils.translations import _
+        tab, pipeline, calls = self._setup(qtbot, monkeypatch)
+        _seed_run("HistPipe", ["/data"], RunStatus.COMPLETED)
+        tab._run_on_profile(pipeline)
+        msg = calls[0]["msg"]
+        assert _("Last run of this pipeline on overlapping directories: {date} ({status}, profile '{profile}')").split("{")[0] in msg
+        assert _("  Overlap: {0} ↔ {1}").format("/data/a", "/data") in msg
+
+    def test_other_pipelines_last_run_is_not_shown(self, qtbot, monkeypatch):
+        from compare.pipeline_run_history import RunStatus
+        tab, pipeline, calls = self._setup(qtbot, monkeypatch)
+        _seed_run("SomethingElse", ["/data/a"], RunStatus.COMPLETED)
+        tab._run_on_profile(pipeline)
+        assert "OldProfile" not in calls[0]["msg"]
+
+    def test_running_overlap_asks_with_default_no(self, qtbot, monkeypatch):
+        from compare.pipeline_run_history import RunStatus
+        from utils.translations import _
+        tab, pipeline, calls = self._setup(qtbot, monkeypatch)
+        _seed_run("SomethingElse", ["/data/a/sub"], RunStatus.RUNNING)
+        tab._run_on_profile(pipeline)
+        (call,) = calls
+        assert call["kind"] == "askyesno"
+        assert call["default_no"] is True
+        assert call["yes_text"] == _("Run Anyway")
+        assert "SomethingElse" in call["msg"]
+
+    def test_unfinished_run_offers_resume(self, qtbot, monkeypatch):
+        from PySide6.QtWidgets import QMessageBox
+        from compare.pipeline_run_history import RunStatus
+        tab, pipeline, calls = self._setup(qtbot, monkeypatch, answer=QMessageBox.StandardButton.Yes)
+        unfinished = _seed_run("HistPipe", ["/data/a"], RunStatus.INTERRUPTED)
+        resumed = []
+        monkeypatch.setattr(ClassifierPipelinesTab, "resume_run",
+                            staticmethod(lambda parent, actions, run_id: resumed.append(run_id)))
+        started = []
+        monkeypatch.setattr(ClassifierPipelinesTab, "start_batch_run",
+                            staticmethod(lambda *a, **kw: started.append(a)))
+        tab._run_on_profile(pipeline)
+        assert calls[0]["kind"] == "askyesnocancel"
+        assert resumed == [unfinished.run_id]
+        assert started == []
+
+    def test_unfinished_run_start_new_starts_a_normal_run(self, qtbot, monkeypatch):
+        from PySide6.QtWidgets import QMessageBox
+        from compare.pipeline_run_history import RunStatus
+        tab, pipeline, _calls = self._setup(qtbot, monkeypatch, answer=QMessageBox.StandardButton.No)
+        _seed_run("HistPipe", ["/data/a"], RunStatus.CANCELLED)
+        started = []
+        monkeypatch.setattr(ClassifierPipelinesTab, "start_batch_run",
+                            staticmethod(lambda *a, **kw: started.append((a, kw))))
+        tab._run_on_profile(pipeline)
+        assert len(started) == 1
+        assert started[0][1] == {}  # not a resume
+
+    def test_unfinished_run_cancel_starts_nothing(self, qtbot, monkeypatch):
+        from PySide6.QtWidgets import QMessageBox
+        from compare.pipeline_run_history import RunStatus
+        tab, pipeline, _calls = self._setup(qtbot, monkeypatch, answer=QMessageBox.StandardButton.Cancel)
+        _seed_run("HistPipe", ["/data/a"], RunStatus.CANCELLED)
+        started = []
+        monkeypatch.setattr(ClassifierPipelinesTab, "start_batch_run",
+                            staticmethod(lambda *a, **kw: started.append(a)))
+        tab._run_on_profile(pipeline)
+        assert started == []
+
+
+class TestResumeRun:
+    def _alerts(self, monkeypatch, answer=True):
+        import ui.compare.classifier_pipelines_tab_qt as _mod
+        calls = []
+
+        def _fake_alert(_parent, _title, msg, kind="info", **kw):
+            calls.append((msg, kind))
+            return answer
+        monkeypatch.setattr(_mod, "qt_alert", _fake_alert)
+        return calls
+
+    def test_resume_starts_batch_with_recorded_directories(self, qtbot, monkeypatch):
+        from compare.pipeline_run_history import RunStatus
+        pipeline = _make_pipeline("ResPipe")
+        ClassifierPipelines.add_pipeline(pipeline)
+        record = _seed_run("ResPipe", ["/rec/a", "/rec/b"], RunStatus.INTERRUPTED, profile="Gone")
+        calls = self._alerts(monkeypatch)
+        started = []
+        monkeypatch.setattr(ClassifierPipelinesTab, "start_batch_run",
+                            staticmethod(lambda *a, **kw: started.append((a, kw))))
+        assert ClassifierPipelinesTab.resume_run(None, _FakeActions(), record.run_id)
+        (args, kwargs), = started
+        assert args[2] is pipeline
+        assert args[3] == ["/rec/a", "/rec/b"]
+        assert args[4] == "Gone"
+        assert kwargs == {"resume_from": record.run_id}
+        # Profile "Gone" no longer exists; the recorded directories are used.
+        assert "Gone" in calls[-1][0]
+
+    def test_resume_of_completed_run_is_refused(self, qtbot, monkeypatch):
+        from compare.pipeline_run_history import RunStatus
+        ClassifierPipelines.add_pipeline(_make_pipeline("ResPipe"))
+        record = _seed_run("ResPipe", ["/rec/a"], RunStatus.COMPLETED)
+        calls = self._alerts(monkeypatch)
+        started = []
+        monkeypatch.setattr(ClassifierPipelinesTab, "start_batch_run",
+                            staticmethod(lambda *a, **kw: started.append(a)))
+        assert not ClassifierPipelinesTab.resume_run(None, _FakeActions(), record.run_id)
+        assert calls[-1][1] == "error"
+        assert started == []
+
+
+class TestStartBatchRunRegistration:
+    def test_registers_a_running_record(self, qtbot, monkeypatch):
+        from compare import pipeline_run_service
+        from compare.pipeline_run_history import RunStatus, pipeline_run_history
+        from utils.constants import ImageGenerationType
+        pipeline = _make_pipeline("RegPipe")
+        pipeline.generation_type = ImageGenerationType.IMG2IMG
+        workers = []
+        monkeypatch.setattr("utils.running_tasks_registry.start_thread",
+                            lambda fn, **kw: workers.append(fn))
+        ClassifierPipelinesTab.start_batch_run(None, _FakeActions(), pipeline, ["/reg"], "P")
+        (record,) = pipeline_run_history.records()
+        assert record.status is RunStatus.RUNNING
+        assert record.source == "gui"
+        assert record.directories == ["/reg"]
+        assert pipeline_run_service.is_active(record.run_id)
+        assert len(workers) == 1
+
+    def test_refused_resume_shows_error_and_starts_nothing(self, qtbot, monkeypatch):
+        from utils.constants import ImageGenerationType
+        import ui.compare.classifier_pipelines_tab_qt as _mod
+        shown = []
+        monkeypatch.setattr(_mod, "qt_alert",
+                            lambda _p, _t, msg, kind="info", **kw: shown.append(kind))
+        workers = []
+        monkeypatch.setattr("utils.running_tasks_registry.start_thread",
+                            lambda fn, **kw: workers.append(fn))
+        pipeline = _make_pipeline("RegPipe")
+        pipeline.generation_type = ImageGenerationType.IMG2IMG
+        ClassifierPipelinesTab.start_batch_run(None, _FakeActions(), pipeline, ["/reg"], "P",
+                                               resume_from="no-such-run")
+        assert shown == ["error"]
+        assert workers == []

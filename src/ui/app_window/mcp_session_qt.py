@@ -451,6 +451,29 @@ class QtWindowMCPSession:
         from compare.pipeline_profile_run import pipeline_runs
         return pipeline_runs.status()
 
+    def stop_pipeline(self, run_id: Optional[str] = None) -> dict:
+        from compare.pipeline_profile_run import pipeline_runs
+        return pipeline_runs.stop(run_id)
+
+    def resume_pipeline(
+        self, run_id: Optional[str] = None, continue_without_sd_runner: bool = False,
+    ) -> dict:
+        from compare.pipeline_profile_run import pipeline_runs
+        from ui.image.media_details import MediaDetails
+
+        return pipeline_runs.resume(
+            run_id,
+            continue_without_sd_runner=continue_without_sd_runner,
+            fallback_generation_type=MediaDetails.get_image_specific_generation_mode(),
+            hide_callback=self._actions.hide_media,
+            notify_callback=self._actions.title_notify,
+            blur_callback=self._actions.request_media_blur,
+        )
+
+    def pipeline_history(self) -> dict:
+        from compare.pipeline_profile_run import pipeline_runs
+        return pipeline_runs.history()
+
     def list_pipelines(self) -> dict:
         from compare.pipeline_profile_run import list_pipelines
         return list_pipelines()

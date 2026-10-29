@@ -28,10 +28,11 @@ from typing import Optional
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFileDialog, QGridLayout, QHBoxLayout, QLabel, QMenu,
-    QPushButton, QScrollArea, QVBoxLayout, QWidget,
+    QMessageBox, QPushButton, QScrollArea, QVBoxLayout, QWidget,
 )
 
 from compare import classifier_pipeline_batch as pipeline_batch
+from compare import pipeline_run_service
 from compare.classifier_actions_manager import ClassifierActionsManager
 from compare.classifier_pipeline import (
     ClassifierPipeline,
@@ -39,6 +40,7 @@ from compare.classifier_pipeline import (
     PrevalidationPipeline,
 )
 from compare.pipeline_profile_run import SELECTED_PROFILE_META_KEY, last_profile_meta_key
+from compare.pipeline_run_history import format_run_time
 from files.directory_profile import DirectoryProfile
 from lib.layout_utils_qt import clear_layout
 from lib.qt_alert import qt_alert
@@ -528,6 +530,9 @@ class ClassifierPipelinesTab(QWidget):
         elif last_profile:
             details.append(_("Last run on: {profile}").format(profile=last_profile))
 
+        history_notes, plan = ClassifierPipelinesTab.history_notes(pipeline.name, directories)
+        details.extend(history_notes)
+
         details_block = ("\n" + "\n".join(details) + "\n") if details else ""
         msg = _("Run pipeline '{name}' on profile '{profile}'?{details}\n\nDirectories:\n{dirs}").format(
             name=pipeline.name,
@@ -535,7 +540,11 @@ class ClassifierPipelinesTab(QWidget):
             details=details_block,
             dirs="\n".join(f"  {d}" for d in directories),
         )
-        if not qt_alert(self, _("Run Pipeline on Profile"), msg, kind="askokcancel"):
+        choice = ClassifierPipelinesTab.confirm_run(self, _("Run Pipeline on Profile"), msg, plan)
+        if choice is None:
+            return
+        if choice == "resume":
+            ClassifierPipelinesTab.resume_run(self, self._app_actions, plan.resumable.run_id)
             return
 
         app_info_cache.set_meta(_last_profile_key, profile_name)
@@ -543,12 +552,106 @@ class ClassifierPipelinesTab(QWidget):
             self, self._app_actions, pipeline, directories, profile_name
         )
 
+    # ------------------------------------------------------------------
+    # Run history: confirmation notes and resume
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def history_notes(pipeline_name: str, directories: list) -> tuple:
+        """Confirmation lines about earlier and running runs that touch
+        *directories*, and the RunPlan they were built from."""
+        plan = pipeline_run_service.plan_run(pipeline_name, directories)
+        notes: list[str] = []
+        last = plan.last_run
+        if last is not None:
+            if plan.last_run_same_set:
+                text = _("Last run of this pipeline on these directories: {date} ({status}, profile '{profile}')")
+            else:
+                text = _("Last run of this pipeline on overlapping directories: {date} ({status}, profile '{profile}')")
+            notes.append(text.format(date=format_run_time(last.started_at),
+                                     status=last.status.label(),
+                                     profile=last.profile_name or "—"))
+            for current_dir, earlier_dir in plan.last_run_overlap[:5]:
+                notes.append(_("  Overlap: {0} ↔ {1}").format(current_dir, earlier_dir))
+        for record in plan.running:
+            notes.append(_("WARNING: pipeline '{name}' is running on overlapping directories (started {date}).").format(
+                name=record.pipeline_name, date=format_run_time(record.started_at)))
+        if plan.resumable is not None:
+            notes.append(_("The last run on these directories did not finish ({status}, {count} file(s) processed).").format(
+                status=plan.resumable.status.label(), count=plan.resumable.files_evaluated))
+        return notes, plan
+
+    @staticmethod
+    def confirm_run(parent: QWidget, title: str, message: str, plan, alert=None) -> Optional[str]:
+        """Ask whether to run, offering to resume an unfinished run on the
+        same directories. Returns "new", "resume" or None (cancelled).
+
+        *alert* defaults to this module's qt_alert; a caller passes its own
+        module's so tests patching it there still see the dialog. Without
+        history the dialog is the plain OK/Cancel confirmation."""
+        alert = alert or qt_alert
+        if plan.resumable is not None:
+            choice = alert(
+                parent, title,
+                message + "\n\n" + _("Resume the unfinished run, or start a new run from the beginning?"),
+                kind="askyesnocancel", yes_text=_("Resume"), no_text=_("Start New Run"),
+            )
+            if choice == QMessageBox.StandardButton.Yes:
+                return "resume"
+            if choice == QMessageBox.StandardButton.No:
+                return "new"
+            return None
+        if plan.running:
+            ok = alert(parent, title, message, kind="askyesno",
+                       yes_text=_("Run Anyway"), no_text=_("Cancel"), default_no=True)
+            return "new" if ok else None
+        return "new" if alert(parent, title, message, kind="askokcancel") else None
+
+    @staticmethod
+    def resume_run(parent: QWidget, app_actions, run_id: str) -> bool:
+        """Confirm and start resuming the unfinished run *run_id* over the
+        directories it recorded. Returns True if the resume was started."""
+        check = pipeline_run_service.check_resume(run_id)
+        if check.problem:
+            qt_alert(parent, _("Resume Pipeline Run"), check.problem, kind="error")
+            return False
+        record, pipeline = check.record, check.pipeline
+        if ClassifierPipelinesTab.refuse_if_invalid(parent, pipeline, _("Resume Pipeline Run")):
+            return False
+        notes: list[str] = []
+        if check.pipeline_changed:
+            notes.append(_("The pipeline was edited since this run; the current definition will be used."))
+        if check.missing_directories:
+            notes.append(_("Missing directories (skipped): {0}").format(
+                ", ".join(check.missing_directories)))
+        if check.profile_changed and record.profile_name:
+            notes.append(_("Profile '{0}' has changed since this run; the directories recorded at that time are used.").format(
+                record.profile_name))
+        msg = _("Resume pipeline '{name}' from {date}? {count} file(s) already processed will be skipped.\n\nDirectories:\n{dirs}").format(
+            name=record.pipeline_name,
+            date=format_run_time(record.started_at),
+            count=record.files_evaluated + record.files_skipped,
+            dirs="\n".join(f"  {d}" for d in record.directories),
+        )
+        if notes:
+            msg += "\n\n" + "\n".join(notes)
+        if not qt_alert(parent, _("Resume Pipeline Run"), msg, kind="askokcancel"):
+            return False
+        ClassifierPipelinesTab.start_batch_run(
+            parent, app_actions, pipeline, list(record.directories), record.profile_name,
+            resume_from=run_id,
+        )
+        return True
+
     @staticmethod
     def start_batch_run(parent: QWidget, app_actions, pipeline: ClassifierPipeline,
-                        directories: list, profile_name: str) -> None:
+                        directories: list, profile_name: str, *,
+                        resume_from: Optional[str] = None) -> None:
         """Run *pipeline* over *directories* on a worker thread, after asking
         whether to continue when it generates and SD Runner is unreachable.
-        The caller has validated the pipeline and confirmed the run."""
+        The caller has validated the pipeline and confirmed the run, including
+        any overlap with runs already in progress. *resume_from* continues
+        that unfinished run; *directories* are then its recorded ones."""
         if pipeline.has_generate_action():
             from extensions.sd_runner_client import SDRunnerClient
             if not SDRunnerClient.is_reachable():
@@ -572,26 +675,48 @@ class ClassifierPipelinesTab(QWidget):
             from ui.image.media_details import MediaDetails
             generation_type = MediaDetails.get_image_specific_generation_mode()
 
+        from compare import pipeline_run_service
         from files.marked_files import MarkedFiles
 
-        def _worker():
-            outcome = pipeline_batch.run_pipeline_over_directories(
-                pipeline,
-                directories,
-                generation_type=generation_type,
-                profile_name=profile_name,
-                hide_callback=app_actions.hide_media,
-                notify_callback=app_actions.title_notify,
-                add_mark_callback=MarkedFiles.add_mark_if_not_present,
-                blur_callback=app_actions.request_media_blur,
+        try:
+            active = pipeline_run_service.begin_run(
+                pipeline, directories, profile_name=profile_name, source="gui",
+                resume_from=resume_from, allow_running_overlap=True,
             )
+        except pipeline_run_service.RunRefused as e:
+            qt_alert(parent, _("Run Pipeline"),
+                     _("This run cannot start:\n{0}").format(e), kind="error")
+            return
+
+        def _worker():
+            try:
+                outcome = pipeline_run_service.execute_run(
+                    active,
+                    generation_type=generation_type,
+                    hide_callback=app_actions.hide_media,
+                    notify_callback=app_actions.title_notify,
+                    add_mark_callback=MarkedFiles.add_mark_if_not_present,
+                    blur_callback=app_actions.request_media_blur,
+                )
+            except Exception as e:
+                logger.exception("Pipeline run %s failed", active.run_id)
+                try:
+                    app_actions.title_notify(
+                        _("Pipeline {0} failed: {1}").format(pipeline.name, e))
+                except Exception:
+                    pass
+                return
             try:
                 app_actions.title_notify(outcome.summary)
             except Exception:
                 pass
 
         from utils.running_tasks_registry import start_thread
-        start_thread(_worker, use_asyncio=False)
+        try:
+            start_thread(_worker, use_asyncio=False)
+        except Exception as e:
+            pipeline_run_service.abandon(active, str(e))
+            raise
 
     # ------------------------------------------------------------------
     # Run on current media

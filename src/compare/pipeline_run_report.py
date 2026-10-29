@@ -36,6 +36,11 @@ class PipelineRunStats:
     generation_type_label: Optional[str] = None
     generation_type_value: Optional[str] = None
     category_map: dict[str, str] = field(default_factory=dict)
+    cancelled: bool = False
+    run_id: Optional[str] = None
+    resumed_from: Optional[str] = None
+    # Files a resumed run passed over because an earlier run processed them.
+    files_skipped: int = 0
 
 
 class PipelineRunReport:
@@ -151,9 +156,12 @@ class PipelineRunReport:
         """Return a multi-line human-readable end-of-run summary."""
         lines: list[str] = []
 
-        lines.append(
-            _("Pipeline {0} — run complete").format(stats.pipeline_name)
-        )
+        if stats.cancelled:
+            lines.append(_("Pipeline {0} — run cancelled").format(stats.pipeline_name))
+        else:
+            lines.append(
+                _("Pipeline {0} — run complete").format(stats.pipeline_name)
+            )
         lines.append("─" * 48)
 
         if stats.profile_name:
@@ -182,6 +190,11 @@ class PipelineRunReport:
         lines.append(
             _("Files evaluated: {0}").format(stats.files_evaluated)
         )
+        if stats.files_skipped:
+            lines.append(
+                _("Resumed run: {0} file(s) already processed earlier were skipped").format(
+                    stats.files_skipped)
+            )
         if stats.errors:
             lines.append(
                 _("Errors during evaluation: {0}").format(stats.errors)

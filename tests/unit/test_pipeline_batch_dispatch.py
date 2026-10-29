@@ -391,3 +391,47 @@ class TestScrambleFaultIsolation:
             on_scr(p)
         execute()  # must not raise; each future's exception is logged
         assert call_count[0] == 3
+
+
+# ---------------------------------------------------------------------------
+# on_flush (run checkpoints drop dispatched work from the pending list)
+# ---------------------------------------------------------------------------
+
+class TestOnFlush:
+    def test_generate_on_flush_called_per_non_empty_flush(self, monkeypatch):
+        from compare import classifier_pipeline_batch as pipeline_batch
+        monkeypatch.setattr("extensions.sd_runner_client.SDRunnerClient.run_batch", MagicMock())
+        flushes = []
+        _, on_gen, dispatch = pipeline_batch.make_generate_batch_state(
+            None, 2, on_flush=lambda: flushes.append(True))
+        for p in _paths(3):
+            on_gen(p)
+        assert len(flushes) == 1
+        dispatch()
+        assert len(flushes) == 2
+        dispatch()  # nothing left
+        assert len(flushes) == 2
+
+    def test_generate_on_flush_called_even_when_dispatch_fails(self, monkeypatch):
+        from compare import classifier_pipeline_batch as pipeline_batch
+        monkeypatch.setattr("extensions.sd_runner_client.SDRunnerClient.run_batch",
+                            MagicMock(side_effect=RuntimeError("down")))
+        flushes = []
+        _, on_gen, dispatch = pipeline_batch.make_generate_batch_state(
+            None, None, on_flush=lambda: flushes.append(True))
+        on_gen("/a.png")
+        dispatch()
+        assert flushes == [True]
+
+    def test_scramble_on_flush_called_per_non_empty_flush(self, monkeypatch):
+        from compare import classifier_pipeline_batch as pipeline_batch
+        monkeypatch.setattr("compare.classifier_pipeline_batch.run_one_scramble",
+                            lambda path, modifier, skip_existing=False: None)
+        flushes = []
+        _, on_scr, execute = pipeline_batch.make_scramble_batch_state(
+            None, on_flush=lambda: flushes.append(True))
+        execute()
+        assert flushes == []
+        on_scr("/a.png", None)
+        execute()
+        assert flushes == [True]

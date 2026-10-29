@@ -35,6 +35,8 @@ from compare.compare_settings import (
     apply_compare_settings, describe_compare_settings, list_classifier_models,
     resolve_run_compare_mode,
 )
+from compare import pipeline_run_service
+from compare.pipeline_run_history import pipeline_run_history
 from extensions.mcp_server import MCPServerExtension
 from files.file_browser import FileBrowser
 from files.file_metadata_cache import file_metadata_cache
@@ -77,6 +79,7 @@ def load_persisted_classifier_state() -> None:
     ClassifierActionsManager.load_classifier_actions()
     ClassifierActionsManager.load_prevalidation_file_cache_from_disk()
     classifier_prediction_cache.load()
+    pipeline_run_history.load()
 
 
 def _persisted_image_generation_type() -> ImageGenerationType:
@@ -192,6 +195,28 @@ class HeadlessMCPSession:
     def pipeline_status(self) -> dict:
         from compare.pipeline_profile_run import pipeline_runs
         return pipeline_runs.status()
+
+    def stop_pipeline(self, run_id: Optional[str] = None) -> dict:
+        from compare.pipeline_profile_run import pipeline_runs
+        return pipeline_runs.stop(run_id)
+
+    def resume_pipeline(
+        self, run_id: Optional[str] = None, continue_without_sd_runner: bool = False,
+    ) -> dict:
+        from compare.pipeline_profile_run import pipeline_runs
+
+        return pipeline_runs.resume(
+            run_id,
+            continue_without_sd_runner=continue_without_sd_runner,
+            fallback_generation_type=_persisted_image_generation_type(),
+            hide_callback=self._hide_media,
+            notify_callback=self._actions.title_notify,
+            blur_callback=self._actions.request_media_blur,
+        )
+
+    def pipeline_history(self) -> dict:
+        from compare.pipeline_profile_run import pipeline_runs
+        return pipeline_runs.history()
 
     def list_pipelines(self) -> dict:
         from compare.pipeline_profile_run import list_pipelines
@@ -705,6 +730,9 @@ def main(argv=None) -> int:
     try:
         started = server.start()
     finally:
+        # Stopped runs are recorded as interrupted, resumable on the next start.
+        pipeline_run_service.shutdown(timeout=3.0)
+        pipeline_run_history.store()
         file_metadata_cache.store()
         classifier_prediction_cache.store()
         app_info_cache.store()

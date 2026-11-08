@@ -2,8 +2,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: 1.0\n"
-"POT-Creation-Date: 2026-10-08 15:16-0400\n"
-"PO-Revision-Date: 2026-10-08 15:16-0400\n"
+"POT-Creation-Date: 2026-11-07 20:56-0500\n"
+"PO-Revision-Date: 2026-11-07 20:56-0500\n"
 "Last-Translator: Translator Name <translator@example.com>\n"
 "Language-Team: fr Team <<EMAIL>>\n"
 "Language: fr\n"
@@ -12,7 +12,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: extensions/sd_runner_client.py:147
+#: extensions/sd_runner_client.py:151
 msgid "Image does not contain a prompt to redo!"
 msgstr "L'image ne contient pas d'invite à refaire !"
 
@@ -85,10 +85,10 @@ msgid "File updated: {0}"
 msgstr "Fichier mis à jour : {0}"
 
 #: extensions/gimp/gimp_wrapper.py:738 extensions/gimp/gimp_wrapper.py:767
-#: src/files/pdf_creator.py:136 src/files/pdf_creator.py:140
-#: src/files/pdf_creator.py:143 src/files/pdf_creator.py:227
-#: src/files/pdf_creator.py:244 src/files/pdf_creator.py:262
-#: src/files/pdf_creator.py:294
+#: src/files/pdf_creator.py:137 src/files/pdf_creator.py:141
+#: src/files/pdf_creator.py:144 src/files/pdf_creator.py:228
+#: src/files/pdf_creator.py:245 src/files/pdf_creator.py:264
+#: src/files/pdf_creator.py:296
 #: src/ui/app_window/notification_controller.py:382
 #: src/ui/auth/app_startup_auth_qt.py:123
 #: src/ui/auth/password_admin_window.py:128
@@ -151,6 +151,7 @@ msgstr "Remplacement du fichier annulé"
 #: src/ui/compare/classifier_action_copy_window_qt.py:166
 #: src/ui/compare/classifier_filter_dialog_qt.py:183
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2014
+#: src/ui/compare/classifier_pipelines_tab_qt.py:606
 #: src/ui/compare/compare_settings_window_qt.py:367
 #: src/ui/compare/hf_model_manager_window_qt.py:283
 #: src/ui/files/auto_sort_confirmation_window_qt.py:69
@@ -159,7 +160,7 @@ msgstr "Remplacement du fichier annulé"
 #: src/ui/files/file_interceptor_rules_window_qt.py:155
 #: src/ui/files/marked_file_mover_qt.py:79
 #: src/ui/files/pdf_options_window_qt.py:138
-#: src/ui/files/type_configuration_window_qt.py:236
+#: src/ui/files/type_configuration_window_qt.py:256
 #: src/ui/image/media_details.py:1277
 #: src/ui/image/rerun_prompt_adjustment_window_qt.py:95
 #: src/utils/constants.py:391 tests/ui/test_qt_alert.py:77
@@ -239,6 +240,7 @@ msgstr "Nouveau Dossier"
 
 #: lib/fast_directory_picker_qt.py:310
 #: src/ui/compare/hf_model_manager_window_qt.py:844
+#: src/ui/compare/pipeline_history_tab_qt.py:97
 #: src/ui/compare/seek_to_trigger_tab_qt.py:136
 msgid "Refresh"
 msgstr "Rafraîchir"
@@ -327,6 +329,10 @@ msgstr "Collecte de données d'image"
 #: src/compare/base_compare.py:349
 msgid "Image comparison"
 msgstr "Comparaison d'images"
+
+#: src/compare/base_compare.py:360
+msgid "Classifier filter"
+msgstr "Filtre de classificateur"
 
 #: src/compare/base_compare.py:401
 msgid "Invalid Checkpoint Data - Confirm Restart"
@@ -540,7 +546,7 @@ msgstr "anticipation : {0}"
 #: src/compare/classifier_pipeline.py:811
 #: src/compare/classifier_pipeline.py:902
 #: src/ui/compare/classifier_pipeline_editor_qt.py:1972
-#: src/ui/compare/classifier_pipelines_tab_qt.py:95
+#: src/ui/compare/classifier_pipelines_tab_qt.py:97
 msgid "New Pipeline"
 msgstr "Nouveau pipeline"
 
@@ -558,7 +564,7 @@ msgid "seed_category '{0}' is not a key in category_map."
 msgstr "seed_category '{0}' n'est pas une clé dans category_map."
 
 #: src/compare/classifier_pipeline.py:244
-#: tests/unit/test_classifier_pipeline.py:2253
+#: tests/unit/test_classifier_pipeline.py:2254
 msgid "Output root {0} is not an absolute path."
 msgstr "La racine de sortie {0} n’est pas un chemin absolu."
 
@@ -683,7 +689,7 @@ msgid "Node {0}: lookahead {1} is not defined."
 msgstr "Nœud {0} : le lookahead {1} n'est pas défini."
 
 #: src/compare/classifier_pipeline.py:434
-#: tests/unit/test_classifier_pipeline.py:2276
+#: tests/unit/test_classifier_pipeline.py:2277
 msgid ""
 "Node {0}: BaseStemMatchCondition.search_directory ({1}) is not a valid "
 "directory."
@@ -764,7 +770,7 @@ msgstr ""
 
 #: src/compare/classifier_pipeline.py:526
 #: tests/unit/test_classifier_pipeline.py:2188
-#: tests/unit/test_classifier_pipeline.py:2220
+#: tests/unit/test_classifier_pipeline.py:2221
 msgid ""
 "Node {0}: {1} is a relative path and the pipeline has no absolute output "
 "root."
@@ -773,7 +779,7 @@ msgstr ""
 "sortie absolue."
 
 #: src/compare/classifier_pipeline.py:594
-#: tests/unit/test_classifier_pipeline.py:2295
+#: tests/unit/test_classifier_pipeline.py:2296
 msgid ""
 "Node {0}: requires a match of {1}, but a match of {1} ends the run, so this "
 "never holds."
@@ -782,7 +788,7 @@ msgstr ""
 "{1} termine l’exécution, donc cela ne se vérifie jamais."
 
 #: src/compare/classifier_pipeline.py:599
-#: tests/unit/test_classifier_pipeline.py:2300
+#: tests/unit/test_classifier_pipeline.py:2301
 msgid ""
 "Node {0}: requires a no-match of {1}, but a no-match of {1} ends the run, so"
 " this never holds."
@@ -935,7 +941,7 @@ msgstr "Le fichier ne contient pas de pipeline."
 msgid "Pipeline {0} could not be read: {1}"
 msgstr "Le pipeline {0} n’a pas pu être lu : {1}"
 
-#: src/compare/classifier_pipeline_batch.py:36
+#: src/compare/classifier_pipeline_batch.py:38
 msgid ""
 "Pipeline {0} cannot run until these are fixed:\n"
 "{1}"
@@ -1102,8 +1108,8 @@ msgid "Reject"
 msgstr "Refuser"
 
 #: src/compare/classifier_pipeline_nodes.py:240
-#: src/compare/pipeline_run_report.py:265
-#: src/compare/pipeline_run_report.py:273
+#: src/compare/pipeline_run_report.py:278
+#: src/compare/pipeline_run_report.py:286
 msgid "(unknown)"
 msgstr "(inconnu)"
 
@@ -1170,6 +1176,105 @@ msgstr "Déplacement"
 #: src/files/marked_files.py:563
 msgid "Copying"
 msgstr "Copie"
+
+#: src/compare/compare_filters.py:513 src/compare/compare_filters.py:576
+msgid "The classifier \"{0}\" used in the compare filters is not registered."
+msgstr ""
+"Le classifieur « {0} » utilisé dans les filtres de comparaison n’est pas "
+"enregistré."
+
+#: src/compare/compare_filters.py:522
+msgid ""
+"The classifier \"{0}\" used in the compare filters could not be loaded. See "
+"the log for details."
+msgstr ""
+"Le classifieur « {0} » utilisé dans les filtres de comparaison n’a pas pu "
+"être chargé. Voir le journal pour plus de détails."
+
+#: src/compare/compare_filters.py:536
+msgid ""
+"The classifier \"{0}\" defines no positive groups, so its model strategy "
+"cannot be used as a compare filter."
+msgstr ""
+"Le classificateur \"{0}\" ne définit aucun groupe positif, ainsi sa "
+"stratégie de modèle ne peut pas être utilisée comme filtre de comparaison."
+
+#: src/compare/compare_filters.py:544
+msgid ""
+"The compare filter for classifier \"{0}\" uses categories the model does not"
+" have: {1}"
+msgstr ""
+"Le filtre de comparaison pour le classificateur \"{0}\" utilise des "
+"catégories que le modèle ne possède pas : {1}"
+
+#: src/compare/compare_filters.py:549
+msgid "The compare filter for classifier \"{0}\" has no categories selected."
+msgstr ""
+"Le filtre de comparaison pour le classificateur \"{0}\" n’a aucune catégorie"
+" sélectionnée."
+
+#: src/compare/compare_manager.py:1286
+msgid "No matching groups found"
+msgstr "Aucun groupe correspondant trouvé"
+
+#: src/compare/compare_manager.py:1288 src/compare/compare_manager.py:1352
+#: src/compare/compare_wrapper.py:892
+msgid "No Match Found"
+msgstr "Aucune correspondance trouvée"
+
+#: src/compare/compare_manager.py:1289
+msgid "No groups survived the composite filter criteria."
+msgstr "Aucun groupe n’a survécu aux critères de filtrage composites."
+
+#: src/compare/compare_manager.py:1345
+msgid "{0} matches found (composite search)"
+msgstr "{0} correspondances trouvées (recherche composite)"
+
+#: src/compare/compare_manager.py:1350
+msgid "No matches found"
+msgstr "Aucun résultat trouvé"
+
+#: src/compare/compare_manager.py:1353
+msgid "None of the files match the composite search criteria."
+msgstr "Aucun des fichiers ne correspond aux critères de recherche composite."
+
+#: src/compare/compare_result.py:276 tests/compare/test_compare_result.py:158
+msgid "(and {0} more)"
+msgstr "(et {0} de plus)"
+
+#: src/compare/compare_result.py:279
+msgid "The compare checkpoint no longer matches the files being compared: {0}"
+msgstr ""
+"Le point de contrôle de comparaison ne correspond plus aux fichiers comparés"
+" : {0}"
+
+#: src/compare/compare_result.py:281 tests/compare/test_compare_result.py:156
+msgid "Removed ({0}): {1}"
+msgstr "Supprimé ({0}) : {1}"
+
+#: src/compare/compare_result.py:283 tests/compare/test_compare_result.py:159
+msgid "Added ({0}): {1}"
+msgstr "Ajouté ({0}) : {1}"
+
+#: src/compare/compare_result.py:285 tests/compare/test_compare_result.py:166
+msgid ""
+"No file was added or removed, but the file list is in a different order."
+msgstr ""
+"Aucun fichier n’a été ajouté ou supprimé, mais la liste des fichiers est "
+"dans un ordre différent."
+
+#: src/compare/compare_result.py:286
+msgid ""
+"Enable \"{0}\" in the compare settings, or delete the checkpoint file, to "
+"rebuild it."
+msgstr ""
+"Activez \"{0}\" dans les paramètres de comparaison, ou supprimez le fichier "
+"de point de contrôle pour le reconstruire."
+
+#: src/compare/compare_result.py:287
+#: src/ui/compare/compare_settings_window_qt.py:303
+msgid "Overwrite cache"
+msgstr "Ecraser le cache"
 
 #: src/compare/compare_wrapper.py:170 src/compare/compare_wrapper.py:173
 msgid "Invalid mode"
@@ -1305,6 +1410,10 @@ msgstr ""
 msgid "Gathering media data for comparison"
 msgstr "Collecte des données des médias pour comparaison"
 
+#: src/compare/compare_wrapper.py:837
+msgid "Compare filters excluded {0} of {1} files"
+msgstr "Les filtres de comparaison ont exclu {0} sur {1} fichiers"
+
 #: src/compare/compare_wrapper.py:885
 msgid "Searching media..."
 msgstr "Recherche des médias..."
@@ -1313,11 +1422,6 @@ msgstr "Recherche des médias..."
 msgid "Set a directory and search file or search text."
 msgstr ""
 "Définir un répertoire et un fichier de recherche ou un texte de recherche."
-
-#: src/compare/compare_manager.py:1288 src/compare/compare_manager.py:1352
-#: src/compare/compare_wrapper.py:892
-msgid "No Match Found"
-msgstr "Aucune correspondance trouvée"
 
 #: src/compare/compare_wrapper.py:892
 msgid "None of the files match the search filters with current settings."
@@ -1411,106 +1515,107 @@ msgstr "Traitement du lot {0}/{1} ({2} images)..."
 msgid "Found {0} images that meet the threshold..."
 msgstr "{0} images correspondant au seuil ont été trouvées..."
 
-#: src/compare/pipeline_run_report.py:68
-#: tests/unit/test_classifier_pipeline_runner.py:1559
+#: src/compare/pipeline_run_report.py:73
+#: tests/unit/test_classifier_pipeline_runner.py:1569
 msgid "Warnings"
 msgstr "Avertissements"
 
-#: src/compare/pipeline_run_report.py:69
-#: tests/unit/test_classifier_pipeline_runner.py:1560
+#: src/compare/pipeline_run_report.py:74
+#: tests/unit/test_classifier_pipeline_runner.py:1570
 msgid "Notable events"
 msgstr "Événements notables"
 
-#: src/compare/pipeline_run_report.py:70
+#: src/compare/pipeline_run_report.py:75
 msgid "Information"
 msgstr "Information"
 
-#: src/compare/pipeline_run_report.py:135
-#: src/ui/compare/classifier_pipelines_tab_qt.py:699
+#: src/compare/pipeline_run_report.py:140
+#: src/ui/compare/classifier_pipelines_tab_qt.py:824
 msgid "(no action)"
 msgstr "(aucune action)"
 
-#: src/compare/pipeline_run_report.py:155
+#: src/compare/pipeline_run_report.py:163
+#: tests/unit/test_classifier_pipeline_runner.py:1554
 msgid "Pipeline {0} — run complete"
 msgstr "Pipeline {0} — exécution terminée"
 
-#: src/compare/pipeline_run_report.py:160
+#: src/compare/pipeline_run_report.py:168
 msgid "Profile: {0}"
 msgstr "Profil : {0}"
 
-#: src/compare/pipeline_run_report.py:164
+#: src/compare/pipeline_run_report.py:172
 msgid "{0} → {1}"
 msgstr "{0} → {1}"
 
-#: src/compare/pipeline_run_report.py:167
+#: src/compare/pipeline_run_report.py:175
 msgid "Categories: {0}"
 msgstr "Catégories : {0}"
 
-#: src/compare/pipeline_run_report.py:170
+#: src/compare/pipeline_run_report.py:178
 msgid "Directories scanned:"
 msgstr "Répertoires analysés :"
 
-#: src/compare/pipeline_run_report.py:174
+#: src/compare/pipeline_run_report.py:182
 msgid "  {0}  ({1} {2})"
 msgstr "  {0} ({1} {2})"
 
-#: src/compare/pipeline_run_report.py:177
+#: src/compare/pipeline_run_report.py:185
 msgid "file(s)"
 msgstr "fichier(s)"
 
-#: src/compare/pipeline_run_report.py:183
+#: src/compare/pipeline_run_report.py:191
 msgid "Files evaluated: {0}"
 msgstr "Fichiers évalués : {0}"
 
-#: src/compare/pipeline_run_report.py:187
+#: src/compare/pipeline_run_report.py:200
 msgid "Errors during evaluation: {0}"
 msgstr "Erreurs lors de l'évaluation : {0}"
 
-#: src/compare/pipeline_run_report.py:191
+#: src/compare/pipeline_run_report.py:204
 msgid "Actions taken:"
 msgstr "Mesures prises :"
 
-#: src/compare/pipeline_run_report.py:199
+#: src/compare/pipeline_run_report.py:212
 msgid "  {0}× {1}"
 msgstr "  {0}× {1}"
 
-#: src/compare/pipeline_run_report.py:207
+#: src/compare/pipeline_run_report.py:220
 msgid "Generations queued: {0} ({1})"
 msgstr "Générations en file d'attente : {0} ({1})"
 
-#: src/compare/pipeline_run_report.py:210
+#: src/compare/pipeline_run_report.py:223
 msgid "Generations queued: {0}"
 msgstr "Générations en file d'attente : {0}"
 
-#: src/compare/pipeline_run_report.py:220
+#: src/compare/pipeline_run_report.py:233
 #: tests/unit/test_pipeline_decision_record.py:288
 #: tests/unit/test_pipeline_decision_record.py:294
 msgid "Decision records captured: {0}"
 msgstr "Enregistrements de décisions capturés : {0}"
 
-#: src/compare/pipeline_run_report.py:258
-#: tests/unit/test_classifier_pipeline_runner.py:1609
+#: src/compare/pipeline_run_report.py:271
+#: tests/unit/test_classifier_pipeline_runner.py:1619
 msgid "  {0} ({1} file(s))"
 msgstr "  {0} ({1} fichier(s))"
 
-#: src/compare/pipeline_run_report.py:263
-#: tests/unit/test_classifier_pipeline_runner.py:1580
+#: src/compare/pipeline_run_report.py:276
+#: tests/unit/test_classifier_pipeline_runner.py:1590
 msgid "  [{0}] — {1} files"
 msgstr "  [{0}] — {1} fichiers"
 
-#: src/compare/pipeline_run_report.py:294
+#: src/compare/pipeline_run_report.py:307
 msgid "      · … and {0} more"
 msgstr "      · … et {0} autres"
 
-#: src/files/file_browser.py:288 src/files/file_browser.py:302
-#: src/files/file_browser.py:314 src/ui/app_window/app_window.py:1061
+#: src/files/file_browser.py:289 src/files/file_browser.py:303
+#: src/files/file_browser.py:315 src/ui/app_window/app_window.py:1061
 #: src/ui/app_window/media_navigator.py:145
 #: src/ui/app_window/media_navigator.py:193
 msgid " (try setting recursive to True)"
 msgstr " (essayez de mettre la récursivité à True)"
 
-#: src/files/file_browser.py:289 src/files/file_browser.py:303
-#: src/files/file_browser.py:315 src/files/file_browser.py:393
+#: src/files/file_browser.py:290 src/files/file_browser.py:304
+#: src/files/file_browser.py:316 src/files/file_browser.py:393
 #: src/ui/app_window/app_window.py:1063
 #: src/ui/app_window/media_navigator.py:147
 #: src/ui/app_window/media_navigator.py:195
@@ -1535,7 +1640,7 @@ msgid "Search text provided to file_browser.find() was invalid."
 msgstr ""
 "Le texte de recherche fourni à file_browser.find() n'était pas valide."
 
-#: src/files/file_browser.py:851
+#: src/files/file_browser.py:852
 msgid ""
 "Loading directory... {0} files currently available (scanned {1} folders; "
 "total unknown)"
@@ -1543,7 +1648,7 @@ msgstr ""
 "Chargement du répertoire... sont disponibles actuellement {0} fichiers "
 "(scannés {1} dossiers ; total inconnu)"
 
-#: src/files/file_browser.py:1213 src/ui/app_window/file_ops_controller.py:574
+#: src/files/file_browser.py:1214 src/ui/app_window/file_ops_controller.py:574
 msgid "No files found"
 msgstr "Aucun fichier trouvé"
 
@@ -1818,6 +1923,16 @@ msgstr "INFO : Fichiers cibles avec différentes données EXIF remplacées."
 msgid "WARNING: Short filenames."
 msgstr "AVERTISSEMENT : Noms de fichiers courts."
 
+#: src/files/marked_files.py:830 tests/unit/test_marked_files_undo.py:176
+msgid "Cannot undo the last marked files move after a file was deleted."
+msgstr ""
+"Impossible d'annuler le dernier déplacement de fichiers marqués après la "
+"suppression d'un fichier."
+
+#: src/files/marked_files.py:834 tests/unit/test_marked_files_undo.py:162
+msgid "No marked files move or copy to undo."
+msgstr "Aucun fichier marqué à annuler (déplacement ou copie)."
+
 #: src/files/marked_files.py:837
 msgid "Moving back"
 msgstr "Reculer"
@@ -1826,25 +1941,19 @@ msgstr "Reculer"
 msgid "Removing"
 msgstr "Suppression"
 
-#: src/files/marked_files.py:839
-msgid "Moved back"
-msgstr "Déplacé vers l'arrière"
-
-#: src/files/marked_files.py:839
-msgid "Removed"
-msgstr "Supprimé"
-
-#: src/files/marked_files.py:882
-msgid "Moved back {0} files from {1}"
-msgstr ""
-"Recule de {0} fichiers à partir de\n"
-"{1}"
-
 #: src/files/marked_files.py:871
 msgid "Removed {0} files from {1}"
 msgstr ""
 "Suppression de {0} fichiers de\n"
 "{1}"
+
+#: src/files/marked_files.py:873 tests/unit/test_marked_files_undo.py:85
+msgid "Moved back {0} files from {1} to {2}"
+msgstr "Rétablis {0} fichiers de {1} à {2}"
+
+#: src/files/marked_files.py:875 tests/unit/test_marked_files_undo.py:100
+msgid "Moved back {0} files from {1} to {2} directories"
+msgstr "Ramenés {0} fichiers de {1} vers {2} répertoires"
 
 #: src/files/marked_files.py:927
 msgid "Existing filenames found!"
@@ -1928,77 +2037,77 @@ msgstr "Erreur potentielle détectée"
 msgid "Removed marked file from source: {0}"
 msgstr "Fichier marqué supprimé de la source : {0}"
 
-#: src/files/pdf_creator.py:47
+#: src/files/pdf_creator.py:48
 msgid "No files to create PDF"
 msgstr "Aucun fichier à créer PDF"
 
-#: src/files/pdf_creator.py:55 src/ui/files/pdf_options_window_qt.py:109
+#: src/files/pdf_creator.py:56 src/ui/files/pdf_options_window_qt.py:109
 msgid "combined_images"
 msgstr "images_combinées"
 
-#: src/files/pdf_creator.py:131
+#: src/files/pdf_creator.py:132
 msgid "compressed"
 msgstr "comprimé"
 
-#: src/files/pdf_creator.py:131
+#: src/files/pdf_creator.py:132
 msgid "high quality"
 msgstr "haute qualité"
 
-#: src/files/pdf_creator.py:133
+#: src/files/pdf_creator.py:134
 msgid "Created {0} PDF with {1} pages"
 msgstr "Création de PDF {0} avec {1} pages"
 
-#: src/files/pdf_creator.py:136
+#: src/files/pdf_creator.py:137
 msgid "No pages could be added to the PDF"
 msgstr "Aucune page n'a pu être ajoutée au PDF"
 
-#: src/files/pdf_creator.py:140
+#: src/files/pdf_creator.py:141
 msgid "PDF creation requires pypdfium2 package"
 msgstr "La création PDF nécessite un paquet pypdfium2"
 
-#: src/files/pdf_creator.py:172 src/ui/files/marked_file_mover_qt.py:353
+#: src/files/pdf_creator.py:173 src/ui/files/marked_file_mover_qt.py:353
 msgid "Diff PDFs"
 msgstr "Diff PDFs"
 
-#: src/files/pdf_creator.py:173
+#: src/files/pdf_creator.py:174
 msgid "Please mark exactly 2 files."
 msgstr "Veuillez marquer exactement 2 fichiers."
 
-#: src/files/pdf_creator.py:181
+#: src/files/pdf_creator.py:182
 msgid "Invalid file"
 msgstr "Fichier non valide"
 
-#: src/files/pdf_creator.py:182
+#: src/files/pdf_creator.py:183
 msgid "One or more marked files do not exist on disk."
 msgstr "Un ou plusieurs fichiers marqués n'existent pas sur le disque."
 
-#: src/files/pdf_creator.py:190
+#: src/files/pdf_creator.py:191
 msgid "diff-pdf not found"
 msgstr "diff-pdf non trouvé"
 
-#: src/files/pdf_creator.py:191
+#: src/files/pdf_creator.py:192
 msgid "The diff-pdf executable was not found on PATH."
 msgstr ""
 "L'exécutable diff-pdf n'a pas été trouvé dans la variable d'environnement "
 "PATH."
 
-#: src/files/pdf_creator.py:228 tests/unit/test_pdf_creator_epub_diff.py:52
+#: src/files/pdf_creator.py:229 tests/unit/test_pdf_creator_epub_diff.py:52
 msgid "Failed to render ePub for diff: {0}"
 msgstr "Échec du rendu de l’ePub pour la différence : {0}"
 
-#: src/files/pdf_creator.py:245
+#: src/files/pdf_creator.py:246
 msgid "Failed to convert marked file to PDF for diff: {0}"
 msgstr "Échec de la conversion du fichier marqué en PDF pour la diff : {0}"
 
-#: src/files/pdf_creator.py:263
+#: src/files/pdf_creator.py:265
 msgid "Failed to run diff-pdf: {0}"
 msgstr "Échec d'exécution de diff-pdf : {0}"
 
-#: src/files/pdf_creator.py:287
+#: src/files/pdf_creator.py:289
 msgid "Created diff PDF: {0}"
 msgstr "Créé un fichier PDF de différence : {0}"
 
-#: src/files/pdf_creator.py:295
+#: src/files/pdf_creator.py:297
 msgid "diff-pdf did not create an output file."
 msgstr "diff-pdf n'a pas créé un fichier de sortie."
 
@@ -2012,33 +2121,33 @@ msgstr ""
 msgid "Suffix must not be purely numeric."
 msgstr "Le suffixe ne doit pas être purement numérique."
 
-#: src/files/related_image.py:259 src/ui/image/media_details.py:1582
+#: src/files/related_image.py:366 src/ui/image/media_details.py:1582
 #: tests/unit/test_downstream_image_matching.py:425
 msgid " (Exact Match Not Found)"
 msgstr " (Correspondance exacte non trouvée)"
 
-#: src/files/related_image.py:261 src/ui/image/media_details.py:1573
+#: src/files/related_image.py:368 src/ui/image/media_details.py:1573
 msgid "(No related image found)"
 msgstr "(Aucune image connexe trouvée)"
 
-#: src/files/related_image.py:309 src/files/related_image.py:318
+#: src/files/related_image.py:416 src/files/related_image.py:425
 msgid "{0} downstream image(s) found."
 msgstr "{0} image(s) liée(s) à l'aval trouvée(s)."
 
-#: src/files/related_image.py:313
+#: src/files/related_image.py:420
 msgid "{0} (cached) downstream image(s) found."
 msgstr "{0} (en cache) image(s) liée(s) à l'aval trouvée(s)."
 
-#: src/files/related_image.py:323
-#: src/ui/app_window/file_marks_controller.py:414
+#: src/files/related_image.py:430
+#: src/ui/app_window/file_marks_controller.py:416
 msgid "No downstream related images found in"
 msgstr "Aucune image liée à l'aval n'a été trouvée dans"
 
-#: src/image/frame_cache.py:764
+#: src/image/frame_cache.py:828
 msgid "Unable to render ePub: pyppeteer and pypdfium2 are required"
 msgstr "Impossible de rendre ePub : pyppeteer et pypdfium2 sont requis"
 
-#: src/image/frame_cache.py:987 src/utils/constants.py:464
+#: src/image/frame_cache.py:1051 src/utils/constants.py:464
 #: tests/unit/test_constants.py:93
 msgid "ePub"
 msgstr "ePub"
@@ -2081,7 +2190,7 @@ msgstr ""
 "{0} déclenché sur {1}, mais la position de cette trame dans le fichier n’a "
 "pas pu être résolue."
 
-#: src/image/image_data_extractor.py:497
+#: src/image/image_data_extractor.py:657
 msgid "(Unable to parse image prompt information for this file.)"
 msgstr ""
 "(Impossible d'analyser les informations relatives à l'image pour ce "
@@ -2130,7 +2239,7 @@ msgstr "Boîte d'arrière-plan"
 msgid "Background Box (Freeform)"
 msgstr "Boîte d’arrière‑plan (Libre)"
 
-#: src/image/video_ops.py:687 src/image/video_ops.py:801
+#: src/image/video_ops.py:688 src/image/video_ops.py:802
 #: src/ui/app_window/file_ops_controller.py:721
 #: src/ui/app_window/file_ops_controller.py:767
 #: src/ui/app_window/file_ops_controller.py:815
@@ -2138,54 +2247,54 @@ msgstr "Boîte d’arrière‑plan (Libre)"
 msgid "Not a video file"
 msgstr "Ce n'est pas un fichier vidéo"
 
-#: src/image/video_ops.py:690 src/image/video_ops.py:804
+#: src/image/video_ops.py:691 src/image/video_ops.py:805
 #: tests/unit/test_cut_video.py:130 tests/unit/test_mute_audio.py:105
 msgid "ffmpeg not found on PATH"
 msgstr "ffmpeg introuvable dans PATH"
 
-#: src/image/video_ops.py:693 tests/unit/test_cut_video.py:136
+#: src/image/video_ops.py:694 tests/unit/test_cut_video.py:136
 msgid "Cut position must be after the start of the video"
 msgstr "La position de coupe doit être après le début de la vidéo"
 
-#: src/image/video_ops.py:695 tests/unit/test_cut_video.py:142
+#: src/image/video_ops.py:696 tests/unit/test_cut_video.py:142
 msgid "Cut position must be before the end of the video"
 msgstr "La position de coupure doit être avant la fin de la vidéo"
 
-#: src/image/video_ops.py:700 src/image/video_ops.py:814
+#: src/image/video_ops.py:701 src/image/video_ops.py:815
 msgid "Output path must differ from the source file"
 msgstr "Le chemin de sortie doit être différent de celui du fichier source"
 
-#: src/image/video_ops.py:702 src/image/video_ops.py:816
+#: src/image/video_ops.py:703 src/image/video_ops.py:817
 msgid "Output file already exists: {0}"
 msgstr "Le fichier de sortie existe déjà : {0}"
 
-#: src/image/video_ops.py:747
+#: src/image/video_ops.py:748
 msgid "ffmpeg timed out while cutting video"
 msgstr "ffmpeg a expiré lors de la découpe de la vidéo"
 
-#: src/image/video_ops.py:749 src/image/video_ops.py:845
+#: src/image/video_ops.py:750 src/image/video_ops.py:846
 msgid "Failed to run ffmpeg: {0}"
 msgstr "Échec de l'exécution de ffmpeg : {0}"
 
-#: src/image/video_ops.py:807 tests/unit/test_mute_audio.py:113
+#: src/image/video_ops.py:808 tests/unit/test_mute_audio.py:113
 msgid "Mute range must start at or after the beginning of the video"
 msgstr ""
 "La plage de sourdine doit commencer au début ou après le début de la vidéo"
 
-#: src/image/video_ops.py:809 tests/unit/test_mute_audio.py:120
+#: src/image/video_ops.py:810 tests/unit/test_mute_audio.py:120
 #: tests/unit/test_mute_audio.py:126
 msgid "Mute range end must be after its start"
 msgstr "La fin de la plage muette doit être après son début"
 
-#: src/image/video_ops.py:843
+#: src/image/video_ops.py:844
 msgid "ffmpeg timed out while muting audio"
 msgstr "ffmpeg a dépassé le délai lors de la mise en sourdine de l’audio"
 
-#: src/image/video_ops.py:1013
+#: src/image/video_ops.py:1014
 msgid "Video ({0})"
 msgstr "Vidéo ({0})"
 
-#: src/image/video_ops.py:1013 src/ui/image/media_details.py:617
+#: src/image/video_ops.py:1014 src/ui/image/media_details.py:617
 #: src/utils/constants.py:460
 msgid "Video"
 msgstr "Vidéo"
@@ -2408,7 +2517,7 @@ msgstr ""
 msgid "Set marks from downstream related images"
 msgstr "Marques de démarcation par rapport aux images liées à l'aval"
 
-#: src/ui/files/related_images_window_qt.py:91
+#: src/ui/files/related_images_window_qt.py:93
 #: src/ui/help_and_config_qt.py:168
 msgid "Mark sources with downstream files in current directory"
 msgstr ""
@@ -2454,7 +2563,7 @@ msgstr "Exécuter l'action des marques les trois plus récentes"
 msgid "Run permanent marks action"
 msgstr "Exécuter l'action des marques permanentes"
 
-#: src/ui/app_window/file_marks_controller.py:289
+#: src/ui/app_window/file_marks_controller.py:291
 #: src/ui/help_and_config_qt.py:182
 msgid "Run file action set"
 msgstr "Exécuter le jeu d'actions de fichier"
@@ -2522,7 +2631,7 @@ msgid "Reapply last crop/box selection to current media"
 msgstr "Réappliquer la dernière sélection de recadrage/boîte au média actuel"
 
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2053
-#: src/ui/compare/classifier_pipelines_tab_qt.py:210
+#: src/ui/compare/classifier_pipelines_tab_qt.py:212
 #: src/ui/help_and_config_qt.py:204 src/utils/constants.py:589
 #: tests/ui/test_classifier_pipelines_tab_qt.py:148
 msgid "Prevalidation"
@@ -2808,7 +2917,7 @@ msgid "Config"
 msgstr "Configuration"
 
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2053
-#: src/ui/compare/classifier_pipelines_tab_qt.py:211
+#: src/ui/compare/classifier_pipelines_tab_qt.py:213
 #: src/ui/help_and_config_qt.py:331
 #: tests/ui/test_classifier_pipelines_tab_qt.py:159
 msgid "General"
@@ -3311,28 +3420,28 @@ msgid "No files found in directory after refresh."
 msgstr ""
 "Aucun fichier n'a été trouvé dans le répertoire après l'actualisation."
 
-#: src/ui/app_window/app_window.py:1407
+#: src/ui/app_window/app_window.py:1414
 msgid "NEW_MEDIA_QUEUED"
 msgstr "{0} nouveau(x) fichier(s) multimédia en file d’attente"
 
-#: src/ui/app_window/app_window.py:1523
+#: src/ui/app_window/app_window.py:1530
 msgid "No cached image for this file."
 msgstr "Aucune image mise en cache pour ce fichier."
 
-#: src/ui/app_window/app_window.py:1526
+#: src/ui/app_window/app_window.py:1533
 msgid "Could not read cached image."
 msgstr "Impossible de lire l'image en cache."
 
-#: src/ui/app_window/app_window.py:1529
+#: src/ui/app_window/app_window.py:1536
 msgid "Clipboard unavailable."
 msgstr "Presse-papiers non disponible."
 
-#: src/ui/app_window/app_window.py:1548 src/ui/app_window/app_window.py:1562
-#: src/ui/app_window/app_window.py:1578
+#: src/ui/app_window/app_window.py:1555 src/ui/app_window/app_window.py:1569
+#: src/ui/app_window/app_window.py:1585
 msgid "Screenshot Failed"
 msgstr "Capture d'écran échouée"
 
-#: src/ui/app_window/app_window.py:1549
+#: src/ui/app_window/app_window.py:1556
 msgid ""
 "Unable to create screenshot directory:\n"
 "{0}\n"
@@ -3344,7 +3453,7 @@ msgstr ""
 "\n"
 "{1}"
 
-#: src/ui/app_window/app_window.py:1563
+#: src/ui/app_window/app_window.py:1570
 msgid ""
 "Unable to save screenshot.\n"
 "\n"
@@ -3354,7 +3463,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/ui/app_window/app_window.py:1569
+#: src/ui/app_window/app_window.py:1576
 msgid ""
 "Screenshot saved to:\n"
 "{0}"
@@ -3362,7 +3471,7 @@ msgstr ""
 "Capture d'écran sauvegardée dans :\n"
 "{0}"
 
-#: src/ui/app_window/app_window.py:1579
+#: src/ui/app_window/app_window.py:1586
 msgid ""
 "Unable to copy image to clipboard.\n"
 "\n"
@@ -3372,11 +3481,11 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/ui/app_window/app_window.py:1583
+#: src/ui/app_window/app_window.py:1590
 msgid "Copied image to clipboard."
 msgstr "Image copiée dans le presse-papiers."
 
-#: src/ui/app_window/app_window.py:1587
+#: src/ui/app_window/app_window.py:1594
 msgid ""
 "Screenshots are available for videos, animated GIFs, and PDF/ePub/SVG/HTML "
 "files."
@@ -3384,23 +3493,23 @@ msgstr ""
 "Des captures d’écran sont disponibles pour les vidéos, les GIF animés et les"
 " fichiers PDF/ePub/SVG/HTML."
 
-#: src/ui/app_window/app_window.py:1645
+#: src/ui/app_window/app_window.py:1652
 msgid "Masonry view"
 msgstr "Vue en mosaïque"
 
-#: src/ui/app_window/app_window.py:1650
+#: src/ui/app_window/app_window.py:1657
 msgid "Full-window view"
 msgstr "Affichage plein écran"
 
-#: src/ui/app_window/app_window.py:1710
+#: src/ui/app_window/app_window.py:1717
 msgid "Theme switched to {0}."
 msgstr "Le thème est passé à {0}."
 
-#: src/ui/app_window/app_window.py:1763
+#: src/ui/app_window/app_window.py:1770
 msgid "Confirm Quit"
 msgstr "Confirmer Quitter"
 
-#: src/ui/app_window/app_window.py:1763
+#: src/ui/app_window/app_window.py:1770
 msgid "Would you like to quit the application?"
 msgstr "Souhaitez-vous quitter l'application ?"
 
@@ -3610,7 +3719,7 @@ msgstr "Exécutez RefacDir"
 #: src/ui/app_window/context_menu_builder.py:325
 #: src/ui/app_window/file_ops_controller.py:275
 #: src/ui/compare/classifier_actions_tab_qt.py:217
-#: src/ui/compare/classifier_pipelines_tab_qt.py:267
+#: src/ui/compare/classifier_pipelines_tab_qt.py:269
 #: src/ui/compare/embedding_seed_library_window_qt.py:95
 #: src/ui/compare/prevalidations_tab_qt.py:385
 #: src/ui/files/file_actions_window_qt.py:108
@@ -3618,144 +3727,146 @@ msgstr "Exécutez RefacDir"
 msgid "Delete"
 msgstr "Supprimer"
 
-#: src/ui/app_window/file_marks_controller.py:62
+#: src/ui/app_window/file_marks_controller.py:64
 msgid "Add or remove a mark"
 msgstr "Ajouter ou supprimer une marque"
 
-#: src/ui/app_window/file_marks_controller.py:68
+#: src/ui/app_window/file_marks_controller.py:70
 msgid "DELETE_LOCK_MARK_STOP"
 msgstr ""
 "La suppression du verrou après la transition\n"
 "du diaporama a empêché l'ajout d'une marque"
 
-#: src/ui/app_window/file_marks_controller.py:82
+#: src/ui/app_window/file_marks_controller.py:84
 msgid "Mark removed. Remaining: {0}"
 msgstr "Marque supprimée. Restant : {0}"
 
-#: src/ui/app_window/file_marks_controller.py:88
+#: src/ui/app_window/file_marks_controller.py:90
 msgid "Mark added. Total set: {0}"
 msgstr "Marque ajoutée. Total défini : {0}"
 
-#: src/ui/app_window/file_marks_controller.py:99
+#: src/ui/app_window/file_marks_controller.py:101
 msgid "Add marks from group"
 msgstr "Ajouter des marques du groupe"
 
-#: src/ui/app_window/file_marks_controller.py:125
+#: src/ui/app_window/file_marks_controller.py:127
 msgid "Marks added. Total set: {0}"
 msgstr "Marques ajoutées. Total défini : {0}"
 
-#: src/ui/app_window/file_marks_controller.py:139
+#: src/ui/app_window/file_marks_controller.py:141
 msgid "First sorted mark"
 msgstr "Première marque triée"
 
-#: src/ui/app_window/file_marks_controller.py:145
+#: src/ui/app_window/file_marks_controller.py:147
 msgid "Only one marked file set."
 msgstr "Un seul ensemble de fichiers marqués."
 
-#: src/ui/app_window/file_marks_controller.py:174
+#: src/ui/app_window/file_marks_controller.py:176
 msgid "Invalid file path"
 msgstr "Chemin d'accès invalide"
 
-#: src/ui/app_window/file_marks_controller.py:175
+#: src/ui/app_window/file_marks_controller.py:177
 msgid "The file path {0} is invalid."
 msgstr "Le chemin d'accès au fichier {0} n'est pas valide."
 
-#: src/ui/app_window/file_marks_controller.py:188
+#: src/ui/app_window/file_marks_controller.py:190
 msgid "Add marks"
 msgstr "Ajouter des marques"
 
-#: src/ui/app_window/file_marks_controller.py:192
+#: src/ui/app_window/file_marks_controller.py:194
 msgid "Including marks: {0}"
 msgstr "Y compris les marques : {0}"
 
-#: src/ui/app_window/file_marks_controller.py:294
+#: src/ui/app_window/file_marks_controller.py:296
 msgid "No file action set actions selected."
 msgstr ""
 "Aucune action de fichier pour les actions définies n'a été sélectionnée."
 
-#: src/ui/app_window/file_marks_controller.py:343
+#: src/ui/app_window/file_marks_controller.py:345
 msgid "NO_MARKS_SET"
 msgstr ""
 "{0} marques ont été définies (>={1} attendu).\n"
 "Utilisez Shift+M pour définir une marque."
 
-#: src/ui/app_window/file_marks_controller.py:379
-#: src/ui/files/related_images_window_qt.py:89
+#: src/ui/app_window/file_marks_controller.py:381
+#: src/ui/files/related_images_window_qt.py:91
 msgid "Set marks from downstream images"
 msgstr "Définir les marques à partir des images en aval"
 
-#: src/ui/app_window/file_marks_controller.py:390
-#: src/ui/app_window/file_marks_controller.py:557
-#: src/ui/app_window/file_marks_controller.py:612
+#: src/ui/app_window/file_marks_controller.py:392
+#: src/ui/app_window/file_marks_controller.py:559
+#: src/ui/app_window/file_marks_controller.py:614
 #: src/ui/app_window/search_controller.py:736
 msgid "Waiting for a directory selection."
 msgstr "En attente de la sélection d'un répertoire."
 
-#: src/ui/app_window/file_marks_controller.py:405
+#: src/ui/app_window/file_marks_controller.py:407
 #: src/ui/app_window/search_controller.py:751
 msgid "Cancelled: that directory has too many files."
 msgstr "Annulé: ce répertoire contient trop de fichiers."
 
-#: src/ui/app_window/file_marks_controller.py:410
+#: src/ui/app_window/file_marks_controller.py:412
 msgid "Set marks from related media"
 msgstr "Définir les marques à partir des médias associés"
 
-#: src/ui/app_window/file_marks_controller.py:419
-#: src/ui/app_window/file_marks_controller.py:524
-#: src/ui/app_window/file_marks_controller.py:582
-#: src/ui/app_window/file_marks_controller.py:637
-#: src/ui/app_window/file_marks_controller.py:689
+#: src/ui/app_window/file_marks_controller.py:421
+#: src/ui/app_window/file_marks_controller.py:526
+#: src/ui/app_window/file_marks_controller.py:584
+#: src/ui/app_window/file_marks_controller.py:639
+#: src/ui/app_window/file_marks_controller.py:691
+#: src/ui/app_window/file_marks_controller.py:745
 msgid "Cancelled: marks were not changed."
 msgstr "Annulé : les marques n'ont pas été modifiées."
 
-#: src/ui/app_window/file_marks_controller.py:422
+#: src/ui/app_window/file_marks_controller.py:424
 msgid "{0} file marks set"
 msgstr "{0} jeux de marques de fichiers"
 
-#: src/ui/app_window/file_marks_controller.py:444
+#: src/ui/app_window/file_marks_controller.py:446
 msgid "Search all open windows"
 msgstr "Rechercher dans toutes les fenêtres ouvertes"
 
-#: src/ui/app_window/file_marks_controller.py:451
+#: src/ui/app_window/file_marks_controller.py:453
 msgid "No active media to search from."
 msgstr "Aucun média actif pour rechercher."
 
-#: src/ui/app_window/file_marks_controller.py:498
+#: src/ui/app_window/file_marks_controller.py:500
 msgid "Source: {0}"
 msgstr "Source : {0}"
 
-#: src/ui/app_window/file_marks_controller.py:504
-#: tests/ui/test_related_images_window.py:294
+#: src/ui/app_window/file_marks_controller.py:506
+#: tests/ui/test_related_images_window.py:312
 msgid "Skipped {0} large unconfirmed director(ies)."
 msgstr "Ignoré {0} grand(s) réalisateur(s) non confirmé(s)."
 
-#: src/ui/app_window/file_marks_controller.py:509
-#: tests/ui/test_related_images_window.py:313
+#: src/ui/app_window/file_marks_controller.py:511
+#: tests/ui/test_related_images_window.py:331
 msgid "No downstream related images found across {0} open window(s)."
 msgstr "Aucune image liée en aval trouvée dans les {0} fenêtre(s) ouvertes."
 
-#: src/ui/app_window/file_marks_controller.py:521
+#: src/ui/app_window/file_marks_controller.py:523
 msgid "Set marks from related media (all windows)"
 msgstr ""
 "Définir les marques à partir des médias associés (toutes les fenêtres)"
 
-#: src/ui/app_window/file_marks_controller.py:528
-#: tests/ui/test_related_images_window.py:238
+#: src/ui/app_window/file_marks_controller.py:530
+#: tests/ui/test_related_images_window.py:256
 msgid "{0} file marks set from {1} window(s)"
 msgstr "{0} repères de fichier définis depuis {1} fenêtre(s)"
 
-#: src/ui/app_window/file_marks_controller.py:550
+#: src/ui/app_window/file_marks_controller.py:552
 msgid "Mark sources with downstream"
 msgstr "Marquer les sources avec downstream"
 
-#: src/ui/app_window/file_marks_controller.py:562
-#: src/ui/app_window/file_marks_controller.py:617
-#: src/ui/app_window/file_marks_controller.py:668
-#: tests/ui/test_related_images_window.py:425
+#: src/ui/app_window/file_marks_controller.py:564
+#: src/ui/app_window/file_marks_controller.py:619
+#: src/ui/app_window/file_marks_controller.py:670
+#: src/ui/app_window/file_marks_controller.py:725
+#: tests/ui/test_related_images_window.py:443
 msgid "No files in current directory."
 msgstr "Aucun fichier dans le répertoire actuel."
 
-#: src/ui/app_window/file_marks_controller.py:571
+#: src/ui/app_window/file_marks_controller.py:573
 msgid ""
 "No source files with downstream images found in\n"
 "{0}"
@@ -3763,20 +3874,20 @@ msgstr ""
 "Aucun fichier source avec des images en aval trouvé dans\n"
 "{0}"
 
-#: src/ui/app_window/file_marks_controller.py:579
+#: src/ui/app_window/file_marks_controller.py:581
 msgid "Mark sources with downstream images"
 msgstr "Marquer les sources avec des images en aval"
 
-#: src/ui/app_window/file_marks_controller.py:587
+#: src/ui/app_window/file_marks_controller.py:589
 msgid "{0} source file(s) marked"
 msgstr "{0} fichier(s) source marqué(s)"
 
-#: src/ui/app_window/file_marks_controller.py:605
-#: src/ui/app_window/file_marks_controller.py:634
+#: src/ui/app_window/file_marks_controller.py:607
+#: src/ui/app_window/file_marks_controller.py:636
 msgid "Mark downstream files"
 msgstr "Marquer les fichiers en aval"
 
-#: src/ui/app_window/file_marks_controller.py:626
+#: src/ui/app_window/file_marks_controller.py:628
 msgid ""
 "No downstream files found in\n"
 "{0}"
@@ -3784,46 +3895,46 @@ msgstr ""
 "Aucun fichier aval trouvé dans\n"
 "{0}"
 
-#: src/ui/app_window/file_marks_controller.py:642
+#: src/ui/app_window/file_marks_controller.py:644
 msgid "{0} downstream file(s) marked"
 msgstr "{0} fichier(s) en aval marqué(s)"
 
-#: src/ui/app_window/file_marks_controller.py:664
-#: src/ui/app_window/file_marks_controller.py:686
-#: tests/ui/test_related_images_window.py:411
+#: src/ui/app_window/file_marks_controller.py:666
+#: src/ui/app_window/file_marks_controller.py:688
+#: tests/ui/test_related_images_window.py:429
 msgid "Mark files without related images"
 msgstr "Marquer les fichiers sans images associées"
 
-#: src/ui/app_window/file_marks_controller.py:678
-#: tests/ui/test_related_images_window.py:379
+#: src/ui/app_window/file_marks_controller.py:680
+#: tests/ui/test_related_images_window.py:397
 msgid "Every file in the current directory has a related image."
 msgstr "Chaque fichier du répertoire actuel possède une image associée."
 
-#: src/ui/app_window/file_marks_controller.py:694
+#: src/ui/app_window/file_marks_controller.py:696
 msgid "{0} file(s) without a related image marked"
 msgstr "{0} fichier(s) sans image associée marquée"
 
-#: src/ui/app_window/file_marks_controller.py:713
+#: src/ui/app_window/file_marks_controller.py:770
 msgid "Set related image"
 msgstr "Définir l'image associée"
 
-#: src/ui/app_window/file_marks_controller.py:719
+#: src/ui/app_window/file_marks_controller.py:776
 msgid "Exactly one file must be marked for this operation."
 msgstr "Exactement un fichier doit être marqué pour cette opération."
 
-#: src/ui/app_window/file_marks_controller.py:727
+#: src/ui/app_window/file_marks_controller.py:784
 msgid "No valid current media file."
 msgstr "Aucun fichier multimédia actuel valide."
 
-#: src/ui/app_window/file_marks_controller.py:730
+#: src/ui/app_window/file_marks_controller.py:787
 msgid "Marked file no longer exists."
 msgstr "Le fichier marqué n'existe plus."
 
-#: src/ui/app_window/file_marks_controller.py:739
+#: src/ui/app_window/file_marks_controller.py:796
 msgid "Set as Related Image"
 msgstr "Définir comme image associée"
 
-#: src/ui/app_window/file_marks_controller.py:741
+#: src/ui/app_window/file_marks_controller.py:798
 msgid ""
 "Enter a suffix (1–8 alphanumeric characters, not purely numeric).\n"
 "The marked file will be renamed to:\n"
@@ -3833,23 +3944,23 @@ msgstr ""
 "Le fichier marqué sera renommé en :\n"
 "{0}_<suffixe>{1}"
 
-#: src/ui/app_window/file_marks_controller.py:753
+#: src/ui/app_window/file_marks_controller.py:810
 msgid "Invalid Suffix"
 msgstr "Suffixe non valide"
 
-#: src/ui/app_window/file_marks_controller.py:762
+#: src/ui/app_window/file_marks_controller.py:819
 msgid "File Already Exists"
 msgstr "Le fichier existe déjà"
 
-#: src/ui/app_window/file_marks_controller.py:763
+#: src/ui/app_window/file_marks_controller.py:820
 msgid "A file named {0} already exists in that directory."
 msgstr "Un fichier nommé {0} existe déjà dans ce répertoire."
 
-#: src/ui/app_window/file_marks_controller.py:773
+#: src/ui/app_window/file_marks_controller.py:830
 msgid "Rename Failed"
 msgstr "Échec du renommage"
 
-#: src/ui/app_window/file_marks_controller.py:778
+#: src/ui/app_window/file_marks_controller.py:835
 msgid "Renamed to {0}"
 msgstr "Renommé en {0}"
 
@@ -4480,14 +4591,6 @@ msgid "No valid base directory for randomize filenames"
 msgstr ""
 "Répertoire de base non valide pour la randomisation des noms de fichiers"
 
-#: src/ui/app_window/file_ops_controller.py:1277
-msgid ""
-"Randomize filenames script not found:\n"
-"{0}"
-msgstr ""
-"Script de génération aléatoire de noms de fichiers introuvable :\n"
-"{0}"
-
 #: src/ui/app_window/file_ops_controller.py:1273
 msgid "Dry run"
 msgstr "sécurité au sec"
@@ -4547,9 +4650,9 @@ msgstr ""
 "\n"
 "Cette opération ne peut pas être annulée depuis Weidr. Voulez-vous continuer ?"
 
-#: src/ui/app_window/file_ops_controller.py:1343
-msgid "Failed to start randomize filenames: {0}"
-msgstr "Échec de la randomisation des noms de fichiers : {0}"
+#: src/ui/app_window/file_ops_controller.py:1309
+msgid "Randomize filenames is already running"
+msgstr "Randomiser les noms de fichiers est déjà en cours"
 
 #: src/ui/app_window/file_ops_controller.py:1333
 msgid "Randomizing filenames under {0} — see {1}"
@@ -4584,55 +4687,55 @@ msgstr "Activer le son"
 msgid "Mute"
 msgstr "Muet"
 
-#: src/ui/app_window/media_frame.py:255
+#: src/ui/app_window/media_frame.py:269
 msgid "No displayable files found in this directory for the current settings."
 msgstr ""
 "Aucuns fichiers affichables n'ont été trouvés dans ce dossier pour les "
 "paramètres actuels."
 
-#: src/ui/app_window/media_frame.py:715
+#: src/ui/app_window/media_frame.py:729
 msgid "Animated media format is not supported for playback: "
 msgstr ""
 "Le format animé des médias n'est pas pris en charge pour la lecture : "
 
-#: src/ui/app_window/media_frame.py:794
+#: src/ui/app_window/media_frame.py:808
 msgid "Video: "
 msgstr "Vidéo : "
 
-#: src/ui/app_window/media_frame.py:814 src/ui/app_window/media_frame.py:820
+#: src/ui/app_window/media_frame.py:828 src/ui/app_window/media_frame.py:834
 #: tests/ui/test_media_frame_lifecycle.py:67
 msgid "Unable to display this file: "
 msgstr "Impossible d'afficher ce fichier : "
 
-#: src/ui/app_window/media_frame.py:886 src/utils/audio_media.py:97
+#: src/ui/app_window/media_frame.py:900 src/utils/audio_media.py:97
 msgid "Audio: "
 msgstr "Audio : "
 
-#: src/ui/app_window/media_frame.py:1205
+#: src/ui/app_window/media_frame.py:1219
 msgid "No output path provided."
 msgstr "Aucun chemin de sortie fourni."
 
-#: src/ui/app_window/media_frame.py:1209
+#: src/ui/app_window/media_frame.py:1223
 msgid "VLC player is unavailable."
 msgstr "Le lecteur VLC est indisponible."
 
-#: src/ui/app_window/media_frame.py:1213
+#: src/ui/app_window/media_frame.py:1227
 msgid "VLC snapshot operation failed."
 msgstr "La capture d'écran de VLC a échoué."
 
-#: src/ui/app_window/media_frame.py:1218
+#: src/ui/app_window/media_frame.py:1232
 msgid "Snapshot file was not created."
 msgstr "Le fichier Instantané n'a pas été créé."
 
-#: src/ui/app_window/media_frame.py:1229
+#: src/ui/app_window/media_frame.py:1243
 msgid "No GIF frame available for screenshot."
 msgstr "Aucun cadre GIF disponible pour la capture d'écran."
 
-#: src/ui/app_window/media_frame.py:1235
+#: src/ui/app_window/media_frame.py:1249
 msgid "Failed to save GIF frame image."
 msgstr "Échec de l'enregistrement de l'image GIF."
 
-#: src/ui/app_window/media_frame.py:1238
+#: src/ui/app_window/media_frame.py:1252
 msgid "No time-based media is currently active."
 msgstr "Aucun média à horaire déterminé n'est actuellement en cours."
 
@@ -4939,9 +5042,9 @@ msgstr "Comparer les outils"
 
 #: src/ui/app_window/sidebar_panel.py:239
 #: src/ui/compare/classifier_actions_tab_qt.py:103
-#: src/ui/compare/classifier_management_window_qt.py:730
+#: src/ui/compare/classifier_management_window_qt.py:734
 #: src/ui/compare/seek_to_trigger_tab_qt.py:227
-#: tests/ui/test_classifier_management_window_qt.py:59
+#: tests/ui/test_classifier_management_window_qt.py:60
 msgid "Classifier Actions"
 msgstr "Actions du classificateur"
 
@@ -5181,17 +5284,87 @@ msgstr ""
 "Faites glisser pour sélectionner la zone à conserver, Entrée pour confirmer,"
 " Échap pour annuler"
 
+#: src/ui/app_window/window_launcher.py:39
+msgid "Window Error"
+msgstr "Erreur de fenêtre"
+
+#: src/ui/app_window/window_launcher.py:60
+#: src/ui/app_window/window_launcher.py:78
+msgid "Go To File Window Error"
+msgstr "Erreur dans la fenêtre Aller au fichier"
+
+#: src/ui/app_window/window_launcher.py:104
+msgid "Recent Directory Window Error"
+msgstr "Erreur récente de la fenêtre du répertoire"
+
+#: src/ui/app_window/window_launcher.py:112
+msgid "Favorites Window Error"
+msgstr "Erreur de la fenêtre Favoris"
+
+#: src/ui/app_window/window_launcher.py:120
+msgid "Embedding Seed Library Window Error"
+msgstr "Erreur d'intégration de la fenêtre de la bibliothèque de graines"
+
 #: src/ui/app_window/window_launcher.py:134
 msgid "Supergroup from {0} ({1})"
 msgstr "Supergroupe de {0} ({1})"
+
+#: src/ui/app_window/window_launcher.py:155
+#: src/ui/app_window/window_launcher.py:181
+msgid "Save Embedding Seed Error"
+msgstr "Erreur d’enregistrement du seed d’embedding"
 
 #: src/ui/app_window/window_launcher.py:169
 msgid "{0} ({1})"
 msgstr "{0} ({1})"
 
+#: src/ui/app_window/window_launcher.py:190
+msgid "Related Images Window Error"
+msgstr "Erreur de la fenêtre d'images associées"
+
 #: src/ui/app_window/window_launcher.py:197
 msgid "Please set a base directory first"
 msgstr "Veuillez d'abord définir un répertoire de base"
+
+#: src/ui/app_window/window_launcher.py:221
+msgid "Directory Notes Window Error"
+msgstr "Erreur de la fenêtre de notes du répertoire"
+
+#: src/ui/app_window/window_launcher.py:236
+msgid "Compare Settings Window Error"
+msgstr "Erreur de comparaison de la fenêtre des paramètres"
+
+#: src/ui/app_window/window_launcher.py:245
+msgid "HF Hub Model Manager Window Error"
+msgstr "Erreur de fenêtre du Gestionnaire de modèles HF Hub"
+
+#: src/ui/app_window/window_launcher.py:265
+msgid "Prevalidations Window Error"
+msgstr "Erreur de fenêtre de prévalidations"
+
+#: src/ui/app_window/window_launcher.py:277
+msgid "Classifier Actions Window Error"
+msgstr "Erreur de fenêtre d’actions du classifieur"
+
+#: src/ui/app_window/window_launcher.py:296
+msgid "File Actions Window Error"
+msgstr "Erreur dans la fenêtre d'actions de fichier"
+
+#: src/ui/app_window/window_launcher.py:323
+msgid "File Action Sets Window Error"
+msgstr "Erreur de la fenêtre Ensembles d’actions de fichier"
+
+#: src/ui/app_window/window_launcher.py:331
+msgid "File Interceptor Rules Window Error"
+msgstr "Erreur de la fenêtre des règles d’interception de fichiers"
+
+#: src/ui/app_window/window_launcher.py:339
+msgid "Auto-Sort Confirmation Window Error"
+msgstr "Erreur de la fenêtre de confirmation du tri automatique"
+
+#: src/ui/app_window/window_launcher.py:351
+msgid "Password Admin Window Error"
+msgstr "Erreur de la fenêtre d'administration du mot de passe"
 
 #: src/ui/app_window/window_launcher.py:388
 msgid "(Open this media as part of a directory to see index details.)"
@@ -5210,6 +5383,10 @@ msgstr "{0} sur {1} ({2})"
 #: src/ui/app_window/window_launcher.py:404
 msgid "{0} of {1} (Ungrouped)"
 msgstr "{0} sur {1} (Non groupé)"
+
+#: src/ui/app_window/window_launcher.py:427
+msgid "Image Details Error"
+msgstr "Erreur de détails d'image"
 
 #: src/ui/app_window/window_launcher.py:470
 msgid "Interactive crop not supported for this media type"
@@ -5726,7 +5903,7 @@ msgstr "Nouveau Nom"
 
 #: src/ui/compare/classifier_action_copy_window_qt.py:162
 #: src/ui/compare/classifier_actions_tab_qt.py:213
-#: src/ui/compare/classifier_pipelines_tab_qt.py:258
+#: src/ui/compare/classifier_pipelines_tab_qt.py:260
 #: src/ui/compare/directory_profile_window_qt.py:328
 #: src/ui/compare/directory_profile_window_qt.py:352
 #: src/ui/compare/prevalidations_tab_qt.py:379
@@ -5770,14 +5947,14 @@ msgstr "Exécuter sur le profil :"
 
 #: src/ui/compare/classifier_actions_tab_qt.py:180
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2039
-#: src/ui/compare/classifier_pipelines_tab_qt.py:184
+#: src/ui/compare/classifier_pipelines_tab_qt.py:186
 #: src/ui/compare/prevalidations_tab_qt.py:337
 msgid "Active"
 msgstr "Actif"
 
 #: src/ui/compare/classifier_actions_tab_qt.py:180
 #: src/ui/compare/classifier_management_window_qt.py:101
-#: src/ui/compare/classifier_pipelines_tab_qt.py:185
+#: src/ui/compare/classifier_pipelines_tab_qt.py:187
 #: src/ui/compare/embedding_seed_edit_window_qt.py:93
 #: src/ui/compare/prevalidations_tab_qt.py:336
 #: src/ui/files/file_interceptor_rules_window_qt.py:68
@@ -5793,7 +5970,7 @@ msgstr "Action"
 
 #: src/ui/compare/classifier_actions_tab_qt.py:191
 #: src/ui/compare/classifier_actions_tab_qt.py:240
-#: src/ui/compare/classifier_pipelines_tab_qt.py:233
+#: src/ui/compare/classifier_pipelines_tab_qt.py:235
 msgid "Run"
 msgstr "Exécuter"
 
@@ -5805,19 +5982,20 @@ msgid "Modify"
 msgstr "Modifier"
 
 #: src/ui/compare/classifier_actions_tab_qt.py:221
-#: src/ui/compare/classifier_pipelines_tab_qt.py:273
+#: src/ui/compare/classifier_pipelines_tab_qt.py:275
 #: src/ui/compare/prevalidations_tab_qt.py:391
 msgid "Move down"
 msgstr "Descendre"
 
 #: src/ui/compare/classifier_actions_tab_qt.py:231
-#: src/ui/compare/classifier_management_window_qt.py:731
-#: tests/ui/test_classifier_management_window_qt.py:60
+#: src/ui/compare/classifier_management_window_qt.py:735
+#: tests/ui/test_classifier_management_window_qt.py:61
 msgid "Pipelines"
 msgstr "Pipelines"
 
 #: src/ui/compare/classifier_actions_tab_qt.py:258
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2021
+#: src/ui/compare/pipeline_history_tab_qt.py:65
 msgid "Pipeline"
 msgstr "Pipeline"
 
@@ -5850,35 +6028,157 @@ msgstr ""
 "Fichiers vérifiés : {1} — résultats : {2} — déplacements : {3} — copies : {4} — suppressions : {5} — erreurs : {6}"
 
 #: src/ui/compare/classifier_actions_tab_qt.py:401
-#: src/ui/compare/classifier_pipelines_tab_qt.py:413
+#: src/ui/compare/classifier_pipelines_tab_qt.py:415
 msgid "Activate Pipeline"
 msgstr "Activer le pipeline"
 
 #: src/ui/compare/classifier_actions_tab_qt.py:411
-#: src/ui/compare/classifier_actions_tab_qt.py:414
-#: src/ui/compare/classifier_pipelines_tab_qt.py:504
-#: src/ui/compare/classifier_pipelines_tab_qt.py:507
-#: src/ui/compare/classifier_pipelines_tab_qt.py:624
+#: src/ui/compare/classifier_actions_tab_qt.py:418
+#: src/ui/compare/classifier_pipelines_tab_qt.py:506
+#: src/ui/compare/classifier_pipelines_tab_qt.py:509
+#: src/ui/compare/classifier_pipelines_tab_qt.py:687
+#: src/ui/compare/classifier_pipelines_tab_qt.py:749
 msgid "Run Pipeline"
 msgstr "Exécuter le pipeline"
 
-#: src/ui/compare/classifier_actions_tab_qt.py:413
+#: src/ui/compare/classifier_actions_tab_qt.py:414
 msgid "Run pipeline '{0}' on profile '{1}'?"
 msgstr "Exécuter le pipeline '{0}' sur le profil '{1}' ?"
 
-#: src/ui/compare/classifier_actions_tab_qt.py:427
+#: src/ui/compare/classifier_actions_tab_qt.py:435
 msgid "No active classifier actions to run"
 msgstr "Aucune action de classification active à exécuter"
 
-#: src/ui/compare/classifier_actions_tab_qt.py:432
+#: src/ui/compare/classifier_actions_tab_qt.py:440
 msgid "Run {0} active classifier action(s) on the following directories?"
 msgstr ""
 "Exécuter {0} action(s) de classification active(s) sur les répertoires "
 "suivants ?"
 
-#: src/ui/compare/classifier_actions_tab_qt.py:440
+#: src/ui/compare/classifier_actions_tab_qt.py:448
 msgid "Run All Classifier Actions"
 msgstr "Exécuter toutes les actions du classificateur"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:45
+#: tests/ui/test_classifier_filter_dialog.py:157
+msgid "(not configured)"
+msgstr "(non configuré)"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:47
+msgid "model strategy"
+msgstr "stratégie du modèle"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:51
+msgid "{0}: exclude {1}"
+msgstr "{0}: exclure {1}"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:53
+#: tests/ui/test_classifier_filter_dialog.py:161
+msgid "{0}: only {1}"
+msgstr "{0}: seulement {1}"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:55
+msgid "(min. {0:.2f})"
+msgstr "(min. {0:.2f})"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:66
+msgid "Classifier Filter"
+msgstr "Filtre de classificateur"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:94
+msgid "Classifier type:"
+msgstr "Type de classificateur:"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:96
+msgid "Image classifier"
+msgstr "Classificateur d'images"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:97
+msgid "Audio classifier"
+msgstr "Classificateur audio"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:102
+msgid "Model:"
+msgstr "Modèle:"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:108
+msgid "Files:"
+msgstr "Fichiers:"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:110
+msgid "Only files in the selected categories"
+msgstr "Uniquement les fichiers dans les catégories sélectionnées"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:111
+msgid "Exclude files in the selected categories"
+msgstr "Exclure les fichiers des catégories sélectionnées"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:115
+msgid "Minimum confidence:"
+msgstr "Confiance minimale:"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:120
+msgid "off"
+msgstr "Désactivé"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:133
+msgid "Sample ratio:"
+msgstr "Ratio d'échantillon :"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:136
+msgid "Share of frames or pages sampled from videos, GIFs, PDFs and ePubs."
+msgstr "Part des images ou pages extraites de vidéos, GIFs, PDF et ePubs."
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:140
+msgid "Positive ratio:"
+msgstr "Taux positif :"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:143
+msgid ""
+"Share of sampled frames or pages that must be in the selected categories for"
+" the file to count as in them."
+msgstr ""
+"Part des images ou pages échantillonnées qui doivent se trouver dans les "
+"catégories sélectionnées pour que le fichier y soit compté."
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:150
+#: src/ui/compare/classifier_management_window_qt.py:330
+msgid "Selected categories"
+msgstr "Catégories sélectionnées"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:151
+msgid "Model strategy (positive groups)"
+msgstr "Stratégie de modèle (groupes positifs)"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:170
+msgid ""
+"Videos, GIFs, PDFs and ePubs are sampled like in classifier actions. Files "
+"the classifier cannot handle (e.g. audio files for an image model) count as "
+"not in the selected categories."
+msgstr ""
+"Les vidéos, GIFs, PDFs et ePubs sont échantillonnés comme dans les actions "
+"du classificateur. Les fichiers que le classificateur ne peut pas gérer (par"
+" ex. des fichiers audio pour un modèle d’image) sont considérés comme "
+"n’appartenant pas aux catégories sélectionnées."
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:212
+msgid "{0} (not registered)"
+msgstr "{0} (non enregistré)"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:275
+msgid "No classifier models of this type are configured."
+msgstr "Aucun modèle de classificateur de ce type n’est configuré."
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:277
+msgid "This model is not registered; the compare run will fail until it is."
+msgstr ""
+"Ce modèle n’est pas enregistré ; l’exécution de comparaison échouera tant "
+"qu’il ne le sera pas."
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:280
+msgid "These categories are no longer part of the model and were removed: {0}"
+msgstr ""
+"Ces catégories ne font plus partie du modèle et ont été supprimées : {0}"
 
 #: src/ui/compare/classifier_management_window_qt.py:78
 #: src/ui/compare/prevalidations_tab_qt.py:121
@@ -6039,11 +6339,6 @@ msgstr "Classificateur – Catégorie sélectionnée"
 msgid "Classifier Classification Mode"
 msgstr "Classificateur Mode de classification"
 
-#: src/ui/compare/classifier_filter_dialog_qt.py:150
-#: src/ui/compare/classifier_management_window_qt.py:330
-msgid "Selected categories"
-msgstr "Catégories sélectionnées"
-
 #: src/ui/compare/classifier_management_window_qt.py:331
 msgid "Model strategy"
 msgstr "Stratégie de modèle"
@@ -6106,27 +6401,28 @@ msgstr "Configuration invalide"
 msgid "Classifier Management"
 msgstr "Gestion des classificateurs"
 
-#: src/ui/compare/classifier_management_window_qt.py:732
+#: src/ui/compare/classifier_management_window_qt.py:737
 #: src/ui/compare/prevalidations_tab_qt.py:267
 #: src/ui/compare/seek_to_trigger_tab_qt.py:241
-#: tests/ui/test_classifier_management_window_qt.py:61
+#: tests/ui/test_classifier_management_window_qt.py:63
+#: tests/ui/test_classifier_management_window_qt.py:113
 msgid "Prevalidations"
 msgstr "Prévalidations"
 
-#: src/ui/compare/classifier_management_window_qt.py:733
-#: tests/ui/test_classifier_management_window_qt.py:62
+#: src/ui/compare/classifier_management_window_qt.py:738
+#: tests/ui/test_classifier_management_window_qt.py:64
 msgid "Seek to Trigger"
 msgstr "Tenter de déclencher"
 
-#: src/ui/compare/classifier_management_window_qt.py:734
+#: src/ui/compare/classifier_management_window_qt.py:739
 #: src/ui/compare/lookaheads_tab_qt.py:38
-#: tests/ui/test_classifier_management_window_qt.py:63
+#: tests/ui/test_classifier_management_window_qt.py:65
 msgid "Lookaheads"
 msgstr "Anticipations"
 
-#: src/ui/compare/classifier_management_window_qt.py:735
+#: src/ui/compare/classifier_management_window_qt.py:740
 #: src/ui/compare/directory_profiles_tab_qt.py:75
-#: tests/ui/test_classifier_management_window_qt.py:64
+#: tests/ui/test_classifier_management_window_qt.py:66
 msgid "Directory Profiles"
 msgstr "Profils du répertoire"
 
@@ -6184,6 +6480,7 @@ msgstr "Ajouter"
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2202
 #: src/ui/compare/directory_profile_window_qt.py:154
 #: src/ui/compare/directory_profile_window_qt.py:418
+#: src/ui/compare/pipeline_history_tab_qt.py:93
 #: src/ui/files/directory_notes_window_qt.py:198
 msgid "Remove"
 msgstr "Supprimer"
@@ -6749,7 +7046,7 @@ msgstr "↑"
 
 #: src/ui/compare/classifier_pipeline_editor_qt.py:1583
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2204
-#: src/ui/compare/classifier_pipelines_tab_qt.py:271
+#: src/ui/compare/classifier_pipelines_tab_qt.py:273
 msgid "↓"
 msgstr "↓"
 
@@ -6821,7 +7118,7 @@ msgstr ""
 
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2061
 #: src/ui/compare/classifier_pipeline_editor_qt.py:3071
-#: src/ui/compare/classifier_pipelines_tab_qt.py:295
+#: src/ui/compare/classifier_pipelines_tab_qt.py:297
 msgid "(no profiles)"
 msgstr "(aucun profil)"
 
@@ -6923,6 +7220,31 @@ msgstr ""
 "images associées permet aux dérivés d’être ignorés plus tôt, mais ce n’est "
 "pas nécessaire à la correction."
 
+#: src/ui/compare/classifier_pipeline_editor_qt.py:2156
+msgid ""
+"For video, GIF, PDF and ePub files, the share of frames or pages that "
+"classifier, embedding and prototype conditions sample."
+msgstr ""
+"Pour les fichiers vidéo, GIF, PDF et ePub, la part des images ou pages que "
+"les conditions de classificateur, d’intégration et de prototype "
+"échantillonnent."
+
+#: src/ui/compare/classifier_pipeline_editor_qt.py:2159
+msgid "Dynamic media sample ratio:"
+msgstr "Ratio d’échantillon des médias dynamiques :"
+
+#: src/ui/compare/classifier_pipeline_editor_qt.py:2162
+msgid ""
+"The share of sampled frames or pages that must match for such a condition to"
+" match the file."
+msgstr ""
+"La part des trames ou pages échantillonnées qui doit correspondre pour "
+"qu’une telle condition corresponde au fichier."
+
+#: src/ui/compare/classifier_pipeline_editor_qt.py:2165
+msgid "Dynamic media positive ratio:"
+msgstr "Ratio positif des médias dynamiques :"
+
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2167
 msgid "Record per-node decisions"
 msgstr "Enregistrer les décisions par nœud"
@@ -6939,7 +7261,7 @@ msgstr ""
 "fin du run."
 
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2186
-#: src/ui/compare/classifier_pipelines_tab_qt.py:187
+#: src/ui/compare/classifier_pipelines_tab_qt.py:189
 msgid "Nodes"
 msgstr "Nœuds"
 
@@ -7031,7 +7353,7 @@ msgid "Run Node"
 msgstr "Exécuter Node"
 
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2534
-#: src/ui/compare/classifier_pipelines_tab_qt.py:624
+#: src/ui/compare/classifier_pipelines_tab_qt.py:749
 msgid "No active media to run on."
 msgstr "Aucun média actif à exécuter."
 
@@ -7099,112 +7421,113 @@ msgstr "Erreurs de validation"
 msgid "Category Map Warnings"
 msgstr "Avertissements de la carte de catégories"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:89
+#: src/ui/compare/classifier_pipelines_tab_qt.py:91
 msgid "Classifier Pipelines"
 msgstr "Pipelines de classificateurs"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:99
+#: src/ui/compare/classifier_pipelines_tab_qt.py:101
 msgid "Load Demo"
 msgstr "Charger la démo"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:100
+#: src/ui/compare/classifier_pipelines_tab_qt.py:102
 msgid "Insert the built-in demo pipeline"
 msgstr "Insérer le pipeline de démonstration intégré"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:104
+#: src/ui/compare/classifier_pipelines_tab_qt.py:106
 msgid "Load Example"
 msgstr "Charger l’exemple"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:105
+#: src/ui/compare/classifier_pipelines_tab_qt.py:107
 msgid "Insert an example pipeline shipped with the app"
 msgstr "Insérer un pipeline d'exemple fourni avec l'application"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:111
+#: src/ui/compare/classifier_pipelines_tab_qt.py:113
 msgid "Import..."
 msgstr "Importer..."
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:112
+#: src/ui/compare/classifier_pipelines_tab_qt.py:114
 msgid ""
 "Add pipelines from a JSON file (an exported pipeline or a pipeline run dump)"
 msgstr ""
 "Ajouter des pipelines depuis un fichier JSON (un pipeline exporté ou un dump"
 " d’exécution de pipeline)"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:121
+#: src/ui/compare/classifier_pipelines_tab_qt.py:123
 msgid "Run on profile:"
 msgstr "Exécuter sur le profil :"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:186
+#: src/ui/compare/classifier_pipelines_tab_qt.py:188
 #: src/ui/compare/hf_model_manager_window_qt.py:801
 #: src/ui/compare/hf_model_manager_window_qt.py:866 src/utils/constants.py:171
 #: src/utils/constants.py:191
 msgid "Type"
 msgstr "Type"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:188
+#: src/ui/compare/classifier_pipelines_tab_qt.py:190
+#: src/ui/compare/pipeline_history_tab_qt.py:65
 #: src/ui/compare/prevalidations_tab_qt.py:336
 msgid "Profile"
 msgstr "Profil"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:189
+#: src/ui/compare/classifier_pipelines_tab_qt.py:191
 msgid "Flow"
 msgstr "Flux"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:234
+#: src/ui/compare/classifier_pipelines_tab_qt.py:236
 msgid "Run on all files in the selected profile's directories"
 msgstr "Exécuter sur tous les fichiers des répertoires du profil sélectionné"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:238
+#: src/ui/compare/classifier_pipelines_tab_qt.py:240
 msgid "Run Current"
 msgstr "Exécuter actuel"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:239
+#: src/ui/compare/classifier_pipelines_tab_qt.py:241
 msgid "Run on the currently displayed media item only"
 msgstr "Exécuter uniquement sur l'élément média actuellement affiché"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:246
-#: src/ui/compare/classifier_pipelines_tab_qt.py:724
-#: src/ui/compare/classifier_pipelines_tab_qt.py:733
-#: src/ui/compare/classifier_pipelines_tab_qt.py:752
+#: src/ui/compare/classifier_pipelines_tab_qt.py:248
+#: src/ui/compare/classifier_pipelines_tab_qt.py:849
+#: src/ui/compare/classifier_pipelines_tab_qt.py:858
+#: src/ui/compare/classifier_pipelines_tab_qt.py:877
 msgid "Rerun Last"
 msgstr "Réexécuter la dernière"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:248
+#: src/ui/compare/classifier_pipelines_tab_qt.py:250
 msgid ""
 "Re-dispatch generates and re-execute scrambles from the most recent run"
 msgstr ""
 "Redispatch génère et réexécute les scrambles de l'exécution la plus récente"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:254
+#: src/ui/compare/classifier_pipelines_tab_qt.py:256
 #: src/ui/compare/directory_profile_window_qt.py:150
 #: src/ui/files/file_interceptor_rules_window_qt.py:305
 msgid "Edit"
 msgstr "Modifier"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:262
+#: src/ui/compare/classifier_pipelines_tab_qt.py:264
 msgid "Export"
 msgstr "Exporter"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:263
+#: src/ui/compare/classifier_pipelines_tab_qt.py:265
 msgid "Save this pipeline to a JSON file"
 msgstr "Enregistrer cette pipeline dans un fichier JSON"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:318
+#: src/ui/compare/classifier_pipelines_tab_qt.py:320
 msgid "(no examples found)"
 msgstr "(aucun exemple trouvé)"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:332
-#: src/ui/compare/classifier_pipelines_tab_qt.py:348
-#: src/ui/compare/classifier_pipelines_tab_qt.py:371
+#: src/ui/compare/classifier_pipelines_tab_qt.py:334
+#: src/ui/compare/classifier_pipelines_tab_qt.py:350
+#: src/ui/compare/classifier_pipelines_tab_qt.py:373
 msgid "Import Pipeline"
 msgstr "Pipeline d’importation"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:333
-#: src/ui/compare/classifier_pipelines_tab_qt.py:377
+#: src/ui/compare/classifier_pipelines_tab_qt.py:335
+#: src/ui/compare/classifier_pipelines_tab_qt.py:379
 msgid "JSON files (*.json)"
 msgstr "Fichiers JSON (*.json)"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:349
+#: src/ui/compare/classifier_pipelines_tab_qt.py:351
 msgid ""
 "Could not import {path}:\n"
 "{err}"
@@ -7212,7 +7535,7 @@ msgstr ""
 "Impossible d’importer {path}:\n"
 "{err}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:363
+#: src/ui/compare/classifier_pipelines_tab_qt.py:365
 msgid ""
 "Imported {n} pipeline(s), inactive:\n"
 "{names}"
@@ -7220,11 +7543,11 @@ msgstr ""
 "Importé {n} pipeline(s), inactif(s) :\n"
 "{names}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:368
+#: src/ui/compare/classifier_pipelines_tab_qt.py:370
 msgid "…and {n} more"
 msgstr "…et {n} de plus"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:369
+#: src/ui/compare/classifier_pipelines_tab_qt.py:371
 msgid ""
 "Fix these before activating:\n"
 "{problems}"
@@ -7232,12 +7555,12 @@ msgstr ""
 "Corrigez ces éléments avant d’activer :\n"
 "{problems}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:377
-#: src/ui/compare/classifier_pipelines_tab_qt.py:385
+#: src/ui/compare/classifier_pipelines_tab_qt.py:379
+#: src/ui/compare/classifier_pipelines_tab_qt.py:387
 msgid "Export Pipeline"
 msgstr "Pipeline d'exportation"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:386
+#: src/ui/compare/classifier_pipelines_tab_qt.py:388
 msgid ""
 "Could not write {path}:\n"
 "{err}"
@@ -7245,43 +7568,43 @@ msgstr ""
 "Impossible d'écrire {path}:\n"
 "{err}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:390
+#: src/ui/compare/classifier_pipelines_tab_qt.py:392
 msgid "Exported pipeline '{name}' to {path}"
 msgstr "Pipeline '{name}' exporté vers {path}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:437
+#: src/ui/compare/classifier_pipelines_tab_qt.py:439
 msgid "Not Available"
 msgstr "Non disponible"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:437
+#: src/ui/compare/classifier_pipelines_tab_qt.py:439
 msgid "Pipeline editor not yet available."
 msgstr "L'éditeur de pipeline n'est pas encore disponible."
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:458
+#: src/ui/compare/classifier_pipelines_tab_qt.py:460
 msgid " (copy)"
 msgstr " (copier)"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:504
+#: src/ui/compare/classifier_pipelines_tab_qt.py:506
 msgid "No profile selected or profile not found."
 msgstr "Aucun profil sélectionné ou profil introuvable."
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:516
+#: src/ui/compare/classifier_pipelines_tab_qt.py:518
 msgid "Seed category: {cat}{suffix}"
 msgstr "Catégorie de semence : {cat}{suffix}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:526
+#: src/ui/compare/classifier_pipelines_tab_qt.py:528
 #: tests/ui/test_classifier_pipelines_tab_qt.py:836
 #: tests/ui/test_classifier_pipelines_tab_qt.py:845
 msgid "Last run on: {profile} (now switching to: {current})"
 msgstr ""
 "Dernière exécution sur : {profile} (basculement maintenant vers : {current})"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:529
+#: src/ui/compare/classifier_pipelines_tab_qt.py:531
 #: tests/ui/test_classifier_pipelines_tab_qt.py:835
 msgid "Last run on: {profile}"
 msgstr "Dernière exécution le : {profile}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:532
+#: src/ui/compare/classifier_pipelines_tab_qt.py:537
 msgid ""
 "Run pipeline '{name}' on profile '{profile}'?{details}\n"
 "\n"
@@ -7293,18 +7616,18 @@ msgstr ""
 "Répertoires :\n"
 "{dirs}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:538
+#: src/ui/compare/classifier_pipelines_tab_qt.py:543
 msgid "Run Pipeline on Profile"
 msgstr "Exécuter le pipeline sur le profil"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:557
-#: src/ui/compare/classifier_pipelines_tab_qt.py:643
+#: src/ui/compare/classifier_pipelines_tab_qt.py:660
+#: src/ui/compare/classifier_pipelines_tab_qt.py:768
 #: tests/ui/test_classifier_pipelines_tab_qt.py:995
 msgid "SD Runner Not Available"
 msgstr "SD Runner non disponible"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:559
-#: src/ui/compare/classifier_pipelines_tab_qt.py:645
+#: src/ui/compare/classifier_pipelines_tab_qt.py:662
+#: src/ui/compare/classifier_pipelines_tab_qt.py:770
 msgid ""
 "This pipeline has GENERATE actions but the SD Runner is not reachable.\n"
 "\n"
@@ -7318,11 +7641,11 @@ msgstr ""
 "\n"
 "Continuer quand même ?"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:606
+#: src/ui/compare/classifier_pipelines_tab_qt.py:731
 msgid "Disabled nodes (will be skipped): {nodes}"
 msgstr "Nœuds désactivés (seront ignorés) : {nodes}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:631
+#: src/ui/compare/classifier_pipelines_tab_qt.py:756
 msgid ""
 "Run pipeline '{name}' on the current media?{details}\n"
 "\n"
@@ -7334,23 +7657,23 @@ msgstr ""
 "Média :\n"
 "  {path}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:634
+#: src/ui/compare/classifier_pipelines_tab_qt.py:759
 msgid "Run Pipeline on Current Media"
 msgstr "Exécuter le pipeline sur le média actuel"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:696
+#: src/ui/compare/classifier_pipelines_tab_qt.py:821
 msgid "Pipeline '{name}' on {file}: {action}"
 msgstr "Pipeline '{name}' sur {file} : {action}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:702
+#: src/ui/compare/classifier_pipelines_tab_qt.py:827
 msgid "{n} generation request(s) queued"
 msgstr "{n} demande(s) de génération en file d'attente"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:725
+#: src/ui/compare/classifier_pipelines_tab_qt.py:850
 msgid "No previous run dump found for '{name}'."
 msgstr "Aucun vidage d'exécution précédent trouvé pour '{name}'."
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:734
+#: src/ui/compare/classifier_pipelines_tab_qt.py:859
 msgid ""
 "Could not load dump file:\n"
 "{err}"
@@ -7358,7 +7681,7 @@ msgstr ""
 "Impossible de charger le fichier de vidage:\n"
 "{err}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:747
+#: src/ui/compare/classifier_pipelines_tab_qt.py:872
 msgid ""
 "Rerun last run of '{name}'?\n"
 "\n"
@@ -7372,7 +7695,7 @@ msgstr ""
 "Générations à redispatcher : {n_gen}\n"
 "Brouillages à réexécuter : {n_scr}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:801
+#: src/ui/compare/classifier_pipelines_tab_qt.py:926
 msgid ""
 "Rerun complete for '{name}'.\n"
 "Generates dispatched: {n_gen}  Scrambles executed: {n_scr}"
@@ -7404,11 +7727,6 @@ msgstr "Seuil"
 #: src/ui/compare/compare_settings_window_qt.py:285
 msgid "Max files to compare"
 msgstr "Nombre maximal de fichiers à comparer"
-
-#: src/compare/compare_result.py:287
-#: src/ui/compare/compare_settings_window_qt.py:303
-msgid "Overwrite cache"
-msgstr "Ecraser le cache"
 
 #: src/ui/compare/compare_settings_window_qt.py:306
 msgid "Store checkpoints"
@@ -7499,6 +7817,7 @@ msgid "Profile Name"
 msgstr "Nom du profil"
 
 #: src/ui/compare/directory_profile_window_qt.py:128
+#: src/ui/compare/pipeline_history_tab_qt.py:67
 msgid "Directories"
 msgstr "Annuaires"
 
@@ -7673,6 +7992,15 @@ msgstr "Taille"
 msgid "Model"
 msgstr "Modèle"
 
+#: src/ui/compare/filter_builder_panel_qt.py:50
+#: src/ui/compare/filter_builder_panel_qt.py:148
+#: src/ui/compare/filter_builder_panel_qt.py:186
+#: src/ui/compare/filter_builder_panel_qt.py:255
+#: tests/ui/test_classifier_filter_dialog.py:213
+#: tests/ui/test_classifier_filter_dialog.py:223
+msgid "Classifier"
+msgstr "Classificateur"
+
 #: src/ui/compare/filter_builder_panel_qt.py:63
 #: src/ui/compare/filter_builder_panel_qt.py:177
 #: src/ui/compare/filter_builder_panel_qt.py:204
@@ -7714,6 +8042,10 @@ msgstr "n'importe quel"
 msgid "incl. LoRAs"
 msgstr "incl. LoRAs"
 
+#: src/ui/compare/filter_builder_panel_qt.py:129
+msgid "Edit…"
+msgstr "Modifier…"
+
 #: src/ui/compare/filter_builder_panel_qt.py:139
 msgid "Remove this condition"
 msgstr "Supprimer cette condition"
@@ -7725,6 +8057,31 @@ msgstr "Correspondance :"
 #: src/ui/compare/filter_builder_panel_qt.py:300
 msgid "+ Add condition"
 msgstr "+ Ajouter une condition"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:48
+#: tests/ui/test_hf_model_manager_window_detection.py:291
+#: tests/ui/test_hf_model_manager_window_detection.py:312
+msgid "Detections (after the threshold and box-area filters):"
+msgstr "Détections (après les filtres de seuil et de zone de boîte) :"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:54
+#: tests/ui/test_hf_model_manager_window_detection.py:292
+#: tests/ui/test_hf_model_manager_window_detection.py:294
+msgid "{0}: {1:.2%} confidence, box covers {2:.1%} of the image"
+msgstr "{0}: {1:.2%} de confiance, la boîte couvre {2:.1%} de l’image"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:58
+#: tests/ui/test_hf_model_manager_window_detection.py:293
+msgid "(counts toward: {0})"
+msgstr "(compte pour : {0})"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:61
+#: src/ui/files/directory_notes_window_qt.py:524
+#: src/ui/files/directory_notes_window_qt.py:555
+#: src/ui/files/file_actions_window_qt.py:334
+#: tests/ui/test_hf_model_manager_window_detection.py:303
+msgid "... and {0} more"
+msgstr "... et {0} de plus"
 
 #: src/ui/compare/hf_model_manager_window_qt.py:139
 #: src/ui/compare/hf_model_manager_window_qt.py:757
@@ -7766,6 +8123,20 @@ msgstr ""
 "configuration mais n’est pas utilisée lors du chargement. ONNX (.onnx) : "
 "inféré à partir de la forme du tenseur d’entrée déclarée par le modèle "
 "lorsqu’il est laissé vide ; définissez‑le pour remplacer."
+
+#: src/ui/compare/hf_model_manager_window_qt.py:174
+msgid ""
+"TFLite (.tflite): inferred from the model's declared input tensor shape; "
+"only applied when that shape is dynamic."
+msgstr ""
+"TFLite (.tflite) : déduit de la forme de tenseur d’entrée déclarée du "
+"modèle ; appliqué uniquement lorsque cette forme est dynamique."
+
+#: src/ui/compare/hf_model_manager_window_qt.py:177
+msgid "Object detection: not used; the model's processor sets the input size."
+msgstr ""
+"Détection d'objets : non utilisée ; le processeur du modèle définit la "
+"taille d'entrée."
 
 #: src/ui/compare/hf_model_manager_window_qt.py:179
 msgid "Input shape (WxH)"
@@ -7840,6 +8211,40 @@ msgstr "Module d'architecture"
 msgid "Arch class"
 msgstr "Classe d'architecture"
 
+#: src/ui/compare/hf_model_manager_window_qt.py:249
+msgid "Background category"
+msgstr "Catégorie d'arrière-plan"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:252
+msgid ""
+"The category for images without a qualifying detection, e.g. \"no person\". "
+"It must also be listed in Categories; every other category must be a label "
+"of the model."
+msgstr ""
+"La catégorie pour les images sans détection qualifiante, par ex. « pas de "
+"personne ». Elle doit également figurer dans Catégories ; toute autre "
+"étiquette doit être une étiquette du modèle."
+
+#: src/ui/compare/hf_model_manager_window_qt.py:256
+msgid "Detection threshold"
+msgstr "Seuil de détection"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:263
+msgid "Detections below this confidence are ignored."
+msgstr "Les détections en dessous de ce niveau de confiance sont ignorées."
+
+#: src/ui/compare/hf_model_manager_window_qt.py:265
+msgid "Min box area"
+msgstr "Surface minimale de la boîte"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:273
+msgid ""
+"Ignore detections whose box covers less than this fraction of the image, "
+"e.g. 0.02 to skip small background figures."
+msgstr ""
+"Ignorer les détections dont la boîte couvre moins que cette fraction de "
+"l'image, par ex. 0,02 pour ignorer les petits éléments d'arrière‑plan."
+
 #: src/ui/compare/hf_model_manager_window_qt.py:315
 msgid "Select model file"
 msgstr "Sélectionner le fichier modèle"
@@ -7868,6 +8273,17 @@ msgstr "Forme d'entrée non valide"
 #: src/ui/compare/hf_model_manager_window_qt.py:415
 msgid "Use two positive integers, for example 224, 224 or 384x384."
 msgstr "Utilisez deux entiers positifs, par exemple 224, 224 ou 384x384."
+
+#: src/ui/compare/hf_model_manager_window_qt.py:445
+#: tests/ui/test_hf_model_manager_window_detection.py:164
+msgid "Invalid background category"
+msgstr "Catégorie d'arrière-plan invalide"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:446
+msgid "The background category '{0}' must also be listed in Categories."
+msgstr ""
+"La catégorie d’arrière‑plan « {0} » doit également être répertoriée dans "
+"Catégories."
 
 #: src/ui/compare/hf_model_manager_window_qt.py:470
 msgid "Invalid model configuration"
@@ -7992,6 +8408,7 @@ msgstr ""
 "modification manuelle du fichier JSON n'est nécessaire."
 
 #: src/ui/compare/hf_model_manager_window_qt.py:866
+#: src/ui/compare/pipeline_history_tab_qt.py:65
 msgid "Status"
 msgstr "Statut"
 
@@ -8069,6 +8486,21 @@ msgstr "s'est chargé(e) des fichiers du dépôt pour {0}."
 msgid "Please enter a filename to download."
 msgstr "Veuillez entrer un nom de fichier pour le téléchargement."
 
+#: src/ui/compare/hf_model_manager_window_qt.py:1199
+#: tests/ui/test_hf_model_manager_window_model_files.py:78
+#: tests/ui/test_hf_model_manager_window_model_files.py:91
+#: tests/ui/test_hf_model_manager_window_model_files.py:98
+msgid "Not a Model File?"
+msgstr "Pas un fichier modèle?"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:1200
+msgid ""
+"'{0}' does not have a recognized model file extension ({1}). Install it "
+"anyway?"
+msgstr ""
+"'{0}' n’a pas d’extension de fichier modèle reconnue ({1}). Installer quand "
+"même ?"
+
 #: src/ui/compare/hf_model_manager_window_qt.py:1213
 msgid "Unable to locate selected file in downloaded snapshot: {0}"
 msgstr ""
@@ -8088,6 +8520,15 @@ msgstr "Le nom du modèle ne peut pas être vide."
 #: src/ui/compare/hf_model_manager_window_qt.py:1308
 msgid "Please enter at least one category."
 msgstr "S'il vous plaît entrez au moins une catégorie."
+
+#: src/ui/compare/hf_model_manager_window_qt.py:1239
+msgid ""
+"Only one category may be something other than a label of this model (the "
+"background category, e.g. \"no person\"). Not model labels: {0}"
+msgstr ""
+"Une seule catégorie peut être différente d’une étiquette de ce modèle (la "
+"catégorie d’arrière‑plan, par ex. « no person »). Étiquettes hors modèle : "
+"{0}"
 
 #: src/ui/compare/hf_model_manager_window_qt.py:1284
 msgid "Downloaded and installed model '{0}'."
@@ -8797,14 +9238,6 @@ msgstr "{0} fichiers importés."
 msgid "{0} filenames not found:"
 msgstr "{0} noms de fichiers introuvables :"
 
-#: src/ui/compare/hf_model_manager_window_qt.py:61
-#: src/ui/files/directory_notes_window_qt.py:524
-#: src/ui/files/directory_notes_window_qt.py:555
-#: src/ui/files/file_actions_window_qt.py:334
-#: tests/ui/test_hf_model_manager_window_detection.py:303
-msgid "... and {0} more"
-msgstr "... et {0} de plus"
-
 #: src/ui/files/directory_notes_window_qt.py:526
 #: src/ui/files/directory_notes_window_qt.py:557
 msgid "Import Complete"
@@ -8980,7 +9413,7 @@ msgid "Move"
 msgstr "Déplacer"
 
 #: src/ui/files/file_action_sets_window_qt.py:271
-#: src/ui/files/related_images_window_qt.py:73
+#: src/ui/files/related_images_window_qt.py:75
 msgid "(no directory)"
 msgstr "(aucun répertoire)"
 
@@ -9844,131 +10277,131 @@ msgstr "Définir le répertoire de comparaison d'images"
 msgid "Set image comparison directory"
 msgstr "Définir le répertoire de comparaison des images"
 
-#: src/ui/files/related_images_window_qt.py:49
+#: src/ui/files/related_images_window_qt.py:51
 msgid "Related Images"
 msgstr "Images associées"
 
-#: src/ui/files/related_images_window_qt.py:63
+#: src/ui/files/related_images_window_qt.py:65
 msgid "Related Image Actions"
 msgstr "Actions d'image associées"
 
-#: src/ui/files/related_images_window_qt.py:74
+#: src/ui/files/related_images_window_qt.py:76
 msgid "Current media source: {0}"
 msgstr "Source multimédia actuelle : {0}"
 
-#: src/ui/files/related_images_window_qt.py:78
+#: src/ui/files/related_images_window_qt.py:80
 msgid ""
 "Actions in this window use the current media of the window that opened it."
 msgstr ""
 "Les actions de cette fenêtre utilisent le support actuel de la fenêtre qui "
 "l'a ouverte."
 
-#: src/ui/files/related_images_window_qt.py:85
+#: src/ui/files/related_images_window_qt.py:87
 #: src/ui/image/media_details.py:1568
 msgid "View related image"
 msgstr "Voir l'image associée"
 
-#: src/ui/files/related_images_window_qt.py:87
+#: src/ui/files/related_images_window_qt.py:89
 msgid "Next downstream image in open window"
 msgstr "Image suivante en aval dans la fenêtre ouverte"
 
-#: src/ui/files/related_images_window_qt.py:93
+#: src/ui/files/related_images_window_qt.py:95
 msgid "Mark all downstream files in current directory"
 msgstr "Marquer tous les fichiers en aval dans le répertoire actuel"
 
-#: src/ui/files/related_images_window_qt.py:95
+#: src/ui/files/related_images_window_qt.py:97
 #: tests/ui/test_related_images_window.py:75
 msgid "Mark files without a related image in current directory"
 msgstr "Marquer les fichiers sans image associée dans le répertoire actuel"
 
-#: src/ui/files/related_images_window_qt.py:97
+#: src/ui/files/related_images_window_qt.py:99
 #: tests/ui/test_related_images_window.py:74
 msgid "Search all open windows for downstream images"
 msgstr "Rechercher les images en aval dans toutes les fenêtres ouvertes"
 
-#: src/ui/files/related_images_window_qt.py:115
+#: src/ui/files/related_images_window_qt.py:135
 msgid "Results"
 msgstr "Résultats"
 
-#: src/ui/files/related_images_window_qt.py:121
+#: src/ui/files/related_images_window_qt.py:141
 msgid "(no results yet)"
 msgstr "(pas encore de résultats)"
 
-#: src/ui/files/related_images_window_qt.py:145
-#: tests/ui/test_related_images_window.py:152
+#: src/ui/files/related_images_window_qt.py:165
+#: tests/ui/test_related_images_window.py:170
 msgid "cancelled"
 msgstr "annulé"
 
-#: src/ui/files/related_images_window_qt.py:146
+#: src/ui/files/related_images_window_qt.py:166
 msgid "waiting"
 msgstr "En attente"
 
-#: src/ui/files/related_images_window_qt.py:147
+#: src/ui/files/related_images_window_qt.py:167
 msgid "no media"
 msgstr "Pas de médias"
 
-#: src/ui/files/related_images_window_qt.py:148
+#: src/ui/files/related_images_window_qt.py:168
 msgid "no files"
 msgstr "Aucun fichier"
 
-#: src/ui/files/related_images_window_qt.py:149
+#: src/ui/files/related_images_window_qt.py:169
 msgid "too many files"
 msgstr "Trop de fichiers"
 
-#: src/ui/files/related_images_window_qt.py:160
-#: tests/ui/test_related_images_window.py:128
+#: src/ui/files/related_images_window_qt.py:180
+#: tests/ui/test_related_images_window.py:146
 msgid "metadata"
 msgstr "métadonnées"
 
-#: src/ui/files/related_images_window_qt.py:161
+#: src/ui/files/related_images_window_qt.py:181
 msgid "filename"
 msgstr "Nom de fichier"
 
-#: src/ui/files/related_images_window_qt.py:162
-#: tests/ui/test_related_images_window.py:128
+#: src/ui/files/related_images_window_qt.py:182
+#: tests/ui/test_related_images_window.py:146
 msgid "name prefix"
 msgstr "préfixe de nom"
 
-#: src/ui/files/related_images_window_qt.py:183
+#: src/ui/files/related_images_window_qt.py:203
 msgid "source: {0}"
 msgstr "source: {0}"
 
-#: src/ui/files/related_images_window_qt.py:193
+#: src/ui/files/related_images_window_qt.py:213
 msgid "searched {0} director(ies)"
 msgstr "recherché {0} réalisateur(s)"
 
-#: src/ui/files/related_images_window_qt.py:195
+#: src/ui/files/related_images_window_qt.py:215
 msgid "in {0}"
 msgstr "dans {0}"
 
-#: src/ui/files/related_images_window_qt.py:201
+#: src/ui/files/related_images_window_qt.py:221
 msgid "{0} of {1} file(s) scanned"
 msgstr "{0} sur {1} fichier(s) numérisé(s)"
 
-#: src/ui/files/related_images_window_qt.py:203
+#: src/ui/files/related_images_window_qt.py:223
 msgid "{0} file(s) scanned"
 msgstr "{0} fichier(s) scanné(s)"
 
-#: src/ui/files/related_images_window_qt.py:207
-#: tests/ui/test_related_images_window.py:140
+#: src/ui/files/related_images_window_qt.py:227
+#: tests/ui/test_related_images_window.py:158
 msgid "{0} of {1} in cycle"
 msgstr "{0} sur {1} dans le cycle"
 
-#: src/ui/files/related_images_window_qt.py:211
+#: src/ui/files/related_images_window_qt.py:231
 msgid "matched by: "
 msgstr "correspond à: "
 
-#: src/ui/files/related_images_window_qt.py:216
-#: tests/ui/test_related_images_window.py:129
+#: src/ui/files/related_images_window_qt.py:236
+#: tests/ui/test_related_images_window.py:147
 msgid "from a cached scan"
 msgstr "à partir d'un scan en cache"
 
-#: src/ui/files/related_images_window_qt.py:223
+#: src/ui/files/related_images_window_qt.py:243
 msgid ", and {0} more"
 msgstr ", et {0} de plus"
 
-#: src/ui/files/related_images_window_qt.py:228
-#: tests/ui/test_related_images_window.py:115
+#: src/ui/files/related_images_window_qt.py:248
+#: tests/ui/test_related_images_window.py:133
 msgid "{0} large unconfirmed director(ies) skipped"
 msgstr "{0} grands directeurs non confirmés ignorés"
 
@@ -9981,35 +10414,35 @@ msgid "Select directory to search for related files"
 msgstr ""
 "Sélectionnez le répertoire dans lequel rechercher les fichiers associés."
 
-#: src/ui/files/type_configuration_window_qt.py:44
+#: src/ui/files/type_configuration_window_qt.py:62
 msgid "Basic image files (PNG, JPG, etc.)"
 msgstr "Fichiers images de base (PNG, JPG, etc.)"
 
-#: src/ui/files/type_configuration_window_qt.py:45
+#: src/ui/files/type_configuration_window_qt.py:63
 msgid "Video files (MP4, AVI, etc.) - First frame will be extracted"
 msgstr "Fichiers vidéo (MP4, AVI, etc.) - Le premier cadre sera extrait"
 
-#: src/ui/files/type_configuration_window_qt.py:46
+#: src/ui/files/type_configuration_window_qt.py:64
 msgid "Animated GIF files - First frame will be extracted"
 msgstr "Fichiers GIF animés - Le premier cadre sera extrait"
 
-#: src/ui/files/type_configuration_window_qt.py:47
+#: src/ui/files/type_configuration_window_qt.py:65
 msgid "PDF documents - First page will be extracted"
 msgstr "Documents PDF - La première page sera extraite"
 
-#: src/ui/files/type_configuration_window_qt.py:48
+#: src/ui/files/type_configuration_window_qt.py:66
 msgid "ePub e-books - Cover and pages will be rendered"
 msgstr "ePub livres numériques – La couverture et les pages seront rendues"
 
-#: src/ui/files/type_configuration_window_qt.py:49
+#: src/ui/files/type_configuration_window_qt.py:67
 msgid "Vector graphics - Will be converted to raster image"
 msgstr "Graphique vectoriel - Sera converti en image raster"
 
-#: src/ui/files/type_configuration_window_qt.py:50
+#: src/ui/files/type_configuration_window_qt.py:68
 msgid "HTML files - Will be rendered and converted to image"
 msgstr "Fichiers HTML - Sera rendu et converti en image"
 
-#: src/ui/files/type_configuration_window_qt.py:52
+#: src/ui/files/type_configuration_window_qt.py:70
 msgid ""
 "Audio files (MP3, FLAC, etc.) - Browse and playback; not used in embedding "
 "compare"
@@ -10017,31 +10450,31 @@ msgstr ""
 "Fichiers audio (MP3, FLAC, etc.) - Parcourir et lire ; non utilisé dans la "
 "comparaison d'intégration"
 
-#: src/ui/files/type_configuration_window_qt.py:60
+#: src/ui/files/type_configuration_window_qt.py:78
 msgid "PDF support requires pypdfium2 package"
 msgstr "Le support PDF nécessite un paquet pypdfium2"
 
-#: src/ui/files/type_configuration_window_qt.py:65
+#: src/ui/files/type_configuration_window_qt.py:83
 msgid "ePub support requires pyppeteer and pypdfium2 packages"
 msgstr "La prise en charge ePub nécessite les packages pyppeteer et pypdfium2"
 
-#: src/ui/files/type_configuration_window_qt.py:70
+#: src/ui/files/type_configuration_window_qt.py:39
 msgid "SVG support requires cairosvg package"
 msgstr "Le support SVG nécessite un paquet cairosvg"
 
-#: src/ui/files/type_configuration_window_qt.py:75
+#: src/ui/files/type_configuration_window_qt.py:89
 msgid "HTML support requires pyppeteer package"
 msgstr "Le support HTML nécessite un paquet pyppeteer"
 
-#: src/ui/files/type_configuration_window_qt.py:159
+#: src/ui/files/type_configuration_window_qt.py:173
 msgid "Media Type Configuration"
 msgstr "Configuration du type de média"
 
-#: src/ui/files/type_configuration_window_qt.py:170 src/utils/constants.py:717
+#: src/ui/files/type_configuration_window_qt.py:184 src/utils/constants.py:717
 msgid "Configure Media Types"
 msgstr "Configurer les types de médias"
 
-#: src/ui/files/type_configuration_window_qt.py:177
+#: src/ui/files/type_configuration_window_qt.py:191
 msgid ""
 "Select which types of media files you want to compare. Changes will require "
 "a refresh of open comparisons but files in browsing mode should update "
@@ -10052,21 +10485,21 @@ msgstr ""
 "ouvertes, mais les fichiers en mode navigation devraient se mettre à jour "
 "automatiquement."
 
-#: src/ui/files/type_configuration_window_qt.py:240
+#: src/ui/files/type_configuration_window_qt.py:260
 msgid "Apply Changes"
 msgstr "Appliquer les modifications"
 
-#: src/ui/files/type_configuration_window_qt.py:285
+#: src/ui/files/type_configuration_window_qt.py:305
 msgid "Confirm Changes"
 msgstr "Confirmer les modifications"
 
-#: src/ui/files/type_configuration_window_qt.py:286
+#: src/ui/files/type_configuration_window_qt.py:306
 msgid "This will clear all existing compares in open windows. Continue?"
 msgstr ""
 "Cela effacera toutes les comparaisons déjà effectuées dans les fenêtres "
 "ouvertes. Continuer ?"
 
-#: src/ui/files/type_configuration_window_qt.py:373
+#: src/ui/files/type_configuration_window_qt.py:393
 msgid "Media type configuration updated"
 msgstr "Configuration du type de média mise à jour"
 
@@ -10992,449 +11425,384 @@ msgstr "Maj"
 msgid "Alt"
 msgstr "Alt"
 
-#: src/ui/compare/hf_model_manager_window_qt.py:174
+#: src/compare/pipeline_run_history.py:77
+msgid "Running"
+msgstr "En cours"
+
+#: src/compare/pipeline_run_history.py:78
+#: tests/ui/test_pipeline_history_tab_qt.py:76
+msgid "Completed"
+msgstr "Terminé"
+
+#: src/compare/pipeline_run_history.py:79
+msgid "Completed with errors"
+msgstr "Terminé avec des erreurs"
+
+#: src/compare/pipeline_run_history.py:80
+#: tests/ui/test_pipeline_history_tab_qt.py:75
+#: tests/unit/test_pipeline_run_history.py:98
+msgid "Cancelled"
+msgstr "Annulé"
+
+#: src/compare/pipeline_run_history.py:81
+msgid "Failed"
+msgstr "Échec"
+
+#: src/compare/pipeline_run_history.py:82
+msgid "Interrupted"
+msgstr "Interrompu"
+
+#: src/compare/pipeline_run_service.py:248
+msgid "This run was already resumed."
+msgstr "Cette exécution a déjà été reprise."
+
+#: src/compare/pipeline_run_service.py:251
 msgid ""
-"TFLite (.tflite): inferred from the model's declared input tensor shape; "
-"only applied when that shape is dynamic."
+"Only cancelled, failed or interrupted runs with saved progress can be "
+"resumed."
 msgstr ""
-"TFLite (.tflite) : déduit de la forme de tenseur d’entrée déclarée du "
-"modèle ; appliqué uniquement lorsque cette forme est dynamique."
+"Seules les exécutions annulées, échouées ou interrompues avec progression "
+"sauvegardée peuvent être reprises."
 
-#: src/ui/compare/hf_model_manager_window_qt.py:1199
-#: tests/ui/test_hf_model_manager_window_model_files.py:78
-#: tests/ui/test_hf_model_manager_window_model_files.py:91
-#: tests/ui/test_hf_model_manager_window_model_files.py:98
-msgid "Not a Model File?"
-msgstr "Pas un fichier modèle?"
+#: src/compare/pipeline_run_service.py:245
+msgid "This run is no longer in the history."
+msgstr "Cette exécution ne figure plus dans l'historique."
 
-#: src/ui/compare/hf_model_manager_window_qt.py:1200
+#: src/compare/pipeline_run_service.py:255
+#: tests/unit/test_pipeline_run_service.py:199
+msgid "Pipeline '{0}' no longer exists."
+msgstr "Le pipeline '{0}' n'existe plus."
+
+#: src/compare/pipeline_run_report.py:160
+#: tests/unit/test_classifier_pipeline_runner.py:1553
+msgid "Pipeline {0} — run cancelled"
+msgstr "Pipeline {0} — exécution annulée"
+
+#: src/compare/pipeline_run_report.py:195
+#: tests/unit/test_classifier_pipeline_runner.py:1555
+msgid "Resumed run: {0} file(s) already processed earlier were skipped"
+msgstr ""
+"Exécution reprise : {0} fichier(s) déjà traité(s) précédemment ont été "
+"ignorés"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:616
+#: src/ui/compare/classifier_pipelines_tab_qt.py:619
+#: src/ui/compare/classifier_pipelines_tab_qt.py:638
+#: src/ui/compare/pipeline_history_tab_qt.py:259
+msgid "Resume Pipeline Run"
+msgstr "Reprendre l'exécution du pipeline"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:568
+#: tests/ui/test_classifier_actions_tab_qt.py:208
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1176
 msgid ""
-"'{0}' does not have a recognized model file extension ({1}). Install it "
-"anyway?"
+"Last run of this pipeline on these directories: {date} ({status}, profile "
+"'{profile}')"
 msgstr ""
-"'{0}' n’a pas d’extension de fichier modèle reconnue ({1}). Installer quand "
-"même ?"
+"Dernière exécution de ce pipeline sur ces répertoires : {date} ({status}, "
+"profil '{profile}')"
 
-#: src/compare/base_compare.py:360
-msgid "Classifier filter"
-msgstr "Filtre de classificateur"
-
-#: src/compare/compare_filters.py:513 src/compare/compare_filters.py:576
-msgid "The classifier \"{0}\" used in the compare filters is not registered."
-msgstr ""
-"Le classifieur « {0} » utilisé dans les filtres de comparaison n’est pas "
-"enregistré."
-
-#: src/compare/compare_filters.py:522
+#: src/ui/compare/classifier_pipelines_tab_qt.py:570
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1187
 msgid ""
-"The classifier \"{0}\" used in the compare filters could not be loaded. See "
-"the log for details."
+"Last run of this pipeline on overlapping directories: {date} ({status}, "
+"profile '{profile}')"
 msgstr ""
-"Le classifieur « {0} » utilisé dans les filtres de comparaison n’a pas pu "
-"être chargé. Voir le journal pour plus de détails."
+"Dernière exécution de ce pipeline sur des répertoires qui se chevauchent : "
+"{date} ({status}, profil '{profile}')"
 
-#: src/compare/compare_filters.py:536
+#: src/ui/compare/classifier_pipelines_tab_qt.py:623
 msgid ""
-"The classifier \"{0}\" defines no positive groups, so its model strategy "
-"cannot be used as a compare filter."
+"The pipeline was edited since this run; the current definition will be used."
 msgstr ""
-"Le classificateur \"{0}\" ne définit aucun groupe positif, ainsi sa "
-"stratégie de modèle ne peut pas être utilisée comme filtre de comparaison."
+"Le pipeline a été modifié depuis cette exécution ; la définition actuelle "
+"sera utilisée."
 
-#: src/compare/compare_filters.py:544
+#: src/ui/compare/classifier_pipelines_tab_qt.py:630
 msgid ""
-"The compare filter for classifier \"{0}\" uses categories the model does not"
-" have: {1}"
+"Resume pipeline '{name}' from {date}? {count} file(s) already processed will be skipped.\n"
+"\n"
+"Directories:\n"
+"{dirs}"
 msgstr ""
-"Le filtre de comparaison pour le classificateur \"{0}\" utilise des "
-"catégories que le modèle ne possède pas : {1}"
+"Reprendre le pipeline '{name}' du {date} ? {count} fichier(s) déjà traité(s) seront ignoré(s).\n"
+"\n"
+"Répertoires :\n"
+"{dirs}"
 
-#: src/compare/compare_filters.py:549
-msgid "The compare filter for classifier \"{0}\" has no categories selected."
+#: src/ui/compare/classifier_pipelines_tab_qt.py:596
+msgid "Resume the unfinished run, or start a new run from the beginning?"
 msgstr ""
-"Le filtre de comparaison pour le classificateur \"{0}\" n’a aucune catégorie"
-" sélectionnée."
+"Reprendre l'exécution inachevée ou démarrer une nouvelle exécution depuis le"
+" début ?"
 
-#: src/compare/compare_manager.py:1286
-msgid "No matching groups found"
-msgstr "Aucun groupe correspondant trouvé"
+#: src/ui/compare/classifier_pipelines_tab_qt.py:597
+#: src/ui/compare/pipeline_history_tab_qt.py:87
+msgid "Resume"
+msgstr "CV"
 
-#: src/compare/compare_manager.py:1289
-msgid "No groups survived the composite filter criteria."
-msgstr "Aucun groupe n’a survécu aux critères de filtrage composites."
+#: src/ui/compare/classifier_pipelines_tab_qt.py:597
+msgid "Start New Run"
+msgstr "Démarrer une nouvelle exécution"
 
-#: src/compare/compare_manager.py:1345
-msgid "{0} matches found (composite search)"
-msgstr "{0} correspondances trouvées (recherche composite)"
+#: src/ui/compare/classifier_pipelines_tab_qt.py:606
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1206
+msgid "Run Anyway"
+msgstr "Exécuter quand même"
 
-#: src/compare/compare_manager.py:1350
-msgid "No matches found"
-msgstr "Aucun résultat trouvé"
-
-#: src/compare/compare_manager.py:1353
-msgid "None of the files match the composite search criteria."
-msgstr "Aucun des fichiers ne correspond aux critères de recherche composite."
-
-#: src/compare/compare_result.py:276 tests/compare/test_compare_result.py:158
-msgid "(and {0} more)"
-msgstr "(et {0} de plus)"
-
-#: src/compare/compare_result.py:279
-msgid "The compare checkpoint no longer matches the files being compared: {0}"
-msgstr ""
-"Le point de contrôle de comparaison ne correspond plus aux fichiers comparés"
-" : {0}"
-
-#: src/compare/compare_result.py:281 tests/compare/test_compare_result.py:156
-msgid "Removed ({0}): {1}"
-msgstr "Supprimé ({0}) : {1}"
-
-#: src/compare/compare_result.py:283 tests/compare/test_compare_result.py:159
-msgid "Added ({0}): {1}"
-msgstr "Ajouté ({0}) : {1}"
-
-#: src/compare/compare_result.py:285 tests/compare/test_compare_result.py:166
+#: src/ui/compare/classifier_pipelines_tab_qt.py:577
 msgid ""
-"No file was added or removed, but the file list is in a different order."
+"WARNING: pipeline '{name}' is running on overlapping directories (started "
+"{date})."
 msgstr ""
-"Aucun fichier n’a été ajouté ou supprimé, mais la liste des fichiers est "
-"dans un ordre différent."
+"AVERTISSEMENT : pipeline '{name}' s’exécute dans des répertoires qui se "
+"chevauchent (démarré {date})."
 
-#: src/compare/compare_result.py:286
+#: src/ui/compare/classifier_pipelines_tab_qt.py:580
 msgid ""
-"Enable \"{0}\" in the compare settings, or delete the checkpoint file, to "
-"rebuild it."
+"The last run on these directories did not finish ({status}, {count} file(s) "
+"processed)."
 msgstr ""
-"Activez \"{0}\" dans les paramètres de comparaison, ou supprimez le fichier "
-"de point de contrôle pour le reconstruire."
+"La dernière exécution de ces répertoires ne s'est pas terminée ({status}, "
+"{count} fichier(s) traité(s))."
 
-#: src/compare/compare_wrapper.py:837
-msgid "Compare filters excluded {0} of {1} files"
-msgstr "Les filtres de comparaison ont exclu {0} sur {1} fichiers"
+#: src/ui/compare/classifier_pipelines_tab_qt.py:625
+msgid "Missing directories (skipped): {0}"
+msgstr "Répertoires manquants (ignorés) : {0}"
 
-#: src/files/marked_files.py:830 tests/unit/test_marked_files_undo.py:176
-msgid "Cannot undo the last marked files move after a file was deleted."
-msgstr ""
-"Impossible d'annuler le dernier déplacement de fichiers marqués après la "
-"suppression d'un fichier."
-
-#: src/files/marked_files.py:834 tests/unit/test_marked_files_undo.py:162
-msgid "No marked files move or copy to undo."
-msgstr "Aucun fichier marqué à annuler (déplacement ou copie)."
-
-#: src/files/marked_files.py:873 tests/unit/test_marked_files_undo.py:85
-msgid "Moved back {0} files from {1} to {2}"
-msgstr "Rétablis {0} fichiers de {1} à {2}"
-
-#: src/files/marked_files.py:875 tests/unit/test_marked_files_undo.py:100
-msgid "Moved back {0} files from {1} to {2} directories"
-msgstr "Ramenés {0} fichiers de {1} vers {2} répertoires"
-
-#: src/ui/app_window/file_ops_controller.py:1309
-msgid "Randomize filenames is already running"
-msgstr "Randomiser les noms de fichiers est déjà en cours"
-
-#: src/ui/app_window/window_launcher.py:39
-msgid "Window Error"
-msgstr "Erreur de fenêtre"
-
-#: src/ui/app_window/window_launcher.py:60
-#: src/ui/app_window/window_launcher.py:78
-msgid "Go To File Window Error"
-msgstr "Erreur dans la fenêtre Aller au fichier"
-
-#: src/ui/app_window/window_launcher.py:104
-msgid "Recent Directory Window Error"
-msgstr "Erreur récente de la fenêtre du répertoire"
-
-#: src/ui/app_window/window_launcher.py:112
-msgid "Favorites Window Error"
-msgstr "Erreur de la fenêtre Favoris"
-
-#: src/ui/app_window/window_launcher.py:120
-msgid "Embedding Seed Library Window Error"
-msgstr "Erreur d'intégration de la fenêtre de la bibliothèque de graines"
-
-#: src/ui/app_window/window_launcher.py:155
-#: src/ui/app_window/window_launcher.py:181
-msgid "Save Embedding Seed Error"
-msgstr "Erreur d’enregistrement du seed d’embedding"
-
-#: src/ui/app_window/window_launcher.py:190
-msgid "Related Images Window Error"
-msgstr "Erreur de la fenêtre d'images associées"
-
-#: src/ui/app_window/window_launcher.py:221
-msgid "Directory Notes Window Error"
-msgstr "Erreur de la fenêtre de notes du répertoire"
-
-#: src/ui/app_window/window_launcher.py:236
-msgid "Compare Settings Window Error"
-msgstr "Erreur de comparaison de la fenêtre des paramètres"
-
-#: src/ui/app_window/window_launcher.py:245
-msgid "HF Hub Model Manager Window Error"
-msgstr "Erreur de fenêtre du Gestionnaire de modèles HF Hub"
-
-#: src/ui/app_window/window_launcher.py:265
-msgid "Prevalidations Window Error"
-msgstr "Erreur de fenêtre de prévalidations"
-
-#: src/ui/app_window/window_launcher.py:277
-msgid "Classifier Actions Window Error"
-msgstr "Erreur de fenêtre d’actions du classifieur"
-
-#: src/ui/app_window/window_launcher.py:296
-msgid "File Actions Window Error"
-msgstr "Erreur dans la fenêtre d'actions de fichier"
-
-#: src/ui/app_window/window_launcher.py:323
-msgid "File Action Sets Window Error"
-msgstr "Erreur de la fenêtre Ensembles d’actions de fichier"
-
-#: src/ui/app_window/window_launcher.py:331
-msgid "File Interceptor Rules Window Error"
-msgstr "Erreur de la fenêtre des règles d’interception de fichiers"
-
-#: src/ui/app_window/window_launcher.py:339
-msgid "Auto-Sort Confirmation Window Error"
-msgstr "Erreur de la fenêtre de confirmation du tri automatique"
-
-#: src/ui/app_window/window_launcher.py:351
-msgid "Password Admin Window Error"
-msgstr "Erreur de la fenêtre d'administration du mot de passe"
-
-#: src/ui/app_window/window_launcher.py:427
-msgid "Image Details Error"
-msgstr "Erreur de détails d'image"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:45
-#: tests/ui/test_classifier_filter_dialog.py:157
-msgid "(not configured)"
-msgstr "(non configuré)"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:47
-msgid "model strategy"
-msgstr "stratégie du modèle"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:51
-msgid "{0}: exclude {1}"
-msgstr "{0}: exclure {1}"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:53
-#: tests/ui/test_classifier_filter_dialog.py:161
-msgid "{0}: only {1}"
-msgstr "{0}: seulement {1}"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:55
-msgid "(min. {0:.2f})"
-msgstr "(min. {0:.2f})"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:66
-msgid "Classifier Filter"
-msgstr "Filtre de classificateur"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:94
-msgid "Classifier type:"
-msgstr "Type de classificateur:"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:96
-msgid "Image classifier"
-msgstr "Classificateur d'images"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:97
-msgid "Audio classifier"
-msgstr "Classificateur audio"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:102
-msgid "Model:"
-msgstr "Modèle:"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:108
-msgid "Files:"
-msgstr "Fichiers:"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:110
-msgid "Only files in the selected categories"
-msgstr "Uniquement les fichiers dans les catégories sélectionnées"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:111
-msgid "Exclude files in the selected categories"
-msgstr "Exclure les fichiers des catégories sélectionnées"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:115
-msgid "Minimum confidence:"
-msgstr "Confiance minimale:"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:120
-msgid "off"
-msgstr "Désactivé"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:133
-msgid "Sample ratio:"
-msgstr "Ratio d'échantillon :"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:136
-msgid "Share of frames or pages sampled from videos, GIFs, PDFs and ePubs."
-msgstr "Part des images ou pages extraites de vidéos, GIFs, PDF et ePubs."
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:140
-msgid "Positive ratio:"
-msgstr "Taux positif :"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:143
+#: src/ui/compare/classifier_pipelines_tab_qt.py:628
 msgid ""
-"Share of sampled frames or pages that must be in the selected categories for"
-" the file to count as in them."
+"Profile '{0}' has changed since this run; the directories recorded at that "
+"time are used."
 msgstr ""
-"Part des images ou pages échantillonnées qui doivent se trouver dans les "
-"catégories sélectionnées pour que le fichier y soit compté."
+"Le profil '{0}' a changé depuis cette exécution ; les répertoires "
+"enregistrés à ce moment‑là sont utilisés."
 
-#: src/ui/compare/classifier_filter_dialog_qt.py:151
-msgid "Model strategy (positive groups)"
-msgstr "Stratégie de modèle (groupes positifs)"
+#: src/ui/compare/classifier_pipelines_tab_qt.py:575
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1188
+msgid "  Overlap: {0} ↔ {1}"
+msgstr "  Chevauchement : {0} ↔ {1}"
 
-#: src/ui/compare/classifier_filter_dialog_qt.py:170
+#: src/ui/compare/classifier_pipelines_tab_qt.py:688
 msgid ""
-"Videos, GIFs, PDFs and ePubs are sampled like in classifier actions. Files "
-"the classifier cannot handle (e.g. audio files for an image model) count as "
-"not in the selected categories."
-msgstr ""
-"Les vidéos, GIFs, PDFs et ePubs sont échantillonnés comme dans les actions "
-"du classificateur. Les fichiers que le classificateur ne peut pas gérer (par"
-" ex. des fichiers audio pour un modèle d’image) sont considérés comme "
-"n’appartenant pas aux catégories sélectionnées."
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:212
-msgid "{0} (not registered)"
-msgstr "{0} (non enregistré)"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:275
-msgid "No classifier models of this type are configured."
-msgstr "Aucun modèle de classificateur de ce type n’est configuré."
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:277
-msgid "This model is not registered; the compare run will fail until it is."
-msgstr ""
-"Ce modèle n’est pas enregistré ; l’exécution de comparaison échouera tant "
-"qu’il ne le sera pas."
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:280
-msgid "These categories are no longer part of the model and were removed: {0}"
-msgstr ""
-"Ces catégories ne font plus partie du modèle et ont été supprimées : {0}"
-
-#: src/ui/compare/classifier_pipeline_editor_qt.py:2156
-msgid ""
-"For video, GIF, PDF and ePub files, the share of frames or pages that "
-"classifier, embedding and prototype conditions sample."
-msgstr ""
-"Pour les fichiers vidéo, GIF, PDF et ePub, la part des images ou pages que "
-"les conditions de classificateur, d’intégration et de prototype "
-"échantillonnent."
-
-#: src/ui/compare/classifier_pipeline_editor_qt.py:2159
-msgid "Dynamic media sample ratio:"
-msgstr "Ratio d’échantillon des médias dynamiques :"
-
-#: src/ui/compare/classifier_pipeline_editor_qt.py:2162
-msgid ""
-"The share of sampled frames or pages that must match for such a condition to"
-" match the file."
-msgstr ""
-"La part des trames ou pages échantillonnées qui doit correspondre pour "
-"qu’une telle condition corresponde au fichier."
-
-#: src/ui/compare/classifier_pipeline_editor_qt.py:2165
-msgid "Dynamic media positive ratio:"
-msgstr "Ratio positif des médias dynamiques :"
-
-#: src/ui/compare/filter_builder_panel_qt.py:50
-#: src/ui/compare/filter_builder_panel_qt.py:148
-#: src/ui/compare/filter_builder_panel_qt.py:186
-#: src/ui/compare/filter_builder_panel_qt.py:255
-#: tests/ui/test_classifier_filter_dialog.py:213
-#: tests/ui/test_classifier_filter_dialog.py:223
-msgid "Classifier"
-msgstr "Classificateur"
-
-#: src/ui/compare/filter_builder_panel_qt.py:129
-msgid "Edit…"
-msgstr "Modifier…"
-
-#: src/ui/compare/hf_model_manager_window_qt.py:48
-#: tests/ui/test_hf_model_manager_window_detection.py:291
-#: tests/ui/test_hf_model_manager_window_detection.py:312
-msgid "Detections (after the threshold and box-area filters):"
-msgstr "Détections (après les filtres de seuil et de zone de boîte) :"
-
-#: src/ui/compare/hf_model_manager_window_qt.py:54
-#: tests/ui/test_hf_model_manager_window_detection.py:292
-#: tests/ui/test_hf_model_manager_window_detection.py:294
-msgid "{0}: {1:.2%} confidence, box covers {2:.1%} of the image"
-msgstr "{0}: {1:.2%} de confiance, la boîte couvre {2:.1%} de l’image"
-
-#: src/ui/compare/hf_model_manager_window_qt.py:58
-#: tests/ui/test_hf_model_manager_window_detection.py:293
-msgid "(counts toward: {0})"
-msgstr "(compte pour : {0})"
-
-#: src/ui/compare/hf_model_manager_window_qt.py:177
-msgid "Object detection: not used; the model's processor sets the input size."
-msgstr ""
-"Détection d'objets : non utilisée ; le processeur du modèle définit la "
-"taille d'entrée."
-
-#: src/ui/compare/hf_model_manager_window_qt.py:249
-msgid "Background category"
-msgstr "Catégorie d'arrière-plan"
-
-#: src/ui/compare/hf_model_manager_window_qt.py:252
-msgid ""
-"The category for images without a qualifying detection, e.g. \"no person\". "
-"It must also be listed in Categories; every other category must be a label "
-"of the model."
-msgstr ""
-"La catégorie pour les images sans détection qualifiante, par ex. « pas de "
-"personne ». Elle doit également figurer dans Catégories ; toute autre "
-"étiquette doit être une étiquette du modèle."
-
-#: src/ui/compare/hf_model_manager_window_qt.py:256
-msgid "Detection threshold"
-msgstr "Seuil de détection"
-
-#: src/ui/compare/hf_model_manager_window_qt.py:263
-msgid "Detections below this confidence are ignored."
-msgstr "Les détections en dessous de ce niveau de confiance sont ignorées."
-
-#: src/ui/compare/hf_model_manager_window_qt.py:265
-msgid "Min box area"
-msgstr "Surface minimale de la boîte"
-
-#: src/ui/compare/hf_model_manager_window_qt.py:273
-msgid ""
-"Ignore detections whose box covers less than this fraction of the image, "
-"e.g. 0.02 to skip small background figures."
-msgstr ""
-"Ignorer les détections dont la boîte couvre moins que cette fraction de "
-"l'image, par ex. 0,02 pour ignorer les petits éléments d'arrière‑plan."
-
-#: src/ui/compare/hf_model_manager_window_qt.py:445
-#: tests/ui/test_hf_model_manager_window_detection.py:164
-msgid "Invalid background category"
-msgstr "Catégorie d'arrière-plan invalide"
-
-#: src/ui/compare/hf_model_manager_window_qt.py:446
-msgid "The background category '{0}' must also be listed in Categories."
-msgstr ""
-"La catégorie d’arrière‑plan « {0} » doit également être répertoriée dans "
-"Catégories."
-
-#: src/ui/compare/hf_model_manager_window_qt.py:1239
-msgid ""
-"Only one category may be something other than a label of this model (the "
-"background category, e.g. \"no person\"). Not model labels: {0}"
-msgstr ""
-"Une seule catégorie peut être différente d’une étiquette de ce modèle (la "
-"catégorie d’arrière‑plan, par ex. « no person »). Étiquettes hors modèle : "
+"This run cannot start:\n"
 "{0}"
+msgstr ""
+"Cette exécution ne peut pas démarrer :\n"
+"{0}"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:705
+msgid "Pipeline {0} failed: {1}"
+msgstr "Pipeline {0} a échoué : {1}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:57
+msgid "Pipeline Run History"
+msgstr "Historique des exécutions de pipeline"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:84
+msgid "Stop"
+msgstr "Arrêt"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:90
+msgid "Resume Last Incomplete"
+msgstr "Reprendre la dernière incomplète"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:141
+#: tests/ui/test_pipeline_history_tab_qt.py:124
+msgid "Stopping…"
+msgstr "Arrêt…"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:172
+#: tests/ui/test_pipeline_history_tab_qt.py:111
+msgid "Other process"
+msgstr "Autre processus"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:173
+msgid "MCP"
+msgstr "MCP"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:173
+msgid "This app"
+msgstr "Cette application"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:176
+msgid "Directories at run time:"
+msgstr "Répertoires à l'exécution:"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:65
+msgid "Started"
+msgstr "Démarré"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Finished / Updated"
+msgstr "Terminé / Mis à jour"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Progress"
+msgstr "Progrès"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Errors"
+msgstr "Erreurs"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Source"
+msgstr "Source"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:239
+#: src/ui/compare/pipeline_history_tab_qt.py:246
+msgid "Stop Pipeline Run"
+msgstr "Arrêter l'exécution du pipeline"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:247
+msgid "This run is not running in this app."
+msgstr "Cette exécution ne s'exécute pas dans cette application."
+
+#: src/ui/compare/pipeline_history_tab_qt.py:259
+msgid "There is no unfinished run to resume."
+msgstr "Il n’y a pas de partie inachevée à reprendre."
+
+#: src/ui/compare/pipeline_history_tab_qt.py:273
+msgid "Remove Run"
+msgstr "Supprimer le Run"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:143
+msgid "Dir {0}/{1} · {2}/{3} files"
+msgstr "Répertoire {0}/{1} · {2}/{3} fichiers"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:148
+msgid "{0} files"
+msgstr "{0} fichiers"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:179
+msgid "Current directory: {0}"
+msgstr "Répertoire actuel : {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:181
+msgid "Skipped (processed by the earlier run): {0}"
+msgstr "Ignoré (traité lors de l'exécution précédente) : {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:183
+msgid "Actions: {0}"
+msgstr "Actions : {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:186
+msgid "Error: {0}"
+msgstr "Erreur : {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:188
+msgid "Resumes run {0}"
+msgstr "CV exécutés {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:190
+msgid "Resumed by run {0}"
+msgstr "Repris par exécution {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:192
+msgid "Run data: {0}"
+msgstr "Données d'exécution : {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:240
+msgid ""
+"Stop pipeline run '{0}'? Files already processed keep their actions; the run"
+" can be resumed later."
+msgstr ""
+"Arrêter l'exécution du pipeline '{0}' ? Les fichiers déjà traités conservent"
+" leurs actions ; l'exécution peut être reprise ultérieurement."
+
+#: src/ui/compare/pipeline_history_tab_qt.py:274
+msgid "Remove this run of '{0}' from the history?"
+msgstr "Supprimer cet enchaînement de '{0}' de l'historique ?"
+
+#: src/ui/compare/classifier_management_window_qt.py:736
+#: tests/ui/test_classifier_management_window_qt.py:62
+msgid "History"
+msgstr "Histoire"
+
+#: app_qt.py:100
+msgid "This build no longer matches its source code. See the log for details."
+msgstr ""
+"Cette version ne correspond plus à son code source. Voir le journal pour "
+"plus de détails."
+
+#: src/image/frame_cache.py:115
+#: tests/unit/test_optional_native_libraries.py:17
+msgid "SVG conversion is unavailable because the Cairo library was not found."
+msgstr ""
+"La conversion SVG est indisponible car la bibliothèque Cairo est "
+"introuvable."
+
+#: src/image/frame_cache.py:116
+#: tests/unit/test_optional_native_libraries.py:34
+msgid "SVG conversion is unavailable because cairosvg is not installed."
+msgstr ""
+"La conversion SVG n’est pas disponible car cairosvg n’est pas installé."
+
+#: src/image/frame_cache.py:124
+#: tests/unit/test_optional_native_libraries.py:18
+msgid ""
+"Run python scripts/install_native_extras.py from the repository, then "
+"restart."
+msgstr ""
+"Exécutez python scripts/install_native_extras.py depuis le dépôt, puis "
+"redémarrez."
+
+#: src/image/frame_cache.py:125
+#: tests/unit/test_optional_native_libraries.py:35
+msgid "pip install cairosvg"
+msgstr "pip install cairosvg"
+
+#: src/ui/app_window/file_marks_controller.py:714
+#: src/ui/files/related_images_window_qt.py:126
+#: tests/ui/test_mark_families_with_all_suffixes.py:215
+#: tests/ui/test_related_images_window.py:76
+#: tests/ui/test_related_images_window.py:90
+#: tests/ui/test_related_images_window.py:484
+msgid "Mark families with all suffixes"
+msgstr "Marquer les familles avec tous les suffixes"
+
+#: src/ui/app_window/file_marks_controller.py:717
+msgid "Enter at least one suffix."
+msgstr "Saisissez au moins un suffixe."
+
+#: src/ui/app_window/file_marks_controller.py:735
+#: tests/ui/test_related_images_window.py:516
+msgid "No image families with all of these suffixes found: {0}"
+msgstr "Aucune famille d'images avec tous ces suffixes trouvée : {0}"
+
+#: src/ui/app_window/file_marks_controller.py:750
+msgid "{0} file(s) in {1} of {2} image families marked ({3})"
+msgstr "{0} fichier(s) dans {1} de {2} familles d’images marquées ({3})"
+
+#: src/ui/app_window/media_frame.py:83
+#: tests/unit/test_optional_native_libraries.py:58
+msgid "Video playback is unavailable because VLC was not found."
+msgstr "La lecture vidéo n’est pas disponible car VLC est introuvable."
+
+#: src/ui/auth/password_utils.py:72
+msgid "Password Unavailable"
+msgstr "Mot de passe non disponible"
+
+#: src/ui/auth/password_utils.py:73
+msgid ""
+"The password is stored with quantum-safe (OQS) encryption, which this build "
+"does not include, so protected actions are unavailable. Use a build made "
+"with OQS support."
+msgstr ""
+"Le mot de passe est stocké avec un chiffrement quantum‑safe (OQS) qui n’est "
+"pas inclus dans cette version, ainsi les actions protégées sont "
+"indisponibles. Utilisez une version compilée avec prise en charge OQS."
+
+#: src/ui/files/related_images_window_qt.py:120
+msgid "Suffixes, e.g. edit, upscale"
+msgstr "Suffixes, par ex. edit, upscale"
+
+#: src/ui/files/related_images_window_qt.py:122
+msgid ""
+"Comma- or space-separated suffixes. Every image family in the current "
+"directory with at least one related image per suffix is marked in full: the "
+"seed and all its related images."
+msgstr ""
+"Suffixes séparés par des virgules ou des espaces. Chaque famille d’images du"
+" répertoire actuel contenant au moins une image liée par suffixe est marquée"
+" entièrement : la seed et toutes ses images associées."

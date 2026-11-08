@@ -2,8 +2,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: 1.0\n"
-"POT-Creation-Date: 2026-10-08 15:16-0400\n"
-"PO-Revision-Date: 2026-10-08 15:16-0400\n"
+"POT-Creation-Date: 2026-11-07 20:56-0500\n"
+"PO-Revision-Date: 2026-11-07 20:56-0500\n"
 "Last-Translator: Translator Name <translator@example.com>\n"
 "Language-Team: zh Team <<EMAIL>>\n"
 "Language: zh\n"
@@ -12,7 +12,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: extensions/sd_runner_client.py:147
+#: extensions/sd_runner_client.py:151
 msgid "Image does not contain a prompt to redo!"
 msgstr "图像不包含重做提示！"
 
@@ -83,10 +83,10 @@ msgid "File updated: {0}"
 msgstr "文件更新时间：{0}"
 
 #: extensions/gimp/gimp_wrapper.py:738 extensions/gimp/gimp_wrapper.py:767
-#: src/files/pdf_creator.py:136 src/files/pdf_creator.py:140
-#: src/files/pdf_creator.py:143 src/files/pdf_creator.py:227
-#: src/files/pdf_creator.py:244 src/files/pdf_creator.py:262
-#: src/files/pdf_creator.py:294
+#: src/files/pdf_creator.py:137 src/files/pdf_creator.py:141
+#: src/files/pdf_creator.py:144 src/files/pdf_creator.py:228
+#: src/files/pdf_creator.py:245 src/files/pdf_creator.py:264
+#: src/files/pdf_creator.py:296
 #: src/ui/app_window/notification_controller.py:382
 #: src/ui/auth/app_startup_auth_qt.py:123
 #: src/ui/auth/password_admin_window.py:128
@@ -149,6 +149,7 @@ msgstr "文件覆盖已取消"
 #: src/ui/compare/classifier_action_copy_window_qt.py:166
 #: src/ui/compare/classifier_filter_dialog_qt.py:183
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2014
+#: src/ui/compare/classifier_pipelines_tab_qt.py:606
 #: src/ui/compare/compare_settings_window_qt.py:367
 #: src/ui/compare/hf_model_manager_window_qt.py:283
 #: src/ui/files/auto_sort_confirmation_window_qt.py:69
@@ -157,7 +158,7 @@ msgstr "文件覆盖已取消"
 #: src/ui/files/file_interceptor_rules_window_qt.py:155
 #: src/ui/files/marked_file_mover_qt.py:79
 #: src/ui/files/pdf_options_window_qt.py:138
-#: src/ui/files/type_configuration_window_qt.py:236
+#: src/ui/files/type_configuration_window_qt.py:256
 #: src/ui/image/media_details.py:1277
 #: src/ui/image/rerun_prompt_adjustment_window_qt.py:95
 #: src/utils/constants.py:391 tests/ui/test_qt_alert.py:77
@@ -237,6 +238,7 @@ msgstr "新建文件夹"
 
 #: lib/fast_directory_picker_qt.py:310
 #: src/ui/compare/hf_model_manager_window_qt.py:844
+#: src/ui/compare/pipeline_history_tab_qt.py:97
 #: src/ui/compare/seek_to_trigger_tab_qt.py:136
 msgid "Refresh"
 msgstr "刷新"
@@ -321,6 +323,10 @@ msgstr "图像数据收集"
 #: src/compare/base_compare.py:349
 msgid "Image comparison"
 msgstr "图片对比"
+
+#: src/compare/base_compare.py:360
+msgid "Classifier filter"
+msgstr "分类器过滤器"
 
 #: src/compare/base_compare.py:401
 msgid "Invalid Checkpoint Data - Confirm Restart"
@@ -528,7 +534,7 @@ msgstr "向前查找：{0}"
 #: src/compare/classifier_pipeline.py:811
 #: src/compare/classifier_pipeline.py:902
 #: src/ui/compare/classifier_pipeline_editor_qt.py:1972
-#: src/ui/compare/classifier_pipelines_tab_qt.py:95
+#: src/ui/compare/classifier_pipelines_tab_qt.py:97
 msgid "New Pipeline"
 msgstr "新管道"
 
@@ -546,7 +552,7 @@ msgid "seed_category '{0}' is not a key in category_map."
 msgstr "seed_category '{0}' 不是 category_map 中的键。"
 
 #: src/compare/classifier_pipeline.py:244
-#: tests/unit/test_classifier_pipeline.py:2253
+#: tests/unit/test_classifier_pipeline.py:2254
 msgid "Output root {0} is not an absolute path."
 msgstr "输出根目录 {0} 不是绝对路径。"
 
@@ -665,7 +671,7 @@ msgid "Node {0}: lookahead {1} is not defined."
 msgstr "节点 {0}：前瞻 {1} 未定义。"
 
 #: src/compare/classifier_pipeline.py:434
-#: tests/unit/test_classifier_pipeline.py:2276
+#: tests/unit/test_classifier_pipeline.py:2277
 msgid ""
 "Node {0}: BaseStemMatchCondition.search_directory ({1}) is not a valid "
 "directory."
@@ -737,21 +743,21 @@ msgstr "节点 {0}：GroupChildResultCondition 引用了非先前节点的组 {1
 
 #: src/compare/classifier_pipeline.py:526
 #: tests/unit/test_classifier_pipeline.py:2188
-#: tests/unit/test_classifier_pipeline.py:2220
+#: tests/unit/test_classifier_pipeline.py:2221
 msgid ""
 "Node {0}: {1} is a relative path and the pipeline has no absolute output "
 "root."
 msgstr "节点 {0}：{1} 是相对路径，且流水线没有绝对输出根。"
 
 #: src/compare/classifier_pipeline.py:594
-#: tests/unit/test_classifier_pipeline.py:2295
+#: tests/unit/test_classifier_pipeline.py:2296
 msgid ""
 "Node {0}: requires a match of {1}, but a match of {1} ends the run, so this "
 "never holds."
 msgstr "节点 {0}：需要匹配 {1}，但匹配 {1} 会结束运行，因此此条件永不成立。"
 
 #: src/compare/classifier_pipeline.py:599
-#: tests/unit/test_classifier_pipeline.py:2300
+#: tests/unit/test_classifier_pipeline.py:2301
 msgid ""
 "Node {0}: requires a no-match of {1}, but a no-match of {1} ends the run, so"
 " this never holds."
@@ -890,7 +896,7 @@ msgstr "文件不包含管道。"
 msgid "Pipeline {0} could not be read: {1}"
 msgstr "无法读取管道 {0}：{1}"
 
-#: src/compare/classifier_pipeline_batch.py:36
+#: src/compare/classifier_pipeline_batch.py:38
 msgid ""
 "Pipeline {0} cannot run until these are fixed:\n"
 "{1}"
@@ -1057,8 +1063,8 @@ msgid "Reject"
 msgstr "拒绝"
 
 #: src/compare/classifier_pipeline_nodes.py:240
-#: src/compare/pipeline_run_report.py:265
-#: src/compare/pipeline_run_report.py:273
+#: src/compare/pipeline_run_report.py:278
+#: src/compare/pipeline_run_report.py:286
 msgid "(unknown)"
 msgstr "(未知)"
 
@@ -1122,6 +1128,89 @@ msgstr "移动"
 #: src/files/marked_files.py:563
 msgid "Copying"
 msgstr "复制"
+
+#: src/compare/compare_filters.py:513 src/compare/compare_filters.py:576
+msgid "The classifier \"{0}\" used in the compare filters is not registered."
+msgstr "比较过滤器中使用的分类器“{0}”未注册。"
+
+#: src/compare/compare_filters.py:522
+msgid ""
+"The classifier \"{0}\" used in the compare filters could not be loaded. See "
+"the log for details."
+msgstr "比较过滤器中使用的分类器“{0}”未能加载。请查看日志了解详情。"
+
+#: src/compare/compare_filters.py:536
+msgid ""
+"The classifier \"{0}\" defines no positive groups, so its model strategy "
+"cannot be used as a compare filter."
+msgstr "分类器 \"{0}\" 未定义正向组，因此其模型策略不能用作比较过滤器。"
+
+#: src/compare/compare_filters.py:544
+msgid ""
+"The compare filter for classifier \"{0}\" uses categories the model does not"
+" have: {1}"
+msgstr "比较过滤器（分类器 \"{0}\"）使用了模型中不存在的类别：{1}"
+
+#: src/compare/compare_filters.py:549
+msgid "The compare filter for classifier \"{0}\" has no categories selected."
+msgstr "分类器\"{0}\"的比较过滤器未选择任何类别。"
+
+#: src/compare/compare_manager.py:1286
+msgid "No matching groups found"
+msgstr "未找到匹配的群组"
+
+#: src/compare/compare_manager.py:1288 src/compare/compare_manager.py:1352
+#: src/compare/compare_wrapper.py:892
+msgid "No Match Found"
+msgstr "找不到匹配"
+
+#: src/compare/compare_manager.py:1289
+msgid "No groups survived the composite filter criteria."
+msgstr "没有组满足复合过滤条件。"
+
+#: src/compare/compare_manager.py:1345
+msgid "{0} matches found (composite search)"
+msgstr "{0} 条匹配项已找到（复合搜索）"
+
+#: src/compare/compare_manager.py:1350
+msgid "No matches found"
+msgstr "未找到匹配项"
+
+#: src/compare/compare_manager.py:1353
+msgid "None of the files match the composite search criteria."
+msgstr "没有文件符合复合搜索条件。"
+
+#: src/compare/compare_result.py:276 tests/compare/test_compare_result.py:158
+msgid "(and {0} more)"
+msgstr "（还有{0}个）"
+
+#: src/compare/compare_result.py:279
+msgid "The compare checkpoint no longer matches the files being compared: {0}"
+msgstr "比较检查点不再匹配正在比较的文件：{0}"
+
+#: src/compare/compare_result.py:281 tests/compare/test_compare_result.py:156
+msgid "Removed ({0}): {1}"
+msgstr "已删除 ({0}): {1}"
+
+#: src/compare/compare_result.py:283 tests/compare/test_compare_result.py:159
+msgid "Added ({0}): {1}"
+msgstr "已添加 ({0})：{1}"
+
+#: src/compare/compare_result.py:285 tests/compare/test_compare_result.py:166
+msgid ""
+"No file was added or removed, but the file list is in a different order."
+msgstr "未添加或删除文件，但文件列表的顺序不同。"
+
+#: src/compare/compare_result.py:286
+msgid ""
+"Enable \"{0}\" in the compare settings, or delete the checkpoint file, to "
+"rebuild it."
+msgstr "在比较设置中启用 \"{0}\"，或删除检查点文件以重新生成它。"
+
+#: src/compare/compare_result.py:287
+#: src/ui/compare/compare_settings_window_qt.py:303
+msgid "Overwrite cache"
+msgstr "覆盖缓存"
 
 #: src/compare/compare_wrapper.py:170 src/compare/compare_wrapper.py:173
 msgid "Invalid mode"
@@ -1247,6 +1336,10 @@ msgstr "检测到搜索模式，请在运行前确认切换至分组模式。分
 msgid "Gathering media data for comparison"
 msgstr "收集媒体数据以进行比较"
 
+#: src/compare/compare_wrapper.py:837
+msgid "Compare filters excluded {0} of {1} files"
+msgstr "比较过滤器在 {1} 个文件中排除了 {0} 个"
+
 #: src/compare/compare_wrapper.py:885
 msgid "Searching media..."
 msgstr "正在查找媒体..."
@@ -1254,11 +1347,6 @@ msgstr "正在查找媒体..."
 #: src/compare/compare_wrapper.py:891
 msgid "Set a directory and search file or search text."
 msgstr "设置目录和搜索文件或搜索文本。"
-
-#: src/compare/compare_manager.py:1288 src/compare/compare_manager.py:1352
-#: src/compare/compare_wrapper.py:892
-msgid "No Match Found"
-msgstr "找不到匹配"
 
 #: src/compare/compare_wrapper.py:892
 msgid "None of the files match the search filters with current settings."
@@ -1347,106 +1435,107 @@ msgstr "正在处理批次 {0}/{1}（包含 {2} 张图像）..."
 msgid "Found {0} images that meet the threshold..."
 msgstr "找到符合阈值的 {0} 张图片..."
 
-#: src/compare/pipeline_run_report.py:68
-#: tests/unit/test_classifier_pipeline_runner.py:1559
+#: src/compare/pipeline_run_report.py:73
+#: tests/unit/test_classifier_pipeline_runner.py:1569
 msgid "Warnings"
 msgstr "警告"
 
-#: src/compare/pipeline_run_report.py:69
-#: tests/unit/test_classifier_pipeline_runner.py:1560
+#: src/compare/pipeline_run_report.py:74
+#: tests/unit/test_classifier_pipeline_runner.py:1570
 msgid "Notable events"
 msgstr "重大事件"
 
-#: src/compare/pipeline_run_report.py:70
+#: src/compare/pipeline_run_report.py:75
 msgid "Information"
 msgstr "信息"
 
-#: src/compare/pipeline_run_report.py:135
-#: src/ui/compare/classifier_pipelines_tab_qt.py:699
+#: src/compare/pipeline_run_report.py:140
+#: src/ui/compare/classifier_pipelines_tab_qt.py:824
 msgid "(no action)"
 msgstr "(无操作)"
 
-#: src/compare/pipeline_run_report.py:155
+#: src/compare/pipeline_run_report.py:163
+#: tests/unit/test_classifier_pipeline_runner.py:1554
 msgid "Pipeline {0} — run complete"
 msgstr "管道 {0} — 运行完成"
 
-#: src/compare/pipeline_run_report.py:160
+#: src/compare/pipeline_run_report.py:168
 msgid "Profile: {0}"
 msgstr "个人资料：{0}"
 
-#: src/compare/pipeline_run_report.py:164
+#: src/compare/pipeline_run_report.py:172
 msgid "{0} → {1}"
 msgstr "{0} → {1}"
 
-#: src/compare/pipeline_run_report.py:167
+#: src/compare/pipeline_run_report.py:175
 msgid "Categories: {0}"
 msgstr "类别：{0}"
 
-#: src/compare/pipeline_run_report.py:170
+#: src/compare/pipeline_run_report.py:178
 msgid "Directories scanned:"
 msgstr "已扫描的目录："
 
-#: src/compare/pipeline_run_report.py:174
+#: src/compare/pipeline_run_report.py:182
 msgid "  {0}  ({1} {2})"
 msgstr "  {0}（{1}{2}）"
 
-#: src/compare/pipeline_run_report.py:177
+#: src/compare/pipeline_run_report.py:185
 msgid "file(s)"
 msgstr "文件"
 
-#: src/compare/pipeline_run_report.py:183
+#: src/compare/pipeline_run_report.py:191
 msgid "Files evaluated: {0}"
 msgstr "已评估的文件：{0}"
 
-#: src/compare/pipeline_run_report.py:187
+#: src/compare/pipeline_run_report.py:200
 msgid "Errors during evaluation: {0}"
 msgstr "评估期间出错：{0}"
 
-#: src/compare/pipeline_run_report.py:191
+#: src/compare/pipeline_run_report.py:204
 msgid "Actions taken:"
 msgstr "已采取的操作："
 
-#: src/compare/pipeline_run_report.py:199
+#: src/compare/pipeline_run_report.py:212
 msgid "  {0}× {1}"
 msgstr "  {0}× {1}"
 
-#: src/compare/pipeline_run_report.py:207
+#: src/compare/pipeline_run_report.py:220
 msgid "Generations queued: {0} ({1})"
 msgstr "排队中的生成：{0} ({1})"
 
-#: src/compare/pipeline_run_report.py:210
+#: src/compare/pipeline_run_report.py:223
 msgid "Generations queued: {0}"
 msgstr "排队中的生成：{0}"
 
-#: src/compare/pipeline_run_report.py:220
+#: src/compare/pipeline_run_report.py:233
 #: tests/unit/test_pipeline_decision_record.py:288
 #: tests/unit/test_pipeline_decision_record.py:294
 msgid "Decision records captured: {0}"
 msgstr "已捕获的决策记录：{0}"
 
-#: src/compare/pipeline_run_report.py:258
-#: tests/unit/test_classifier_pipeline_runner.py:1609
+#: src/compare/pipeline_run_report.py:271
+#: tests/unit/test_classifier_pipeline_runner.py:1619
 msgid "  {0} ({1} file(s))"
 msgstr "  {0}（{1} 文件）"
 
-#: src/compare/pipeline_run_report.py:263
-#: tests/unit/test_classifier_pipeline_runner.py:1580
+#: src/compare/pipeline_run_report.py:276
+#: tests/unit/test_classifier_pipeline_runner.py:1590
 msgid "  [{0}] — {1} files"
 msgstr "  [{0}] — {1} 个文件"
 
-#: src/compare/pipeline_run_report.py:294
+#: src/compare/pipeline_run_report.py:307
 msgid "      · … and {0} more"
 msgstr "      · ……以及其他 {0} 项"
 
-#: src/files/file_browser.py:288 src/files/file_browser.py:302
-#: src/files/file_browser.py:314 src/ui/app_window/app_window.py:1061
+#: src/files/file_browser.py:289 src/files/file_browser.py:303
+#: src/files/file_browser.py:315 src/ui/app_window/app_window.py:1061
 #: src/ui/app_window/media_navigator.py:145
 #: src/ui/app_window/media_navigator.py:193
 msgid " (try setting recursive to True)"
 msgstr " (尝试将递归设置为 True）"
 
-#: src/files/file_browser.py:289 src/files/file_browser.py:303
-#: src/files/file_browser.py:315 src/files/file_browser.py:393
+#: src/files/file_browser.py:290 src/files/file_browser.py:304
+#: src/files/file_browser.py:316 src/files/file_browser.py:393
 #: src/ui/app_window/app_window.py:1063
 #: src/ui/app_window/media_navigator.py:147
 #: src/ui/app_window/media_navigator.py:195
@@ -1469,13 +1558,13 @@ msgstr "索引 {0} 超出范围。共有 {1} 个文件。"
 msgid "Search text provided to file_browser.find() was invalid."
 msgstr "提供给 file_browser.find() 的搜索文本无效。"
 
-#: src/files/file_browser.py:851
+#: src/files/file_browser.py:852
 msgid ""
 "Loading directory... {0} files currently available (scanned {1} folders; "
 "total unknown)"
 msgstr "正在加载目录... 当前有 {0} 个文件可用（已扫描 {1} 个文件夹；总数未知）"
 
-#: src/files/file_browser.py:1213 src/ui/app_window/file_ops_controller.py:574
+#: src/files/file_browser.py:1214 src/ui/app_window/file_ops_controller.py:574
 msgid "No files found"
 msgstr "未找到任何文件"
 
@@ -1743,6 +1832,14 @@ msgstr "INFO: 替换了具有不同EXIF数据的目标文件。"
 msgid "WARNING: Short filenames."
 msgstr "警告:文件短。"
 
+#: src/files/marked_files.py:830 tests/unit/test_marked_files_undo.py:176
+msgid "Cannot undo the last marked files move after a file was deleted."
+msgstr "文件被删除后，无法撤销上一次标记文件的移动。"
+
+#: src/files/marked_files.py:834 tests/unit/test_marked_files_undo.py:162
+msgid "No marked files move or copy to undo."
+msgstr "没有标记的文件可用于撤销移动或复制。"
+
 #: src/files/marked_files.py:837
 msgid "Moving back"
 msgstr "向后移动"
@@ -1751,25 +1848,19 @@ msgstr "向后移动"
 msgid "Removing"
 msgstr "删除"
 
-#: src/files/marked_files.py:839
-msgid "Moved back"
-msgstr "向后移动"
-
-#: src/files/marked_files.py:839
-msgid "Removed"
-msgstr "已删除"
-
-#: src/files/marked_files.py:882
-msgid "Moved back {0} files from {1}"
-msgstr ""
-"从 {1}\n"
-"移回 {0} 个文件"
-
 #: src/files/marked_files.py:871
 msgid "Removed {0} files from {1}"
 msgstr ""
 "从 {1}\n"
 "移除 {0} 个文件"
+
+#: src/files/marked_files.py:873 tests/unit/test_marked_files_undo.py:85
+msgid "Moved back {0} files from {1} to {2}"
+msgstr "已将 {0} 个文件从 {1} 移回 {2}"
+
+#: src/files/marked_files.py:875 tests/unit/test_marked_files_undo.py:100
+msgid "Moved back {0} files from {1} to {2} directories"
+msgstr "已将 {0} 个文件从 {1} 移回 {2} 目录"
 
 #: src/files/marked_files.py:927
 msgid "Existing filenames found!"
@@ -1849,75 +1940,75 @@ msgstr "检测到潜在错误"
 msgid "Removed marked file from source: {0}"
 msgstr "已从源位置移除标记文件：{0}"
 
-#: src/files/pdf_creator.py:47
+#: src/files/pdf_creator.py:48
 msgid "No files to create PDF"
 msgstr "没有文件可以创建 PDF"
 
-#: src/files/pdf_creator.py:55 src/ui/files/pdf_options_window_qt.py:109
+#: src/files/pdf_creator.py:56 src/ui/files/pdf_options_window_qt.py:109
 msgid "combined_images"
 msgstr "合并图片"
 
-#: src/files/pdf_creator.py:131
+#: src/files/pdf_creator.py:132
 msgid "compressed"
 msgstr "压缩"
 
-#: src/files/pdf_creator.py:131
+#: src/files/pdf_creator.py:132
 msgid "high quality"
 msgstr "高品质"
 
-#: src/files/pdf_creator.py:133
+#: src/files/pdf_creator.py:134
 msgid "Created {0} PDF with {1} pages"
 msgstr "创建了 {0} 个 PDF 文件，包含 {1} 个页面"
 
-#: src/files/pdf_creator.py:136
+#: src/files/pdf_creator.py:137
 msgid "No pages could be added to the PDF"
 msgstr "PDF 无法添加任何页面"
 
-#: src/files/pdf_creator.py:140
+#: src/files/pdf_creator.py:141
 msgid "PDF creation requires pypdfium2 package"
 msgstr "创建 PDF 需要 pypdfium2 软件包"
 
-#: src/files/pdf_creator.py:172 src/ui/files/marked_file_mover_qt.py:353
+#: src/files/pdf_creator.py:173 src/ui/files/marked_file_mover_qt.py:353
 msgid "Diff PDFs"
 msgstr "PDF 对比"
 
-#: src/files/pdf_creator.py:173
+#: src/files/pdf_creator.py:174
 msgid "Please mark exactly 2 files."
 msgstr "请标记正好2个文件。"
 
-#: src/files/pdf_creator.py:181
+#: src/files/pdf_creator.py:182
 msgid "Invalid file"
 msgstr "无效文件"
 
-#: src/files/pdf_creator.py:182
+#: src/files/pdf_creator.py:183
 msgid "One or more marked files do not exist on disk."
 msgstr "一个或多个已标记的文件在磁盘上不存在。"
 
-#: src/files/pdf_creator.py:190
+#: src/files/pdf_creator.py:191
 msgid "diff-pdf not found"
 msgstr "diff-pdf未找到"
 
-#: src/files/pdf_creator.py:191
+#: src/files/pdf_creator.py:192
 msgid "The diff-pdf executable was not found on PATH."
 msgstr "diff-pdf 可执行文件未在 PATH 中找到。"
 
-#: src/files/pdf_creator.py:228 tests/unit/test_pdf_creator_epub_diff.py:52
+#: src/files/pdf_creator.py:229 tests/unit/test_pdf_creator_epub_diff.py:52
 msgid "Failed to render ePub for diff: {0}"
 msgstr "未能渲染 diff 的 ePub：{0}"
 
-#: src/files/pdf_creator.py:245
+#: src/files/pdf_creator.py:246
 msgid "Failed to convert marked file to PDF for diff: {0}"
 msgstr "未能将标记的文件转换为PDF以进行比较: {0}"
 
-#: src/files/pdf_creator.py:263
+#: src/files/pdf_creator.py:265
 msgid "Failed to run diff-pdf: {0}"
 msgstr "无法运行 diff-pdf: {0}"
 
-#: src/files/pdf_creator.py:287
+#: src/files/pdf_creator.py:289
 msgid "Created diff PDF: {0}"
 msgstr "创建了差异 PDF：{0}"
 
-#: src/files/pdf_creator.py:295
+#: src/files/pdf_creator.py:297
 msgid "diff-pdf did not create an output file."
 msgstr "diff-pdf 未创建输出文件。"
 
@@ -1929,33 +2020,33 @@ msgstr "后缀必须是 1–8 个字母数字字符（仅限字母和数字）�
 msgid "Suffix must not be purely numeric."
 msgstr "后缀不得纯为数字。"
 
-#: src/files/related_image.py:259 src/ui/image/media_details.py:1582
+#: src/files/related_image.py:366 src/ui/image/media_details.py:1582
 #: tests/unit/test_downstream_image_matching.py:425
 msgid " (Exact Match Not Found)"
 msgstr " (没有找到精确匹配)"
 
-#: src/files/related_image.py:261 src/ui/image/media_details.py:1573
+#: src/files/related_image.py:368 src/ui/image/media_details.py:1573
 msgid "(No related image found)"
 msgstr "(没有找到相关的图像)"
 
-#: src/files/related_image.py:309 src/files/related_image.py:318
+#: src/files/related_image.py:416 src/files/related_image.py:425
 msgid "{0} downstream image(s) found."
 msgstr "{0} 找到下游图像 。"
 
-#: src/files/related_image.py:313
+#: src/files/related_image.py:420
 msgid "{0} (cached) downstream image(s) found."
 msgstr "{0}（缓存）个下游图片已找到。"
 
-#: src/files/related_image.py:323
-#: src/ui/app_window/file_marks_controller.py:414
+#: src/files/related_image.py:430
+#: src/ui/app_window/file_marks_controller.py:416
 msgid "No downstream related images found in"
 msgstr "找不到下游相关图像"
 
-#: src/image/frame_cache.py:764
+#: src/image/frame_cache.py:828
 msgid "Unable to render ePub: pyppeteer and pypdfium2 are required"
 msgstr "无法渲染 ePub：需要 pyppeteer 和 pypdfium2"
 
-#: src/image/frame_cache.py:987 src/utils/constants.py:464
+#: src/image/frame_cache.py:1051 src/utils/constants.py:464
 #: tests/unit/test_constants.py:93
 msgid "ePub"
 msgstr "ePub"
@@ -1991,7 +2082,7 @@ msgid ""
 "be resolved."
 msgstr "{0} 在 {1} 触发，但无法解析该帧在文件中的位置。"
 
-#: src/image/image_data_extractor.py:497
+#: src/image/image_data_extractor.py:657
 msgid "(Unable to parse image prompt information for this file.)"
 msgstr "（无法解析此文件的图像提示信息。）"
 
@@ -2037,7 +2128,7 @@ msgstr "背景框"
 msgid "Background Box (Freeform)"
 msgstr "背景框（自由形）"
 
-#: src/image/video_ops.py:687 src/image/video_ops.py:801
+#: src/image/video_ops.py:688 src/image/video_ops.py:802
 #: src/ui/app_window/file_ops_controller.py:721
 #: src/ui/app_window/file_ops_controller.py:767
 #: src/ui/app_window/file_ops_controller.py:815
@@ -2045,53 +2136,53 @@ msgstr "背景框（自由形）"
 msgid "Not a video file"
 msgstr "不是视频文件"
 
-#: src/image/video_ops.py:690 src/image/video_ops.py:804
+#: src/image/video_ops.py:691 src/image/video_ops.py:805
 #: tests/unit/test_cut_video.py:130 tests/unit/test_mute_audio.py:105
 msgid "ffmpeg not found on PATH"
 msgstr "未在 PATH 中找到 ffmpeg"
 
-#: src/image/video_ops.py:693 tests/unit/test_cut_video.py:136
+#: src/image/video_ops.py:694 tests/unit/test_cut_video.py:136
 msgid "Cut position must be after the start of the video"
 msgstr "剪切位置必须在视频开始之后"
 
-#: src/image/video_ops.py:695 tests/unit/test_cut_video.py:142
+#: src/image/video_ops.py:696 tests/unit/test_cut_video.py:142
 msgid "Cut position must be before the end of the video"
 msgstr "剪切位置必须在视频结束之前"
 
-#: src/image/video_ops.py:700 src/image/video_ops.py:814
+#: src/image/video_ops.py:701 src/image/video_ops.py:815
 msgid "Output path must differ from the source file"
 msgstr "输出路径必须与源文件不同"
 
-#: src/image/video_ops.py:702 src/image/video_ops.py:816
+#: src/image/video_ops.py:703 src/image/video_ops.py:817
 msgid "Output file already exists: {0}"
 msgstr "输出文件已存在：{0}"
 
-#: src/image/video_ops.py:747
+#: src/image/video_ops.py:748
 msgid "ffmpeg timed out while cutting video"
 msgstr "ffmpeg在裁剪视频时超时"
 
-#: src/image/video_ops.py:749 src/image/video_ops.py:845
+#: src/image/video_ops.py:750 src/image/video_ops.py:846
 msgid "Failed to run ffmpeg: {0}"
 msgstr "运行 ffmpeg 失败：{0}"
 
-#: src/image/video_ops.py:807 tests/unit/test_mute_audio.py:113
+#: src/image/video_ops.py:808 tests/unit/test_mute_audio.py:113
 msgid "Mute range must start at or after the beginning of the video"
 msgstr "静音范围必须从视频开始时或之后开始"
 
-#: src/image/video_ops.py:809 tests/unit/test_mute_audio.py:120
+#: src/image/video_ops.py:810 tests/unit/test_mute_audio.py:120
 #: tests/unit/test_mute_audio.py:126
 msgid "Mute range end must be after its start"
 msgstr "静音范围的结束必须在开始之后"
 
-#: src/image/video_ops.py:843
+#: src/image/video_ops.py:844
 msgid "ffmpeg timed out while muting audio"
 msgstr "ffmpeg 在静音音频时超时"
 
-#: src/image/video_ops.py:1013
+#: src/image/video_ops.py:1014
 msgid "Video ({0})"
 msgstr "视频 ({0})"
 
-#: src/image/video_ops.py:1013 src/ui/image/media_details.py:617
+#: src/image/video_ops.py:1014 src/ui/image/media_details.py:617
 #: src/utils/constants.py:460
 msgid "Video"
 msgstr "视频"
@@ -2311,7 +2402,7 @@ msgstr "从先前的标记列表中设定当前标记"
 msgid "Set marks from downstream related images"
 msgstr "从下游相关图像设置标记"
 
-#: src/ui/files/related_images_window_qt.py:91
+#: src/ui/files/related_images_window_qt.py:93
 #: src/ui/help_and_config_qt.py:168
 msgid "Mark sources with downstream files in current directory"
 msgstr "用当前目录中的下游文件标记源"
@@ -2352,7 +2443,7 @@ msgstr "运行第三近的标记操作"
 msgid "Run permanent marks action"
 msgstr "运行永久标记动作"
 
-#: src/ui/app_window/file_marks_controller.py:289
+#: src/ui/app_window/file_marks_controller.py:291
 #: src/ui/help_and_config_qt.py:182
 msgid "Run file action set"
 msgstr "运行文件操作集"
@@ -2418,7 +2509,7 @@ msgid "Reapply last crop/box selection to current media"
 msgstr "将上一次的裁剪/框选重新应用到当前媒体"
 
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2053
-#: src/ui/compare/classifier_pipelines_tab_qt.py:210
+#: src/ui/compare/classifier_pipelines_tab_qt.py:212
 #: src/ui/help_and_config_qt.py:204 src/utils/constants.py:589
 #: tests/ui/test_classifier_pipelines_tab_qt.py:148
 msgid "Prevalidation"
@@ -2686,7 +2777,7 @@ msgid "Config"
 msgstr "配置"
 
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2053
-#: src/ui/compare/classifier_pipelines_tab_qt.py:211
+#: src/ui/compare/classifier_pipelines_tab_qt.py:213
 #: src/ui/help_and_config_qt.py:331
 #: tests/ui/test_classifier_pipelines_tab_qt.py:159
 msgid "General"
@@ -3166,28 +3257,28 @@ msgstr "许多文件"
 msgid "No files found in directory after refresh."
 msgstr "刷新后在目录中未发现文件。"
 
-#: src/ui/app_window/app_window.py:1407
+#: src/ui/app_window/app_window.py:1414
 msgid "NEW_MEDIA_QUEUED"
 msgstr "{0} 个新媒体文件已排队"
 
-#: src/ui/app_window/app_window.py:1523
+#: src/ui/app_window/app_window.py:1530
 msgid "No cached image for this file."
 msgstr "此文件没有缓存图像。"
 
-#: src/ui/app_window/app_window.py:1526
+#: src/ui/app_window/app_window.py:1533
 msgid "Could not read cached image."
 msgstr "无法读取缓存的图像。"
 
-#: src/ui/app_window/app_window.py:1529
+#: src/ui/app_window/app_window.py:1536
 msgid "Clipboard unavailable."
 msgstr "剪贴板不可用。"
 
-#: src/ui/app_window/app_window.py:1548 src/ui/app_window/app_window.py:1562
-#: src/ui/app_window/app_window.py:1578
+#: src/ui/app_window/app_window.py:1555 src/ui/app_window/app_window.py:1569
+#: src/ui/app_window/app_window.py:1585
 msgid "Screenshot Failed"
 msgstr "截图失败"
 
-#: src/ui/app_window/app_window.py:1549
+#: src/ui/app_window/app_window.py:1556
 msgid ""
 "Unable to create screenshot directory:\n"
 "{0}\n"
@@ -3199,7 +3290,7 @@ msgstr ""
 "\n"
 "{1}"
 
-#: src/ui/app_window/app_window.py:1563
+#: src/ui/app_window/app_window.py:1570
 msgid ""
 "Unable to save screenshot.\n"
 "\n"
@@ -3209,7 +3300,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/ui/app_window/app_window.py:1569
+#: src/ui/app_window/app_window.py:1576
 msgid ""
 "Screenshot saved to:\n"
 "{0}"
@@ -3217,7 +3308,7 @@ msgstr ""
 "截图已保存到：\n"
 "{0}"
 
-#: src/ui/app_window/app_window.py:1579
+#: src/ui/app_window/app_window.py:1586
 msgid ""
 "Unable to copy image to clipboard.\n"
 "\n"
@@ -3227,33 +3318,33 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/ui/app_window/app_window.py:1583
+#: src/ui/app_window/app_window.py:1590
 msgid "Copied image to clipboard."
 msgstr "图像已复制到剪贴板。"
 
-#: src/ui/app_window/app_window.py:1587
+#: src/ui/app_window/app_window.py:1594
 msgid ""
 "Screenshots are available for videos, animated GIFs, and PDF/ePub/SVG/HTML "
 "files."
 msgstr "视频、动画 GIF 和 PDF/ePub/SVG/HTML 文件均可提供截图。"
 
-#: src/ui/app_window/app_window.py:1645
+#: src/ui/app_window/app_window.py:1652
 msgid "Masonry view"
 msgstr "瀑布流视图"
 
-#: src/ui/app_window/app_window.py:1650
+#: src/ui/app_window/app_window.py:1657
 msgid "Full-window view"
 msgstr "全屏视图"
 
-#: src/ui/app_window/app_window.py:1710
+#: src/ui/app_window/app_window.py:1717
 msgid "Theme switched to {0}."
 msgstr "主题切换到{0} 。"
 
-#: src/ui/app_window/app_window.py:1763
+#: src/ui/app_window/app_window.py:1770
 msgid "Confirm Quit"
 msgstr "确认退出"
 
-#: src/ui/app_window/app_window.py:1763
+#: src/ui/app_window/app_window.py:1770
 msgid "Would you like to quit the application?"
 msgstr "是否要退出应用程序？"
 
@@ -3458,7 +3549,7 @@ msgstr "运行 RefacDir"
 #: src/ui/app_window/context_menu_builder.py:325
 #: src/ui/app_window/file_ops_controller.py:275
 #: src/ui/compare/classifier_actions_tab_qt.py:217
-#: src/ui/compare/classifier_pipelines_tab_qt.py:267
+#: src/ui/compare/classifier_pipelines_tab_qt.py:269
 #: src/ui/compare/embedding_seed_library_window_qt.py:95
 #: src/ui/compare/prevalidations_tab_qt.py:385
 #: src/ui/files/file_actions_window_qt.py:108
@@ -3466,142 +3557,144 @@ msgstr "运行 RefacDir"
 msgid "Delete"
 msgstr "删除"
 
-#: src/ui/app_window/file_marks_controller.py:62
+#: src/ui/app_window/file_marks_controller.py:64
 msgid "Add or remove a mark"
 msgstr "添加或删除标记"
 
-#: src/ui/app_window/file_marks_controller.py:68
+#: src/ui/app_window/file_marks_controller.py:70
 msgid "DELETE_LOCK_MARK_STOP"
 msgstr ""
 "幻灯片放映后删除锁定\n"
 "过渡时无法添加标记"
 
-#: src/ui/app_window/file_marks_controller.py:82
+#: src/ui/app_window/file_marks_controller.py:84
 msgid "Mark removed. Remaining: {0}"
 msgstr "标记已去除。剩余 {0}"
 
-#: src/ui/app_window/file_marks_controller.py:88
+#: src/ui/app_window/file_marks_controller.py:90
 msgid "Mark added. Total set: {0}"
 msgstr "已添加标记。当前集合总数：{0}"
 
-#: src/ui/app_window/file_marks_controller.py:99
+#: src/ui/app_window/file_marks_controller.py:101
 msgid "Add marks from group"
 msgstr "从组添加标记"
 
-#: src/ui/app_window/file_marks_controller.py:125
+#: src/ui/app_window/file_marks_controller.py:127
 msgid "Marks added. Total set: {0}"
 msgstr "已添加标记。当前集合总数：{0}"
 
-#: src/ui/app_window/file_marks_controller.py:139
+#: src/ui/app_window/file_marks_controller.py:141
 msgid "First sorted mark"
 msgstr "第一个排序标记"
 
-#: src/ui/app_window/file_marks_controller.py:145
+#: src/ui/app_window/file_marks_controller.py:147
 msgid "Only one marked file set."
 msgstr "只有一个标记的文件集 。"
 
-#: src/ui/app_window/file_marks_controller.py:174
+#: src/ui/app_window/file_marks_controller.py:176
 msgid "Invalid file path"
 msgstr "无效的文件路径"
 
-#: src/ui/app_window/file_marks_controller.py:175
+#: src/ui/app_window/file_marks_controller.py:177
 msgid "The file path {0} is invalid."
 msgstr "文件路径 {0} 无效。"
 
-#: src/ui/app_window/file_marks_controller.py:188
+#: src/ui/app_window/file_marks_controller.py:190
 msgid "Add marks"
 msgstr "添加标记"
 
-#: src/ui/app_window/file_marks_controller.py:192
+#: src/ui/app_window/file_marks_controller.py:194
 msgid "Including marks: {0}"
 msgstr "包括标记：{0}"
 
-#: src/ui/app_window/file_marks_controller.py:294
+#: src/ui/app_window/file_marks_controller.py:296
 msgid "No file action set actions selected."
 msgstr "未选择针对设置操作的文件操作。"
 
-#: src/ui/app_window/file_marks_controller.py:343
+#: src/ui/app_window/file_marks_controller.py:345
 msgid "NO_MARKS_SET"
 msgstr ""
 "已设置 {0} 标记(预计 >={1})。\n"
 "使用 Shift+M 设置标记。"
 
-#: src/ui/app_window/file_marks_controller.py:379
-#: src/ui/files/related_images_window_qt.py:89
+#: src/ui/app_window/file_marks_controller.py:381
+#: src/ui/files/related_images_window_qt.py:91
 msgid "Set marks from downstream images"
 msgstr "从下游图像设置标记"
 
-#: src/ui/app_window/file_marks_controller.py:390
-#: src/ui/app_window/file_marks_controller.py:557
-#: src/ui/app_window/file_marks_controller.py:612
+#: src/ui/app_window/file_marks_controller.py:392
+#: src/ui/app_window/file_marks_controller.py:559
+#: src/ui/app_window/file_marks_controller.py:614
 #: src/ui/app_window/search_controller.py:736
 msgid "Waiting for a directory selection."
 msgstr "正在等待目录选择。"
 
-#: src/ui/app_window/file_marks_controller.py:405
+#: src/ui/app_window/file_marks_controller.py:407
 #: src/ui/app_window/search_controller.py:751
 msgid "Cancelled: that directory has too many files."
 msgstr "已取消：该目录的文件太多。"
 
-#: src/ui/app_window/file_marks_controller.py:410
+#: src/ui/app_window/file_marks_controller.py:412
 msgid "Set marks from related media"
 msgstr "从相关媒体设置标记"
 
-#: src/ui/app_window/file_marks_controller.py:419
-#: src/ui/app_window/file_marks_controller.py:524
-#: src/ui/app_window/file_marks_controller.py:582
-#: src/ui/app_window/file_marks_controller.py:637
-#: src/ui/app_window/file_marks_controller.py:689
+#: src/ui/app_window/file_marks_controller.py:421
+#: src/ui/app_window/file_marks_controller.py:526
+#: src/ui/app_window/file_marks_controller.py:584
+#: src/ui/app_window/file_marks_controller.py:639
+#: src/ui/app_window/file_marks_controller.py:691
+#: src/ui/app_window/file_marks_controller.py:745
 msgid "Cancelled: marks were not changed."
 msgstr "已取消：标记未更改。"
 
-#: src/ui/app_window/file_marks_controller.py:422
+#: src/ui/app_window/file_marks_controller.py:424
 msgid "{0} file marks set"
 msgstr "{0} 文件标记设定"
 
-#: src/ui/app_window/file_marks_controller.py:444
+#: src/ui/app_window/file_marks_controller.py:446
 msgid "Search all open windows"
 msgstr "搜索所有打开的窗口"
 
-#: src/ui/app_window/file_marks_controller.py:451
+#: src/ui/app_window/file_marks_controller.py:453
 msgid "No active media to search from."
 msgstr "没有可用于搜索的活动媒体。"
 
-#: src/ui/app_window/file_marks_controller.py:498
+#: src/ui/app_window/file_marks_controller.py:500
 msgid "Source: {0}"
 msgstr "来源：{0}"
 
-#: src/ui/app_window/file_marks_controller.py:504
-#: tests/ui/test_related_images_window.py:294
+#: src/ui/app_window/file_marks_controller.py:506
+#: tests/ui/test_related_images_window.py:312
 msgid "Skipped {0} large unconfirmed director(ies)."
 msgstr "已跳过 {0} 个大型未确认导演。"
 
-#: src/ui/app_window/file_marks_controller.py:509
-#: tests/ui/test_related_images_window.py:313
+#: src/ui/app_window/file_marks_controller.py:511
+#: tests/ui/test_related_images_window.py:331
 msgid "No downstream related images found across {0} open window(s)."
 msgstr "在 {0} 个打开的窗口中未找到下游相关图像。"
 
-#: src/ui/app_window/file_marks_controller.py:521
+#: src/ui/app_window/file_marks_controller.py:523
 msgid "Set marks from related media (all windows)"
 msgstr "从相关媒体设置标记（所有窗口）"
 
-#: src/ui/app_window/file_marks_controller.py:528
-#: tests/ui/test_related_images_window.py:238
+#: src/ui/app_window/file_marks_controller.py:530
+#: tests/ui/test_related_images_window.py:256
 msgid "{0} file marks set from {1} window(s)"
 msgstr "{0} 文件标记已从 {1} 窗口设置"
 
-#: src/ui/app_window/file_marks_controller.py:550
+#: src/ui/app_window/file_marks_controller.py:552
 msgid "Mark sources with downstream"
 msgstr "标记带下游的源"
 
-#: src/ui/app_window/file_marks_controller.py:562
-#: src/ui/app_window/file_marks_controller.py:617
-#: src/ui/app_window/file_marks_controller.py:668
-#: tests/ui/test_related_images_window.py:425
+#: src/ui/app_window/file_marks_controller.py:564
+#: src/ui/app_window/file_marks_controller.py:619
+#: src/ui/app_window/file_marks_controller.py:670
+#: src/ui/app_window/file_marks_controller.py:725
+#: tests/ui/test_related_images_window.py:443
 msgid "No files in current directory."
 msgstr "当前目录中没有文件。"
 
-#: src/ui/app_window/file_marks_controller.py:571
+#: src/ui/app_window/file_marks_controller.py:573
 msgid ""
 "No source files with downstream images found in\n"
 "{0}"
@@ -3609,20 +3702,20 @@ msgstr ""
 "在\n"
 "{0}中未找到包含下游图像的源文件"
 
-#: src/ui/app_window/file_marks_controller.py:579
+#: src/ui/app_window/file_marks_controller.py:581
 msgid "Mark sources with downstream images"
 msgstr "标记具有下游图像的源"
 
-#: src/ui/app_window/file_marks_controller.py:587
+#: src/ui/app_window/file_marks_controller.py:589
 msgid "{0} source file(s) marked"
 msgstr "{0} 个源文件已标记"
 
-#: src/ui/app_window/file_marks_controller.py:605
-#: src/ui/app_window/file_marks_controller.py:634
+#: src/ui/app_window/file_marks_controller.py:607
+#: src/ui/app_window/file_marks_controller.py:636
 msgid "Mark downstream files"
 msgstr "标记下游文件"
 
-#: src/ui/app_window/file_marks_controller.py:626
+#: src/ui/app_window/file_marks_controller.py:628
 msgid ""
 "No downstream files found in\n"
 "{0}"
@@ -3630,46 +3723,46 @@ msgstr ""
 "在以下位置未找到下游文件：\n"
 "{0}"
 
-#: src/ui/app_window/file_marks_controller.py:642
+#: src/ui/app_window/file_marks_controller.py:644
 msgid "{0} downstream file(s) marked"
 msgstr "{0} 个下游文件已标记"
 
-#: src/ui/app_window/file_marks_controller.py:664
-#: src/ui/app_window/file_marks_controller.py:686
-#: tests/ui/test_related_images_window.py:411
+#: src/ui/app_window/file_marks_controller.py:666
+#: src/ui/app_window/file_marks_controller.py:688
+#: tests/ui/test_related_images_window.py:429
 msgid "Mark files without related images"
 msgstr "标记没有关联图像的文件"
 
-#: src/ui/app_window/file_marks_controller.py:678
-#: tests/ui/test_related_images_window.py:379
+#: src/ui/app_window/file_marks_controller.py:680
+#: tests/ui/test_related_images_window.py:397
 msgid "Every file in the current directory has a related image."
 msgstr "当前目录中的每个文件都有相关的图片。"
 
-#: src/ui/app_window/file_marks_controller.py:694
+#: src/ui/app_window/file_marks_controller.py:696
 msgid "{0} file(s) without a related image marked"
 msgstr "{0} 个文件未标记相关图片"
 
-#: src/ui/app_window/file_marks_controller.py:713
+#: src/ui/app_window/file_marks_controller.py:770
 msgid "Set related image"
 msgstr "设置相关图片"
 
-#: src/ui/app_window/file_marks_controller.py:719
+#: src/ui/app_window/file_marks_controller.py:776
 msgid "Exactly one file must be marked for this operation."
 msgstr "此操作必须恰好标记一个文件。"
 
-#: src/ui/app_window/file_marks_controller.py:727
+#: src/ui/app_window/file_marks_controller.py:784
 msgid "No valid current media file."
 msgstr "没有有效的当前媒体文件。"
 
-#: src/ui/app_window/file_marks_controller.py:730
+#: src/ui/app_window/file_marks_controller.py:787
 msgid "Marked file no longer exists."
 msgstr "标记的文件不再存在。"
 
-#: src/ui/app_window/file_marks_controller.py:739
+#: src/ui/app_window/file_marks_controller.py:796
 msgid "Set as Related Image"
 msgstr "设置为相关图片"
 
-#: src/ui/app_window/file_marks_controller.py:741
+#: src/ui/app_window/file_marks_controller.py:798
 msgid ""
 "Enter a suffix (1–8 alphanumeric characters, not purely numeric).\n"
 "The marked file will be renamed to:\n"
@@ -3679,23 +3772,23 @@ msgstr ""
 "标记的文件将被重命名为：\n"
 "{0}_<后缀>{1}"
 
-#: src/ui/app_window/file_marks_controller.py:753
+#: src/ui/app_window/file_marks_controller.py:810
 msgid "Invalid Suffix"
 msgstr "无效后缀"
 
-#: src/ui/app_window/file_marks_controller.py:762
+#: src/ui/app_window/file_marks_controller.py:819
 msgid "File Already Exists"
 msgstr "文件已存在"
 
-#: src/ui/app_window/file_marks_controller.py:763
+#: src/ui/app_window/file_marks_controller.py:820
 msgid "A file named {0} already exists in that directory."
 msgstr "该目录中已存在名为 {0} 的文件。"
 
-#: src/ui/app_window/file_marks_controller.py:773
+#: src/ui/app_window/file_marks_controller.py:830
 msgid "Rename Failed"
 msgstr "重命名失败"
 
-#: src/ui/app_window/file_marks_controller.py:778
+#: src/ui/app_window/file_marks_controller.py:835
 msgid "Renamed to {0}"
 msgstr "已重命名为 {0}"
 
@@ -4306,14 +4399,6 @@ msgstr "随机化文件名"
 msgid "No valid base directory for randomize filenames"
 msgstr "没有有效的基目录用于随机化文件名"
 
-#: src/ui/app_window/file_ops_controller.py:1277
-msgid ""
-"Randomize filenames script not found:\n"
-"{0}"
-msgstr ""
-"未找到“随机化文件名”脚本：\n"
-"{0}"
-
 #: src/ui/app_window/file_ops_controller.py:1273
 msgid "Dry run"
 msgstr "预演"
@@ -4373,9 +4458,9 @@ msgstr ""
 "\n"
 "此操作无法在 Weidr 中撤销。继续吗？"
 
-#: src/ui/app_window/file_ops_controller.py:1343
-msgid "Failed to start randomize filenames: {0}"
-msgstr "无法启动文件名随机化功能：{0}"
+#: src/ui/app_window/file_ops_controller.py:1309
+msgid "Randomize filenames is already running"
+msgstr "随机化文件名已在运行"
 
 #: src/ui/app_window/file_ops_controller.py:1333
 msgid "Randomizing filenames under {0} — see {1}"
@@ -4408,52 +4493,52 @@ msgstr "取消静音"
 msgid "Mute"
 msgstr "静音"
 
-#: src/ui/app_window/media_frame.py:255
+#: src/ui/app_window/media_frame.py:269
 msgid "No displayable files found in this directory for the current settings."
 msgstr "在当前设置下，此目录中未找到可显示的文件。"
 
-#: src/ui/app_window/media_frame.py:715
+#: src/ui/app_window/media_frame.py:729
 msgid "Animated media format is not supported for playback: "
 msgstr "动画媒体格式不支持播放： "
 
-#: src/ui/app_window/media_frame.py:794
+#: src/ui/app_window/media_frame.py:808
 msgid "Video: "
 msgstr "视频： "
 
-#: src/ui/app_window/media_frame.py:814 src/ui/app_window/media_frame.py:820
+#: src/ui/app_window/media_frame.py:828 src/ui/app_window/media_frame.py:834
 #: tests/ui/test_media_frame_lifecycle.py:67
 msgid "Unable to display this file: "
 msgstr "无法显示此文件： "
 
-#: src/ui/app_window/media_frame.py:886 src/utils/audio_media.py:97
+#: src/ui/app_window/media_frame.py:900 src/utils/audio_media.py:97
 msgid "Audio: "
 msgstr "音频： "
 
-#: src/ui/app_window/media_frame.py:1205
+#: src/ui/app_window/media_frame.py:1219
 msgid "No output path provided."
 msgstr "未指定输出路径。"
 
-#: src/ui/app_window/media_frame.py:1209
+#: src/ui/app_window/media_frame.py:1223
 msgid "VLC player is unavailable."
 msgstr "VLC媒体播放器不可用。"
 
-#: src/ui/app_window/media_frame.py:1213
+#: src/ui/app_window/media_frame.py:1227
 msgid "VLC snapshot operation failed."
 msgstr "VLC截屏操作失败了"
 
-#: src/ui/app_window/media_frame.py:1218
+#: src/ui/app_window/media_frame.py:1232
 msgid "Snapshot file was not created."
 msgstr "快照文件未创建。"
 
-#: src/ui/app_window/media_frame.py:1229
+#: src/ui/app_window/media_frame.py:1243
 msgid "No GIF frame available for screenshot."
 msgstr "无 GIF 帧可用于截图。"
 
-#: src/ui/app_window/media_frame.py:1235
+#: src/ui/app_window/media_frame.py:1249
 msgid "Failed to save GIF frame image."
 msgstr "未能保存GIF帧图像。"
 
-#: src/ui/app_window/media_frame.py:1238
+#: src/ui/app_window/media_frame.py:1252
 msgid "No time-based media is currently active."
 msgstr "目前没有基于时间的媒体处于活动状态。"
 
@@ -4747,9 +4832,9 @@ msgstr "比较工具"
 
 #: src/ui/app_window/sidebar_panel.py:239
 #: src/ui/compare/classifier_actions_tab_qt.py:103
-#: src/ui/compare/classifier_management_window_qt.py:730
+#: src/ui/compare/classifier_management_window_qt.py:734
 #: src/ui/compare/seek_to_trigger_tab_qt.py:227
-#: tests/ui/test_classifier_management_window_qt.py:59
+#: tests/ui/test_classifier_management_window_qt.py:60
 msgid "Classifier Actions"
 msgstr "分类器操作"
 
@@ -4956,17 +5041,87 @@ msgstr "已添加视频背景框"
 msgid "Drag to select area to keep, Enter to confirm, Escape to cancel"
 msgstr "拖动选择要保留的区域，Enter 确认，Escape 取消"
 
+#: src/ui/app_window/window_launcher.py:39
+msgid "Window Error"
+msgstr "窗口错误"
+
+#: src/ui/app_window/window_launcher.py:60
+#: src/ui/app_window/window_launcher.py:78
+msgid "Go To File Window Error"
+msgstr "转到文件窗口错误"
+
+#: src/ui/app_window/window_launcher.py:104
+msgid "Recent Directory Window Error"
+msgstr "最近的目录窗口错误"
+
+#: src/ui/app_window/window_launcher.py:112
+msgid "Favorites Window Error"
+msgstr "收藏夹窗口错误"
+
+#: src/ui/app_window/window_launcher.py:120
+msgid "Embedding Seed Library Window Error"
+msgstr "嵌入种子库窗口错误"
+
 #: src/ui/app_window/window_launcher.py:134
 msgid "Supergroup from {0} ({1})"
 msgstr "来自{0}的超级群组（{1}）"
+
+#: src/ui/app_window/window_launcher.py:155
+#: src/ui/app_window/window_launcher.py:181
+msgid "Save Embedding Seed Error"
+msgstr "保存嵌入种子错误"
 
 #: src/ui/app_window/window_launcher.py:169
 msgid "{0} ({1})"
 msgstr "{0} ({1})"
 
+#: src/ui/app_window/window_launcher.py:190
+msgid "Related Images Window Error"
+msgstr "相关图像窗口错误"
+
 #: src/ui/app_window/window_launcher.py:197
 msgid "Please set a base directory first"
 msgstr "请先设置一个基础目录"
+
+#: src/ui/app_window/window_launcher.py:221
+msgid "Directory Notes Window Error"
+msgstr "目录备注窗口错误"
+
+#: src/ui/app_window/window_launcher.py:236
+msgid "Compare Settings Window Error"
+msgstr "比较设置窗口错误"
+
+#: src/ui/app_window/window_launcher.py:245
+msgid "HF Hub Model Manager Window Error"
+msgstr "HF Hub 模型管理器窗口错误"
+
+#: src/ui/app_window/window_launcher.py:265
+msgid "Prevalidations Window Error"
+msgstr "预验证窗口错误"
+
+#: src/ui/app_window/window_launcher.py:277
+msgid "Classifier Actions Window Error"
+msgstr "分类器操作窗口错误"
+
+#: src/ui/app_window/window_launcher.py:296
+msgid "File Actions Window Error"
+msgstr "文件操作窗口错误"
+
+#: src/ui/app_window/window_launcher.py:323
+msgid "File Action Sets Window Error"
+msgstr "文件操作集窗口错误"
+
+#: src/ui/app_window/window_launcher.py:331
+msgid "File Interceptor Rules Window Error"
+msgstr "文件拦截器规则窗口错误"
+
+#: src/ui/app_window/window_launcher.py:339
+msgid "Auto-Sort Confirmation Window Error"
+msgstr "自动排序确认窗口错误"
+
+#: src/ui/app_window/window_launcher.py:351
+msgid "Password Admin Window Error"
+msgstr "密码管理员窗口错误"
 
 #: src/ui/app_window/window_launcher.py:388
 msgid "(Open this media as part of a directory to see index details.)"
@@ -4983,6 +5138,10 @@ msgstr "{0}/{1} ({2})"
 #: src/ui/app_window/window_launcher.py:404
 msgid "{0} of {1} (Ungrouped)"
 msgstr "{0}/{1}（未分组）"
+
+#: src/ui/app_window/window_launcher.py:427
+msgid "Image Details Error"
+msgstr "图像详情错误"
 
 #: src/ui/app_window/window_launcher.py:470
 msgid "Interactive crop not supported for this media type"
@@ -5476,7 +5635,7 @@ msgstr "新名字"
 
 #: src/ui/compare/classifier_action_copy_window_qt.py:162
 #: src/ui/compare/classifier_actions_tab_qt.py:213
-#: src/ui/compare/classifier_pipelines_tab_qt.py:258
+#: src/ui/compare/classifier_pipelines_tab_qt.py:260
 #: src/ui/compare/directory_profile_window_qt.py:328
 #: src/ui/compare/directory_profile_window_qt.py:352
 #: src/ui/compare/prevalidations_tab_qt.py:379
@@ -5520,14 +5679,14 @@ msgstr "在配置文件上运行："
 
 #: src/ui/compare/classifier_actions_tab_qt.py:180
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2039
-#: src/ui/compare/classifier_pipelines_tab_qt.py:184
+#: src/ui/compare/classifier_pipelines_tab_qt.py:186
 #: src/ui/compare/prevalidations_tab_qt.py:337
 msgid "Active"
 msgstr "活动"
 
 #: src/ui/compare/classifier_actions_tab_qt.py:180
 #: src/ui/compare/classifier_management_window_qt.py:101
-#: src/ui/compare/classifier_pipelines_tab_qt.py:185
+#: src/ui/compare/classifier_pipelines_tab_qt.py:187
 #: src/ui/compare/embedding_seed_edit_window_qt.py:93
 #: src/ui/compare/prevalidations_tab_qt.py:336
 #: src/ui/files/file_interceptor_rules_window_qt.py:68
@@ -5543,7 +5702,7 @@ msgstr "行动"
 
 #: src/ui/compare/classifier_actions_tab_qt.py:191
 #: src/ui/compare/classifier_actions_tab_qt.py:240
-#: src/ui/compare/classifier_pipelines_tab_qt.py:233
+#: src/ui/compare/classifier_pipelines_tab_qt.py:235
 msgid "Run"
 msgstr "运行"
 
@@ -5555,19 +5714,20 @@ msgid "Modify"
 msgstr "修改"
 
 #: src/ui/compare/classifier_actions_tab_qt.py:221
-#: src/ui/compare/classifier_pipelines_tab_qt.py:273
+#: src/ui/compare/classifier_pipelines_tab_qt.py:275
 #: src/ui/compare/prevalidations_tab_qt.py:391
 msgid "Move down"
 msgstr "向下移动"
 
 #: src/ui/compare/classifier_actions_tab_qt.py:231
-#: src/ui/compare/classifier_management_window_qt.py:731
-#: tests/ui/test_classifier_management_window_qt.py:60
+#: src/ui/compare/classifier_management_window_qt.py:735
+#: tests/ui/test_classifier_management_window_qt.py:61
 msgid "Pipelines"
 msgstr "管道"
 
 #: src/ui/compare/classifier_actions_tab_qt.py:258
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2021
+#: src/ui/compare/pipeline_history_tab_qt.py:65
 msgid "Pipeline"
 msgstr "管道"
 
@@ -5597,33 +5757,147 @@ msgstr ""
 "已检查文件：{1} — 结果：{2} — 移动：{3} — 复制：{4} — 删除：{5} — 错误：{6}"
 
 #: src/ui/compare/classifier_actions_tab_qt.py:401
-#: src/ui/compare/classifier_pipelines_tab_qt.py:413
+#: src/ui/compare/classifier_pipelines_tab_qt.py:415
 msgid "Activate Pipeline"
 msgstr "激活流水线"
 
 #: src/ui/compare/classifier_actions_tab_qt.py:411
-#: src/ui/compare/classifier_actions_tab_qt.py:414
-#: src/ui/compare/classifier_pipelines_tab_qt.py:504
-#: src/ui/compare/classifier_pipelines_tab_qt.py:507
-#: src/ui/compare/classifier_pipelines_tab_qt.py:624
+#: src/ui/compare/classifier_actions_tab_qt.py:418
+#: src/ui/compare/classifier_pipelines_tab_qt.py:506
+#: src/ui/compare/classifier_pipelines_tab_qt.py:509
+#: src/ui/compare/classifier_pipelines_tab_qt.py:687
+#: src/ui/compare/classifier_pipelines_tab_qt.py:749
 msgid "Run Pipeline"
 msgstr "运行管道"
 
-#: src/ui/compare/classifier_actions_tab_qt.py:413
+#: src/ui/compare/classifier_actions_tab_qt.py:414
 msgid "Run pipeline '{0}' on profile '{1}'?"
 msgstr "是否在配置文件“{1}”上运行管道“{0}”？"
 
-#: src/ui/compare/classifier_actions_tab_qt.py:427
+#: src/ui/compare/classifier_actions_tab_qt.py:435
 msgid "No active classifier actions to run"
 msgstr "没有可运行的活动分类器操作"
 
-#: src/ui/compare/classifier_actions_tab_qt.py:432
+#: src/ui/compare/classifier_actions_tab_qt.py:440
 msgid "Run {0} active classifier action(s) on the following directories?"
 msgstr "在以下目录上运行 {0} 个活动分类器操作？"
 
-#: src/ui/compare/classifier_actions_tab_qt.py:440
+#: src/ui/compare/classifier_actions_tab_qt.py:448
 msgid "Run All Classifier Actions"
 msgstr "运行所有分类器操作"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:45
+#: tests/ui/test_classifier_filter_dialog.py:157
+msgid "(not configured)"
+msgstr "(未配置)"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:47
+msgid "model strategy"
+msgstr "模型策略"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:51
+msgid "{0}: exclude {1}"
+msgstr "{0}：排除 {1}"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:53
+#: tests/ui/test_classifier_filter_dialog.py:161
+msgid "{0}: only {1}"
+msgstr "{0}：仅{1}"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:55
+msgid "(min. {0:.2f})"
+msgstr "(最小 {0:.2f})"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:66
+msgid "Classifier Filter"
+msgstr "分类器过滤器"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:94
+msgid "Classifier type:"
+msgstr "分类器类型："
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:96
+msgid "Image classifier"
+msgstr "图像分类器"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:97
+msgid "Audio classifier"
+msgstr "音频分类器"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:102
+msgid "Model:"
+msgstr "模型:"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:108
+msgid "Files:"
+msgstr "文件："
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:110
+msgid "Only files in the selected categories"
+msgstr "仅显示所选类别的文件"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:111
+msgid "Exclude files in the selected categories"
+msgstr "在所选类别中排除文件"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:115
+msgid "Minimum confidence:"
+msgstr "最低置信度:"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:120
+msgid "off"
+msgstr "关闭"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:133
+msgid "Sample ratio:"
+msgstr "样本比例："
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:136
+msgid "Share of frames or pages sampled from videos, GIFs, PDFs and ePubs."
+msgstr "从视频、GIF、PDF 和 ePub 中抽样的帧或页面比例。"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:140
+msgid "Positive ratio:"
+msgstr "正比率："
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:143
+msgid ""
+"Share of sampled frames or pages that must be in the selected categories for"
+" the file to count as in them."
+msgstr "必须位于所选类别中的采样帧或页面的比例，以便该文件计入这些类别。"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:150
+#: src/ui/compare/classifier_management_window_qt.py:330
+msgid "Selected categories"
+msgstr "精选分类"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:151
+msgid "Model strategy (positive groups)"
+msgstr "模型策略（正向组）"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:170
+msgid ""
+"Videos, GIFs, PDFs and ePubs are sampled like in classifier actions. Files "
+"the classifier cannot handle (e.g. audio files for an image model) count as "
+"not in the selected categories."
+msgstr ""
+"视频、GIF、PDF 和 ePub 会像分类器操作中一样进行抽样。分类器无法处理的文件（例如用于图像模型的音频文件）被视为不属于选定的类别。"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:212
+msgid "{0} (not registered)"
+msgstr "{0} (未注册)"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:275
+msgid "No classifier models of this type are configured."
+msgstr "未配置此类型的分类器模型。"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:277
+msgid "This model is not registered; the compare run will fail until it is."
+msgstr "此模型未注册；比较运行将在注册后才会成功。"
+
+#: src/ui/compare/classifier_filter_dialog_qt.py:280
+msgid "These categories are no longer part of the model and were removed: {0}"
+msgstr "这些类别不再是模型的一部分，已被移除：{0}"
 
 #: src/ui/compare/classifier_management_window_qt.py:78
 #: src/ui/compare/prevalidations_tab_qt.py:121
@@ -5777,11 +6051,6 @@ msgstr "分类器 - 已选类别"
 msgid "Classifier Classification Mode"
 msgstr "分类器分类模式"
 
-#: src/ui/compare/classifier_filter_dialog_qt.py:150
-#: src/ui/compare/classifier_management_window_qt.py:330
-msgid "Selected categories"
-msgstr "精选分类"
-
 #: src/ui/compare/classifier_management_window_qt.py:331
 msgid "Model strategy"
 msgstr "模型策略"
@@ -5844,27 +6113,28 @@ msgstr "配置无效"
 msgid "Classifier Management"
 msgstr "分类器管理"
 
-#: src/ui/compare/classifier_management_window_qt.py:732
+#: src/ui/compare/classifier_management_window_qt.py:737
 #: src/ui/compare/prevalidations_tab_qt.py:267
 #: src/ui/compare/seek_to_trigger_tab_qt.py:241
-#: tests/ui/test_classifier_management_window_qt.py:61
+#: tests/ui/test_classifier_management_window_qt.py:63
+#: tests/ui/test_classifier_management_window_qt.py:113
 msgid "Prevalidations"
 msgstr "预验证"
 
-#: src/ui/compare/classifier_management_window_qt.py:733
-#: tests/ui/test_classifier_management_window_qt.py:62
+#: src/ui/compare/classifier_management_window_qt.py:738
+#: tests/ui/test_classifier_management_window_qt.py:64
 msgid "Seek to Trigger"
 msgstr "尝试触发"
 
-#: src/ui/compare/classifier_management_window_qt.py:734
+#: src/ui/compare/classifier_management_window_qt.py:739
 #: src/ui/compare/lookaheads_tab_qt.py:38
-#: tests/ui/test_classifier_management_window_qt.py:63
+#: tests/ui/test_classifier_management_window_qt.py:65
 msgid "Lookaheads"
 msgstr "前瞻"
 
-#: src/ui/compare/classifier_management_window_qt.py:735
+#: src/ui/compare/classifier_management_window_qt.py:740
 #: src/ui/compare/directory_profiles_tab_qt.py:75
-#: tests/ui/test_classifier_management_window_qt.py:64
+#: tests/ui/test_classifier_management_window_qt.py:66
 msgid "Directory Profiles"
 msgstr "目录简介"
 
@@ -5922,6 +6192,7 @@ msgstr "添加"
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2202
 #: src/ui/compare/directory_profile_window_qt.py:154
 #: src/ui/compare/directory_profile_window_qt.py:418
+#: src/ui/compare/pipeline_history_tab_qt.py:93
 #: src/ui/files/directory_notes_window_qt.py:198
 msgid "Remove"
 msgstr "移除"
@@ -6413,7 +6684,7 @@ msgstr "↑"
 
 #: src/ui/compare/classifier_pipeline_editor_qt.py:1583
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2204
-#: src/ui/compare/classifier_pipelines_tab_qt.py:271
+#: src/ui/compare/classifier_pipelines_tab_qt.py:273
 msgid "↓"
 msgstr "↓"
 
@@ -6482,7 +6753,7 @@ msgstr "启用后，GENERATE 操作会将当前工作目录传递给 sd-runner�
 
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2061
 #: src/ui/compare/classifier_pipeline_editor_qt.py:3071
-#: src/ui/compare/classifier_pipelines_tab_qt.py:295
+#: src/ui/compare/classifier_pipelines_tab_qt.py:297
 msgid "(no profiles)"
 msgstr "(没有个人资料)"
 
@@ -6570,6 +6841,26 @@ msgid ""
 msgstr ""
 "在批处理运行时，跳过已评估过的词干组文件。能够生成的管道也会跳过找不到或未归档的词干组。关闭后可独立评估每个文件。关联图像的排序顺序可让派生项更早被跳过，但这不是正确性所必需的。"
 
+#: src/ui/compare/classifier_pipeline_editor_qt.py:2156
+msgid ""
+"For video, GIF, PDF and ePub files, the share of frames or pages that "
+"classifier, embedding and prototype conditions sample."
+msgstr "对于视频、GIF、PDF 和 ePub 文件，分类器、嵌入和原型条件采样的帧或页的比例。"
+
+#: src/ui/compare/classifier_pipeline_editor_qt.py:2159
+msgid "Dynamic media sample ratio:"
+msgstr "动态媒体采样比例："
+
+#: src/ui/compare/classifier_pipeline_editor_qt.py:2162
+msgid ""
+"The share of sampled frames or pages that must match for such a condition to"
+" match the file."
+msgstr "必须匹配的采样帧或页面的比例，以使该条件匹配文件。"
+
+#: src/ui/compare/classifier_pipeline_editor_qt.py:2165
+msgid "Dynamic media positive ratio:"
+msgstr "动态媒体正比率:"
+
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2167
 msgid "Record per-node decisions"
 msgstr "记录每个节点的决策"
@@ -6582,7 +6873,7 @@ msgid ""
 msgstr "将每个已评估文件的节点匹配结果和分数写入运行转储，用于审计或阈值校准。每个文件添加一条记录，保存在内存中，直到运行结束。"
 
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2186
-#: src/ui/compare/classifier_pipelines_tab_qt.py:187
+#: src/ui/compare/classifier_pipelines_tab_qt.py:189
 msgid "Nodes"
 msgstr "节点"
 
@@ -6670,7 +6961,7 @@ msgid "Run Node"
 msgstr "运行 Node"
 
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2534
-#: src/ui/compare/classifier_pipelines_tab_qt.py:624
+#: src/ui/compare/classifier_pipelines_tab_qt.py:749
 msgid "No active media to run on."
 msgstr "没有可运行的活动媒体。"
 
@@ -6734,109 +7025,110 @@ msgstr "验证错误"
 msgid "Category Map Warnings"
 msgstr "类别地图警告"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:89
+#: src/ui/compare/classifier_pipelines_tab_qt.py:91
 msgid "Classifier Pipelines"
 msgstr "分类器管道"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:99
+#: src/ui/compare/classifier_pipelines_tab_qt.py:101
 msgid "Load Demo"
 msgstr "加载演示"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:100
+#: src/ui/compare/classifier_pipelines_tab_qt.py:102
 msgid "Insert the built-in demo pipeline"
 msgstr "插入内置的演示管道"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:104
+#: src/ui/compare/classifier_pipelines_tab_qt.py:106
 msgid "Load Example"
 msgstr "加载示例"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:105
+#: src/ui/compare/classifier_pipelines_tab_qt.py:107
 msgid "Insert an example pipeline shipped with the app"
 msgstr "插入随应用一起提供的示例管道"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:111
+#: src/ui/compare/classifier_pipelines_tab_qt.py:113
 msgid "Import..."
 msgstr "导入..."
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:112
+#: src/ui/compare/classifier_pipelines_tab_qt.py:114
 msgid ""
 "Add pipelines from a JSON file (an exported pipeline or a pipeline run dump)"
 msgstr "从 JSON 文件添加管道（已导出的管道或管道运行转储）"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:121
+#: src/ui/compare/classifier_pipelines_tab_qt.py:123
 msgid "Run on profile:"
 msgstr "在配置文件上运行:"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:186
+#: src/ui/compare/classifier_pipelines_tab_qt.py:188
 #: src/ui/compare/hf_model_manager_window_qt.py:801
 #: src/ui/compare/hf_model_manager_window_qt.py:866 src/utils/constants.py:171
 #: src/utils/constants.py:191
 msgid "Type"
 msgstr "类型"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:188
+#: src/ui/compare/classifier_pipelines_tab_qt.py:190
+#: src/ui/compare/pipeline_history_tab_qt.py:65
 #: src/ui/compare/prevalidations_tab_qt.py:336
 msgid "Profile"
 msgstr "目录简介"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:189
+#: src/ui/compare/classifier_pipelines_tab_qt.py:191
 msgid "Flow"
 msgstr "流"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:234
+#: src/ui/compare/classifier_pipelines_tab_qt.py:236
 msgid "Run on all files in the selected profile's directories"
 msgstr "在所选配置文件的目录中的所有文件上运行"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:238
+#: src/ui/compare/classifier_pipelines_tab_qt.py:240
 msgid "Run Current"
 msgstr "运行当前"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:239
+#: src/ui/compare/classifier_pipelines_tab_qt.py:241
 msgid "Run on the currently displayed media item only"
 msgstr "仅在当前显示的媒体项目上运行"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:246
-#: src/ui/compare/classifier_pipelines_tab_qt.py:724
-#: src/ui/compare/classifier_pipelines_tab_qt.py:733
-#: src/ui/compare/classifier_pipelines_tab_qt.py:752
+#: src/ui/compare/classifier_pipelines_tab_qt.py:248
+#: src/ui/compare/classifier_pipelines_tab_qt.py:849
+#: src/ui/compare/classifier_pipelines_tab_qt.py:858
+#: src/ui/compare/classifier_pipelines_tab_qt.py:877
 msgid "Rerun Last"
 msgstr "重新运行最后一个"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:248
+#: src/ui/compare/classifier_pipelines_tab_qt.py:250
 msgid ""
 "Re-dispatch generates and re-execute scrambles from the most recent run"
 msgstr "Redispatch 从最近的运行生成并重新执行打乱"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:254
+#: src/ui/compare/classifier_pipelines_tab_qt.py:256
 #: src/ui/compare/directory_profile_window_qt.py:150
 #: src/ui/files/file_interceptor_rules_window_qt.py:305
 msgid "Edit"
 msgstr "编辑"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:262
+#: src/ui/compare/classifier_pipelines_tab_qt.py:264
 msgid "Export"
 msgstr "导出"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:263
+#: src/ui/compare/classifier_pipelines_tab_qt.py:265
 msgid "Save this pipeline to a JSON file"
 msgstr "将此管道保存为 JSON 文件"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:318
+#: src/ui/compare/classifier_pipelines_tab_qt.py:320
 msgid "(no examples found)"
 msgstr "(未找到示例)"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:332
-#: src/ui/compare/classifier_pipelines_tab_qt.py:348
-#: src/ui/compare/classifier_pipelines_tab_qt.py:371
+#: src/ui/compare/classifier_pipelines_tab_qt.py:334
+#: src/ui/compare/classifier_pipelines_tab_qt.py:350
+#: src/ui/compare/classifier_pipelines_tab_qt.py:373
 msgid "Import Pipeline"
 msgstr "导入管道"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:333
-#: src/ui/compare/classifier_pipelines_tab_qt.py:377
+#: src/ui/compare/classifier_pipelines_tab_qt.py:335
+#: src/ui/compare/classifier_pipelines_tab_qt.py:379
 msgid "JSON files (*.json)"
 msgstr "JSON 文件 (*.json)"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:349
+#: src/ui/compare/classifier_pipelines_tab_qt.py:351
 msgid ""
 "Could not import {path}:\n"
 "{err}"
@@ -6844,7 +7136,7 @@ msgstr ""
 "无法导入 {path}:\n"
 "{err}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:363
+#: src/ui/compare/classifier_pipelines_tab_qt.py:365
 msgid ""
 "Imported {n} pipeline(s), inactive:\n"
 "{names}"
@@ -6852,11 +7144,11 @@ msgstr ""
 "已导入 {n} 条管道，未激活：\n"
 "{names}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:368
+#: src/ui/compare/classifier_pipelines_tab_qt.py:370
 msgid "…and {n} more"
 msgstr "…以及{n}项"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:369
+#: src/ui/compare/classifier_pipelines_tab_qt.py:371
 msgid ""
 "Fix these before activating:\n"
 "{problems}"
@@ -6864,12 +7156,12 @@ msgstr ""
 "在激活前修复以下问题：\n"
 "{problems}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:377
-#: src/ui/compare/classifier_pipelines_tab_qt.py:385
+#: src/ui/compare/classifier_pipelines_tab_qt.py:379
+#: src/ui/compare/classifier_pipelines_tab_qt.py:387
 msgid "Export Pipeline"
 msgstr "导出管道"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:386
+#: src/ui/compare/classifier_pipelines_tab_qt.py:388
 msgid ""
 "Could not write {path}:\n"
 "{err}"
@@ -6877,42 +7169,42 @@ msgstr ""
 "无法写入 {path}:\n"
 "{err}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:390
+#: src/ui/compare/classifier_pipelines_tab_qt.py:392
 msgid "Exported pipeline '{name}' to {path}"
 msgstr "已导出管道“{name}”到 {path}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:437
+#: src/ui/compare/classifier_pipelines_tab_qt.py:439
 msgid "Not Available"
 msgstr "不可用"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:437
+#: src/ui/compare/classifier_pipelines_tab_qt.py:439
 msgid "Pipeline editor not yet available."
 msgstr "管道编辑器尚未可用。"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:458
+#: src/ui/compare/classifier_pipelines_tab_qt.py:460
 msgid " (copy)"
 msgstr " (复制)"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:504
+#: src/ui/compare/classifier_pipelines_tab_qt.py:506
 msgid "No profile selected or profile not found."
 msgstr "未选择配置文件或找不到配置文件。"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:516
+#: src/ui/compare/classifier_pipelines_tab_qt.py:518
 msgid "Seed category: {cat}{suffix}"
 msgstr "种子类别：{cat}{suffix}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:526
+#: src/ui/compare/classifier_pipelines_tab_qt.py:528
 #: tests/ui/test_classifier_pipelines_tab_qt.py:836
 #: tests/ui/test_classifier_pipelines_tab_qt.py:845
 msgid "Last run on: {profile} (now switching to: {current})"
 msgstr "上次运行于：{profile}（现在切换至：{current}）"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:529
+#: src/ui/compare/classifier_pipelines_tab_qt.py:531
 #: tests/ui/test_classifier_pipelines_tab_qt.py:835
 msgid "Last run on: {profile}"
 msgstr "上次运行于：{profile}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:532
+#: src/ui/compare/classifier_pipelines_tab_qt.py:537
 msgid ""
 "Run pipeline '{name}' on profile '{profile}'?{details}\n"
 "\n"
@@ -6924,18 +7216,18 @@ msgstr ""
 "目录：\n"
 "{dirs}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:538
+#: src/ui/compare/classifier_pipelines_tab_qt.py:543
 msgid "Run Pipeline on Profile"
 msgstr "在配置文件上运行管道"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:557
-#: src/ui/compare/classifier_pipelines_tab_qt.py:643
+#: src/ui/compare/classifier_pipelines_tab_qt.py:660
+#: src/ui/compare/classifier_pipelines_tab_qt.py:768
 #: tests/ui/test_classifier_pipelines_tab_qt.py:995
 msgid "SD Runner Not Available"
 msgstr "SD Runner 不可用"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:559
-#: src/ui/compare/classifier_pipelines_tab_qt.py:645
+#: src/ui/compare/classifier_pipelines_tab_qt.py:662
+#: src/ui/compare/classifier_pipelines_tab_qt.py:770
 msgid ""
 "This pipeline has GENERATE actions but the SD Runner is not reachable.\n"
 "\n"
@@ -6949,11 +7241,11 @@ msgstr ""
 "\n"
 "仍然要继续吗？"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:606
+#: src/ui/compare/classifier_pipelines_tab_qt.py:731
 msgid "Disabled nodes (will be skipped): {nodes}"
 msgstr "已禁用的节点（将被跳过）：{nodes}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:631
+#: src/ui/compare/classifier_pipelines_tab_qt.py:756
 msgid ""
 "Run pipeline '{name}' on the current media?{details}\n"
 "\n"
@@ -6965,23 +7257,23 @@ msgstr ""
 "媒体：\n"
 "  {path}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:634
+#: src/ui/compare/classifier_pipelines_tab_qt.py:759
 msgid "Run Pipeline on Current Media"
 msgstr "在当前媒体上运行流水线"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:696
+#: src/ui/compare/classifier_pipelines_tab_qt.py:821
 msgid "Pipeline '{name}' on {file}: {action}"
 msgstr "流水线‘{name}’在 {file} 上：{action}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:702
+#: src/ui/compare/classifier_pipelines_tab_qt.py:827
 msgid "{n} generation request(s) queued"
 msgstr "{n} 条生成请求已排队"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:725
+#: src/ui/compare/classifier_pipelines_tab_qt.py:850
 msgid "No previous run dump found for '{name}'."
 msgstr "未找到“{name}”的先前运行转储。"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:734
+#: src/ui/compare/classifier_pipelines_tab_qt.py:859
 msgid ""
 "Could not load dump file:\n"
 "{err}"
@@ -6989,7 +7281,7 @@ msgstr ""
 "无法加载转储文件：\n"
 "{err}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:747
+#: src/ui/compare/classifier_pipelines_tab_qt.py:872
 msgid ""
 "Rerun last run of '{name}'?\n"
 "\n"
@@ -7003,7 +7295,7 @@ msgstr ""
 "需重新分发的 Generates：{n_gen}\n"
 "需重新执行的 Scrambles：{n_scr}"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:801
+#: src/ui/compare/classifier_pipelines_tab_qt.py:926
 msgid ""
 "Rerun complete for '{name}'.\n"
 "Generates dispatched: {n_gen}  Scrambles executed: {n_scr}"
@@ -7035,11 +7327,6 @@ msgstr "阈值"
 #: src/ui/compare/compare_settings_window_qt.py:285
 msgid "Max files to compare"
 msgstr "要比较的最大文件"
-
-#: src/compare/compare_result.py:287
-#: src/ui/compare/compare_settings_window_qt.py:303
-msgid "Overwrite cache"
-msgstr "覆盖缓存"
 
 #: src/ui/compare/compare_settings_window_qt.py:306
 msgid "Store checkpoints"
@@ -7126,6 +7413,7 @@ msgid "Profile Name"
 msgstr "目录配置文件名称"
 
 #: src/ui/compare/directory_profile_window_qt.py:128
+#: src/ui/compare/pipeline_history_tab_qt.py:67
 msgid "Directories"
 msgstr "目录"
 
@@ -7295,6 +7583,15 @@ msgstr "大小"
 msgid "Model"
 msgstr "模型"
 
+#: src/ui/compare/filter_builder_panel_qt.py:50
+#: src/ui/compare/filter_builder_panel_qt.py:148
+#: src/ui/compare/filter_builder_panel_qt.py:186
+#: src/ui/compare/filter_builder_panel_qt.py:255
+#: tests/ui/test_classifier_filter_dialog.py:213
+#: tests/ui/test_classifier_filter_dialog.py:223
+msgid "Classifier"
+msgstr "分类器"
+
 #: src/ui/compare/filter_builder_panel_qt.py:63
 #: src/ui/compare/filter_builder_panel_qt.py:177
 #: src/ui/compare/filter_builder_panel_qt.py:204
@@ -7336,6 +7633,10 @@ msgstr "任意"
 msgid "incl. LoRAs"
 msgstr "包含 LoRAs"
 
+#: src/ui/compare/filter_builder_panel_qt.py:129
+msgid "Edit…"
+msgstr "编辑…"
+
 #: src/ui/compare/filter_builder_panel_qt.py:139
 msgid "Remove this condition"
 msgstr "移除此条件"
@@ -7347,6 +7648,31 @@ msgstr "匹配:"
 #: src/ui/compare/filter_builder_panel_qt.py:300
 msgid "+ Add condition"
 msgstr "+ 添加条件"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:48
+#: tests/ui/test_hf_model_manager_window_detection.py:291
+#: tests/ui/test_hf_model_manager_window_detection.py:312
+msgid "Detections (after the threshold and box-area filters):"
+msgstr "检测（阈值和框面积过滤后）："
+
+#: src/ui/compare/hf_model_manager_window_qt.py:54
+#: tests/ui/test_hf_model_manager_window_detection.py:292
+#: tests/ui/test_hf_model_manager_window_detection.py:294
+msgid "{0}: {1:.2%} confidence, box covers {2:.1%} of the image"
+msgstr "{0}: 置信度 {1:.2%}，框覆盖图像的 {2:.1%}"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:58
+#: tests/ui/test_hf_model_manager_window_detection.py:293
+msgid "(counts toward: {0})"
+msgstr "(计入: {0})"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:61
+#: src/ui/files/directory_notes_window_qt.py:524
+#: src/ui/files/directory_notes_window_qt.py:555
+#: src/ui/files/file_actions_window_qt.py:334
+#: tests/ui/test_hf_model_manager_window_detection.py:303
+msgid "... and {0} more"
+msgstr "... 以及 {0} 项更多内容"
 
 #: src/ui/compare/hf_model_manager_window_qt.py:139
 #: src/ui/compare/hf_model_manager_window_qt.py:757
@@ -7384,6 +7710,16 @@ msgid ""
 msgstr ""
 "可选。PyTorch：内部缩放的宽度和高度（留空时默认 "
 "224×224）。HDF5（.h5）：加载的模型定义其自身的输入尺寸；此值存储在配置中，但加载时不使用。ONNX（.onnx）：当留空时根据模型声明的输入张量形状推断；设置此项可覆盖默认值。"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:174
+msgid ""
+"TFLite (.tflite): inferred from the model's declared input tensor shape; "
+"only applied when that shape is dynamic."
+msgstr "TFLite (.tflite)：从模型声明的输入张量形状推断；仅在该形状为动态时适用。"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:177
+msgid "Object detection: not used; the model's processor sets the input size."
+msgstr "对象检测：未使用；模型的处理器设置输入尺寸。"
 
 #: src/ui/compare/hf_model_manager_window_qt.py:179
 msgid "Input shape (WxH)"
@@ -7458,6 +7794,35 @@ msgstr "结构模块"
 msgid "Arch class"
 msgstr "架构类"
 
+#: src/ui/compare/hf_model_manager_window_qt.py:249
+msgid "Background category"
+msgstr "背景类别"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:252
+msgid ""
+"The category for images without a qualifying detection, e.g. \"no person\". "
+"It must also be listed in Categories; every other category must be a label "
+"of the model."
+msgstr "对没有符合条件的检测的图像的类别，例如“无人物”。它还必须列在“类别”中；所有其他标签必须是模型的标签。"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:256
+msgid "Detection threshold"
+msgstr "检测阈值"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:263
+msgid "Detections below this confidence are ignored."
+msgstr "置信度低于此阈值的检测将被忽略。"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:265
+msgid "Min box area"
+msgstr "最小框面积"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:273
+msgid ""
+"Ignore detections whose box covers less than this fraction of the image, "
+"e.g. 0.02 to skip small background figures."
+msgstr "忽略框覆盖面积小于图像此比例的检测，例如 0.02，以跳过小的背景图形。"
+
 #: src/ui/compare/hf_model_manager_window_qt.py:315
 msgid "Select model file"
 msgstr "选择模型文件"
@@ -7484,6 +7849,15 @@ msgstr "无效输入形状"
 #: src/ui/compare/hf_model_manager_window_qt.py:415
 msgid "Use two positive integers, for example 224, 224 or 384x384."
 msgstr "使用两个正整数，例如 224、224 或者 384×384 像素。"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:445
+#: tests/ui/test_hf_model_manager_window_detection.py:164
+msgid "Invalid background category"
+msgstr "无效的背景类别"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:446
+msgid "The background category '{0}' must also be listed in Categories."
+msgstr "背景类别“{0}”也必须列在“类别”中。"
 
 #: src/ui/compare/hf_model_manager_window_qt.py:470
 msgid "Invalid model configuration"
@@ -7603,6 +7977,7 @@ msgstr ""
 "经过精选、已知与本应用配合良好的模型。安装时会从 Hugging Face 下载文件，并自动将其添加到您的分类器配置中——无需手动编辑 JSON 文件。"
 
 #: src/ui/compare/hf_model_manager_window_qt.py:866
+#: src/ui/compare/pipeline_history_tab_qt.py:65
 msgid "Status"
 msgstr "状态"
 
@@ -7678,6 +8053,19 @@ msgstr "已加载 {0} 的仓库文件。"
 msgid "Please enter a filename to download."
 msgstr "请输入要下载的文件名。"
 
+#: src/ui/compare/hf_model_manager_window_qt.py:1199
+#: tests/ui/test_hf_model_manager_window_model_files.py:78
+#: tests/ui/test_hf_model_manager_window_model_files.py:91
+#: tests/ui/test_hf_model_manager_window_model_files.py:98
+msgid "Not a Model File?"
+msgstr "不是模型文件吗？"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:1200
+msgid ""
+"'{0}' does not have a recognized model file extension ({1}). Install it "
+"anyway?"
+msgstr "‘{0}’ 没有已识别的模型文件扩展名 ({1})。仍然安装吗？"
+
 #: src/ui/compare/hf_model_manager_window_qt.py:1213
 msgid "Unable to locate selected file in downloaded snapshot: {0}"
 msgstr "无法在下载的快照中找到选定文件：{0}"
@@ -7695,6 +8083,12 @@ msgstr "模型名称不能为空。"
 #: src/ui/compare/hf_model_manager_window_qt.py:1308
 msgid "Please enter at least one category."
 msgstr "请至少输入一个类别。"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:1239
+msgid ""
+"Only one category may be something other than a label of this model (the "
+"background category, e.g. \"no person\"). Not model labels: {0}"
+msgstr "此模型只能有一个类别不是标签（背景类别，例如“no person”）。非模型标签：{0}"
 
 #: src/ui/compare/hf_model_manager_window_qt.py:1284
 msgid "Downloaded and installed model '{0}'."
@@ -8377,14 +8771,6 @@ msgstr "导入 {0} 个文件。"
 msgid "{0} filenames not found:"
 msgstr "{0} 未找到文件名："
 
-#: src/ui/compare/hf_model_manager_window_qt.py:61
-#: src/ui/files/directory_notes_window_qt.py:524
-#: src/ui/files/directory_notes_window_qt.py:555
-#: src/ui/files/file_actions_window_qt.py:334
-#: tests/ui/test_hf_model_manager_window_detection.py:303
-msgid "... and {0} more"
-msgstr "... 以及 {0} 项更多内容"
-
 #: src/ui/files/directory_notes_window_qt.py:526
 #: src/ui/files/directory_notes_window_qt.py:557
 msgid "Import Complete"
@@ -8556,7 +8942,7 @@ msgid "Move"
 msgstr "移动"
 
 #: src/ui/files/file_action_sets_window_qt.py:271
-#: src/ui/files/related_images_window_qt.py:73
+#: src/ui/files/related_images_window_qt.py:75
 msgid "(no directory)"
 msgstr "(无目录)"
 
@@ -9379,129 +9765,129 @@ msgstr "设置图像比较目录"
 msgid "Set image comparison directory"
 msgstr "设定图像比较目录"
 
-#: src/ui/files/related_images_window_qt.py:49
+#: src/ui/files/related_images_window_qt.py:51
 msgid "Related Images"
 msgstr "相关图片"
 
-#: src/ui/files/related_images_window_qt.py:63
+#: src/ui/files/related_images_window_qt.py:65
 msgid "Related Image Actions"
 msgstr "相关图像操作"
 
-#: src/ui/files/related_images_window_qt.py:74
+#: src/ui/files/related_images_window_qt.py:76
 msgid "Current media source: {0}"
 msgstr "当前媒体来源：{0}"
 
-#: src/ui/files/related_images_window_qt.py:78
+#: src/ui/files/related_images_window_qt.py:80
 msgid ""
 "Actions in this window use the current media of the window that opened it."
 msgstr "此窗口中的操作将使用打开该窗口的窗口的当前媒体。"
 
-#: src/ui/files/related_images_window_qt.py:85
+#: src/ui/files/related_images_window_qt.py:87
 #: src/ui/image/media_details.py:1568
 msgid "View related image"
 msgstr "查看相关图片"
 
-#: src/ui/files/related_images_window_qt.py:87
+#: src/ui/files/related_images_window_qt.py:89
 msgid "Next downstream image in open window"
 msgstr "打开窗口中的下一个下游图像"
 
-#: src/ui/files/related_images_window_qt.py:93
+#: src/ui/files/related_images_window_qt.py:95
 msgid "Mark all downstream files in current directory"
 msgstr "标记当前目录中的所有下游文件"
 
-#: src/ui/files/related_images_window_qt.py:95
+#: src/ui/files/related_images_window_qt.py:97
 #: tests/ui/test_related_images_window.py:75
 msgid "Mark files without a related image in current directory"
 msgstr "标记当前目录中没有关联图像的文件"
 
-#: src/ui/files/related_images_window_qt.py:97
+#: src/ui/files/related_images_window_qt.py:99
 #: tests/ui/test_related_images_window.py:74
 msgid "Search all open windows for downstream images"
 msgstr "在所有打开的窗口中搜索下游图像"
 
-#: src/ui/files/related_images_window_qt.py:115
+#: src/ui/files/related_images_window_qt.py:135
 msgid "Results"
 msgstr "结果"
 
-#: src/ui/files/related_images_window_qt.py:121
+#: src/ui/files/related_images_window_qt.py:141
 msgid "(no results yet)"
 msgstr "（暂无结果）"
 
-#: src/ui/files/related_images_window_qt.py:145
-#: tests/ui/test_related_images_window.py:152
+#: src/ui/files/related_images_window_qt.py:165
+#: tests/ui/test_related_images_window.py:170
 msgid "cancelled"
 msgstr "已取消"
 
-#: src/ui/files/related_images_window_qt.py:146
+#: src/ui/files/related_images_window_qt.py:166
 msgid "waiting"
 msgstr "等待中"
 
-#: src/ui/files/related_images_window_qt.py:147
+#: src/ui/files/related_images_window_qt.py:167
 msgid "no media"
 msgstr "无媒体"
 
-#: src/ui/files/related_images_window_qt.py:148
+#: src/ui/files/related_images_window_qt.py:168
 msgid "no files"
 msgstr "没有文件"
 
-#: src/ui/files/related_images_window_qt.py:149
+#: src/ui/files/related_images_window_qt.py:169
 msgid "too many files"
 msgstr "文件过多"
 
-#: src/ui/files/related_images_window_qt.py:160
-#: tests/ui/test_related_images_window.py:128
+#: src/ui/files/related_images_window_qt.py:180
+#: tests/ui/test_related_images_window.py:146
 msgid "metadata"
 msgstr "元数据"
 
-#: src/ui/files/related_images_window_qt.py:161
+#: src/ui/files/related_images_window_qt.py:181
 msgid "filename"
 msgstr "文件名"
 
-#: src/ui/files/related_images_window_qt.py:162
-#: tests/ui/test_related_images_window.py:128
+#: src/ui/files/related_images_window_qt.py:182
+#: tests/ui/test_related_images_window.py:146
 msgid "name prefix"
 msgstr "姓名前缀"
 
-#: src/ui/files/related_images_window_qt.py:183
+#: src/ui/files/related_images_window_qt.py:203
 msgid "source: {0}"
 msgstr "源: {0}"
 
-#: src/ui/files/related_images_window_qt.py:193
+#: src/ui/files/related_images_window_qt.py:213
 msgid "searched {0} director(ies)"
 msgstr "已搜索 {0} 位导演"
 
-#: src/ui/files/related_images_window_qt.py:195
+#: src/ui/files/related_images_window_qt.py:215
 msgid "in {0}"
 msgstr "在 {0}"
 
-#: src/ui/files/related_images_window_qt.py:201
+#: src/ui/files/related_images_window_qt.py:221
 msgid "{0} of {1} file(s) scanned"
 msgstr "{0}/{1} 文件已扫描"
 
-#: src/ui/files/related_images_window_qt.py:203
+#: src/ui/files/related_images_window_qt.py:223
 msgid "{0} file(s) scanned"
 msgstr "{0} 个文件已扫描"
 
-#: src/ui/files/related_images_window_qt.py:207
-#: tests/ui/test_related_images_window.py:140
+#: src/ui/files/related_images_window_qt.py:227
+#: tests/ui/test_related_images_window.py:158
 msgid "{0} of {1} in cycle"
 msgstr "{0}/{1} 在循环中"
 
-#: src/ui/files/related_images_window_qt.py:211
+#: src/ui/files/related_images_window_qt.py:231
 msgid "matched by: "
 msgstr "匹配于： "
 
-#: src/ui/files/related_images_window_qt.py:216
-#: tests/ui/test_related_images_window.py:129
+#: src/ui/files/related_images_window_qt.py:236
+#: tests/ui/test_related_images_window.py:147
 msgid "from a cached scan"
 msgstr "来自缓存扫描"
 
-#: src/ui/files/related_images_window_qt.py:223
+#: src/ui/files/related_images_window_qt.py:243
 msgid ", and {0} more"
 msgstr ", 还有{0}个"
 
-#: src/ui/files/related_images_window_qt.py:228
-#: tests/ui/test_related_images_window.py:115
+#: src/ui/files/related_images_window_qt.py:248
+#: tests/ui/test_related_images_window.py:133
 msgid "{0} large unconfirmed director(ies) skipped"
 msgstr "{0} 条大型未确认导演已跳过"
 
@@ -9513,84 +9899,84 @@ msgstr "选择目标目录"
 msgid "Select directory to search for related files"
 msgstr "选择目录以搜索相关文件"
 
-#: src/ui/files/type_configuration_window_qt.py:44
+#: src/ui/files/type_configuration_window_qt.py:62
 msgid "Basic image files (PNG, JPG, etc.)"
 msgstr "基本图片文件(PNG、JPG 等)"
 
-#: src/ui/files/type_configuration_window_qt.py:45
+#: src/ui/files/type_configuration_window_qt.py:63
 msgid "Video files (MP4, AVI, etc.) - First frame will be extracted"
 msgstr "视频文件( MP4, AVI等) - 将提取第一帧"
 
-#: src/ui/files/type_configuration_window_qt.py:46
+#: src/ui/files/type_configuration_window_qt.py:64
 msgid "Animated GIF files - First frame will be extracted"
 msgstr "GIF 动画文件 - 第一个框架将被提取"
 
-#: src/ui/files/type_configuration_window_qt.py:47
+#: src/ui/files/type_configuration_window_qt.py:65
 msgid "PDF documents - First page will be extracted"
 msgstr "PDF 文档 - 将提取第一页"
 
-#: src/ui/files/type_configuration_window_qt.py:48
+#: src/ui/files/type_configuration_window_qt.py:66
 msgid "ePub e-books - Cover and pages will be rendered"
 msgstr "ePub 电子书 – 封面和页面将被渲染"
 
-#: src/ui/files/type_configuration_window_qt.py:49
+#: src/ui/files/type_configuration_window_qt.py:67
 msgid "Vector graphics - Will be converted to raster image"
 msgstr "矢量图形 - 将转换为光栅图像"
 
-#: src/ui/files/type_configuration_window_qt.py:50
+#: src/ui/files/type_configuration_window_qt.py:68
 msgid "HTML files - Will be rendered and converted to image"
 msgstr "HTML 文件 - 将渲染并转换成图像"
 
-#: src/ui/files/type_configuration_window_qt.py:52
+#: src/ui/files/type_configuration_window_qt.py:70
 msgid ""
 "Audio files (MP3, FLAC, etc.) - Browse and playback; not used in embedding "
 "compare"
 msgstr "音频文件（MP3、FLAC 等）- 浏览和播放；不用于嵌入比较"
 
-#: src/ui/files/type_configuration_window_qt.py:60
+#: src/ui/files/type_configuration_window_qt.py:78
 msgid "PDF support requires pypdfium2 package"
 msgstr "PDF 支持需要 pypdfium2 软件包"
 
-#: src/ui/files/type_configuration_window_qt.py:65
+#: src/ui/files/type_configuration_window_qt.py:83
 msgid "ePub support requires pyppeteer and pypdfium2 packages"
 msgstr "ePub 支持需要 pyppeteer 和 pypdfium2 包"
 
-#: src/ui/files/type_configuration_window_qt.py:70
+#: src/ui/files/type_configuration_window_qt.py:39
 msgid "SVG support requires cairosvg package"
 msgstr "SVG 支持需要 cairosvg 软件包"
 
-#: src/ui/files/type_configuration_window_qt.py:75
+#: src/ui/files/type_configuration_window_qt.py:89
 msgid "HTML support requires pyppeteer package"
 msgstr "支持 HTML 功能需要安装 pyppeteer 包"
 
-#: src/ui/files/type_configuration_window_qt.py:159
+#: src/ui/files/type_configuration_window_qt.py:173
 msgid "Media Type Configuration"
 msgstr "媒体类型配置"
 
-#: src/ui/files/type_configuration_window_qt.py:170 src/utils/constants.py:717
+#: src/ui/files/type_configuration_window_qt.py:184 src/utils/constants.py:717
 msgid "Configure Media Types"
 msgstr "配置媒体类型"
 
-#: src/ui/files/type_configuration_window_qt.py:177
+#: src/ui/files/type_configuration_window_qt.py:191
 msgid ""
 "Select which types of media files you want to compare. Changes will require "
 "a refresh of open comparisons but files in browsing mode should update "
 "automatically."
 msgstr "选择要比较的媒体文件类型。更改将需要刷新打开的比较，但浏览模式下的文件应会自动更新。"
 
-#: src/ui/files/type_configuration_window_qt.py:240
+#: src/ui/files/type_configuration_window_qt.py:260
 msgid "Apply Changes"
 msgstr "应用更改"
 
-#: src/ui/files/type_configuration_window_qt.py:285
+#: src/ui/files/type_configuration_window_qt.py:305
 msgid "Confirm Changes"
 msgstr "确认更改"
 
-#: src/ui/files/type_configuration_window_qt.py:286
+#: src/ui/files/type_configuration_window_qt.py:306
 msgid "This will clear all existing compares in open windows. Continue?"
 msgstr "这将清除所有在开放窗口中的比较 。 继续?"
 
-#: src/ui/files/type_configuration_window_qt.py:373
+#: src/ui/files/type_configuration_window_qt.py:393
 msgid "Media type configuration updated"
 msgstr "更新媒体类型配置"
 
@@ -10499,402 +10885,351 @@ msgstr "Shift"
 msgid "Alt"
 msgstr "Alt"
 
-#: src/ui/compare/hf_model_manager_window_qt.py:174
+#: src/compare/pipeline_run_history.py:77
+msgid "Running"
+msgstr "运行中"
+
+#: src/compare/pipeline_run_history.py:78
+#: tests/ui/test_pipeline_history_tab_qt.py:76
+msgid "Completed"
+msgstr "已完成"
+
+#: src/compare/pipeline_run_history.py:79
+msgid "Completed with errors"
+msgstr "完成，出现错误"
+
+#: src/compare/pipeline_run_history.py:80
+#: tests/ui/test_pipeline_history_tab_qt.py:75
+#: tests/unit/test_pipeline_run_history.py:98
+msgid "Cancelled"
+msgstr "已取消"
+
+#: src/compare/pipeline_run_history.py:81
+msgid "Failed"
+msgstr "失败"
+
+#: src/compare/pipeline_run_history.py:82
+msgid "Interrupted"
+msgstr "已中断"
+
+#: src/compare/pipeline_run_service.py:248
+msgid "This run was already resumed."
+msgstr "此运行已恢复。"
+
+#: src/compare/pipeline_run_service.py:251
 msgid ""
-"TFLite (.tflite): inferred from the model's declared input tensor shape; "
-"only applied when that shape is dynamic."
-msgstr "TFLite (.tflite)：从模型声明的输入张量形状推断；仅在该形状为动态时适用。"
+"Only cancelled, failed or interrupted runs with saved progress can be "
+"resumed."
+msgstr "仅可恢复已保存进度的已取消、失败或中断的运行。"
 
-#: src/ui/compare/hf_model_manager_window_qt.py:1199
-#: tests/ui/test_hf_model_manager_window_model_files.py:78
-#: tests/ui/test_hf_model_manager_window_model_files.py:91
-#: tests/ui/test_hf_model_manager_window_model_files.py:98
-msgid "Not a Model File?"
-msgstr "不是模型文件吗？"
+#: src/compare/pipeline_run_service.py:245
+msgid "This run is no longer in the history."
+msgstr "此运行已不再出现在历史记录中。"
 
-#: src/ui/compare/hf_model_manager_window_qt.py:1200
+#: src/compare/pipeline_run_service.py:255
+#: tests/unit/test_pipeline_run_service.py:199
+msgid "Pipeline '{0}' no longer exists."
+msgstr "流水线“{0}”不再存在。"
+
+#: src/compare/pipeline_run_report.py:160
+#: tests/unit/test_classifier_pipeline_runner.py:1553
+msgid "Pipeline {0} — run cancelled"
+msgstr "Pipeline {0} — 运行已取消"
+
+#: src/compare/pipeline_run_report.py:195
+#: tests/unit/test_classifier_pipeline_runner.py:1555
+msgid "Resumed run: {0} file(s) already processed earlier were skipped"
+msgstr "已恢复运行：已提前处理的{0}个文件被跳过"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:616
+#: src/ui/compare/classifier_pipelines_tab_qt.py:619
+#: src/ui/compare/classifier_pipelines_tab_qt.py:638
+#: src/ui/compare/pipeline_history_tab_qt.py:259
+msgid "Resume Pipeline Run"
+msgstr "恢复流水线运行"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:568
+#: tests/ui/test_classifier_actions_tab_qt.py:208
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1176
 msgid ""
-"'{0}' does not have a recognized model file extension ({1}). Install it "
-"anyway?"
-msgstr "‘{0}’ 没有已识别的模型文件扩展名 ({1})。仍然安装吗？"
+"Last run of this pipeline on these directories: {date} ({status}, profile "
+"'{profile}')"
+msgstr "此流水线在这些目录上的上次运行时间：{date}（{status}，配置文件 '{profile}'）"
 
-#: src/compare/base_compare.py:360
-msgid "Classifier filter"
-msgstr "分类器过滤器"
-
-#: src/compare/compare_filters.py:513 src/compare/compare_filters.py:576
-msgid "The classifier \"{0}\" used in the compare filters is not registered."
-msgstr "比较过滤器中使用的分类器“{0}”未注册。"
-
-#: src/compare/compare_filters.py:522
+#: src/ui/compare/classifier_pipelines_tab_qt.py:570
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1187
 msgid ""
-"The classifier \"{0}\" used in the compare filters could not be loaded. See "
-"the log for details."
-msgstr "比较过滤器中使用的分类器“{0}”未能加载。请查看日志了解详情。"
+"Last run of this pipeline on overlapping directories: {date} ({status}, "
+"profile '{profile}')"
+msgstr "此流水线在重叠目录上的最近运行时间: {date} ({status}, 配置文件 '{profile}')"
 
-#: src/compare/compare_filters.py:536
+#: src/ui/compare/classifier_pipelines_tab_qt.py:623
 msgid ""
-"The classifier \"{0}\" defines no positive groups, so its model strategy "
-"cannot be used as a compare filter."
-msgstr "分类器 \"{0}\" 未定义正向组，因此其模型策略不能用作比较过滤器。"
+"The pipeline was edited since this run; the current definition will be used."
+msgstr "自此运行后已编辑管道；将使用当前定义。"
 
-#: src/compare/compare_filters.py:544
+#: src/ui/compare/classifier_pipelines_tab_qt.py:630
 msgid ""
-"The compare filter for classifier \"{0}\" uses categories the model does not"
-" have: {1}"
-msgstr "比较过滤器（分类器 \"{0}\"）使用了模型中不存在的类别：{1}"
-
-#: src/compare/compare_filters.py:549
-msgid "The compare filter for classifier \"{0}\" has no categories selected."
-msgstr "分类器\"{0}\"的比较过滤器未选择任何类别。"
-
-#: src/compare/compare_manager.py:1286
-msgid "No matching groups found"
-msgstr "未找到匹配的群组"
-
-#: src/compare/compare_manager.py:1289
-msgid "No groups survived the composite filter criteria."
-msgstr "没有组满足复合过滤条件。"
-
-#: src/compare/compare_manager.py:1345
-msgid "{0} matches found (composite search)"
-msgstr "{0} 条匹配项已找到（复合搜索）"
-
-#: src/compare/compare_manager.py:1350
-msgid "No matches found"
-msgstr "未找到匹配项"
-
-#: src/compare/compare_manager.py:1353
-msgid "None of the files match the composite search criteria."
-msgstr "没有文件符合复合搜索条件。"
-
-#: src/compare/compare_result.py:276 tests/compare/test_compare_result.py:158
-msgid "(and {0} more)"
-msgstr "（还有{0}个）"
-
-#: src/compare/compare_result.py:279
-msgid "The compare checkpoint no longer matches the files being compared: {0}"
-msgstr "比较检查点不再匹配正在比较的文件：{0}"
-
-#: src/compare/compare_result.py:281 tests/compare/test_compare_result.py:156
-msgid "Removed ({0}): {1}"
-msgstr "已删除 ({0}): {1}"
-
-#: src/compare/compare_result.py:283 tests/compare/test_compare_result.py:159
-msgid "Added ({0}): {1}"
-msgstr "已添加 ({0})：{1}"
-
-#: src/compare/compare_result.py:285 tests/compare/test_compare_result.py:166
-msgid ""
-"No file was added or removed, but the file list is in a different order."
-msgstr "未添加或删除文件，但文件列表的顺序不同。"
-
-#: src/compare/compare_result.py:286
-msgid ""
-"Enable \"{0}\" in the compare settings, or delete the checkpoint file, to "
-"rebuild it."
-msgstr "在比较设置中启用 \"{0}\"，或删除检查点文件以重新生成它。"
-
-#: src/compare/compare_wrapper.py:837
-msgid "Compare filters excluded {0} of {1} files"
-msgstr "比较过滤器在 {1} 个文件中排除了 {0} 个"
-
-#: src/files/marked_files.py:830 tests/unit/test_marked_files_undo.py:176
-msgid "Cannot undo the last marked files move after a file was deleted."
-msgstr "文件被删除后，无法撤销上一次标记文件的移动。"
-
-#: src/files/marked_files.py:834 tests/unit/test_marked_files_undo.py:162
-msgid "No marked files move or copy to undo."
-msgstr "没有标记的文件可用于撤销移动或复制。"
-
-#: src/files/marked_files.py:873 tests/unit/test_marked_files_undo.py:85
-msgid "Moved back {0} files from {1} to {2}"
-msgstr "已将 {0} 个文件从 {1} 移回 {2}"
-
-#: src/files/marked_files.py:875 tests/unit/test_marked_files_undo.py:100
-msgid "Moved back {0} files from {1} to {2} directories"
-msgstr "已将 {0} 个文件从 {1} 移回 {2} 目录"
-
-#: src/ui/app_window/file_ops_controller.py:1309
-msgid "Randomize filenames is already running"
-msgstr "随机化文件名已在运行"
-
-#: src/ui/app_window/window_launcher.py:39
-msgid "Window Error"
-msgstr "窗口错误"
-
-#: src/ui/app_window/window_launcher.py:60
-#: src/ui/app_window/window_launcher.py:78
-msgid "Go To File Window Error"
-msgstr "转到文件窗口错误"
-
-#: src/ui/app_window/window_launcher.py:104
-msgid "Recent Directory Window Error"
-msgstr "最近的目录窗口错误"
-
-#: src/ui/app_window/window_launcher.py:112
-msgid "Favorites Window Error"
-msgstr "收藏夹窗口错误"
-
-#: src/ui/app_window/window_launcher.py:120
-msgid "Embedding Seed Library Window Error"
-msgstr "嵌入种子库窗口错误"
-
-#: src/ui/app_window/window_launcher.py:155
-#: src/ui/app_window/window_launcher.py:181
-msgid "Save Embedding Seed Error"
-msgstr "保存嵌入种子错误"
-
-#: src/ui/app_window/window_launcher.py:190
-msgid "Related Images Window Error"
-msgstr "相关图像窗口错误"
-
-#: src/ui/app_window/window_launcher.py:221
-msgid "Directory Notes Window Error"
-msgstr "目录备注窗口错误"
-
-#: src/ui/app_window/window_launcher.py:236
-msgid "Compare Settings Window Error"
-msgstr "比较设置窗口错误"
-
-#: src/ui/app_window/window_launcher.py:245
-msgid "HF Hub Model Manager Window Error"
-msgstr "HF Hub 模型管理器窗口错误"
-
-#: src/ui/app_window/window_launcher.py:265
-msgid "Prevalidations Window Error"
-msgstr "预验证窗口错误"
-
-#: src/ui/app_window/window_launcher.py:277
-msgid "Classifier Actions Window Error"
-msgstr "分类器操作窗口错误"
-
-#: src/ui/app_window/window_launcher.py:296
-msgid "File Actions Window Error"
-msgstr "文件操作窗口错误"
-
-#: src/ui/app_window/window_launcher.py:323
-msgid "File Action Sets Window Error"
-msgstr "文件操作集窗口错误"
-
-#: src/ui/app_window/window_launcher.py:331
-msgid "File Interceptor Rules Window Error"
-msgstr "文件拦截器规则窗口错误"
-
-#: src/ui/app_window/window_launcher.py:339
-msgid "Auto-Sort Confirmation Window Error"
-msgstr "自动排序确认窗口错误"
-
-#: src/ui/app_window/window_launcher.py:351
-msgid "Password Admin Window Error"
-msgstr "密码管理员窗口错误"
-
-#: src/ui/app_window/window_launcher.py:427
-msgid "Image Details Error"
-msgstr "图像详情错误"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:45
-#: tests/ui/test_classifier_filter_dialog.py:157
-msgid "(not configured)"
-msgstr "(未配置)"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:47
-msgid "model strategy"
-msgstr "模型策略"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:51
-msgid "{0}: exclude {1}"
-msgstr "{0}：排除 {1}"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:53
-#: tests/ui/test_classifier_filter_dialog.py:161
-msgid "{0}: only {1}"
-msgstr "{0}：仅{1}"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:55
-msgid "(min. {0:.2f})"
-msgstr "(最小 {0:.2f})"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:66
-msgid "Classifier Filter"
-msgstr "分类器过滤器"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:94
-msgid "Classifier type:"
-msgstr "分类器类型："
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:96
-msgid "Image classifier"
-msgstr "图像分类器"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:97
-msgid "Audio classifier"
-msgstr "音频分类器"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:102
-msgid "Model:"
-msgstr "模型:"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:108
-msgid "Files:"
-msgstr "文件："
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:110
-msgid "Only files in the selected categories"
-msgstr "仅显示所选类别的文件"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:111
-msgid "Exclude files in the selected categories"
-msgstr "在所选类别中排除文件"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:115
-msgid "Minimum confidence:"
-msgstr "最低置信度:"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:120
-msgid "off"
-msgstr "关闭"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:133
-msgid "Sample ratio:"
-msgstr "样本比例："
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:136
-msgid "Share of frames or pages sampled from videos, GIFs, PDFs and ePubs."
-msgstr "从视频、GIF、PDF 和 ePub 中抽样的帧或页面比例。"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:140
-msgid "Positive ratio:"
-msgstr "正比率："
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:143
-msgid ""
-"Share of sampled frames or pages that must be in the selected categories for"
-" the file to count as in them."
-msgstr "必须位于所选类别中的采样帧或页面的比例，以便该文件计入这些类别。"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:151
-msgid "Model strategy (positive groups)"
-msgstr "模型策略（正向组）"
-
-#: src/ui/compare/classifier_filter_dialog_qt.py:170
-msgid ""
-"Videos, GIFs, PDFs and ePubs are sampled like in classifier actions. Files "
-"the classifier cannot handle (e.g. audio files for an image model) count as "
-"not in the selected categories."
+"Resume pipeline '{name}' from {date}? {count} file(s) already processed will be skipped.\n"
+"\n"
+"Directories:\n"
+"{dirs}"
 msgstr ""
-"视频、GIF、PDF 和 ePub 会像分类器操作中一样进行抽样。分类器无法处理的文件（例如用于图像模型的音频文件）被视为不属于选定的类别。"
+"从 {date} 恢复管道“{name}”？ 已跳过 {count} 个已处理的文件。\n"
+"\n"
+"目录：\n"
+"{dirs}"
 
-#: src/ui/compare/classifier_filter_dialog_qt.py:212
-msgid "{0} (not registered)"
-msgstr "{0} (未注册)"
+#: src/ui/compare/classifier_pipelines_tab_qt.py:596
+msgid "Resume the unfinished run, or start a new run from the beginning?"
+msgstr "继续未完成的运行，还是从头开始新的运行？"
 
-#: src/ui/compare/classifier_filter_dialog_qt.py:275
-msgid "No classifier models of this type are configured."
-msgstr "未配置此类型的分类器模型。"
+#: src/ui/compare/classifier_pipelines_tab_qt.py:597
+#: src/ui/compare/pipeline_history_tab_qt.py:87
+msgid "Resume"
+msgstr "简历"
 
-#: src/ui/compare/classifier_filter_dialog_qt.py:277
-msgid "This model is not registered; the compare run will fail until it is."
-msgstr "此模型未注册；比较运行将在注册后才会成功。"
+#: src/ui/compare/classifier_pipelines_tab_qt.py:597
+msgid "Start New Run"
+msgstr "开始新运行"
 
-#: src/ui/compare/classifier_filter_dialog_qt.py:280
-msgid "These categories are no longer part of the model and were removed: {0}"
-msgstr "这些类别不再是模型的一部分，已被移除：{0}"
+#: src/ui/compare/classifier_pipelines_tab_qt.py:606
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1206
+msgid "Run Anyway"
+msgstr "仍然执行"
 
-#: src/ui/compare/classifier_pipeline_editor_qt.py:2156
+#: src/ui/compare/classifier_pipelines_tab_qt.py:577
 msgid ""
-"For video, GIF, PDF and ePub files, the share of frames or pages that "
-"classifier, embedding and prototype conditions sample."
-msgstr "对于视频、GIF、PDF 和 ePub 文件，分类器、嵌入和原型条件采样的帧或页的比例。"
+"WARNING: pipeline '{name}' is running on overlapping directories (started "
+"{date})."
+msgstr "警告：管道‘{name}’在重叠目录中运行（开始于 {date}）。"
 
-#: src/ui/compare/classifier_pipeline_editor_qt.py:2159
-msgid "Dynamic media sample ratio:"
-msgstr "动态媒体采样比例："
-
-#: src/ui/compare/classifier_pipeline_editor_qt.py:2162
+#: src/ui/compare/classifier_pipelines_tab_qt.py:580
 msgid ""
-"The share of sampled frames or pages that must match for such a condition to"
-" match the file."
-msgstr "必须匹配的采样帧或页面的比例，以使该条件匹配文件。"
+"The last run on these directories did not finish ({status}, {count} file(s) "
+"processed)."
+msgstr "这些目录的最近一次运行未完成（{status}，已处理 {count} 个文件）。"
 
-#: src/ui/compare/classifier_pipeline_editor_qt.py:2165
-msgid "Dynamic media positive ratio:"
-msgstr "动态媒体正比率:"
+#: src/ui/compare/classifier_pipelines_tab_qt.py:625
+msgid "Missing directories (skipped): {0}"
+msgstr "缺少的目录（已跳过）：{0}"
 
-#: src/ui/compare/filter_builder_panel_qt.py:50
-#: src/ui/compare/filter_builder_panel_qt.py:148
-#: src/ui/compare/filter_builder_panel_qt.py:186
-#: src/ui/compare/filter_builder_panel_qt.py:255
-#: tests/ui/test_classifier_filter_dialog.py:213
-#: tests/ui/test_classifier_filter_dialog.py:223
-msgid "Classifier"
-msgstr "分类器"
-
-#: src/ui/compare/filter_builder_panel_qt.py:129
-msgid "Edit…"
-msgstr "编辑…"
-
-#: src/ui/compare/hf_model_manager_window_qt.py:48
-#: tests/ui/test_hf_model_manager_window_detection.py:291
-#: tests/ui/test_hf_model_manager_window_detection.py:312
-msgid "Detections (after the threshold and box-area filters):"
-msgstr "检测（阈值和框面积过滤后）："
-
-#: src/ui/compare/hf_model_manager_window_qt.py:54
-#: tests/ui/test_hf_model_manager_window_detection.py:292
-#: tests/ui/test_hf_model_manager_window_detection.py:294
-msgid "{0}: {1:.2%} confidence, box covers {2:.1%} of the image"
-msgstr "{0}: 置信度 {1:.2%}，框覆盖图像的 {2:.1%}"
-
-#: src/ui/compare/hf_model_manager_window_qt.py:58
-#: tests/ui/test_hf_model_manager_window_detection.py:293
-msgid "(counts toward: {0})"
-msgstr "(计入: {0})"
-
-#: src/ui/compare/hf_model_manager_window_qt.py:177
-msgid "Object detection: not used; the model's processor sets the input size."
-msgstr "对象检测：未使用；模型的处理器设置输入尺寸。"
-
-#: src/ui/compare/hf_model_manager_window_qt.py:249
-msgid "Background category"
-msgstr "背景类别"
-
-#: src/ui/compare/hf_model_manager_window_qt.py:252
+#: src/ui/compare/classifier_pipelines_tab_qt.py:628
 msgid ""
-"The category for images without a qualifying detection, e.g. \"no person\". "
-"It must also be listed in Categories; every other category must be a label "
-"of the model."
-msgstr "对没有符合条件的检测的图像的类别，例如“无人物”。它还必须列在“类别”中；所有其他标签必须是模型的标签。"
+"Profile '{0}' has changed since this run; the directories recorded at that "
+"time are used."
+msgstr "配置文件“{0}”自本次运行后已更改；将使用当时记录的目录。"
 
-#: src/ui/compare/hf_model_manager_window_qt.py:256
-msgid "Detection threshold"
-msgstr "检测阈值"
+#: src/ui/compare/classifier_pipelines_tab_qt.py:575
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1188
+msgid "  Overlap: {0} ↔ {1}"
+msgstr "  重叠：{0} ↔ {1}"
 
-#: src/ui/compare/hf_model_manager_window_qt.py:263
-msgid "Detections below this confidence are ignored."
-msgstr "置信度低于此阈值的检测将被忽略。"
-
-#: src/ui/compare/hf_model_manager_window_qt.py:265
-msgid "Min box area"
-msgstr "最小框面积"
-
-#: src/ui/compare/hf_model_manager_window_qt.py:273
+#: src/ui/compare/classifier_pipelines_tab_qt.py:688
 msgid ""
-"Ignore detections whose box covers less than this fraction of the image, "
-"e.g. 0.02 to skip small background figures."
-msgstr "忽略框覆盖面积小于图像此比例的检测，例如 0.02，以跳过小的背景图形。"
+"This run cannot start:\n"
+"{0}"
+msgstr ""
+"此运行无法启动：\n"
+"{0}"
 
-#: src/ui/compare/hf_model_manager_window_qt.py:445
-#: tests/ui/test_hf_model_manager_window_detection.py:164
-msgid "Invalid background category"
-msgstr "无效的背景类别"
+#: src/ui/compare/classifier_pipelines_tab_qt.py:705
+msgid "Pipeline {0} failed: {1}"
+msgstr "流水线 {0} 失败：{1}"
 
-#: src/ui/compare/hf_model_manager_window_qt.py:446
-msgid "The background category '{0}' must also be listed in Categories."
-msgstr "背景类别“{0}”也必须列在“类别”中。"
+#: src/ui/compare/pipeline_history_tab_qt.py:57
+msgid "Pipeline Run History"
+msgstr "流水线运行历史"
 
-#: src/ui/compare/hf_model_manager_window_qt.py:1239
+#: src/ui/compare/pipeline_history_tab_qt.py:84
+msgid "Stop"
+msgstr "停止"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:90
+msgid "Resume Last Incomplete"
+msgstr "继续上次未完成"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:141
+#: tests/ui/test_pipeline_history_tab_qt.py:124
+msgid "Stopping…"
+msgstr "停止中…"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:172
+#: tests/ui/test_pipeline_history_tab_qt.py:111
+msgid "Other process"
+msgstr "其他进程"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:173
+msgid "MCP"
+msgstr "MCP"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:173
+msgid "This app"
+msgstr "此应用"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:176
+msgid "Directories at run time:"
+msgstr "运行时目录："
+
+#: src/ui/compare/pipeline_history_tab_qt.py:65
+msgid "Started"
+msgstr "已开始"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Finished / Updated"
+msgstr "已完成 / 已更新"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Progress"
+msgstr "进度"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Errors"
+msgstr "错误"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Source"
+msgstr "来源"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:239
+#: src/ui/compare/pipeline_history_tab_qt.py:246
+msgid "Stop Pipeline Run"
+msgstr "停止流水线运行"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:247
+msgid "This run is not running in this app."
+msgstr "此运行未在此应用中运行。"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:259
+msgid "There is no unfinished run to resume."
+msgstr "没有未完成的运行可以恢复。"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:273
+msgid "Remove Run"
+msgstr "删除 Run"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:143
+msgid "Dir {0}/{1} · {2}/{3} files"
+msgstr "目录 {0}/{1} · {2}/{3} 文件"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:148
+msgid "{0} files"
+msgstr "{0} 文件"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:179
+msgid "Current directory: {0}"
+msgstr "当前目录：{0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:181
+msgid "Skipped (processed by the earlier run): {0}"
+msgstr "已跳过（由上一次运行处理）：{0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:183
+msgid "Actions: {0}"
+msgstr "操作：{0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:186
+msgid "Error: {0}"
+msgstr "错误: {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:188
+msgid "Resumes run {0}"
+msgstr "简历已运行 {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:190
+msgid "Resumed by run {0}"
+msgstr "由运行 {0} 恢复"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:192
+msgid "Run data: {0}"
+msgstr "运行数据：{0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:240
 msgid ""
-"Only one category may be something other than a label of this model (the "
-"background category, e.g. \"no person\"). Not model labels: {0}"
-msgstr "此模型只能有一个类别不是标签（背景类别，例如“no person”）。非模型标签：{0}"
+"Stop pipeline run '{0}'? Files already processed keep their actions; the run"
+" can be resumed later."
+msgstr "停止管道运行“{0}”？已处理的文件保持其操作；该运行可以稍后恢复。"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:274
+msgid "Remove this run of '{0}' from the history?"
+msgstr "要从历史记录中删除此“{0}”的运行吗？"
+
+#: src/ui/compare/classifier_management_window_qt.py:736
+#: tests/ui/test_classifier_management_window_qt.py:62
+msgid "History"
+msgstr "历史"
+
+#: app_qt.py:100
+msgid "This build no longer matches its source code. See the log for details."
+msgstr "此构建已不再匹配其源代码。请查看日志了解详情。"
+
+#: src/image/frame_cache.py:115
+#: tests/unit/test_optional_native_libraries.py:17
+msgid "SVG conversion is unavailable because the Cairo library was not found."
+msgstr "未找到 Cairo 库，无法进行 SVG 转换。"
+
+#: src/image/frame_cache.py:116
+#: tests/unit/test_optional_native_libraries.py:34
+msgid "SVG conversion is unavailable because cairosvg is not installed."
+msgstr "由于未安装 cairosvg，SVG 转换不可用。"
+
+#: src/image/frame_cache.py:124
+#: tests/unit/test_optional_native_libraries.py:18
+msgid ""
+"Run python scripts/install_native_extras.py from the repository, then "
+"restart."
+msgstr "从仓库运行 python scripts/install_native_extras.py，然后重启。"
+
+#: src/image/frame_cache.py:125
+#: tests/unit/test_optional_native_libraries.py:35
+msgid "pip install cairosvg"
+msgstr "pip install cairosvg"
+
+#: src/ui/app_window/file_marks_controller.py:714
+#: src/ui/files/related_images_window_qt.py:126
+#: tests/ui/test_mark_families_with_all_suffixes.py:215
+#: tests/ui/test_related_images_window.py:76
+#: tests/ui/test_related_images_window.py:90
+#: tests/ui/test_related_images_window.py:484
+msgid "Mark families with all suffixes"
+msgstr "标记所有后缀的族"
+
+#: src/ui/app_window/file_marks_controller.py:717
+msgid "Enter at least one suffix."
+msgstr "至少输入一个后缀。"
+
+#: src/ui/app_window/file_marks_controller.py:735
+#: tests/ui/test_related_images_window.py:516
+msgid "No image families with all of these suffixes found: {0}"
+msgstr "未找到具有所有这些后缀的图像族：{0}"
+
+#: src/ui/app_window/file_marks_controller.py:750
+msgid "{0} file(s) in {1} of {2} image families marked ({3})"
+msgstr "{0} 个文件位于 {1}/{2} 图像族中已标记 ({3})"
+
+#: src/ui/app_window/media_frame.py:83
+#: tests/unit/test_optional_native_libraries.py:58
+msgid "Video playback is unavailable because VLC was not found."
+msgstr "由于未找到 VLC，视频播放不可用。"
+
+#: src/ui/auth/password_utils.py:72
+msgid "Password Unavailable"
+msgstr "密码不可用"
+
+#: src/ui/auth/password_utils.py:73
+msgid ""
+"The password is stored with quantum-safe (OQS) encryption, which this build "
+"does not include, so protected actions are unavailable. Use a build made "
+"with OQS support."
+msgstr "密码使用量子安全（OQS）加密存储，但此构建不包含该功能，导致受保护的操作不可用。请使用支持 OQS 的构建。"
+
+#: src/ui/files/related_images_window_qt.py:120
+msgid "Suffixes, e.g. edit, upscale"
+msgstr "后缀，例如 edit，upscale"
+
+#: src/ui/files/related_images_window_qt.py:122
+msgid ""
+"Comma- or space-separated suffixes. Every image family in the current "
+"directory with at least one related image per suffix is marked in full: the "
+"seed and all its related images."
+msgstr "以逗号或空格分隔的后缀。当前目录中每个每个后缀至少有一张相关图片的图像系列都会被完整标记：种子图像及其所有相关图像。"

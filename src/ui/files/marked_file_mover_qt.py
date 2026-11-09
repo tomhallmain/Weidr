@@ -733,7 +733,7 @@ class MarkedFileMover(SmartDialog):
         except Exception as e:
             self._app_actions.alert(
                 _("Error"),
-                "Error opening hotkey actions window: " + str(e),
+                _("Error opening hotkey actions window: ") + str(e),
                 master=self,
             )
 
@@ -859,7 +859,7 @@ class MarkedFileMover(SmartDialog):
                 self,
                 _("Save PDF as"),
                 os.path.join(default_dir, default_name + ".pdf"),
-                "PDF files (*.pdf)",
+                _("PDF files") + " (*.pdf)",
             )
             if not path:
                 save_cancelled = True

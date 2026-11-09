@@ -437,7 +437,7 @@ class SidebarPanel(QWidget):
         """Add a dynamically-named button to the mode button container."""
         if name in self._dynamic_buttons:
             return self._dynamic_buttons[name]
-        btn = QPushButton(_(text), self)
+        btn = QPushButton(text, self)
         btn.clicked.connect(command)
         self._mode_button_container.addWidget(btn)
         self._dynamic_buttons[name] = btn
@@ -463,34 +463,34 @@ class SidebarPanel(QWidget):
                     and "toggle_media_view_btn" not in self._dynamic_buttons):
                 self.add_button(
                     "toggle_media_view_btn",
-                    "Toggle media view",
+                    _("Toggle media view"),
                     self._app.media_navigator.toggle_media_view,
                 )
                 self.add_button(
                     "replace_current_media_btn",
-                    "Replace with search media",
+                    _("Replace with search media"),
                     self._app.file_ops_ctrl.replace_current_media_with_search_media,
                 )
 
         elif mode == Mode.GROUP:
             self.add_button(
                 "prev_group_btn",
-                "Previous group",
+                _("Previous group"),
                 self._app.compare_manager.show_prev_group,
             )
             self.add_button(
                 "next_group_btn",
-                "Next group",
+                _("Next group"),
                 self._app.compare_manager.show_next_group,
             )
             self.add_button(
                 "random_purge_btn",
-                "Random purge",
+                _("Random purge"),
                 self._app.compare_manager.random_purge_groups,
             )
             self.add_button(
                 "view_ungrouped_btn",
-                "View ungrouped files",
+                _("View ungrouped files"),
                 self._app.compare_manager.enter_complement_mode,
             )
 
@@ -500,7 +500,7 @@ class SidebarPanel(QWidget):
         elif mode == Mode.GROUP_COMPLEMENT:
             self.add_button(
                 "return_to_groups_btn",
-                "Return to groups",
+                _("Return to groups"),
                 self._app.compare_manager.return_to_group_mode,
             )
 

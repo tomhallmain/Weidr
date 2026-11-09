@@ -66,7 +66,7 @@ class _FilterRow(QWidget):
 
         self._size_w = QLineEdit()
         self._size_w.setFixedWidth(58)
-        self._size_w.setPlaceholderText("W")
+        self._size_w.setPlaceholderText(_("W"))
         sl.addWidget(self._size_w)
 
         cross = QLabel("×")
@@ -75,7 +75,7 @@ class _FilterRow(QWidget):
 
         self._size_h = QLineEdit()
         self._size_h.setFixedWidth(58)
-        self._size_h.setPlaceholderText("H")
+        self._size_h.setPlaceholderText(_("H"))
         sl.addWidget(self._size_h)
 
         self._tol_lbl = QLabel("±")

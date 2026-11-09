@@ -2,8 +2,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: 1.0\n"
-"POT-Creation-Date: 2026-11-07 20:56-0500\n"
-"PO-Revision-Date: 2026-11-07 20:56-0500\n"
+"POT-Creation-Date: 2026-11-09 17:36-0500\n"
+"PO-Revision-Date: 2026-11-09 17:36-0500\n"
 "Last-Translator: Translator Name <translator@example.com>\n"
 "Language-Team: zh Team <<EMAIL>>\n"
 "Language: zh\n"
@@ -11,6 +11,10 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: app_qt.py:100
+msgid "This build no longer matches its source code. See the log for details."
+msgstr "此构建已不再匹配其源代码。请查看日志了解详情。"
 
 #: extensions/sd_runner_client.py:151
 msgid "Image does not contain a prompt to redo!"
@@ -1435,6 +1439,33 @@ msgstr "正在处理批次 {0}/{1}（包含 {2} 张图像）..."
 msgid "Found {0} images that meet the threshold..."
 msgstr "找到符合阈值的 {0} 张图片..."
 
+#: src/compare/pipeline_run_history.py:77
+msgid "Running"
+msgstr "运行中"
+
+#: src/compare/pipeline_run_history.py:78
+#: tests/ui/test_pipeline_history_tab_qt.py:76
+msgid "Completed"
+msgstr "已完成"
+
+#: src/compare/pipeline_run_history.py:79
+msgid "Completed with errors"
+msgstr "完成，出现错误"
+
+#: src/compare/pipeline_run_history.py:80
+#: tests/ui/test_pipeline_history_tab_qt.py:75
+#: tests/unit/test_pipeline_run_history.py:98
+msgid "Cancelled"
+msgstr "已取消"
+
+#: src/compare/pipeline_run_history.py:81
+msgid "Failed"
+msgstr "失败"
+
+#: src/compare/pipeline_run_history.py:82
+msgid "Interrupted"
+msgstr "已中断"
+
 #: src/compare/pipeline_run_report.py:73
 #: tests/unit/test_classifier_pipeline_runner.py:1569
 msgid "Warnings"
@@ -1453,6 +1484,11 @@ msgstr "信息"
 #: src/ui/compare/classifier_pipelines_tab_qt.py:824
 msgid "(no action)"
 msgstr "(无操作)"
+
+#: src/compare/pipeline_run_report.py:160
+#: tests/unit/test_classifier_pipeline_runner.py:1553
+msgid "Pipeline {0} — run cancelled"
+msgstr "Pipeline {0} — 运行已取消"
 
 #: src/compare/pipeline_run_report.py:163
 #: tests/unit/test_classifier_pipeline_runner.py:1554
@@ -1486,6 +1522,11 @@ msgstr "文件"
 #: src/compare/pipeline_run_report.py:191
 msgid "Files evaluated: {0}"
 msgstr "已评估的文件：{0}"
+
+#: src/compare/pipeline_run_report.py:195
+#: tests/unit/test_classifier_pipeline_runner.py:1555
+msgid "Resumed run: {0} file(s) already processed earlier were skipped"
+msgstr "已恢复运行：已提前处理的{0}个文件被跳过"
 
 #: src/compare/pipeline_run_report.py:200
 msgid "Errors during evaluation: {0}"
@@ -1526,6 +1567,25 @@ msgstr "  [{0}] — {1} 个文件"
 #: src/compare/pipeline_run_report.py:307
 msgid "      · … and {0} more"
 msgstr "      · ……以及其他 {0} 项"
+
+#: src/compare/pipeline_run_service.py:245
+msgid "This run is no longer in the history."
+msgstr "此运行已不再出现在历史记录中。"
+
+#: src/compare/pipeline_run_service.py:248
+msgid "This run was already resumed."
+msgstr "此运行已恢复。"
+
+#: src/compare/pipeline_run_service.py:251
+msgid ""
+"Only cancelled, failed or interrupted runs with saved progress can be "
+"resumed."
+msgstr "仅可恢复已保存进度的已取消、失败或中断的运行。"
+
+#: src/compare/pipeline_run_service.py:255
+#: tests/unit/test_pipeline_run_service.py:199
+msgid "Pipeline '{0}' no longer exists."
+msgstr "流水线“{0}”不再存在。"
 
 #: src/files/file_browser.py:289 src/files/file_browser.py:303
 #: src/files/file_browser.py:315 src/ui/app_window/app_window.py:1061
@@ -1677,7 +1737,7 @@ msgstr "删除文件： {0}"
 
 #: src/files/marked_files.py:293 src/files/marked_files.py:300
 #: src/files/marked_files.py:304 src/files/marked_files.py:310
-#: src/files/marked_files.py:321 src/ui/app_window/app_window.py:1381
+#: src/files/marked_files.py:321 src/ui/app_window/app_window.py:1385
 #: src/ui/app_window/search_controller.py:652
 #: src/ui/app_window/search_controller.py:711
 #: src/ui/app_window/search_controller.py:788
@@ -2041,6 +2101,28 @@ msgstr "{0}（缓存）个下游图片已找到。"
 #: src/ui/app_window/file_marks_controller.py:416
 msgid "No downstream related images found in"
 msgstr "找不到下游相关图像"
+
+#: src/image/frame_cache.py:115
+#: tests/unit/test_optional_native_libraries.py:17
+msgid "SVG conversion is unavailable because the Cairo library was not found."
+msgstr "未找到 Cairo 库，无法进行 SVG 转换。"
+
+#: src/image/frame_cache.py:116
+#: tests/unit/test_optional_native_libraries.py:34
+msgid "SVG conversion is unavailable because cairosvg is not installed."
+msgstr "由于未安装 cairosvg，SVG 转换不可用。"
+
+#: src/image/frame_cache.py:124
+#: tests/unit/test_optional_native_libraries.py:18
+msgid ""
+"Run python scripts/install_native_extras.py from the repository, then "
+"restart."
+msgstr "从仓库运行 python scripts/install_native_extras.py，然后重启。"
+
+#: src/image/frame_cache.py:125
+#: tests/unit/test_optional_native_libraries.py:35
+msgid "pip install cairosvg"
+msgstr "pip install cairosvg"
 
 #: src/image/frame_cache.py:828
 msgid "Unable to render ePub: pyppeteer and pypdfium2 are required"
@@ -2813,11 +2895,11 @@ msgstr "使用每实例EQ音量控制"
 
 #: src/ui/help_and_config_qt.py:355
 msgid "Show Toasts"
-msgstr "显示 Toast 通知"
+msgstr "显示提示"
 
 #: src/ui/help_and_config_qt.py:358
 msgid "Toasts Persist (sec)"
-msgstr "Toast 通知持续时间（秒）"
+msgstr "保留 Toasts (秒)"
 
 #: src/ui/help_and_config_qt.py:361
 msgid "Title Notify Persist (sec)"
@@ -3248,37 +3330,37 @@ msgstr "已恢复 {0} 个已移回文件的比较结果状态"
 msgid "Browsing mode set."
 msgstr "浏览模式设置 。"
 
-#: src/ui/app_window/app_window.py:1274
+#: src/ui/app_window/app_window.py:1278
 #: src/ui/app_window/window_launcher.py:1155
 msgid "Many Files"
 msgstr "许多文件"
 
-#: src/ui/app_window/app_window.py:1381
+#: src/ui/app_window/app_window.py:1385
 msgid "No files found in directory after refresh."
 msgstr "刷新后在目录中未发现文件。"
 
-#: src/ui/app_window/app_window.py:1414
+#: src/ui/app_window/app_window.py:1418
 msgid "NEW_MEDIA_QUEUED"
 msgstr "{0} 个新媒体文件已排队"
 
-#: src/ui/app_window/app_window.py:1530
+#: src/ui/app_window/app_window.py:1534
 msgid "No cached image for this file."
 msgstr "此文件没有缓存图像。"
 
-#: src/ui/app_window/app_window.py:1533
+#: src/ui/app_window/app_window.py:1537
 msgid "Could not read cached image."
 msgstr "无法读取缓存的图像。"
 
-#: src/ui/app_window/app_window.py:1536
+#: src/ui/app_window/app_window.py:1540
 msgid "Clipboard unavailable."
 msgstr "剪贴板不可用。"
 
-#: src/ui/app_window/app_window.py:1555 src/ui/app_window/app_window.py:1569
-#: src/ui/app_window/app_window.py:1585
+#: src/ui/app_window/app_window.py:1559 src/ui/app_window/app_window.py:1573
+#: src/ui/app_window/app_window.py:1589
 msgid "Screenshot Failed"
 msgstr "截图失败"
 
-#: src/ui/app_window/app_window.py:1556
+#: src/ui/app_window/app_window.py:1560
 msgid ""
 "Unable to create screenshot directory:\n"
 "{0}\n"
@@ -3290,7 +3372,7 @@ msgstr ""
 "\n"
 "{1}"
 
-#: src/ui/app_window/app_window.py:1570
+#: src/ui/app_window/app_window.py:1574
 msgid ""
 "Unable to save screenshot.\n"
 "\n"
@@ -3300,7 +3382,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/ui/app_window/app_window.py:1576
+#: src/ui/app_window/app_window.py:1580
 msgid ""
 "Screenshot saved to:\n"
 "{0}"
@@ -3308,7 +3390,7 @@ msgstr ""
 "截图已保存到：\n"
 "{0}"
 
-#: src/ui/app_window/app_window.py:1586
+#: src/ui/app_window/app_window.py:1590
 msgid ""
 "Unable to copy image to clipboard.\n"
 "\n"
@@ -3318,33 +3400,33 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/ui/app_window/app_window.py:1590
+#: src/ui/app_window/app_window.py:1594
 msgid "Copied image to clipboard."
 msgstr "图像已复制到剪贴板。"
 
-#: src/ui/app_window/app_window.py:1594
+#: src/ui/app_window/app_window.py:1598
 msgid ""
 "Screenshots are available for videos, animated GIFs, and PDF/ePub/SVG/HTML "
 "files."
 msgstr "视频、动画 GIF 和 PDF/ePub/SVG/HTML 文件均可提供截图。"
 
-#: src/ui/app_window/app_window.py:1652
+#: src/ui/app_window/app_window.py:1656
 msgid "Masonry view"
 msgstr "瀑布流视图"
 
-#: src/ui/app_window/app_window.py:1657
+#: src/ui/app_window/app_window.py:1661
 msgid "Full-window view"
 msgstr "全屏视图"
 
-#: src/ui/app_window/app_window.py:1717
+#: src/ui/app_window/app_window.py:1721
 msgid "Theme switched to {0}."
 msgstr "主题切换到{0} 。"
 
-#: src/ui/app_window/app_window.py:1770
+#: src/ui/app_window/app_window.py:1774
 msgid "Confirm Quit"
 msgstr "确认退出"
 
-#: src/ui/app_window/app_window.py:1770
+#: src/ui/app_window/app_window.py:1774
 msgid "Would you like to quit the application?"
 msgstr "是否要退出应用程序？"
 
@@ -3741,6 +3823,28 @@ msgstr "当前目录中的每个文件都有相关的图片。"
 #: src/ui/app_window/file_marks_controller.py:696
 msgid "{0} file(s) without a related image marked"
 msgstr "{0} 个文件未标记相关图片"
+
+#: src/ui/app_window/file_marks_controller.py:714
+#: src/ui/files/related_images_window_qt.py:126
+#: tests/ui/test_mark_families_with_all_suffixes.py:215
+#: tests/ui/test_related_images_window.py:76
+#: tests/ui/test_related_images_window.py:90
+#: tests/ui/test_related_images_window.py:484
+msgid "Mark families with all suffixes"
+msgstr "标记所有后缀的族"
+
+#: src/ui/app_window/file_marks_controller.py:717
+msgid "Enter at least one suffix."
+msgstr "至少输入一个后缀。"
+
+#: src/ui/app_window/file_marks_controller.py:735
+#: tests/ui/test_related_images_window.py:516
+msgid "No image families with all of these suffixes found: {0}"
+msgstr "未找到具有所有这些后缀的图像族：{0}"
+
+#: src/ui/app_window/file_marks_controller.py:750
+msgid "{0} file(s) in {1} of {2} image families marked ({3})"
+msgstr "{0} 个文件位于 {1}/{2} 图像族中已标记 ({3})"
 
 #: src/ui/app_window/file_marks_controller.py:770
 msgid "Set related image"
@@ -4492,6 +4596,11 @@ msgstr "取消静音"
 #: tests/ui/test_media_controls_overlay.py:207
 msgid "Mute"
 msgstr "静音"
+
+#: src/ui/app_window/media_frame.py:83
+#: tests/unit/test_optional_native_libraries.py:58
+msgid "Video playback is unavailable because VLC was not found."
+msgstr "由于未找到 VLC，视频播放不可用。"
 
 #: src/ui/app_window/media_frame.py:269
 msgid "No displayable files found in this directory for the current settings."
@@ -5452,7 +5561,7 @@ msgstr "保存设置"
 
 #: src/ui/auth/password_admin_window.py:352
 #: src/ui/compare/hf_model_manager_window_qt.py:96
-#: src/ui/files/directory_picker_dialog.py:61
+#: src/ui/custom_title_bar.py:170 src/ui/files/directory_picker_dialog.py:61
 msgid "Close"
 msgstr "关闭"
 
@@ -5571,6 +5680,17 @@ msgid ""
 "Password protection is required for this action but is not currently "
 "configured."
 msgstr "此操作需要密码保护，但目前尚未配置。"
+
+#: src/ui/auth/password_utils.py:72
+msgid "Password Unavailable"
+msgstr "密码不可用"
+
+#: src/ui/auth/password_utils.py:73
+msgid ""
+"The password is stored with quantum-safe (OQS) encryption, which this build "
+"does not include, so protected actions are unavailable. Use a build made "
+"with OQS support."
+msgstr "密码使用量子安全（OQS）加密存储，但此构建不包含该功能，导致受保护的操作不可用。请使用支持 OQS 的构建。"
 
 #: src/ui/compare/add_instance_dialog_qt.py:40
 msgid "Add Compare Instance"
@@ -6112,6 +6232,11 @@ msgstr "配置无效"
 #: src/ui/compare/classifier_management_window_qt.py:689
 msgid "Classifier Management"
 msgstr "分类器管理"
+
+#: src/ui/compare/classifier_management_window_qt.py:736
+#: tests/ui/test_classifier_management_window_qt.py:62
+msgid "History"
+msgstr "历史"
 
 #: src/ui/compare/classifier_management_window_qt.py:737
 #: src/ui/compare/prevalidations_tab_qt.py:267
@@ -7220,6 +7345,90 @@ msgstr ""
 msgid "Run Pipeline on Profile"
 msgstr "在配置文件上运行管道"
 
+#: src/ui/compare/classifier_pipelines_tab_qt.py:568
+#: tests/ui/test_classifier_actions_tab_qt.py:208
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1176
+msgid ""
+"Last run of this pipeline on these directories: {date} ({status}, profile "
+"'{profile}')"
+msgstr "此流水线在这些目录上的上次运行时间：{date}（{status}，配置文件 '{profile}'）"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:570
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1187
+msgid ""
+"Last run of this pipeline on overlapping directories: {date} ({status}, "
+"profile '{profile}')"
+msgstr "此流水线在重叠目录上的最近运行时间: {date} ({status}, 配置文件 '{profile}')"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:575
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1188
+msgid "  Overlap: {0} ↔ {1}"
+msgstr "  重叠：{0} ↔ {1}"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:577
+msgid ""
+"WARNING: pipeline '{name}' is running on overlapping directories (started "
+"{date})."
+msgstr "警告：管道‘{name}’在重叠目录中运行（开始于 {date}）。"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:580
+msgid ""
+"The last run on these directories did not finish ({status}, {count} file(s) "
+"processed)."
+msgstr "这些目录的最近一次运行未完成（{status}，已处理 {count} 个文件）。"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:596
+msgid "Resume the unfinished run, or start a new run from the beginning?"
+msgstr "继续未完成的运行，还是从头开始新的运行？"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:597
+#: src/ui/compare/pipeline_history_tab_qt.py:87
+msgid "Resume"
+msgstr "简历"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:597
+msgid "Start New Run"
+msgstr "开始新运行"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:606
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1206
+msgid "Run Anyway"
+msgstr "仍然执行"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:616
+#: src/ui/compare/classifier_pipelines_tab_qt.py:619
+#: src/ui/compare/classifier_pipelines_tab_qt.py:638
+#: src/ui/compare/pipeline_history_tab_qt.py:259
+msgid "Resume Pipeline Run"
+msgstr "恢复流水线运行"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:623
+msgid ""
+"The pipeline was edited since this run; the current definition will be used."
+msgstr "自此运行后已编辑管道；将使用当前定义。"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:625
+msgid "Missing directories (skipped): {0}"
+msgstr "缺少的目录（已跳过）：{0}"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:628
+msgid ""
+"Profile '{0}' has changed since this run; the directories recorded at that "
+"time are used."
+msgstr "配置文件“{0}”自本次运行后已更改；将使用当时记录的目录。"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:630
+msgid ""
+"Resume pipeline '{name}' from {date}? {count} file(s) already processed will be skipped.\n"
+"\n"
+"Directories:\n"
+"{dirs}"
+msgstr ""
+"从 {date} 恢复管道“{name}”？ 已跳过 {count} 个已处理的文件。\n"
+"\n"
+"目录：\n"
+"{dirs}"
+
 #: src/ui/compare/classifier_pipelines_tab_qt.py:660
 #: src/ui/compare/classifier_pipelines_tab_qt.py:768
 #: tests/ui/test_classifier_pipelines_tab_qt.py:995
@@ -7240,6 +7449,18 @@ msgstr ""
 "除非在运行完成之前启动SD Runner，否则不会生成生成的图像。\n"
 "\n"
 "仍然要继续吗？"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:688
+msgid ""
+"This run cannot start:\n"
+"{0}"
+msgstr ""
+"此运行无法启动：\n"
+"{0}"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:705
+msgid "Pipeline {0} failed: {1}"
+msgstr "流水线 {0} 失败：{1}"
 
 #: src/ui/compare/classifier_pipelines_tab_qt.py:731
 msgid "Disabled nodes (will be skipped): {nodes}"
@@ -8331,6 +8552,123 @@ msgstr "移除前瞻"
 #: src/ui/compare/lookaheads_tab_qt.py:80
 msgid "{name} ({name_or_text}, threshold: {threshold:.2f})"
 msgstr "{name}（{name_or_text}，阈值：{threshold:.2f}）"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:57
+msgid "Pipeline Run History"
+msgstr "流水线运行历史"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:65
+msgid "Started"
+msgstr "已开始"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Finished / Updated"
+msgstr "已完成 / 已更新"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Progress"
+msgstr "进度"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Errors"
+msgstr "错误"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Source"
+msgstr "来源"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:84
+msgid "Stop"
+msgstr "停止"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:90
+msgid "Resume Last Incomplete"
+msgstr "继续上次未完成"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:141
+#: tests/ui/test_pipeline_history_tab_qt.py:124
+msgid "Stopping…"
+msgstr "停止中…"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:143
+msgid "Dir {0}/{1} · {2}/{3} files"
+msgstr "目录 {0}/{1} · {2}/{3} 文件"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:148
+msgid "{0} files"
+msgstr "{0} 文件"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:172
+#: tests/ui/test_pipeline_history_tab_qt.py:111
+msgid "Other process"
+msgstr "其他进程"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:173
+msgid "MCP"
+msgstr "MCP"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:173
+msgid "This app"
+msgstr "此应用"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:176
+msgid "Directories at run time:"
+msgstr "运行时目录："
+
+#: src/ui/compare/pipeline_history_tab_qt.py:179
+msgid "Current directory: {0}"
+msgstr "当前目录：{0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:181
+msgid "Skipped (processed by the earlier run): {0}"
+msgstr "已跳过（由上一次运行处理）：{0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:183
+msgid "Actions: {0}"
+msgstr "操作：{0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:186
+msgid "Error: {0}"
+msgstr "错误: {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:188
+msgid "Resumes run {0}"
+msgstr "简历已运行 {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:190
+msgid "Resumed by run {0}"
+msgstr "由运行 {0} 恢复"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:192
+msgid "Run data: {0}"
+msgstr "运行数据：{0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:239
+#: src/ui/compare/pipeline_history_tab_qt.py:246
+msgid "Stop Pipeline Run"
+msgstr "停止流水线运行"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:240
+msgid ""
+"Stop pipeline run '{0}'? Files already processed keep their actions; the run"
+" can be resumed later."
+msgstr "停止管道运行“{0}”？已处理的文件保持其操作；该运行可以稍后恢复。"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:247
+msgid "This run is not running in this app."
+msgstr "此运行未在此应用中运行。"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:259
+msgid "There is no unfinished run to resume."
+msgstr "没有未完成的运行可以恢复。"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:273
+msgid "Remove Run"
+msgstr "删除 Run"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:274
+msgid "Remove this run of '{0}' from the history?"
+msgstr "要从历史记录中删除此“{0}”的运行吗？"
 
 #: src/ui/compare/prevalidations_tab_qt.py:136
 msgid "Lookaheads (select from shared list)"
@@ -9805,6 +10143,17 @@ msgstr "标记当前目录中没有关联图像的文件"
 msgid "Search all open windows for downstream images"
 msgstr "在所有打开的窗口中搜索下游图像"
 
+#: src/ui/files/related_images_window_qt.py:120
+msgid "Suffixes, e.g. edit, upscale"
+msgstr "后缀，例如 edit，upscale"
+
+#: src/ui/files/related_images_window_qt.py:122
+msgid ""
+"Comma- or space-separated suffixes. Every image family in the current "
+"directory with at least one related image per suffix is marked in full: the "
+"seed and all its related images."
+msgstr "以逗号或空格分隔的后缀。当前目录中每个每个后缀至少有一张相关图片的图像系列都会被完整标记：种子图像及其所有相关图像。"
+
 #: src/ui/files/related_images_window_qt.py:135
 msgid "Results"
 msgstr "结果"
@@ -9899,6 +10248,10 @@ msgstr "选择目标目录"
 msgid "Select directory to search for related files"
 msgstr "选择目录以搜索相关文件"
 
+#: src/ui/files/type_configuration_window_qt.py:39
+msgid "SVG support requires cairosvg package"
+msgstr "SVG 支持需要 cairosvg 软件包"
+
 #: src/ui/files/type_configuration_window_qt.py:62
 msgid "Basic image files (PNG, JPG, etc.)"
 msgstr "基本图片文件(PNG、JPG 等)"
@@ -9940,10 +10293,6 @@ msgstr "PDF 支持需要 pypdfium2 软件包"
 #: src/ui/files/type_configuration_window_qt.py:83
 msgid "ePub support requires pyppeteer and pypdfium2 packages"
 msgstr "ePub 支持需要 pyppeteer 和 pypdfium2 包"
-
-#: src/ui/files/type_configuration_window_qt.py:39
-msgid "SVG support requires cairosvg package"
-msgstr "SVG 支持需要 cairosvg 软件包"
 
 #: src/ui/files/type_configuration_window_qt.py:89
 msgid "HTML support requires pyppeteer package"
@@ -10522,7 +10871,7 @@ msgstr "V-JEPA 2 嵌入"
 
 #: src/utils/constants.py:53 src/utils/constants.py:83
 msgid "Face Embedding"
-msgstr "Face Embedding"
+msgstr "面部嵌入"
 
 #: src/utils/constants.py:55 src/utils/constants.py:87
 msgid "Prompts (Exact Match)"
@@ -10885,351 +11234,135 @@ msgstr "Shift"
 msgid "Alt"
 msgstr "Alt"
 
-#: src/compare/pipeline_run_history.py:77
-msgid "Running"
-msgstr "运行中"
+#: src/ui/custom_title_bar.py:160
+msgid "Minimize"
+msgstr "最小化"
 
-#: src/compare/pipeline_run_history.py:78
-#: tests/ui/test_pipeline_history_tab_qt.py:76
-msgid "Completed"
-msgstr "已完成"
+#: src/ui/custom_title_bar.py:165 src/ui/custom_title_bar.py:296
+msgid "Maximize"
+msgstr "最大化"
 
-#: src/compare/pipeline_run_history.py:79
-msgid "Completed with errors"
-msgstr "完成，出现错误"
+#: src/ui/custom_title_bar.py:293
+msgid "Restore"
+msgstr "恢复"
 
-#: src/compare/pipeline_run_history.py:80
-#: tests/ui/test_pipeline_history_tab_qt.py:75
-#: tests/unit/test_pipeline_run_history.py:98
-msgid "Cancelled"
-msgstr "已取消"
+#: src/ui/app_window/app_window.py:1275
+msgid "do this action"
+msgstr "执行此操作"
 
-#: src/compare/pipeline_run_history.py:81
-msgid "Failed"
-msgstr "失败"
-
-#: src/compare/pipeline_run_history.py:82
-msgid "Interrupted"
-msgstr "已中断"
-
-#: src/compare/pipeline_run_service.py:248
-msgid "This run was already resumed."
-msgstr "此运行已恢复。"
-
-#: src/compare/pipeline_run_service.py:251
+#: src/ui/app_window/app_window.py:1279
 msgid ""
-"Only cancelled, failed or interrupted runs with saved progress can be "
-"resumed."
-msgstr "仅可恢复已保存进度的已取消、失败或中断的运行。"
-
-#: src/compare/pipeline_run_service.py:245
-msgid "This run is no longer in the history."
-msgstr "此运行已不再出现在历史记录中。"
-
-#: src/compare/pipeline_run_service.py:255
-#: tests/unit/test_pipeline_run_service.py:199
-msgid "Pipeline '{0}' no longer exists."
-msgstr "流水线“{0}”不再存在。"
-
-#: src/compare/pipeline_run_report.py:160
-#: tests/unit/test_classifier_pipeline_runner.py:1553
-msgid "Pipeline {0} — run cancelled"
-msgstr "Pipeline {0} — 运行已取消"
-
-#: src/compare/pipeline_run_report.py:195
-#: tests/unit/test_classifier_pipeline_runner.py:1555
-msgid "Resumed run: {0} file(s) already processed earlier were skipped"
-msgstr "已恢复运行：已提前处理的{0}个文件被跳过"
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:616
-#: src/ui/compare/classifier_pipelines_tab_qt.py:619
-#: src/ui/compare/classifier_pipelines_tab_qt.py:638
-#: src/ui/compare/pipeline_history_tab_qt.py:259
-msgid "Resume Pipeline Run"
-msgstr "恢复流水线运行"
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:568
-#: tests/ui/test_classifier_actions_tab_qt.py:208
-#: tests/ui/test_classifier_pipelines_tab_qt.py:1176
-msgid ""
-"Last run of this pipeline on these directories: {date} ({status}, profile "
-"'{profile}')"
-msgstr "此流水线在这些目录上的上次运行时间：{date}（{status}，配置文件 '{profile}'）"
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:570
-#: tests/ui/test_classifier_pipelines_tab_qt.py:1187
-msgid ""
-"Last run of this pipeline on overlapping directories: {date} ({status}, "
-"profile '{profile}')"
-msgstr "此流水线在重叠目录上的最近运行时间: {date} ({status}, 配置文件 '{profile}')"
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:623
-msgid ""
-"The pipeline was edited since this run; the current definition will be used."
-msgstr "自此运行后已编辑管道；将使用当前定义。"
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:630
-msgid ""
-"Resume pipeline '{name}' from {date}? {count} file(s) already processed will be skipped.\n"
+"There are a lot of files in {0} and it may take a while to {1}.\n"
 "\n"
-"Directories:\n"
-"{dirs}"
+"Would you like to proceed?"
 msgstr ""
-"从 {date} 恢复管道“{name}”？ 已跳过 {count} 个已处理的文件。\n"
+"在 {0} 中有很多文件，可能需要一段时间才能 {1}。\n"
 "\n"
-"目录：\n"
-"{dirs}"
+"您想继续吗？"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:596
-msgid "Resume the unfinished run, or start a new run from the beginning?"
-msgstr "继续未完成的运行，还是从头开始新的运行？"
+#: src/ui/app_window/file_marks_controller.py:215
+msgid "Marked Files Window Error"
+msgstr "标记文件窗口错误"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:597
-#: src/ui/compare/pipeline_history_tab_qt.py:87
-msgid "Resume"
-msgstr "简历"
+#: src/ui/app_window/file_marks_controller.py:405
+#: src/ui/app_window/search_controller.py:749
+msgid "find related media"
+msgstr "查找相关媒体"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:597
-msgid "Start New Run"
-msgstr "开始新运行"
+#: src/ui/app_window/masonry_browser.py:537
+msgid "Showing all {0} files"
+msgstr "显示所有{0}文件"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:606
-#: tests/ui/test_classifier_pipelines_tab_qt.py:1206
-msgid "Run Anyway"
-msgstr "仍然执行"
+#: src/ui/app_window/masonry_browser.py:540
+#: tests/ui/test_masonry_interaction.py:21
+msgid "Page {0} / {1}  •  files {2}–{3} of {4}  •  PgUp / PgDn to navigate"
+msgstr "第 {0} / {1} 页  •  文件 {2}–{3} / {4}  •  PgUp / PgDn 进行导航"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:577
-msgid ""
-"WARNING: pipeline '{name}' is running on overlapping directories (started "
-"{date})."
-msgstr "警告：管道‘{name}’在重叠目录中运行（开始于 {date}）。"
+#: src/ui/app_window/media_navigator.py:91
+#: src/ui/app_window/media_navigator.py:117
+msgid "Exception"
+msgstr "异常"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:580
-msgid ""
-"The last run on these directories did not finish ({status}, {count} file(s) "
-"processed)."
-msgstr "这些目录的最近一次运行未完成（{status}，已处理 {count} 个文件）。"
+#: src/ui/app_window/media_navigator.py:421
+msgid "Go To Index Error"
+msgstr "转到索引错误"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:625
-msgid "Missing directories (skipped): {0}"
-msgstr "缺少的目录（已跳过）：{0}"
+#: src/ui/app_window/media_navigator.py:479
+msgid "(search media)"
+msgstr "(搜索媒体)"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:628
-msgid ""
-"Profile '{0}' has changed since this run; the directories recorded at that "
-"time are used."
-msgstr "配置文件“{0}”自本次运行后已更改；将使用当时记录的目录。"
+#: src/ui/app_window/search_controller.py:468
+msgid "Search file is not a valid file for base dir."
+msgstr "搜索文件不是基目录的有效文件。"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:575
-#: tests/ui/test_classifier_pipelines_tab_qt.py:1188
-msgid "  Overlap: {0} ↔ {1}"
-msgstr "  重叠：{0} ↔ {1}"
+#: src/ui/app_window/search_controller.py:469
+msgid "Invalid search file"
+msgstr "无效的搜索文件"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:688
-msgid ""
-"This run cannot start:\n"
-"{0}"
-msgstr ""
-"此运行无法启动：\n"
-"{0}"
+#: src/ui/app_window/search_controller.py:484
+msgid "Negative search file is not a valid file for base dir."
+msgstr "负向搜索文件不是基目录的有效文件。"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:705
-msgid "Pipeline {0} failed: {1}"
-msgstr "流水线 {0} 失败：{1}"
+#: src/ui/app_window/search_controller.py:485
+msgid "Invalid negative search file"
+msgstr "无效的负面搜索文件"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:57
-msgid "Pipeline Run History"
-msgstr "流水线运行历史"
+#: src/ui/app_window/sidebar_panel.py:466
+msgid "Toggle media view"
+msgstr "切换媒体视图"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:84
-msgid "Stop"
-msgstr "停止"
+#: src/ui/app_window/sidebar_panel.py:471
+msgid "Replace with search media"
+msgstr "用搜索媒体替换"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:90
-msgid "Resume Last Incomplete"
-msgstr "继续上次未完成"
+#: src/ui/app_window/sidebar_panel.py:478
+msgid "Previous group"
+msgstr "上一个组"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:141
-#: tests/ui/test_pipeline_history_tab_qt.py:124
-msgid "Stopping…"
-msgstr "停止中…"
+#: src/ui/app_window/sidebar_panel.py:483
+msgid "Next group"
+msgstr "下一组"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:172
-#: tests/ui/test_pipeline_history_tab_qt.py:111
-msgid "Other process"
-msgstr "其他进程"
+#: src/ui/app_window/sidebar_panel.py:488
+msgid "Random purge"
+msgstr "随机清理"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:173
-msgid "MCP"
-msgstr "MCP"
+#: src/ui/app_window/sidebar_panel.py:493
+msgid "View ungrouped files"
+msgstr "查看未分组的文件"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:173
-msgid "This app"
-msgstr "此应用"
+#: src/ui/app_window/sidebar_panel.py:503
+msgid "Return to groups"
+msgstr "返回群组"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:176
-msgid "Directories at run time:"
-msgstr "运行时目录："
+#: src/ui/app_window/window_launcher.py:1124
+msgid "Help & Config Error"
+msgstr "帮助 & 配置错误"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:65
-msgid "Started"
-msgstr "已开始"
+#: src/ui/compare/filter_builder_panel_qt.py:69
+msgid "W"
+msgstr "W"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:66
-msgid "Finished / Updated"
-msgstr "已完成 / 已更新"
+#: src/ui/compare/filter_builder_panel_qt.py:78
+msgid "H"
+msgstr "H"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:66
-msgid "Progress"
-msgstr "进度"
+#: src/ui/compare/hf_model_manager_window_qt.py:519
+msgid "Model failed to initialize (can_run=False)."
+msgstr "模型初始化失败 (can_run=False)。"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:66
-msgid "Errors"
-msgstr "错误"
+#: src/ui/compare/hf_model_manager_window_qt.py:786
+msgid "{0} (optional)"
+msgstr "{0}（可选）"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:66
-msgid "Source"
-msgstr "来源"
+#: src/ui/files/file_actions_window_qt.py:642
+msgid "Copied filename: {0}"
+msgstr "已复制的文件名: {0}"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:239
-#: src/ui/compare/pipeline_history_tab_qt.py:246
-msgid "Stop Pipeline Run"
-msgstr "停止流水线运行"
+#: src/ui/files/marked_file_mover_qt.py:736
+msgid "Error opening hotkey actions window: "
+msgstr "打开热键操作窗口时出错： "
 
-#: src/ui/compare/pipeline_history_tab_qt.py:247
-msgid "This run is not running in this app."
-msgstr "此运行未在此应用中运行。"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:259
-msgid "There is no unfinished run to resume."
-msgstr "没有未完成的运行可以恢复。"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:273
-msgid "Remove Run"
-msgstr "删除 Run"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:143
-msgid "Dir {0}/{1} · {2}/{3} files"
-msgstr "目录 {0}/{1} · {2}/{3} 文件"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:148
-msgid "{0} files"
-msgstr "{0} 文件"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:179
-msgid "Current directory: {0}"
-msgstr "当前目录：{0}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:181
-msgid "Skipped (processed by the earlier run): {0}"
-msgstr "已跳过（由上一次运行处理）：{0}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:183
-msgid "Actions: {0}"
-msgstr "操作：{0}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:186
-msgid "Error: {0}"
-msgstr "错误: {0}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:188
-msgid "Resumes run {0}"
-msgstr "简历已运行 {0}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:190
-msgid "Resumed by run {0}"
-msgstr "由运行 {0} 恢复"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:192
-msgid "Run data: {0}"
-msgstr "运行数据：{0}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:240
-msgid ""
-"Stop pipeline run '{0}'? Files already processed keep their actions; the run"
-" can be resumed later."
-msgstr "停止管道运行“{0}”？已处理的文件保持其操作；该运行可以稍后恢复。"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:274
-msgid "Remove this run of '{0}' from the history?"
-msgstr "要从历史记录中删除此“{0}”的运行吗？"
-
-#: src/ui/compare/classifier_management_window_qt.py:736
-#: tests/ui/test_classifier_management_window_qt.py:62
-msgid "History"
-msgstr "历史"
-
-#: app_qt.py:100
-msgid "This build no longer matches its source code. See the log for details."
-msgstr "此构建已不再匹配其源代码。请查看日志了解详情。"
-
-#: src/image/frame_cache.py:115
-#: tests/unit/test_optional_native_libraries.py:17
-msgid "SVG conversion is unavailable because the Cairo library was not found."
-msgstr "未找到 Cairo 库，无法进行 SVG 转换。"
-
-#: src/image/frame_cache.py:116
-#: tests/unit/test_optional_native_libraries.py:34
-msgid "SVG conversion is unavailable because cairosvg is not installed."
-msgstr "由于未安装 cairosvg，SVG 转换不可用。"
-
-#: src/image/frame_cache.py:124
-#: tests/unit/test_optional_native_libraries.py:18
-msgid ""
-"Run python scripts/install_native_extras.py from the repository, then "
-"restart."
-msgstr "从仓库运行 python scripts/install_native_extras.py，然后重启。"
-
-#: src/image/frame_cache.py:125
-#: tests/unit/test_optional_native_libraries.py:35
-msgid "pip install cairosvg"
-msgstr "pip install cairosvg"
-
-#: src/ui/app_window/file_marks_controller.py:714
-#: src/ui/files/related_images_window_qt.py:126
-#: tests/ui/test_mark_families_with_all_suffixes.py:215
-#: tests/ui/test_related_images_window.py:76
-#: tests/ui/test_related_images_window.py:90
-#: tests/ui/test_related_images_window.py:484
-msgid "Mark families with all suffixes"
-msgstr "标记所有后缀的族"
-
-#: src/ui/app_window/file_marks_controller.py:717
-msgid "Enter at least one suffix."
-msgstr "至少输入一个后缀。"
-
-#: src/ui/app_window/file_marks_controller.py:735
-#: tests/ui/test_related_images_window.py:516
-msgid "No image families with all of these suffixes found: {0}"
-msgstr "未找到具有所有这些后缀的图像族：{0}"
-
-#: src/ui/app_window/file_marks_controller.py:750
-msgid "{0} file(s) in {1} of {2} image families marked ({3})"
-msgstr "{0} 个文件位于 {1}/{2} 图像族中已标记 ({3})"
-
-#: src/ui/app_window/media_frame.py:83
-#: tests/unit/test_optional_native_libraries.py:58
-msgid "Video playback is unavailable because VLC was not found."
-msgstr "由于未找到 VLC，视频播放不可用。"
-
-#: src/ui/auth/password_utils.py:72
-msgid "Password Unavailable"
-msgstr "密码不可用"
-
-#: src/ui/auth/password_utils.py:73
-msgid ""
-"The password is stored with quantum-safe (OQS) encryption, which this build "
-"does not include, so protected actions are unavailable. Use a build made "
-"with OQS support."
-msgstr "密码使用量子安全（OQS）加密存储，但此构建不包含该功能，导致受保护的操作不可用。请使用支持 OQS 的构建。"
-
-#: src/ui/files/related_images_window_qt.py:120
-msgid "Suffixes, e.g. edit, upscale"
-msgstr "后缀，例如 edit，upscale"
-
-#: src/ui/files/related_images_window_qt.py:122
-msgid ""
-"Comma- or space-separated suffixes. Every image family in the current "
-"directory with at least one related image per suffix is marked in full: the "
-"seed and all its related images."
-msgstr "以逗号或空格分隔的后缀。当前目录中每个每个后缀至少有一张相关图片的图像系列都会被完整标记：种子图像及其所有相关图像。"
+#: src/ui/files/marked_file_mover_qt.py:862
+msgid "PDF files"
+msgstr "PDF文件"

@@ -465,8 +465,8 @@ class SearchController:
             search_file = Utils.get_valid_file(self._app.get_search_dir(), media_path)
             if search_file is None:
                 self._app.notification_ctrl.handle_error(
-                    "Search file is not a valid file for base dir.",
-                    title="Invalid search file",
+                    _("Search file is not a valid file for base dir."),
+                    title=_("Invalid search file"),
                 )
                 raise AssertionError("Search file is not a valid file.")
         return search_file
@@ -481,8 +481,8 @@ class SearchController:
             search_file = Utils.get_valid_file(self._app.get_search_dir(), media_path)
             if search_file is None:
                 self._app.notification_ctrl.handle_error(
-                    "Negative search file is not a valid file for base dir.",
-                    title="Invalid negative search file",
+                    _("Negative search file is not a valid file for base dir."),
+                    title=_("Invalid negative search file"),
                 )
                 raise AssertionError("Negative search file is not a valid file.")
         return search_file
@@ -746,7 +746,7 @@ class SearchController:
             else MarkedFiles.file_marks[0]
         )
 
-        if self._app.check_many_files(window, action="find related media"):
+        if self._app.check_many_files(window, action=_("find related media")):
             self._app.app_actions.report_related_images(
                 _("Cancelled: that directory has too many files."), action_label=label,
                 outcome="too_many_files", source=media_to_use, base_dir=base_dir)

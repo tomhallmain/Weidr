@@ -34,6 +34,7 @@ from PySide6.QtWidgets import (
 from ui.app_style import AppStyle
 from utils.audio_media import MASONRY_AUDIO_TILE_LABEL, is_audio_for_display
 from utils.logging_setup import get_logger
+from utils.translations import _
 
 try:
     from PIL import Image as PilImage
@@ -533,11 +534,11 @@ class MasonryBrowser(QWidget):
         if pages <= 1:
             # Single page — show total count without the navigation hint so the
             # bar stays informative without implying there are more pages.
-            self._page_label.setText(f"Showing all {total} files")
+            self._page_label.setText(_("Showing all {0} files").format(total))
         else:
             self._page_label.setText(
-                f"Page {self._page + 1} / {pages}"
-                f"  •  files {start}–{end} of {total}"
-                f"  •  PgUp / PgDn to navigate"
+                _("Page {0} / {1}  •  files {2}–{3} of {4}  •  PgUp / PgDn to navigate").format(
+                    self._page + 1, pages, start, end, total
+                )
             )
         self._page_bar.setVisible(True)

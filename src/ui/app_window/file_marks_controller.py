@@ -212,7 +212,7 @@ class FileMarksController:
             )
         except Exception as e:
             self._app.notification_ctrl.handle_error(
-                str(e), title="Marked Files Window Error"
+                str(e), title=_("Marked Files Window Error")
             )
 
     # ==================================================================
@@ -402,7 +402,7 @@ class FileMarksController:
                 else MarkedFiles.file_marks[0]
             )
 
-        if self._app.check_many_files(window, action="find related media"):
+        if self._app.check_many_files(window, action=_("find related media")):
             self._notify_related_result(
                 _("Cancelled: that directory has too many files."), label,
                 outcome="too_many_files", source=media_to_use, base_dir=base_dir)

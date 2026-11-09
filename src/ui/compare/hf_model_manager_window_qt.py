@@ -516,7 +516,7 @@ class _ClassifierTestWorker(QThread):
             classifier = image_classifier_manager.get_classifier(self._model_name)
             if classifier is None or not classifier.can_run:
                 self.failed.emit(self._model_name, self._image_path,
-                                 "Model failed to initialize (can_run=False).")
+                                 _("Model failed to initialize (can_run=False)."))
                 return
             # Non-raster media (SVG, PDF, video, ...) is classified from its rendered
             # image; the detection backend below must read that same image.
@@ -783,7 +783,7 @@ class HfModelManagerWindow(SmartDialog):
 
         install_row_3.addWidget(QLabel(_("Arch class")))
         self._arch_class_edit = QLineEdit()
-        self._arch_class_edit.setPlaceholderText("architecture_class_path (optional)")
+        self._arch_class_edit.setPlaceholderText(_("{0} (optional)").format("architecture_class_path"))
         install_row_3.addWidget(self._arch_class_edit, stretch=1)
         layout.addLayout(install_row_3)
 

@@ -2,8 +2,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: 1.0\n"
-"POT-Creation-Date: 2026-11-07 20:55-0500\n"
-"PO-Revision-Date: 2026-11-07 20:55-0500\n"
+"POT-Creation-Date: 2026-11-09 17:36-0500\n"
+"PO-Revision-Date: 2026-11-09 17:36-0500\n"
 "Last-Translator: Translator Name <translator@example.com>\n"
 "Language-Team: it Team <<EMAIL>>\n"
 "Language: it\n"
@@ -11,6 +11,12 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: app_qt.py:100
+msgid "This build no longer matches its source code. See the log for details."
+msgstr ""
+"Questa build non corrisponde più al suo codice sorgente. Vedi il registro "
+"per i dettagli."
 
 #: extensions/sd_runner_client.py:151
 msgid "Image does not contain a prompt to redo!"
@@ -1515,6 +1521,33 @@ msgstr "Elaborazione batch {0}/{1} ({2} immagini)..."
 msgid "Found {0} images that meet the threshold..."
 msgstr "Trovate {0} immagini che soddisfano la soglia..."
 
+#: src/compare/pipeline_run_history.py:77
+msgid "Running"
+msgstr "In esecuzione"
+
+#: src/compare/pipeline_run_history.py:78
+#: tests/ui/test_pipeline_history_tab_qt.py:76
+msgid "Completed"
+msgstr "Completato"
+
+#: src/compare/pipeline_run_history.py:79
+msgid "Completed with errors"
+msgstr "Completato con errori"
+
+#: src/compare/pipeline_run_history.py:80
+#: tests/ui/test_pipeline_history_tab_qt.py:75
+#: tests/unit/test_pipeline_run_history.py:98
+msgid "Cancelled"
+msgstr "Annullato"
+
+#: src/compare/pipeline_run_history.py:81
+msgid "Failed"
+msgstr "Fallito"
+
+#: src/compare/pipeline_run_history.py:82
+msgid "Interrupted"
+msgstr "Interrotto"
+
 #: src/compare/pipeline_run_report.py:73
 #: tests/unit/test_classifier_pipeline_runner.py:1569
 msgid "Warnings"
@@ -1533,6 +1566,11 @@ msgstr "Informazioni"
 #: src/ui/compare/classifier_pipelines_tab_qt.py:824
 msgid "(no action)"
 msgstr "(nessuna azione)"
+
+#: src/compare/pipeline_run_report.py:160
+#: tests/unit/test_classifier_pipeline_runner.py:1553
+msgid "Pipeline {0} — run cancelled"
+msgstr "Pipeline {0} — esecuzione annullata"
 
 #: src/compare/pipeline_run_report.py:163
 #: tests/unit/test_classifier_pipeline_runner.py:1554
@@ -1566,6 +1604,12 @@ msgstr "file"
 #: src/compare/pipeline_run_report.py:191
 msgid "Files evaluated: {0}"
 msgstr "File valutati: {0}"
+
+#: src/compare/pipeline_run_report.py:195
+#: tests/unit/test_classifier_pipeline_runner.py:1555
+msgid "Resumed run: {0} file(s) already processed earlier were skipped"
+msgstr ""
+"Esecuzione ripresa: {0} file già elaborati in precedenza sono stati ignorati"
 
 #: src/compare/pipeline_run_report.py:200
 msgid "Errors during evaluation: {0}"
@@ -1606,6 +1650,27 @@ msgstr "  [{0}] — {1} file"
 #: src/compare/pipeline_run_report.py:307
 msgid "      · … and {0} more"
 msgstr "      · … e {0} altri"
+
+#: src/compare/pipeline_run_service.py:245
+msgid "This run is no longer in the history."
+msgstr "Questa esecuzione non è più nella cronologia."
+
+#: src/compare/pipeline_run_service.py:248
+msgid "This run was already resumed."
+msgstr "Questa esecuzione è già stata ripresa."
+
+#: src/compare/pipeline_run_service.py:251
+msgid ""
+"Only cancelled, failed or interrupted runs with saved progress can be "
+"resumed."
+msgstr ""
+"Solo le esecuzioni annullate, fallite o interrotte con progresso salvato "
+"possono essere riprese."
+
+#: src/compare/pipeline_run_service.py:255
+#: tests/unit/test_pipeline_run_service.py:199
+msgid "Pipeline '{0}' no longer exists."
+msgstr "Il pipeline '{0}' non esiste più."
 
 #: src/files/file_browser.py:289 src/files/file_browser.py:303
 #: src/files/file_browser.py:315 src/ui/app_window/app_window.py:1061
@@ -1759,7 +1824,7 @@ msgstr "Rimozione del file: {0}"
 
 #: src/files/marked_files.py:293 src/files/marked_files.py:300
 #: src/files/marked_files.py:304 src/files/marked_files.py:310
-#: src/files/marked_files.py:321 src/ui/app_window/app_window.py:1381
+#: src/files/marked_files.py:321 src/ui/app_window/app_window.py:1385
 #: src/ui/app_window/search_controller.py:652
 #: src/ui/app_window/search_controller.py:711
 #: src/ui/app_window/search_controller.py:788
@@ -2136,6 +2201,32 @@ msgstr "{0} (cache) immagini a valle trovate."
 #: src/ui/app_window/file_marks_controller.py:416
 msgid "No downstream related images found in"
 msgstr "Non sono state trovate immagini relative al downstream in"
+
+#: src/image/frame_cache.py:115
+#: tests/unit/test_optional_native_libraries.py:17
+msgid "SVG conversion is unavailable because the Cairo library was not found."
+msgstr ""
+"La conversione SVG non è disponibile perché la libreria Cairo non è stata "
+"trovata."
+
+#: src/image/frame_cache.py:116
+#: tests/unit/test_optional_native_libraries.py:34
+msgid "SVG conversion is unavailable because cairosvg is not installed."
+msgstr ""
+"La conversione SVG non è disponibile perché cairosvg non è installato."
+
+#: src/image/frame_cache.py:124
+#: tests/unit/test_optional_native_libraries.py:18
+msgid ""
+"Run python scripts/install_native_extras.py from the repository, then "
+"restart."
+msgstr ""
+"Esegui python scripts/install_native_extras.py dal repository, poi riavvia."
+
+#: src/image/frame_cache.py:125
+#: tests/unit/test_optional_native_libraries.py:35
+msgid "pip install cairosvg"
+msgstr "pip install cairosvg"
 
 #: src/image/frame_cache.py:828
 msgid "Unable to render ePub: pyppeteer and pypdfium2 are required"
@@ -3406,37 +3497,37 @@ msgstr ""
 msgid "Browsing mode set."
 msgstr "Modalità di navigazione impostata."
 
-#: src/ui/app_window/app_window.py:1274
+#: src/ui/app_window/app_window.py:1278
 #: src/ui/app_window/window_launcher.py:1155
 msgid "Many Files"
 msgstr "Molti file"
 
-#: src/ui/app_window/app_window.py:1381
+#: src/ui/app_window/app_window.py:1385
 msgid "No files found in directory after refresh."
 msgstr "Nessun file trovato nella cartella dopo l'aggiornamento."
 
-#: src/ui/app_window/app_window.py:1414
+#: src/ui/app_window/app_window.py:1418
 msgid "NEW_MEDIA_QUEUED"
 msgstr "{0} nuovo(i) file multimediali in coda"
 
-#: src/ui/app_window/app_window.py:1530
+#: src/ui/app_window/app_window.py:1534
 msgid "No cached image for this file."
 msgstr "Nessuna immagine nella cache per questo file."
 
-#: src/ui/app_window/app_window.py:1533
+#: src/ui/app_window/app_window.py:1537
 msgid "Could not read cached image."
 msgstr "Impossibile leggere l'immagine memorizzata nella cache."
 
-#: src/ui/app_window/app_window.py:1536
+#: src/ui/app_window/app_window.py:1540
 msgid "Clipboard unavailable."
 msgstr "Appunti non disponibili."
 
-#: src/ui/app_window/app_window.py:1555 src/ui/app_window/app_window.py:1569
-#: src/ui/app_window/app_window.py:1585
+#: src/ui/app_window/app_window.py:1559 src/ui/app_window/app_window.py:1573
+#: src/ui/app_window/app_window.py:1589
 msgid "Screenshot Failed"
 msgstr "Screenshot non riuscito"
 
-#: src/ui/app_window/app_window.py:1556
+#: src/ui/app_window/app_window.py:1560
 msgid ""
 "Unable to create screenshot directory:\n"
 "{0}\n"
@@ -3448,7 +3539,7 @@ msgstr ""
 "\n"
 "{1}"
 
-#: src/ui/app_window/app_window.py:1570
+#: src/ui/app_window/app_window.py:1574
 msgid ""
 "Unable to save screenshot.\n"
 "\n"
@@ -3458,7 +3549,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/ui/app_window/app_window.py:1576
+#: src/ui/app_window/app_window.py:1580
 msgid ""
 "Screenshot saved to:\n"
 "{0}"
@@ -3466,7 +3557,7 @@ msgstr ""
 "Screenshot salvato in:\n"
 "{0}"
 
-#: src/ui/app_window/app_window.py:1586
+#: src/ui/app_window/app_window.py:1590
 msgid ""
 "Unable to copy image to clipboard.\n"
 "\n"
@@ -3476,34 +3567,34 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/ui/app_window/app_window.py:1590
+#: src/ui/app_window/app_window.py:1594
 msgid "Copied image to clipboard."
 msgstr "Immagine copiata negli appunti."
 
-#: src/ui/app_window/app_window.py:1594
+#: src/ui/app_window/app_window.py:1598
 msgid ""
 "Screenshots are available for videos, animated GIFs, and PDF/ePub/SVG/HTML "
 "files."
 msgstr ""
 "Sono disponibili screenshot per video, GIF animate e file PDF/ePub/SVG/HTML."
 
-#: src/ui/app_window/app_window.py:1652
+#: src/ui/app_window/app_window.py:1656
 msgid "Masonry view"
 msgstr "Vista a mosaico"
 
-#: src/ui/app_window/app_window.py:1657
+#: src/ui/app_window/app_window.py:1661
 msgid "Full-window view"
 msgstr "Visualizzazione a schermo intero"
 
-#: src/ui/app_window/app_window.py:1717
+#: src/ui/app_window/app_window.py:1721
 msgid "Theme switched to {0}."
 msgstr "Il tema è passato a {0}."
 
-#: src/ui/app_window/app_window.py:1770
+#: src/ui/app_window/app_window.py:1774
 msgid "Confirm Quit"
 msgstr "Confermare l'uscita"
 
-#: src/ui/app_window/app_window.py:1770
+#: src/ui/app_window/app_window.py:1774
 msgid "Would you like to quit the application?"
 msgstr "Volete abbandonare l'applicazione?"
 
@@ -3904,6 +3995,28 @@ msgstr "Ogni file nella directory corrente ha un'immagine correlata."
 #: src/ui/app_window/file_marks_controller.py:696
 msgid "{0} file(s) without a related image marked"
 msgstr "{0} file senza un'immagine correlata contrassegnata"
+
+#: src/ui/app_window/file_marks_controller.py:714
+#: src/ui/files/related_images_window_qt.py:126
+#: tests/ui/test_mark_families_with_all_suffixes.py:215
+#: tests/ui/test_related_images_window.py:76
+#: tests/ui/test_related_images_window.py:90
+#: tests/ui/test_related_images_window.py:484
+msgid "Mark families with all suffixes"
+msgstr "Contrassegnare le famiglie con tutti i suffissi"
+
+#: src/ui/app_window/file_marks_controller.py:717
+msgid "Enter at least one suffix."
+msgstr "Inserisci almeno un suffisso."
+
+#: src/ui/app_window/file_marks_controller.py:735
+#: tests/ui/test_related_images_window.py:516
+msgid "No image families with all of these suffixes found: {0}"
+msgstr "Nessuna famiglia di immagini con tutti questi suffissi trovata: {0}"
+
+#: src/ui/app_window/file_marks_controller.py:750
+msgid "{0} file(s) in {1} of {2} image families marked ({3})"
+msgstr "{0} file in {1} di {2} famiglie di immagini contrassegnati ({3})"
 
 #: src/ui/app_window/file_marks_controller.py:770
 msgid "Set related image"
@@ -4676,6 +4789,12 @@ msgstr "Attiva audio"
 #: tests/ui/test_media_controls_overlay.py:207
 msgid "Mute"
 msgstr "Muto"
+
+#: src/ui/app_window/media_frame.py:83
+#: tests/unit/test_optional_native_libraries.py:58
+msgid "Video playback is unavailable because VLC was not found."
+msgstr ""
+"La riproduzione video non è disponibile perché VLC non è stato trovato."
 
 #: src/ui/app_window/media_frame.py:269
 msgid "No displayable files found in this directory for the current settings."
@@ -5693,7 +5812,7 @@ msgstr "Salva le impostazioni"
 
 #: src/ui/auth/password_admin_window.py:352
 #: src/ui/compare/hf_model_manager_window_qt.py:96
-#: src/ui/files/directory_picker_dialog.py:61
+#: src/ui/custom_title_bar.py:170 src/ui/files/directory_picker_dialog.py:61
 msgid "Close"
 msgstr "Chiudere"
 
@@ -5822,6 +5941,20 @@ msgid ""
 msgstr ""
 "La protezione con password è necessaria per questa azione, ma al momento non"
 " è configurata."
+
+#: src/ui/auth/password_utils.py:72
+msgid "Password Unavailable"
+msgstr "Password non disponibile"
+
+#: src/ui/auth/password_utils.py:73
+msgid ""
+"The password is stored with quantum-safe (OQS) encryption, which this build "
+"does not include, so protected actions are unavailable. Use a build made "
+"with OQS support."
+msgstr ""
+"La password è memorizzata con crittografia quantum‑safe (OQS) che questa "
+"build non include, quindi le azioni protette non sono disponibili. Usa una "
+"build con supporto OQS."
 
 #: src/ui/compare/add_instance_dialog_qt.py:40
 msgid "Add Compare Instance"
@@ -6382,6 +6515,11 @@ msgstr "Configurazione non valida"
 #: src/ui/compare/classifier_management_window_qt.py:689
 msgid "Classifier Management"
 msgstr "Gestione dei classificatori"
+
+#: src/ui/compare/classifier_management_window_qt.py:736
+#: tests/ui/test_classifier_management_window_qt.py:62
+msgid "History"
+msgstr "Storia"
 
 #: src/ui/compare/classifier_management_window_qt.py:737
 #: src/ui/compare/prevalidations_tab_qt.py:267
@@ -7602,6 +7740,104 @@ msgstr ""
 msgid "Run Pipeline on Profile"
 msgstr "Esegui pipeline sul profilo"
 
+#: src/ui/compare/classifier_pipelines_tab_qt.py:568
+#: tests/ui/test_classifier_actions_tab_qt.py:208
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1176
+msgid ""
+"Last run of this pipeline on these directories: {date} ({status}, profile "
+"'{profile}')"
+msgstr ""
+"Ultima esecuzione di questa pipeline su queste directory: {date} ({status}, "
+"profilo '{profile}')"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:570
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1187
+msgid ""
+"Last run of this pipeline on overlapping directories: {date} ({status}, "
+"profile '{profile}')"
+msgstr ""
+"Ultima esecuzione di questa pipeline su directory sovrapposte: {date} "
+"({status}, profilo '{profile}')"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:575
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1188
+msgid "  Overlap: {0} ↔ {1}"
+msgstr "  Sovrapposizione: {0} ↔ {1}"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:577
+msgid ""
+"WARNING: pipeline '{name}' is running on overlapping directories (started "
+"{date})."
+msgstr ""
+"AVVERTENZA: pipeline '{name}' è in esecuzione su directory sovrapposte "
+"(avviato {date})."
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:580
+msgid ""
+"The last run on these directories did not finish ({status}, {count} file(s) "
+"processed)."
+msgstr ""
+"L'ultima esecuzione di queste directory non è terminata ({status}, {count} "
+"file elaborato(i))."
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:596
+msgid "Resume the unfinished run, or start a new run from the beginning?"
+msgstr ""
+"Riprendere l'esecuzione interrotta o avviare una nuova esecuzione "
+"dall'inizio?"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:597
+#: src/ui/compare/pipeline_history_tab_qt.py:87
+msgid "Resume"
+msgstr "Curriculum"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:597
+msgid "Start New Run"
+msgstr "Avvia nuova esecuzione"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:606
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1206
+msgid "Run Anyway"
+msgstr "Esegui comunque"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:616
+#: src/ui/compare/classifier_pipelines_tab_qt.py:619
+#: src/ui/compare/classifier_pipelines_tab_qt.py:638
+#: src/ui/compare/pipeline_history_tab_qt.py:259
+msgid "Resume Pipeline Run"
+msgstr "Riprendi esecuzione del pipeline"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:623
+msgid ""
+"The pipeline was edited since this run; the current definition will be used."
+msgstr ""
+"La pipeline è stata modificata da questa esecuzione; verrà usata la "
+"definizione attuale."
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:625
+msgid "Missing directories (skipped): {0}"
+msgstr "Directory mancanti (ignorate): {0}"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:628
+msgid ""
+"Profile '{0}' has changed since this run; the directories recorded at that "
+"time are used."
+msgstr ""
+"Il profilo '{0}' è cambiato dal lancio corrente; le directory registrate a "
+"quel tempo vengono usate."
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:630
+msgid ""
+"Resume pipeline '{name}' from {date}? {count} file(s) already processed will be skipped.\n"
+"\n"
+"Directories:\n"
+"{dirs}"
+msgstr ""
+"Riprendi la pipeline '{name}' dal {date}? {count} file già elaborati verranno ignorati.\n"
+"\n"
+"Cartelle:\n"
+"{dirs}"
+
 #: src/ui/compare/classifier_pipelines_tab_qt.py:660
 #: src/ui/compare/classifier_pipelines_tab_qt.py:768
 #: tests/ui/test_classifier_pipelines_tab_qt.py:995
@@ -7622,6 +7858,18 @@ msgstr ""
 "Le immagini generate non verranno prodotte a meno che SD Runner non venga avviato prima del completamento dell'esecuzione.\n"
 "\n"
 "Continuare comunque?"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:688
+msgid ""
+"This run cannot start:\n"
+"{0}"
+msgstr ""
+"Questa esecuzione non può avviarsi:\n"
+"{0}"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:705
+msgid "Pipeline {0} failed: {1}"
+msgstr "Pipeline {0} non riuscita: {1}"
 
 #: src/ui/compare/classifier_pipelines_tab_qt.py:731
 msgid "Disabled nodes (will be skipped): {nodes}"
@@ -8761,6 +9009,125 @@ msgstr "Rimuovi anticipata"
 #: src/ui/compare/lookaheads_tab_qt.py:80
 msgid "{name} ({name_or_text}, threshold: {threshold:.2f})"
 msgstr "{name} ({name_or_text}, soglia: {threshold:.2f})"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:57
+msgid "Pipeline Run History"
+msgstr "Cronologia esecuzioni pipeline"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:65
+msgid "Started"
+msgstr "Avviato"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Finished / Updated"
+msgstr "Completato / Aggiornato"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Progress"
+msgstr "Avanzamento"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Errors"
+msgstr "Errori"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Source"
+msgstr "Origine"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:84
+msgid "Stop"
+msgstr "Ferma"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:90
+msgid "Resume Last Incomplete"
+msgstr "Riprendi ultima incompleta"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:141
+#: tests/ui/test_pipeline_history_tab_qt.py:124
+msgid "Stopping…"
+msgstr "Arrestando…"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:143
+msgid "Dir {0}/{1} · {2}/{3} files"
+msgstr "Cartella {0}/{1} · {2}/{3} file"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:148
+msgid "{0} files"
+msgstr "{0} file"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:172
+#: tests/ui/test_pipeline_history_tab_qt.py:111
+msgid "Other process"
+msgstr "Altro processo"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:173
+msgid "MCP"
+msgstr "MCP"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:173
+msgid "This app"
+msgstr "Questa app"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:176
+msgid "Directories at run time:"
+msgstr "Directory in fase di esecuzione:"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:179
+msgid "Current directory: {0}"
+msgstr "Directory corrente: {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:181
+msgid "Skipped (processed by the earlier run): {0}"
+msgstr "Saltato (elaborato dall'esecuzione precedente): {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:183
+msgid "Actions: {0}"
+msgstr "Azioni: {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:186
+msgid "Error: {0}"
+msgstr "Errore: {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:188
+msgid "Resumes run {0}"
+msgstr "Curriculum eseguiti {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:190
+msgid "Resumed by run {0}"
+msgstr "Ripreso dall'esecuzione {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:192
+msgid "Run data: {0}"
+msgstr "Dati di esecuzione: {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:239
+#: src/ui/compare/pipeline_history_tab_qt.py:246
+msgid "Stop Pipeline Run"
+msgstr "Interrompi esecuzione pipeline"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:240
+msgid ""
+"Stop pipeline run '{0}'? Files already processed keep their actions; the run"
+" can be resumed later."
+msgstr ""
+"Interrompere l'esecuzione del pipeline '{0}'? I file già elaborati "
+"mantengono le loro azioni; l'esecuzione può essere ripresa in seguito."
+
+#: src/ui/compare/pipeline_history_tab_qt.py:247
+msgid "This run is not running in this app."
+msgstr "Questa esecuzione non è in esecuzione in questa app."
+
+#: src/ui/compare/pipeline_history_tab_qt.py:259
+msgid "There is no unfinished run to resume."
+msgstr "Non c’è alcuna esecuzione incompleta da riprendere."
+
+#: src/ui/compare/pipeline_history_tab_qt.py:273
+msgid "Remove Run"
+msgstr "Rimuovi Run"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:274
+msgid "Remove this run of '{0}' from the history?"
+msgstr "Rimuovere questa sequenza di '{0}' dalla cronologia?"
 
 #: src/ui/compare/prevalidations_tab_qt.py:136
 msgid "Lookaheads (select from shared list)"
@@ -10287,6 +10654,20 @@ msgstr "Contrassegna i file senza immagine correlata nella cartella corrente"
 msgid "Search all open windows for downstream images"
 msgstr "Cerca immagini a valle in tutte le finestre aperte"
 
+#: src/ui/files/related_images_window_qt.py:120
+msgid "Suffixes, e.g. edit, upscale"
+msgstr "Suffissi, ad es. edit, upscale"
+
+#: src/ui/files/related_images_window_qt.py:122
+msgid ""
+"Comma- or space-separated suffixes. Every image family in the current "
+"directory with at least one related image per suffix is marked in full: the "
+"seed and all its related images."
+msgstr ""
+"Suffissi separati da virgole o spazi. Ogni gruppo di immagini nella cartella"
+" corrente con almeno un’immagine correlata per suffisso viene contrassegnato"
+" per intero: la seed e tutte le sue immagini correlate."
+
 #: src/ui/files/related_images_window_qt.py:135
 msgid "Results"
 msgstr "Risultati"
@@ -10381,6 +10762,10 @@ msgstr "Seleziona directory di destinazione"
 msgid "Select directory to search for related files"
 msgstr "Selezionare la directory in cui cercare i file correlati"
 
+#: src/ui/files/type_configuration_window_qt.py:39
+msgid "SVG support requires cairosvg package"
+msgstr "Il supporto SVG richiede il pacchetto cairosvg"
+
 #: src/ui/files/type_configuration_window_qt.py:62
 msgid "Basic image files (PNG, JPG, etc.)"
 msgstr "File di immagini di base (PNG, JPG, ecc.)"
@@ -10424,10 +10809,6 @@ msgstr "Il supporto PDF richiede il pacchetto pypdfium2"
 #: src/ui/files/type_configuration_window_qt.py:83
 msgid "ePub support requires pyppeteer and pypdfium2 packages"
 msgstr "Il supporto ePub richiede i pacchetti pyppeteer e pypdfium2"
-
-#: src/ui/files/type_configuration_window_qt.py:39
-msgid "SVG support requires cairosvg package"
-msgstr "Il supporto SVG richiede il pacchetto cairosvg"
 
 #: src/ui/files/type_configuration_window_qt.py:89
 msgid "HTML support requires pyppeteer package"
@@ -11392,383 +11773,137 @@ msgstr "Maiusc"
 msgid "Alt"
 msgstr "Alt"
 
-#: src/compare/pipeline_run_history.py:77
-msgid "Running"
-msgstr "In esecuzione"
+#: src/ui/custom_title_bar.py:160
+msgid "Minimize"
+msgstr "Minimizza"
 
-#: src/compare/pipeline_run_history.py:78
-#: tests/ui/test_pipeline_history_tab_qt.py:76
-msgid "Completed"
-msgstr "Completato"
+#: src/ui/custom_title_bar.py:165 src/ui/custom_title_bar.py:296
+msgid "Maximize"
+msgstr "Massimizza"
 
-#: src/compare/pipeline_run_history.py:79
-msgid "Completed with errors"
-msgstr "Completato con errori"
+#: src/ui/custom_title_bar.py:293
+msgid "Restore"
+msgstr "Ripristina"
 
-#: src/compare/pipeline_run_history.py:80
-#: tests/ui/test_pipeline_history_tab_qt.py:75
-#: tests/unit/test_pipeline_run_history.py:98
-msgid "Cancelled"
-msgstr "Annullato"
+#: src/ui/app_window/app_window.py:1275
+msgid "do this action"
+msgstr "esegui questa azione"
 
-#: src/compare/pipeline_run_history.py:81
-msgid "Failed"
-msgstr "Fallito"
-
-#: src/compare/pipeline_run_history.py:82
-msgid "Interrupted"
-msgstr "Interrotto"
-
-#: src/compare/pipeline_run_service.py:248
-msgid "This run was already resumed."
-msgstr "Questa esecuzione è già stata ripresa."
-
-#: src/compare/pipeline_run_service.py:251
+#: src/ui/app_window/app_window.py:1279
 msgid ""
-"Only cancelled, failed or interrupted runs with saved progress can be "
-"resumed."
-msgstr ""
-"Solo le esecuzioni annullate, fallite o interrotte con progresso salvato "
-"possono essere riprese."
-
-#: src/compare/pipeline_run_service.py:245
-msgid "This run is no longer in the history."
-msgstr "Questa esecuzione non è più nella cronologia."
-
-#: src/compare/pipeline_run_service.py:255
-#: tests/unit/test_pipeline_run_service.py:199
-msgid "Pipeline '{0}' no longer exists."
-msgstr "Il pipeline '{0}' non esiste più."
-
-#: src/compare/pipeline_run_report.py:160
-#: tests/unit/test_classifier_pipeline_runner.py:1553
-msgid "Pipeline {0} — run cancelled"
-msgstr "Pipeline {0} — esecuzione annullata"
-
-#: src/compare/pipeline_run_report.py:195
-#: tests/unit/test_classifier_pipeline_runner.py:1555
-msgid "Resumed run: {0} file(s) already processed earlier were skipped"
-msgstr ""
-"Esecuzione ripresa: {0} file già elaborati in precedenza sono stati ignorati"
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:616
-#: src/ui/compare/classifier_pipelines_tab_qt.py:619
-#: src/ui/compare/classifier_pipelines_tab_qt.py:638
-#: src/ui/compare/pipeline_history_tab_qt.py:259
-msgid "Resume Pipeline Run"
-msgstr "Riprendi esecuzione del pipeline"
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:568
-#: tests/ui/test_classifier_actions_tab_qt.py:208
-#: tests/ui/test_classifier_pipelines_tab_qt.py:1176
-msgid ""
-"Last run of this pipeline on these directories: {date} ({status}, profile "
-"'{profile}')"
-msgstr ""
-"Ultima esecuzione di questa pipeline su queste directory: {date} ({status}, "
-"profilo '{profile}')"
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:570
-#: tests/ui/test_classifier_pipelines_tab_qt.py:1187
-msgid ""
-"Last run of this pipeline on overlapping directories: {date} ({status}, "
-"profile '{profile}')"
-msgstr ""
-"Ultima esecuzione di questa pipeline su directory sovrapposte: {date} "
-"({status}, profilo '{profile}')"
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:623
-msgid ""
-"The pipeline was edited since this run; the current definition will be used."
-msgstr ""
-"La pipeline è stata modificata da questa esecuzione; verrà usata la "
-"definizione attuale."
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:630
-msgid ""
-"Resume pipeline '{name}' from {date}? {count} file(s) already processed will be skipped.\n"
+"There are a lot of files in {0} and it may take a while to {1}.\n"
 "\n"
-"Directories:\n"
-"{dirs}"
+"Would you like to proceed?"
 msgstr ""
-"Riprendi la pipeline '{name}' dal {date}? {count} file già elaborati verranno ignorati.\n"
+"Ci sono molti file in {0} e potrebbe volerci del tempo per {1}.\n"
 "\n"
-"Cartelle:\n"
-"{dirs}"
+"Desideri procedere?"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:596
-msgid "Resume the unfinished run, or start a new run from the beginning?"
+#: src/ui/app_window/file_marks_controller.py:215
+msgid "Marked Files Window Error"
+msgstr "Errore della finestra File contrassegnati"
+
+#: src/ui/app_window/file_marks_controller.py:405
+#: src/ui/app_window/search_controller.py:749
+msgid "find related media"
+msgstr "trova media correlati"
+
+#: src/ui/app_window/masonry_browser.py:537
+msgid "Showing all {0} files"
+msgstr "Mostra tutti i {0} file"
+
+#: src/ui/app_window/masonry_browser.py:540
+#: tests/ui/test_masonry_interaction.py:21
+msgid "Page {0} / {1}  •  files {2}–{3} of {4}  •  PgUp / PgDn to navigate"
+msgstr "Pagina {0} / {1}  •  file {2}–{3} di {4}  •  PgUp / PgDn per navigare"
+
+#: src/ui/app_window/media_navigator.py:91
+#: src/ui/app_window/media_navigator.py:117
+msgid "Exception"
+msgstr "Eccezione"
+
+#: src/ui/app_window/media_navigator.py:421
+msgid "Go To Index Error"
+msgstr "Errore nell'accesso all'indice"
+
+#: src/ui/app_window/media_navigator.py:479
+msgid "(search media)"
+msgstr "(cerca media)"
+
+#: src/ui/app_window/search_controller.py:468
+msgid "Search file is not a valid file for base dir."
+msgstr "Il file di ricerca non è un file valido per la directory base."
+
+#: src/ui/app_window/search_controller.py:469
+msgid "Invalid search file"
+msgstr "File di ricerca non valido"
+
+#: src/ui/app_window/search_controller.py:484
+msgid "Negative search file is not a valid file for base dir."
 msgstr ""
-"Riprendere l'esecuzione interrotta o avviare una nuova esecuzione "
-"dall'inizio?"
+"Il file di ricerca negativa non è un file valido per la directory di base."
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:597
-#: src/ui/compare/pipeline_history_tab_qt.py:87
-msgid "Resume"
-msgstr "Curriculum"
+#: src/ui/app_window/search_controller.py:485
+msgid "Invalid negative search file"
+msgstr "File di ricerca negativa non valido"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:597
-msgid "Start New Run"
-msgstr "Avvia nuova esecuzione"
+#: src/ui/app_window/sidebar_panel.py:466
+msgid "Toggle media view"
+msgstr "Commuta vista media"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:606
-#: tests/ui/test_classifier_pipelines_tab_qt.py:1206
-msgid "Run Anyway"
-msgstr "Esegui comunque"
+#: src/ui/app_window/sidebar_panel.py:471
+msgid "Replace with search media"
+msgstr "Sostituire con media di ricerca"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:577
-msgid ""
-"WARNING: pipeline '{name}' is running on overlapping directories (started "
-"{date})."
+#: src/ui/app_window/sidebar_panel.py:478
+msgid "Previous group"
+msgstr "Gruppo precedente"
+
+#: src/ui/app_window/sidebar_panel.py:483
+msgid "Next group"
+msgstr "Gruppo successivo"
+
+#: src/ui/app_window/sidebar_panel.py:488
+msgid "Random purge"
+msgstr "Purge casuale"
+
+#: src/ui/app_window/sidebar_panel.py:493
+msgid "View ungrouped files"
+msgstr "Visualizza file non raggruppati"
+
+#: src/ui/app_window/sidebar_panel.py:503
+msgid "Return to groups"
+msgstr "Ritorna ai gruppi"
+
+#: src/ui/app_window/window_launcher.py:1124
+msgid "Help & Config Error"
+msgstr "Errore di Aiuto & Configurazione"
+
+#: src/ui/compare/filter_builder_panel_qt.py:69
+msgid "W"
+msgstr "W"
+
+#: src/ui/compare/filter_builder_panel_qt.py:78
+msgid "H"
+msgstr "H"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:519
+msgid "Model failed to initialize (can_run=False)."
+msgstr "Inizializzazione del modello non riuscita (can_run=False)."
+
+#: src/ui/compare/hf_model_manager_window_qt.py:786
+msgid "{0} (optional)"
+msgstr "{0} (opzionale)"
+
+#: src/ui/files/file_actions_window_qt.py:642
+msgid "Copied filename: {0}"
+msgstr "Nome file copiato: {0}"
+
+#: src/ui/files/marked_file_mover_qt.py:736
+msgid "Error opening hotkey actions window: "
 msgstr ""
-"AVVERTENZA: pipeline '{name}' è in esecuzione su directory sovrapposte "
-"(avviato {date})."
+"Errore durante l'apertura della finestra delle azioni dei tasti rapidi: "
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:580
-msgid ""
-"The last run on these directories did not finish ({status}, {count} file(s) "
-"processed)."
-msgstr ""
-"L'ultima esecuzione di queste directory non è terminata ({status}, {count} "
-"file elaborato(i))."
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:625
-msgid "Missing directories (skipped): {0}"
-msgstr "Directory mancanti (ignorate): {0}"
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:628
-msgid ""
-"Profile '{0}' has changed since this run; the directories recorded at that "
-"time are used."
-msgstr ""
-"Il profilo '{0}' è cambiato dal lancio corrente; le directory registrate a "
-"quel tempo vengono usate."
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:575
-#: tests/ui/test_classifier_pipelines_tab_qt.py:1188
-msgid "  Overlap: {0} ↔ {1}"
-msgstr "  Sovrapposizione: {0} ↔ {1}"
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:688
-msgid ""
-"This run cannot start:\n"
-"{0}"
-msgstr ""
-"Questa esecuzione non può avviarsi:\n"
-"{0}"
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:705
-msgid "Pipeline {0} failed: {1}"
-msgstr "Pipeline {0} non riuscita: {1}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:57
-msgid "Pipeline Run History"
-msgstr "Cronologia esecuzioni pipeline"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:84
-msgid "Stop"
-msgstr "Ferma"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:90
-msgid "Resume Last Incomplete"
-msgstr "Riprendi ultima incompleta"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:141
-#: tests/ui/test_pipeline_history_tab_qt.py:124
-msgid "Stopping…"
-msgstr "Arrestando…"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:172
-#: tests/ui/test_pipeline_history_tab_qt.py:111
-msgid "Other process"
-msgstr "Altro processo"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:173
-msgid "MCP"
-msgstr "MCP"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:173
-msgid "This app"
-msgstr "Questa app"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:176
-msgid "Directories at run time:"
-msgstr "Directory in fase di esecuzione:"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:65
-msgid "Started"
-msgstr "Avviato"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:66
-msgid "Finished / Updated"
-msgstr "Completato / Aggiornato"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:66
-msgid "Progress"
-msgstr "Avanzamento"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:66
-msgid "Errors"
-msgstr "Errori"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:66
-msgid "Source"
-msgstr "Origine"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:239
-#: src/ui/compare/pipeline_history_tab_qt.py:246
-msgid "Stop Pipeline Run"
-msgstr "Interrompi esecuzione pipeline"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:247
-msgid "This run is not running in this app."
-msgstr "Questa esecuzione non è in esecuzione in questa app."
-
-#: src/ui/compare/pipeline_history_tab_qt.py:259
-msgid "There is no unfinished run to resume."
-msgstr "Non c’è alcuna esecuzione incompleta da riprendere."
-
-#: src/ui/compare/pipeline_history_tab_qt.py:273
-msgid "Remove Run"
-msgstr "Rimuovi Run"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:143
-msgid "Dir {0}/{1} · {2}/{3} files"
-msgstr "Cartella {0}/{1} · {2}/{3} file"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:148
-msgid "{0} files"
-msgstr "{0} file"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:179
-msgid "Current directory: {0}"
-msgstr "Directory corrente: {0}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:181
-msgid "Skipped (processed by the earlier run): {0}"
-msgstr "Saltato (elaborato dall'esecuzione precedente): {0}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:183
-msgid "Actions: {0}"
-msgstr "Azioni: {0}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:186
-msgid "Error: {0}"
-msgstr "Errore: {0}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:188
-msgid "Resumes run {0}"
-msgstr "Curriculum eseguiti {0}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:190
-msgid "Resumed by run {0}"
-msgstr "Ripreso dall'esecuzione {0}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:192
-msgid "Run data: {0}"
-msgstr "Dati di esecuzione: {0}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:240
-msgid ""
-"Stop pipeline run '{0}'? Files already processed keep their actions; the run"
-" can be resumed later."
-msgstr ""
-"Interrompere l'esecuzione del pipeline '{0}'? I file già elaborati "
-"mantengono le loro azioni; l'esecuzione può essere ripresa in seguito."
-
-#: src/ui/compare/pipeline_history_tab_qt.py:274
-msgid "Remove this run of '{0}' from the history?"
-msgstr "Rimuovere questa sequenza di '{0}' dalla cronologia?"
-
-#: src/ui/compare/classifier_management_window_qt.py:736
-#: tests/ui/test_classifier_management_window_qt.py:62
-msgid "History"
-msgstr "Storia"
-
-#: app_qt.py:100
-msgid "This build no longer matches its source code. See the log for details."
-msgstr ""
-"Questa build non corrisponde più al suo codice sorgente. Vedi il registro "
-"per i dettagli."
-
-#: src/image/frame_cache.py:115
-#: tests/unit/test_optional_native_libraries.py:17
-msgid "SVG conversion is unavailable because the Cairo library was not found."
-msgstr ""
-"La conversione SVG non è disponibile perché la libreria Cairo non è stata "
-"trovata."
-
-#: src/image/frame_cache.py:116
-#: tests/unit/test_optional_native_libraries.py:34
-msgid "SVG conversion is unavailable because cairosvg is not installed."
-msgstr ""
-"La conversione SVG non è disponibile perché cairosvg non è installato."
-
-#: src/image/frame_cache.py:124
-#: tests/unit/test_optional_native_libraries.py:18
-msgid ""
-"Run python scripts/install_native_extras.py from the repository, then "
-"restart."
-msgstr ""
-"Esegui python scripts/install_native_extras.py dal repository, poi riavvia."
-
-#: src/image/frame_cache.py:125
-#: tests/unit/test_optional_native_libraries.py:35
-msgid "pip install cairosvg"
-msgstr "pip install cairosvg"
-
-#: src/ui/app_window/file_marks_controller.py:714
-#: src/ui/files/related_images_window_qt.py:126
-#: tests/ui/test_mark_families_with_all_suffixes.py:215
-#: tests/ui/test_related_images_window.py:76
-#: tests/ui/test_related_images_window.py:90
-#: tests/ui/test_related_images_window.py:484
-msgid "Mark families with all suffixes"
-msgstr "Contrassegnare le famiglie con tutti i suffissi"
-
-#: src/ui/app_window/file_marks_controller.py:717
-msgid "Enter at least one suffix."
-msgstr "Inserisci almeno un suffisso."
-
-#: src/ui/app_window/file_marks_controller.py:735
-#: tests/ui/test_related_images_window.py:516
-msgid "No image families with all of these suffixes found: {0}"
-msgstr "Nessuna famiglia di immagini con tutti questi suffissi trovata: {0}"
-
-#: src/ui/app_window/file_marks_controller.py:750
-msgid "{0} file(s) in {1} of {2} image families marked ({3})"
-msgstr "{0} file in {1} di {2} famiglie di immagini contrassegnati ({3})"
-
-#: src/ui/app_window/media_frame.py:83
-#: tests/unit/test_optional_native_libraries.py:58
-msgid "Video playback is unavailable because VLC was not found."
-msgstr ""
-"La riproduzione video non è disponibile perché VLC non è stato trovato."
-
-#: src/ui/auth/password_utils.py:72
-msgid "Password Unavailable"
-msgstr "Password non disponibile"
-
-#: src/ui/auth/password_utils.py:73
-msgid ""
-"The password is stored with quantum-safe (OQS) encryption, which this build "
-"does not include, so protected actions are unavailable. Use a build made "
-"with OQS support."
-msgstr ""
-"La password è memorizzata con crittografia quantum‑safe (OQS) che questa "
-"build non include, quindi le azioni protette non sono disponibili. Usa una "
-"build con supporto OQS."
-
-#: src/ui/files/related_images_window_qt.py:120
-msgid "Suffixes, e.g. edit, upscale"
-msgstr "Suffissi, ad es. edit, upscale"
-
-#: src/ui/files/related_images_window_qt.py:122
-msgid ""
-"Comma- or space-separated suffixes. Every image family in the current "
-"directory with at least one related image per suffix is marked in full: the "
-"seed and all its related images."
-msgstr ""
-"Suffissi separati da virgole o spazi. Ogni gruppo di immagini nella cartella"
-" corrente con almeno un’immagine correlata per suffisso viene contrassegnato"
-" per intero: la seed e tutte le sue immagini correlate."
+#: src/ui/files/marked_file_mover_qt.py:862
+msgid "PDF files"
+msgstr "file PDF"

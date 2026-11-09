@@ -2,8 +2,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: 1.0\n"
-"POT-Creation-Date: 2026-11-07 20:56-0500\n"
-"PO-Revision-Date: 2026-11-07 20:56-0500\n"
+"POT-Creation-Date: 2026-11-09 17:36-0500\n"
+"PO-Revision-Date: 2026-11-09 17:36-0500\n"
 "Last-Translator: Translator Name <translator@example.com>\n"
 "Language-Team: ko Team <<EMAIL>>\n"
 "Language: ko\n"
@@ -11,6 +11,10 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: app_qt.py:100
+msgid "This build no longer matches its source code. See the log for details."
+msgstr "이 빌드가 더 이상 소스 코드와 일치하지 않습니다. 자세한 내용은 로그를 확인하십시오."
 
 #: extensions/sd_runner_client.py:151
 msgid "Image does not contain a prompt to redo!"
@@ -1442,6 +1446,33 @@ msgstr "배치 {0}/{1} 처리 중 ({2} 이미지)..."
 msgid "Found {0} images that meet the threshold..."
 msgstr "임계값을 충족하는 {0}개의 이미지를 찾았습니다..."
 
+#: src/compare/pipeline_run_history.py:77
+msgid "Running"
+msgstr "실행 중"
+
+#: src/compare/pipeline_run_history.py:78
+#: tests/ui/test_pipeline_history_tab_qt.py:76
+msgid "Completed"
+msgstr "완료"
+
+#: src/compare/pipeline_run_history.py:79
+msgid "Completed with errors"
+msgstr "오류와 함께 완료"
+
+#: src/compare/pipeline_run_history.py:80
+#: tests/ui/test_pipeline_history_tab_qt.py:75
+#: tests/unit/test_pipeline_run_history.py:98
+msgid "Cancelled"
+msgstr "취소됨"
+
+#: src/compare/pipeline_run_history.py:81
+msgid "Failed"
+msgstr "실패"
+
+#: src/compare/pipeline_run_history.py:82
+msgid "Interrupted"
+msgstr "중단"
+
 #: src/compare/pipeline_run_report.py:73
 #: tests/unit/test_classifier_pipeline_runner.py:1569
 msgid "Warnings"
@@ -1460,6 +1491,11 @@ msgstr "정보"
 #: src/ui/compare/classifier_pipelines_tab_qt.py:824
 msgid "(no action)"
 msgstr "(작동 없음)"
+
+#: src/compare/pipeline_run_report.py:160
+#: tests/unit/test_classifier_pipeline_runner.py:1553
+msgid "Pipeline {0} — run cancelled"
+msgstr "파이프라인 {0} — 실행이 취소되었습니다"
 
 #: src/compare/pipeline_run_report.py:163
 #: tests/unit/test_classifier_pipeline_runner.py:1554
@@ -1493,6 +1529,11 @@ msgstr "파일"
 #: src/compare/pipeline_run_report.py:191
 msgid "Files evaluated: {0}"
 msgstr "평가된 파일: {0}"
+
+#: src/compare/pipeline_run_report.py:195
+#: tests/unit/test_classifier_pipeline_runner.py:1555
+msgid "Resumed run: {0} file(s) already processed earlier were skipped"
+msgstr "재개된 실행: 이전에 처리된 {0}개의 파일이 건너뛰어졌습니다"
 
 #: src/compare/pipeline_run_report.py:200
 msgid "Errors during evaluation: {0}"
@@ -1533,6 +1574,25 @@ msgstr "  [{0}] — {1} 파일"
 #: src/compare/pipeline_run_report.py:307
 msgid "      · … and {0} more"
 msgstr "      · … 그 외 {0}개"
+
+#: src/compare/pipeline_run_service.py:245
+msgid "This run is no longer in the history."
+msgstr "이 실행은 더 이상 기록에 없습니다."
+
+#: src/compare/pipeline_run_service.py:248
+msgid "This run was already resumed."
+msgstr "이 실행은 이미 재개되었습니다."
+
+#: src/compare/pipeline_run_service.py:251
+msgid ""
+"Only cancelled, failed or interrupted runs with saved progress can be "
+"resumed."
+msgstr "저장된 진행 상황이 있는 취소되거나 실패하거나 중단된 실행만 재개할 수 있습니다."
+
+#: src/compare/pipeline_run_service.py:255
+#: tests/unit/test_pipeline_run_service.py:199
+msgid "Pipeline '{0}' no longer exists."
+msgstr "파이프라인 '{0}'이(가) 더 이상 존재하지 않습니다."
 
 #: src/files/file_browser.py:289 src/files/file_browser.py:303
 #: src/files/file_browser.py:315 src/ui/app_window/app_window.py:1061
@@ -1684,7 +1744,7 @@ msgstr "파일을 제거 중입니다: {0}"
 
 #: src/files/marked_files.py:293 src/files/marked_files.py:300
 #: src/files/marked_files.py:304 src/files/marked_files.py:310
-#: src/files/marked_files.py:321 src/ui/app_window/app_window.py:1381
+#: src/files/marked_files.py:321 src/ui/app_window/app_window.py:1385
 #: src/ui/app_window/search_controller.py:652
 #: src/ui/app_window/search_controller.py:711
 #: src/ui/app_window/search_controller.py:788
@@ -2054,6 +2114,28 @@ msgstr "{0} (캐시됨) 다운스트림 이미지를 찾았습니다."
 #: src/ui/app_window/file_marks_controller.py:416
 msgid "No downstream related images found in"
 msgstr "다음 위치에서 관련 이미지를 찾을 수 없습니다:"
+
+#: src/image/frame_cache.py:115
+#: tests/unit/test_optional_native_libraries.py:17
+msgid "SVG conversion is unavailable because the Cairo library was not found."
+msgstr "Cairo 라이브러리를 찾을 수 없어 SVG 변환을 사용할 수 없습니다."
+
+#: src/image/frame_cache.py:116
+#: tests/unit/test_optional_native_libraries.py:34
+msgid "SVG conversion is unavailable because cairosvg is not installed."
+msgstr "cairosvg가 설치되지 않아 SVG 변환을 사용할 수 없습니다."
+
+#: src/image/frame_cache.py:124
+#: tests/unit/test_optional_native_libraries.py:18
+msgid ""
+"Run python scripts/install_native_extras.py from the repository, then "
+"restart."
+msgstr "저장소에서 python scripts/install_native_extras.py 를 실행한 후 다시 시작하십시오."
+
+#: src/image/frame_cache.py:125
+#: tests/unit/test_optional_native_libraries.py:35
+msgid "pip install cairosvg"
+msgstr "pip install cairosvg"
 
 #: src/image/frame_cache.py:828
 msgid "Unable to render ePub: pyppeteer and pypdfium2 are required"
@@ -3270,37 +3352,37 @@ msgstr "돌려온 {0} 파일의 비교 결과 상태를 복원했습니다"
 msgid "Browsing mode set."
 msgstr "검색 모드 설정."
 
-#: src/ui/app_window/app_window.py:1274
+#: src/ui/app_window/app_window.py:1278
 #: src/ui/app_window/window_launcher.py:1155
 msgid "Many Files"
 msgstr "많은 파일"
 
-#: src/ui/app_window/app_window.py:1381
+#: src/ui/app_window/app_window.py:1385
 msgid "No files found in directory after refresh."
 msgstr "새로 고침 후 디렉토리에 파일을 찾을 수 없습니다."
 
-#: src/ui/app_window/app_window.py:1414
+#: src/ui/app_window/app_window.py:1418
 msgid "NEW_MEDIA_QUEUED"
 msgstr "{0}개의 새로운 미디어 파일이 대기열에 추가되었습니다"
 
-#: src/ui/app_window/app_window.py:1530
+#: src/ui/app_window/app_window.py:1534
 msgid "No cached image for this file."
 msgstr "이 파일에 대한 캐시된 이미지가 없습니다."
 
-#: src/ui/app_window/app_window.py:1533
+#: src/ui/app_window/app_window.py:1537
 msgid "Could not read cached image."
 msgstr "캐시된 이미지를 읽을 수 없습니다."
 
-#: src/ui/app_window/app_window.py:1536
+#: src/ui/app_window/app_window.py:1540
 msgid "Clipboard unavailable."
 msgstr "클립보드를 사용할 수 없습니다."
 
-#: src/ui/app_window/app_window.py:1555 src/ui/app_window/app_window.py:1569
-#: src/ui/app_window/app_window.py:1585
+#: src/ui/app_window/app_window.py:1559 src/ui/app_window/app_window.py:1573
+#: src/ui/app_window/app_window.py:1589
 msgid "Screenshot Failed"
 msgstr "스크린샷 실패했습니다"
 
-#: src/ui/app_window/app_window.py:1556
+#: src/ui/app_window/app_window.py:1560
 msgid ""
 "Unable to create screenshot directory:\n"
 "{0}\n"
@@ -3312,7 +3394,7 @@ msgstr ""
 "\n"
 "{1}"
 
-#: src/ui/app_window/app_window.py:1570
+#: src/ui/app_window/app_window.py:1574
 msgid ""
 "Unable to save screenshot.\n"
 "\n"
@@ -3322,7 +3404,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/ui/app_window/app_window.py:1576
+#: src/ui/app_window/app_window.py:1580
 msgid ""
 "Screenshot saved to:\n"
 "{0}"
@@ -3330,7 +3412,7 @@ msgstr ""
 "스크린샷이 저장되었습니다:\n"
 "{0}"
 
-#: src/ui/app_window/app_window.py:1586
+#: src/ui/app_window/app_window.py:1590
 msgid ""
 "Unable to copy image to clipboard.\n"
 "\n"
@@ -3340,33 +3422,33 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/ui/app_window/app_window.py:1590
+#: src/ui/app_window/app_window.py:1594
 msgid "Copied image to clipboard."
 msgstr "클립보드에 이미지를 복사했습니다."
 
-#: src/ui/app_window/app_window.py:1594
+#: src/ui/app_window/app_window.py:1598
 msgid ""
 "Screenshots are available for videos, animated GIFs, and PDF/ePub/SVG/HTML "
 "files."
 msgstr "동영상, 애니메이션 GIF, PDF/ePub/SVG/HTML 파일에 대한 스크린샷을 사용할 수 있습니다."
 
-#: src/ui/app_window/app_window.py:1652
+#: src/ui/app_window/app_window.py:1656
 msgid "Masonry view"
 msgstr "메이슨리 뷰"
 
-#: src/ui/app_window/app_window.py:1657
+#: src/ui/app_window/app_window.py:1661
 msgid "Full-window view"
 msgstr "전체 화면 보기"
 
-#: src/ui/app_window/app_window.py:1717
+#: src/ui/app_window/app_window.py:1721
 msgid "Theme switched to {0}."
 msgstr "테마는 {0}에 전환."
 
-#: src/ui/app_window/app_window.py:1770
+#: src/ui/app_window/app_window.py:1774
 msgid "Confirm Quit"
 msgstr "종료 확인"
 
-#: src/ui/app_window/app_window.py:1770
+#: src/ui/app_window/app_window.py:1774
 msgid "Would you like to quit the application?"
 msgstr "응용 프로그램을 종료하시겠습니까?"
 
@@ -3763,6 +3845,28 @@ msgstr "현재 디렉터리의 모든 파일에는 관련 이미지가 있습니
 #: src/ui/app_window/file_marks_controller.py:696
 msgid "{0} file(s) without a related image marked"
 msgstr "{0}개 파일에 연관된 이미지가 표시되지 않음"
+
+#: src/ui/app_window/file_marks_controller.py:714
+#: src/ui/files/related_images_window_qt.py:126
+#: tests/ui/test_mark_families_with_all_suffixes.py:215
+#: tests/ui/test_related_images_window.py:76
+#: tests/ui/test_related_images_window.py:90
+#: tests/ui/test_related_images_window.py:484
+msgid "Mark families with all suffixes"
+msgstr "모든 접미사로 패밀리를 표시"
+
+#: src/ui/app_window/file_marks_controller.py:717
+msgid "Enter at least one suffix."
+msgstr "접미사를 하나 이상 입력하십시오."
+
+#: src/ui/app_window/file_marks_controller.py:735
+#: tests/ui/test_related_images_window.py:516
+msgid "No image families with all of these suffixes found: {0}"
+msgstr "다음 접미사를 모두 포함하는 이미지 패밀리를 찾을 수 없습니다: {0}"
+
+#: src/ui/app_window/file_marks_controller.py:750
+msgid "{0} file(s) in {1} of {2} image families marked ({3})"
+msgstr "{0} 파일이 {1}/{2} 이미지 패밀리에서 표시됨 ({3})"
 
 #: src/ui/app_window/file_marks_controller.py:770
 msgid "Set related image"
@@ -4514,6 +4618,11 @@ msgstr "음소거 해제"
 #: tests/ui/test_media_controls_overlay.py:207
 msgid "Mute"
 msgstr "음소거"
+
+#: src/ui/app_window/media_frame.py:83
+#: tests/unit/test_optional_native_libraries.py:58
+msgid "Video playback is unavailable because VLC was not found."
+msgstr "VLC를 찾을 수 없어 비디오 재생을 사용할 수 없습니다."
 
 #: src/ui/app_window/media_frame.py:269
 msgid "No displayable files found in this directory for the current settings."
@@ -5474,7 +5583,7 @@ msgstr "설정 저장"
 
 #: src/ui/auth/password_admin_window.py:352
 #: src/ui/compare/hf_model_manager_window_qt.py:96
-#: src/ui/files/directory_picker_dialog.py:61
+#: src/ui/custom_title_bar.py:170 src/ui/files/directory_picker_dialog.py:61
 msgid "Close"
 msgstr "닫기"
 
@@ -5593,6 +5702,19 @@ msgid ""
 "Password protection is required for this action but is not currently "
 "configured."
 msgstr "이 작업에는 비밀번호 보호가 필요하지만 현재 구성되어 있지 않습니다."
+
+#: src/ui/auth/password_utils.py:72
+msgid "Password Unavailable"
+msgstr "비밀번호를 사용할 수 없습니다"
+
+#: src/ui/auth/password_utils.py:73
+msgid ""
+"The password is stored with quantum-safe (OQS) encryption, which this build "
+"does not include, so protected actions are unavailable. Use a build made "
+"with OQS support."
+msgstr ""
+"비밀번호는 양자 안전(OQS) 암호화로 저장되지만 이 빌드에는 포함되지 않아 보호된 작업을 사용할 수 없습니다. OQS 지원이 포함된 "
+"빌드를 사용하십시오."
 
 #: src/ui/compare/add_instance_dialog_qt.py:40
 msgid "Add Compare Instance"
@@ -6135,6 +6257,11 @@ msgstr "잘못된 구성"
 #: src/ui/compare/classifier_management_window_qt.py:689
 msgid "Classifier Management"
 msgstr "분류기 관리"
+
+#: src/ui/compare/classifier_management_window_qt.py:736
+#: tests/ui/test_classifier_management_window_qt.py:62
+msgid "History"
+msgstr "기록"
 
 #: src/ui/compare/classifier_management_window_qt.py:737
 #: src/ui/compare/prevalidations_tab_qt.py:267
@@ -7265,6 +7392,90 @@ msgstr ""
 msgid "Run Pipeline on Profile"
 msgstr "프로필에서 파이프라인 실행"
 
+#: src/ui/compare/classifier_pipelines_tab_qt.py:568
+#: tests/ui/test_classifier_actions_tab_qt.py:208
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1176
+msgid ""
+"Last run of this pipeline on these directories: {date} ({status}, profile "
+"'{profile}')"
+msgstr "이 파이프라인의 이 디렉터리에서 마지막 실행: {date} ({status}, 프로필 '{profile}')"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:570
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1187
+msgid ""
+"Last run of this pipeline on overlapping directories: {date} ({status}, "
+"profile '{profile}')"
+msgstr "이 파이프라인이 겹치는 디렉터리에서 마지막 실행: {date} ({status}, 프로필 '{profile}')"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:575
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1188
+msgid "  Overlap: {0} ↔ {1}"
+msgstr "  겹침: {0} ↔ {1}"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:577
+msgid ""
+"WARNING: pipeline '{name}' is running on overlapping directories (started "
+"{date})."
+msgstr "경고: 파이프라인 '{name}'이 겹치는 디렉터리에서 실행 중입니다 (시작 {date})."
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:580
+msgid ""
+"The last run on these directories did not finish ({status}, {count} file(s) "
+"processed)."
+msgstr "이 디렉터리들의 마지막 실행이 완료되지 않았습니다 ({status}, 처리된 파일 수 {count})."
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:596
+msgid "Resume the unfinished run, or start a new run from the beginning?"
+msgstr "미완료된 실행을 재개하시겠습니까, 아니면 처음부터 새 실행을 시작하시겠습니까?"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:597
+#: src/ui/compare/pipeline_history_tab_qt.py:87
+msgid "Resume"
+msgstr "이력서"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:597
+msgid "Start New Run"
+msgstr "새 실행 시작"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:606
+#: tests/ui/test_classifier_pipelines_tab_qt.py:1206
+msgid "Run Anyway"
+msgstr "그래도 실행"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:616
+#: src/ui/compare/classifier_pipelines_tab_qt.py:619
+#: src/ui/compare/classifier_pipelines_tab_qt.py:638
+#: src/ui/compare/pipeline_history_tab_qt.py:259
+msgid "Resume Pipeline Run"
+msgstr "파이프라인 실행 재개"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:623
+msgid ""
+"The pipeline was edited since this run; the current definition will be used."
+msgstr "이 실행 이후 파이프라인이 편집되었습니다; 현재 정의가 사용됩니다."
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:625
+msgid "Missing directories (skipped): {0}"
+msgstr "누락된 디렉터리 (건너뜀): {0}"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:628
+msgid ""
+"Profile '{0}' has changed since this run; the directories recorded at that "
+"time are used."
+msgstr "프로파일 '{0}'이(가) 이번 실행 이후 변경되었습니다; 해당 시점에 기록된 디렉터리를 사용합니다."
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:630
+msgid ""
+"Resume pipeline '{name}' from {date}? {count} file(s) already processed will be skipped.\n"
+"\n"
+"Directories:\n"
+"{dirs}"
+msgstr ""
+"파이프라인 '{name}'을(를) {date}부터 재개하시겠습니까? 이미 처리된 {count}개 파일은 건너뛰게 됩니다.\n"
+"\n"
+"디렉터리:\n"
+"{dirs}"
+
 #: src/ui/compare/classifier_pipelines_tab_qt.py:660
 #: src/ui/compare/classifier_pipelines_tab_qt.py:768
 #: tests/ui/test_classifier_pipelines_tab_qt.py:995
@@ -7285,6 +7496,18 @@ msgstr ""
 "실행이 완료되기 전에 SD Runner를 시작하지 않으면 생성된 이미지가 생성되지 않습니다.\n"
 "\n"
 "그래도 계속하시겠습니까?"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:688
+msgid ""
+"This run cannot start:\n"
+"{0}"
+msgstr ""
+"이 실행을 시작할 수 없습니다:\n"
+"{0}"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:705
+msgid "Pipeline {0} failed: {1}"
+msgstr "파이프라인 {0} 실패: {1}"
 
 #: src/ui/compare/classifier_pipelines_tab_qt.py:731
 msgid "Disabled nodes (will be skipped): {nodes}"
@@ -8385,6 +8608,124 @@ msgstr "앞을 내다보기 제거"
 #: src/ui/compare/lookaheads_tab_qt.py:80
 msgid "{name} ({name_or_text}, threshold: {threshold:.2f})"
 msgstr "{name} ({name_or_text}, 임계값: {threshold:.2f})"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:57
+msgid "Pipeline Run History"
+msgstr "파이프라인 실행 기록"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:65
+msgid "Started"
+msgstr "시작됨"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Finished / Updated"
+msgstr "완료 / 업데이트됨"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Progress"
+msgstr "진행"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Errors"
+msgstr "오류"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:66
+msgid "Source"
+msgstr "소스"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:84
+msgid "Stop"
+msgstr "정지"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:90
+msgid "Resume Last Incomplete"
+msgstr "마지막 미완료 재개"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:141
+#: tests/ui/test_pipeline_history_tab_qt.py:124
+msgid "Stopping…"
+msgstr "중지 중…"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:143
+msgid "Dir {0}/{1} · {2}/{3} files"
+msgstr "폴더 {0}/{1} · {2}/{3} 파일"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:148
+msgid "{0} files"
+msgstr "{0} 파일"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:172
+#: tests/ui/test_pipeline_history_tab_qt.py:111
+msgid "Other process"
+msgstr "다른 프로세스"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:173
+msgid "MCP"
+msgstr "MCP"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:173
+msgid "This app"
+msgstr "이 앱"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:176
+msgid "Directories at run time:"
+msgstr "실행 시 디렉터리:"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:179
+msgid "Current directory: {0}"
+msgstr "현재 디렉터리: {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:181
+msgid "Skipped (processed by the earlier run): {0}"
+msgstr "건너뛰었습니다(이전 실행에서 처리됨): {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:183
+msgid "Actions: {0}"
+msgstr "동작: {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:186
+msgid "Error: {0}"
+msgstr "오류: {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:188
+msgid "Resumes run {0}"
+msgstr "이력서 실행됨 {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:190
+msgid "Resumed by run {0}"
+msgstr "실행 {0}에 의해 재개"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:192
+msgid "Run data: {0}"
+msgstr "실행 데이터: {0}"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:239
+#: src/ui/compare/pipeline_history_tab_qt.py:246
+msgid "Stop Pipeline Run"
+msgstr "파이프라인 실행 중지"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:240
+msgid ""
+"Stop pipeline run '{0}'? Files already processed keep their actions; the run"
+" can be resumed later."
+msgstr ""
+"파이프라인 실행 '{0}'을(를) 중지하시겠습니까? 이미 처리된 파일은 작업을 유지합니다; 실행은 나중에 재개할 수 있습니다."
+
+#: src/ui/compare/pipeline_history_tab_qt.py:247
+msgid "This run is not running in this app."
+msgstr "이 실행은 이 앱에서 실행되고 있지 않습니다."
+
+#: src/ui/compare/pipeline_history_tab_qt.py:259
+msgid "There is no unfinished run to resume."
+msgstr "재개할 미완료 실행이 없습니다."
+
+#: src/ui/compare/pipeline_history_tab_qt.py:273
+msgid "Remove Run"
+msgstr "Run 제거"
+
+#: src/ui/compare/pipeline_history_tab_qt.py:274
+msgid "Remove this run of '{0}' from the history?"
+msgstr "이 '{0}' 실행을 기록에서 삭제하시겠습니까?"
 
 #: src/ui/compare/prevalidations_tab_qt.py:136
 msgid "Lookaheads (select from shared list)"
@@ -9865,6 +10206,19 @@ msgstr "현재 디렉터리에서 관련 이미지가 없는 파일 표시"
 msgid "Search all open windows for downstream images"
 msgstr "열려 있는 모든 창에서 다운스트림 이미지를 검색"
 
+#: src/ui/files/related_images_window_qt.py:120
+msgid "Suffixes, e.g. edit, upscale"
+msgstr "접미사, 예: edit, upscale"
+
+#: src/ui/files/related_images_window_qt.py:122
+msgid ""
+"Comma- or space-separated suffixes. Every image family in the current "
+"directory with at least one related image per suffix is marked in full: the "
+"seed and all its related images."
+msgstr ""
+"쉼표 또는 공백으로 구분된 접미사. 현재 디렉터리에서 접미사당 최소 하나의 관련 이미지가 있는 모든 이미지 패밀리는 시드와 모든 관련 "
+"이미지를 완전히 표시합니다."
+
 #: src/ui/files/related_images_window_qt.py:135
 msgid "Results"
 msgstr "결과"
@@ -9959,6 +10313,10 @@ msgstr "대상 디렉터리 선택"
 msgid "Select directory to search for related files"
 msgstr "관련 파일을 검색할 디렉터리를 선택하세요"
 
+#: src/ui/files/type_configuration_window_qt.py:39
+msgid "SVG support requires cairosvg package"
+msgstr "SVG 지원은 cairosvg 포장을 요구합니다"
+
 #: src/ui/files/type_configuration_window_qt.py:62
 msgid "Basic image files (PNG, JPG, etc.)"
 msgstr "기본 이미지 파일 (PNG, JPG 등)"
@@ -10000,10 +10358,6 @@ msgstr "PDF 지원은 pypdfium2 포장을 요구합니다"
 #: src/ui/files/type_configuration_window_qt.py:83
 msgid "ePub support requires pyppeteer and pypdfium2 packages"
 msgstr "ePub 지원에는 pyppeteer 및 pypdfium2 패키지가 필요합니다"
-
-#: src/ui/files/type_configuration_window_qt.py:39
-msgid "SVG support requires cairosvg package"
-msgstr "SVG 지원은 cairosvg 포장을 요구합니다"
 
 #: src/ui/files/type_configuration_window_qt.py:89
 msgid "HTML support requires pyppeteer package"
@@ -10583,7 +10937,7 @@ msgstr "V-JEPA 2 임베딩"
 
 #: src/utils/constants.py:53 src/utils/constants.py:83
 msgid "Face Embedding"
-msgstr "Face Embedding"
+msgstr "얼굴 임베딩"
 
 #: src/utils/constants.py:55 src/utils/constants.py:87
 msgid "Prompts (Exact Match)"
@@ -10946,356 +11300,135 @@ msgstr "Shift"
 msgid "Alt"
 msgstr "Alt"
 
-#: src/compare/pipeline_run_history.py:77
-msgid "Running"
-msgstr "실행 중"
+#: src/ui/custom_title_bar.py:160
+msgid "Minimize"
+msgstr "최소화"
 
-#: src/compare/pipeline_run_history.py:78
-#: tests/ui/test_pipeline_history_tab_qt.py:76
-msgid "Completed"
-msgstr "완료"
+#: src/ui/custom_title_bar.py:165 src/ui/custom_title_bar.py:296
+msgid "Maximize"
+msgstr "최대화"
 
-#: src/compare/pipeline_run_history.py:79
-msgid "Completed with errors"
-msgstr "오류와 함께 완료"
+#: src/ui/custom_title_bar.py:293
+msgid "Restore"
+msgstr "복원"
 
-#: src/compare/pipeline_run_history.py:80
-#: tests/ui/test_pipeline_history_tab_qt.py:75
-#: tests/unit/test_pipeline_run_history.py:98
-msgid "Cancelled"
-msgstr "취소됨"
+#: src/ui/app_window/app_window.py:1275
+msgid "do this action"
+msgstr "이 작업을 수행하세요"
 
-#: src/compare/pipeline_run_history.py:81
-msgid "Failed"
-msgstr "실패"
-
-#: src/compare/pipeline_run_history.py:82
-msgid "Interrupted"
-msgstr "중단"
-
-#: src/compare/pipeline_run_service.py:248
-msgid "This run was already resumed."
-msgstr "이 실행은 이미 재개되었습니다."
-
-#: src/compare/pipeline_run_service.py:251
+#: src/ui/app_window/app_window.py:1279
 msgid ""
-"Only cancelled, failed or interrupted runs with saved progress can be "
-"resumed."
-msgstr "저장된 진행 상황이 있는 취소되거나 실패하거나 중단된 실행만 재개할 수 있습니다."
-
-#: src/compare/pipeline_run_service.py:245
-msgid "This run is no longer in the history."
-msgstr "이 실행은 더 이상 기록에 없습니다."
-
-#: src/compare/pipeline_run_service.py:255
-#: tests/unit/test_pipeline_run_service.py:199
-msgid "Pipeline '{0}' no longer exists."
-msgstr "파이프라인 '{0}'이(가) 더 이상 존재하지 않습니다."
-
-#: src/compare/pipeline_run_report.py:160
-#: tests/unit/test_classifier_pipeline_runner.py:1553
-msgid "Pipeline {0} — run cancelled"
-msgstr "파이프라인 {0} — 실행이 취소되었습니다"
-
-#: src/compare/pipeline_run_report.py:195
-#: tests/unit/test_classifier_pipeline_runner.py:1555
-msgid "Resumed run: {0} file(s) already processed earlier were skipped"
-msgstr "재개된 실행: 이전에 처리된 {0}개의 파일이 건너뛰어졌습니다"
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:616
-#: src/ui/compare/classifier_pipelines_tab_qt.py:619
-#: src/ui/compare/classifier_pipelines_tab_qt.py:638
-#: src/ui/compare/pipeline_history_tab_qt.py:259
-msgid "Resume Pipeline Run"
-msgstr "파이프라인 실행 재개"
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:568
-#: tests/ui/test_classifier_actions_tab_qt.py:208
-#: tests/ui/test_classifier_pipelines_tab_qt.py:1176
-msgid ""
-"Last run of this pipeline on these directories: {date} ({status}, profile "
-"'{profile}')"
-msgstr "이 파이프라인의 이 디렉터리에서 마지막 실행: {date} ({status}, 프로필 '{profile}')"
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:570
-#: tests/ui/test_classifier_pipelines_tab_qt.py:1187
-msgid ""
-"Last run of this pipeline on overlapping directories: {date} ({status}, "
-"profile '{profile}')"
-msgstr "이 파이프라인이 겹치는 디렉터리에서 마지막 실행: {date} ({status}, 프로필 '{profile}')"
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:623
-msgid ""
-"The pipeline was edited since this run; the current definition will be used."
-msgstr "이 실행 이후 파이프라인이 편집되었습니다; 현재 정의가 사용됩니다."
-
-#: src/ui/compare/classifier_pipelines_tab_qt.py:630
-msgid ""
-"Resume pipeline '{name}' from {date}? {count} file(s) already processed will be skipped.\n"
+"There are a lot of files in {0} and it may take a while to {1}.\n"
 "\n"
-"Directories:\n"
-"{dirs}"
+"Would you like to proceed?"
 msgstr ""
-"파이프라인 '{name}'을(를) {date}부터 재개하시겠습니까? 이미 처리된 {count}개 파일은 건너뛰게 됩니다.\n"
+"{0}에 파일이 많이 있으며 {1}까지 시간이 걸릴 수 있습니다.\n"
 "\n"
-"디렉터리:\n"
-"{dirs}"
+"계속하시겠습니까?"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:596
-msgid "Resume the unfinished run, or start a new run from the beginning?"
-msgstr "미완료된 실행을 재개하시겠습니까, 아니면 처음부터 새 실행을 시작하시겠습니까?"
+#: src/ui/app_window/file_marks_controller.py:215
+msgid "Marked Files Window Error"
+msgstr "표시된 파일 창 오류"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:597
-#: src/ui/compare/pipeline_history_tab_qt.py:87
-msgid "Resume"
-msgstr "이력서"
+#: src/ui/app_window/file_marks_controller.py:405
+#: src/ui/app_window/search_controller.py:749
+msgid "find related media"
+msgstr "관련 미디어 찾기"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:597
-msgid "Start New Run"
-msgstr "새 실행 시작"
+#: src/ui/app_window/masonry_browser.py:537
+msgid "Showing all {0} files"
+msgstr "전체 {0} 파일을 표시"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:606
-#: tests/ui/test_classifier_pipelines_tab_qt.py:1206
-msgid "Run Anyway"
-msgstr "그래도 실행"
+#: src/ui/app_window/masonry_browser.py:540
+#: tests/ui/test_masonry_interaction.py:21
+msgid "Page {0} / {1}  •  files {2}–{3} of {4}  •  PgUp / PgDn to navigate"
+msgstr "페이지 {0} / {1}  •  파일 {2}–{3} / {4} 개  •  PgUp / PgDn 로 이동"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:577
-msgid ""
-"WARNING: pipeline '{name}' is running on overlapping directories (started "
-"{date})."
-msgstr "경고: 파이프라인 '{name}'이 겹치는 디렉터리에서 실행 중입니다 (시작 {date})."
+#: src/ui/app_window/media_navigator.py:91
+#: src/ui/app_window/media_navigator.py:117
+msgid "Exception"
+msgstr "예외"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:580
-msgid ""
-"The last run on these directories did not finish ({status}, {count} file(s) "
-"processed)."
-msgstr "이 디렉터리들의 마지막 실행이 완료되지 않았습니다 ({status}, 처리된 파일 수 {count})."
+#: src/ui/app_window/media_navigator.py:421
+msgid "Go To Index Error"
+msgstr "인덱스 오류로 이동"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:625
-msgid "Missing directories (skipped): {0}"
-msgstr "누락된 디렉터리 (건너뜀): {0}"
+#: src/ui/app_window/media_navigator.py:479
+msgid "(search media)"
+msgstr "(미디어 검색)"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:628
-msgid ""
-"Profile '{0}' has changed since this run; the directories recorded at that "
-"time are used."
-msgstr "프로파일 '{0}'이(가) 이번 실행 이후 변경되었습니다; 해당 시점에 기록된 디렉터리를 사용합니다."
+#: src/ui/app_window/search_controller.py:468
+msgid "Search file is not a valid file for base dir."
+msgstr "검색 파일은 기본 디렉터리의 유효한 파일이 아닙니다."
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:575
-#: tests/ui/test_classifier_pipelines_tab_qt.py:1188
-msgid "  Overlap: {0} ↔ {1}"
-msgstr "  겹침: {0} ↔ {1}"
+#: src/ui/app_window/search_controller.py:469
+msgid "Invalid search file"
+msgstr "잘못된 검색 파일"
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:688
-msgid ""
-"This run cannot start:\n"
-"{0}"
-msgstr ""
-"이 실행을 시작할 수 없습니다:\n"
-"{0}"
+#: src/ui/app_window/search_controller.py:484
+msgid "Negative search file is not a valid file for base dir."
+msgstr "음수 검색 파일은 기본 디렉터리의 유효한 파일이 아닙니다."
 
-#: src/ui/compare/classifier_pipelines_tab_qt.py:705
-msgid "Pipeline {0} failed: {1}"
-msgstr "파이프라인 {0} 실패: {1}"
+#: src/ui/app_window/search_controller.py:485
+msgid "Invalid negative search file"
+msgstr "잘못된 음수 검색 파일"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:57
-msgid "Pipeline Run History"
-msgstr "파이프라인 실행 기록"
+#: src/ui/app_window/sidebar_panel.py:466
+msgid "Toggle media view"
+msgstr "미디어 보기 전환"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:84
-msgid "Stop"
-msgstr "정지"
+#: src/ui/app_window/sidebar_panel.py:471
+msgid "Replace with search media"
+msgstr "검색 미디어로 교체"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:90
-msgid "Resume Last Incomplete"
-msgstr "마지막 미완료 재개"
+#: src/ui/app_window/sidebar_panel.py:478
+msgid "Previous group"
+msgstr "이전 그룹"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:141
-#: tests/ui/test_pipeline_history_tab_qt.py:124
-msgid "Stopping…"
-msgstr "중지 중…"
+#: src/ui/app_window/sidebar_panel.py:483
+msgid "Next group"
+msgstr "다음 그룹"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:172
-#: tests/ui/test_pipeline_history_tab_qt.py:111
-msgid "Other process"
-msgstr "다른 프로세스"
+#: src/ui/app_window/sidebar_panel.py:488
+msgid "Random purge"
+msgstr "무작위 정리"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:173
-msgid "MCP"
-msgstr "MCP"
+#: src/ui/app_window/sidebar_panel.py:493
+msgid "View ungrouped files"
+msgstr "그룹되지 않은 파일 보기"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:173
-msgid "This app"
-msgstr "이 앱"
+#: src/ui/app_window/sidebar_panel.py:503
+msgid "Return to groups"
+msgstr "그룹으로 돌아가기"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:176
-msgid "Directories at run time:"
-msgstr "실행 시 디렉터리:"
+#: src/ui/app_window/window_launcher.py:1124
+msgid "Help & Config Error"
+msgstr "도움말 & 구성 오류"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:65
-msgid "Started"
-msgstr "시작됨"
+#: src/ui/compare/filter_builder_panel_qt.py:69
+msgid "W"
+msgstr "W"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:66
-msgid "Finished / Updated"
-msgstr "완료 / 업데이트됨"
+#: src/ui/compare/filter_builder_panel_qt.py:78
+msgid "H"
+msgstr "H"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:66
-msgid "Progress"
-msgstr "진행"
+#: src/ui/compare/hf_model_manager_window_qt.py:519
+msgid "Model failed to initialize (can_run=False)."
+msgstr "모델 초기화 실패 (can_run=False)."
 
-#: src/ui/compare/pipeline_history_tab_qt.py:66
-msgid "Errors"
-msgstr "오류"
+#: src/ui/compare/hf_model_manager_window_qt.py:786
+msgid "{0} (optional)"
+msgstr "{0} (선택)"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:66
-msgid "Source"
-msgstr "소스"
+#: src/ui/files/file_actions_window_qt.py:642
+msgid "Copied filename: {0}"
+msgstr "복사된 파일 이름: {0}"
 
-#: src/ui/compare/pipeline_history_tab_qt.py:239
-#: src/ui/compare/pipeline_history_tab_qt.py:246
-msgid "Stop Pipeline Run"
-msgstr "파이프라인 실행 중지"
+#: src/ui/files/marked_file_mover_qt.py:736
+msgid "Error opening hotkey actions window: "
+msgstr "핫키 작업 창을 여는 중 오류: "
 
-#: src/ui/compare/pipeline_history_tab_qt.py:247
-msgid "This run is not running in this app."
-msgstr "이 실행은 이 앱에서 실행되고 있지 않습니다."
-
-#: src/ui/compare/pipeline_history_tab_qt.py:259
-msgid "There is no unfinished run to resume."
-msgstr "재개할 미완료 실행이 없습니다."
-
-#: src/ui/compare/pipeline_history_tab_qt.py:273
-msgid "Remove Run"
-msgstr "Run 제거"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:143
-msgid "Dir {0}/{1} · {2}/{3} files"
-msgstr "폴더 {0}/{1} · {2}/{3} 파일"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:148
-msgid "{0} files"
-msgstr "{0} 파일"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:179
-msgid "Current directory: {0}"
-msgstr "현재 디렉터리: {0}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:181
-msgid "Skipped (processed by the earlier run): {0}"
-msgstr "건너뛰었습니다(이전 실행에서 처리됨): {0}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:183
-msgid "Actions: {0}"
-msgstr "동작: {0}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:186
-msgid "Error: {0}"
-msgstr "오류: {0}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:188
-msgid "Resumes run {0}"
-msgstr "이력서 실행됨 {0}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:190
-msgid "Resumed by run {0}"
-msgstr "실행 {0}에 의해 재개"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:192
-msgid "Run data: {0}"
-msgstr "실행 데이터: {0}"
-
-#: src/ui/compare/pipeline_history_tab_qt.py:240
-msgid ""
-"Stop pipeline run '{0}'? Files already processed keep their actions; the run"
-" can be resumed later."
-msgstr ""
-"파이프라인 실행 '{0}'을(를) 중지하시겠습니까? 이미 처리된 파일은 작업을 유지합니다; 실행은 나중에 재개할 수 있습니다."
-
-#: src/ui/compare/pipeline_history_tab_qt.py:274
-msgid "Remove this run of '{0}' from the history?"
-msgstr "이 '{0}' 실행을 기록에서 삭제하시겠습니까?"
-
-#: src/ui/compare/classifier_management_window_qt.py:736
-#: tests/ui/test_classifier_management_window_qt.py:62
-msgid "History"
-msgstr "기록"
-
-#: app_qt.py:100
-msgid "This build no longer matches its source code. See the log for details."
-msgstr "이 빌드가 더 이상 소스 코드와 일치하지 않습니다. 자세한 내용은 로그를 확인하십시오."
-
-#: src/image/frame_cache.py:115
-#: tests/unit/test_optional_native_libraries.py:17
-msgid "SVG conversion is unavailable because the Cairo library was not found."
-msgstr "Cairo 라이브러리를 찾을 수 없어 SVG 변환을 사용할 수 없습니다."
-
-#: src/image/frame_cache.py:116
-#: tests/unit/test_optional_native_libraries.py:34
-msgid "SVG conversion is unavailable because cairosvg is not installed."
-msgstr "cairosvg가 설치되지 않아 SVG 변환을 사용할 수 없습니다."
-
-#: src/image/frame_cache.py:124
-#: tests/unit/test_optional_native_libraries.py:18
-msgid ""
-"Run python scripts/install_native_extras.py from the repository, then "
-"restart."
-msgstr "저장소에서 python scripts/install_native_extras.py 를 실행한 후 다시 시작하십시오."
-
-#: src/image/frame_cache.py:125
-#: tests/unit/test_optional_native_libraries.py:35
-msgid "pip install cairosvg"
-msgstr "pip install cairosvg"
-
-#: src/ui/app_window/file_marks_controller.py:714
-#: src/ui/files/related_images_window_qt.py:126
-#: tests/ui/test_mark_families_with_all_suffixes.py:215
-#: tests/ui/test_related_images_window.py:76
-#: tests/ui/test_related_images_window.py:90
-#: tests/ui/test_related_images_window.py:484
-msgid "Mark families with all suffixes"
-msgstr "모든 접미사로 패밀리를 표시"
-
-#: src/ui/app_window/file_marks_controller.py:717
-msgid "Enter at least one suffix."
-msgstr "접미사를 하나 이상 입력하십시오."
-
-#: src/ui/app_window/file_marks_controller.py:735
-#: tests/ui/test_related_images_window.py:516
-msgid "No image families with all of these suffixes found: {0}"
-msgstr "다음 접미사를 모두 포함하는 이미지 패밀리를 찾을 수 없습니다: {0}"
-
-#: src/ui/app_window/file_marks_controller.py:750
-msgid "{0} file(s) in {1} of {2} image families marked ({3})"
-msgstr "{0} 파일이 {1}/{2} 이미지 패밀리에서 표시됨 ({3})"
-
-#: src/ui/app_window/media_frame.py:83
-#: tests/unit/test_optional_native_libraries.py:58
-msgid "Video playback is unavailable because VLC was not found."
-msgstr "VLC를 찾을 수 없어 비디오 재생을 사용할 수 없습니다."
-
-#: src/ui/auth/password_utils.py:72
-msgid "Password Unavailable"
-msgstr "비밀번호를 사용할 수 없습니다"
-
-#: src/ui/auth/password_utils.py:73
-msgid ""
-"The password is stored with quantum-safe (OQS) encryption, which this build "
-"does not include, so protected actions are unavailable. Use a build made "
-"with OQS support."
-msgstr ""
-"비밀번호는 양자 안전(OQS) 암호화로 저장되지만 이 빌드에는 포함되지 않아 보호된 작업을 사용할 수 없습니다. OQS 지원이 포함된 "
-"빌드를 사용하십시오."
-
-#: src/ui/files/related_images_window_qt.py:120
-msgid "Suffixes, e.g. edit, upscale"
-msgstr "접미사, 예: edit, upscale"
-
-#: src/ui/files/related_images_window_qt.py:122
-msgid ""
-"Comma- or space-separated suffixes. Every image family in the current "
-"directory with at least one related image per suffix is marked in full: the "
-"seed and all its related images."
-msgstr ""
-"쉼표 또는 공백으로 구분된 접미사. 현재 디렉터리에서 접미사당 최소 하나의 관련 이미지가 있는 모든 이미지 패밀리는 시드와 모든 관련 "
-"이미지를 완전히 표시합니다."
+#: src/ui/files/marked_file_mover_qt.py:862
+msgid "PDF files"
+msgstr "PDF 파일"

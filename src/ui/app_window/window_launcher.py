@@ -1121,7 +1121,7 @@ class WindowLauncher:
             dialog.show()
         except Exception as e:
             self._app.notification_ctrl.alert(
-                "Help & Config Error", str(e), kind="error"
+                _("Help & Config Error"), str(e), kind="error"
             )
 
     # ------------------------------------------------------------------

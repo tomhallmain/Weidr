@@ -639,7 +639,7 @@ class FileActionsWindow(SmartWindow):
         if clipboard is not None:
             clipboard.setText(filename)
         if hasattr(self._app_actions, "toast"):
-            self._app_actions.toast(f"Copied filename: {filename}")
+            self._app_actions.toast(_("Copied filename: {0}").format(filename))
 
     # ==================================================================
     # Type filter

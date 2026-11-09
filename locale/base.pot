@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: APPLICATION 1.0\n"
 "Report-Msgid-Bugs-To: Translator Name <translator@example.com>\n"
-"POT-Creation-Date: 2026-11-07 20:40-0500\n"
-"PO-Revision-Date: 2026-11-07 20:40-0500\n"
+"POT-Creation-Date: 2026-11-09 17:25-0500\n"
+"PO-Revision-Date: 2026-11-09 17:25-0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -1542,7 +1542,7 @@ msgid "Removing file: {0}"
 msgstr ""
 
 #: src/files/marked_files.py:293 src/files/marked_files.py:300 src/files/marked_files.py:304 src/files/marked_files.py:310
-#: src/files/marked_files.py:321 src/ui/app_window/app_window.py:1381 src/ui/app_window/search_controller.py:652
+#: src/files/marked_files.py:321 src/ui/app_window/app_window.py:1385 src/ui/app_window/search_controller.py:652
 #: src/ui/app_window/search_controller.py:711 src/ui/app_window/search_controller.py:788
 msgid "Warning"
 msgstr ""
@@ -2001,6 +2001,23 @@ msgstr ""
 
 #: src/image/video_ops.py:1014 src/ui/image/media_details.py:617 src/utils/constants.py:460
 msgid "Video"
+msgstr ""
+
+#: src/ui/custom_title_bar.py:160
+msgid "Minimize"
+msgstr ""
+
+#: src/ui/custom_title_bar.py:165 src/ui/custom_title_bar.py:296
+msgid "Maximize"
+msgstr ""
+
+#: src/ui/auth/password_admin_window.py:352 src/ui/compare/hf_model_manager_window_qt.py:96 src/ui/custom_title_bar.py:170
+#: src/ui/files/directory_picker_dialog.py:61
+msgid "Close"
+msgstr ""
+
+#: src/ui/custom_title_bar.py:293
+msgid "Restore"
 msgstr ""
 
 #: src/ui/help_and_config_qt.py:40
@@ -3020,35 +3037,46 @@ msgstr ""
 msgid "Browsing mode set."
 msgstr ""
 
-#: src/ui/app_window/app_window.py:1274 src/ui/app_window/window_launcher.py:1155
+#: src/ui/app_window/app_window.py:1275
+msgid "do this action"
+msgstr ""
+
+#: src/ui/app_window/app_window.py:1278 src/ui/app_window/window_launcher.py:1155
 msgid "Many Files"
 msgstr ""
 
-#: src/ui/app_window/app_window.py:1381
+#: src/ui/app_window/app_window.py:1279
+msgid ""
+"There are a lot of files in {0} and it may take a while to {1}.\n"
+"\n"
+"Would you like to proceed?"
+msgstr ""
+
+#: src/ui/app_window/app_window.py:1385
 msgid "No files found in directory after refresh."
 msgstr ""
 
-#: src/ui/app_window/app_window.py:1414
+#: src/ui/app_window/app_window.py:1418
 msgid "NEW_MEDIA_QUEUED"
 msgstr ""
 
-#: src/ui/app_window/app_window.py:1530
+#: src/ui/app_window/app_window.py:1534
 msgid "No cached image for this file."
 msgstr ""
 
-#: src/ui/app_window/app_window.py:1533
+#: src/ui/app_window/app_window.py:1537
 msgid "Could not read cached image."
 msgstr ""
 
-#: src/ui/app_window/app_window.py:1536
+#: src/ui/app_window/app_window.py:1540
 msgid "Clipboard unavailable."
 msgstr ""
 
-#: src/ui/app_window/app_window.py:1555 src/ui/app_window/app_window.py:1569 src/ui/app_window/app_window.py:1585
+#: src/ui/app_window/app_window.py:1559 src/ui/app_window/app_window.py:1573 src/ui/app_window/app_window.py:1589
 msgid "Screenshot Failed"
 msgstr ""
 
-#: src/ui/app_window/app_window.py:1556
+#: src/ui/app_window/app_window.py:1560
 msgid ""
 "Unable to create screenshot directory:\n"
 "{0}\n"
@@ -3056,51 +3084,51 @@ msgid ""
 "{1}"
 msgstr ""
 
-#: src/ui/app_window/app_window.py:1570
+#: src/ui/app_window/app_window.py:1574
 msgid ""
 "Unable to save screenshot.\n"
 "\n"
 "{0}"
 msgstr ""
 
-#: src/ui/app_window/app_window.py:1576
+#: src/ui/app_window/app_window.py:1580
 msgid ""
 "Screenshot saved to:\n"
 "{0}"
 msgstr ""
 
-#: src/ui/app_window/app_window.py:1586
+#: src/ui/app_window/app_window.py:1590
 msgid ""
 "Unable to copy image to clipboard.\n"
 "\n"
 "{0}"
 msgstr ""
 
-#: src/ui/app_window/app_window.py:1590
+#: src/ui/app_window/app_window.py:1594
 msgid "Copied image to clipboard."
 msgstr ""
 
-#: src/ui/app_window/app_window.py:1594
+#: src/ui/app_window/app_window.py:1598
 msgid "Screenshots are available for videos, animated GIFs, and PDF/ePub/SVG/HTML files."
 msgstr ""
 
-#: src/ui/app_window/app_window.py:1652
+#: src/ui/app_window/app_window.py:1656
 msgid "Masonry view"
 msgstr ""
 
-#: src/ui/app_window/app_window.py:1657
+#: src/ui/app_window/app_window.py:1661
 msgid "Full-window view"
 msgstr ""
 
-#: src/ui/app_window/app_window.py:1717
+#: src/ui/app_window/app_window.py:1721
 msgid "Theme switched to {0}."
 msgstr ""
 
-#: src/ui/app_window/app_window.py:1770
+#: src/ui/app_window/app_window.py:1774
 msgid "Confirm Quit"
 msgstr ""
 
-#: src/ui/app_window/app_window.py:1770
+#: src/ui/app_window/app_window.py:1774
 msgid "Would you like to quit the application?"
 msgstr ""
 
@@ -3341,6 +3369,10 @@ msgstr ""
 msgid "Including marks: {0}"
 msgstr ""
 
+#: src/ui/app_window/file_marks_controller.py:215
+msgid "Marked Files Window Error"
+msgstr ""
+
 #: src/ui/app_window/file_marks_controller.py:296
 msgid "No file action set actions selected."
 msgstr ""
@@ -3356,6 +3388,10 @@ msgstr ""
 #: src/ui/app_window/file_marks_controller.py:392 src/ui/app_window/file_marks_controller.py:559
 #: src/ui/app_window/file_marks_controller.py:614 src/ui/app_window/search_controller.py:736
 msgid "Waiting for a directory selection."
+msgstr ""
+
+#: src/ui/app_window/file_marks_controller.py:405 src/ui/app_window/search_controller.py:749
+msgid "find related media"
 msgstr ""
 
 #: src/ui/app_window/file_marks_controller.py:407 src/ui/app_window/search_controller.py:751
@@ -4096,6 +4132,14 @@ msgstr ""
 msgid "Randomize filenames dry run started for {0} — see {1}"
 msgstr ""
 
+#: src/ui/app_window/masonry_browser.py:537
+msgid "Showing all {0} files"
+msgstr ""
+
+#: src/ui/app_window/masonry_browser.py:540 tests/ui/test_masonry_interaction.py:21
+msgid "Page {0} / {1}  •  files {2}–{3} of {4}  •  PgUp / PgDn to navigate"
+msgstr ""
+
 #: src/ui/app_window/media_controls_overlay.py:143
 msgid "Playback speed"
 msgstr ""
@@ -4168,6 +4212,10 @@ msgstr ""
 msgid "No time-based media is currently active."
 msgstr ""
 
+#: src/ui/app_window/media_navigator.py:91 src/ui/app_window/media_navigator.py:117
+msgid "Exception"
+msgstr ""
+
 #: src/ui/app_window/media_navigator.py:142 src/ui/app_window/media_navigator.py:162
 msgid "Directory is still loading; no files available yet."
 msgstr ""
@@ -4198,6 +4246,14 @@ msgstr ""
 
 #: src/ui/app_window/media_navigator.py:418
 msgid "Invalid index"
+msgstr ""
+
+#: src/ui/app_window/media_navigator.py:421
+msgid "Go To Index Error"
+msgstr ""
+
+#: src/ui/app_window/media_navigator.py:479
+msgid "(search media)"
 msgstr ""
 
 #: src/ui/app_window/media_navigator.py:483
@@ -4286,6 +4342,22 @@ msgstr ""
 
 #: src/ui/app_window/search_controller.py:436
 msgid "Are you sure you want to proceed?"
+msgstr ""
+
+#: src/ui/app_window/search_controller.py:468
+msgid "Search file is not a valid file for base dir."
+msgstr ""
+
+#: src/ui/app_window/search_controller.py:469
+msgid "Invalid search file"
+msgstr ""
+
+#: src/ui/app_window/search_controller.py:484
+msgid "Negative search file is not a valid file for base dir."
+msgstr ""
+
+#: src/ui/app_window/search_controller.py:485
+msgid "Invalid negative search file"
 msgstr ""
 
 #: src/ui/app_window/search_controller.py:520 src/ui/app_window/search_controller.py:551
@@ -4570,6 +4642,34 @@ msgstr ""
 msgid "Permanently delete the current media file from disk."
 msgstr ""
 
+#: src/ui/app_window/sidebar_panel.py:466
+msgid "Toggle media view"
+msgstr ""
+
+#: src/ui/app_window/sidebar_panel.py:471
+msgid "Replace with search media"
+msgstr ""
+
+#: src/ui/app_window/sidebar_panel.py:478
+msgid "Previous group"
+msgstr ""
+
+#: src/ui/app_window/sidebar_panel.py:483
+msgid "Next group"
+msgstr ""
+
+#: src/ui/app_window/sidebar_panel.py:488
+msgid "Random purge"
+msgstr ""
+
+#: src/ui/app_window/sidebar_panel.py:493
+msgid "View ungrouped files"
+msgstr ""
+
+#: src/ui/app_window/sidebar_panel.py:503
+msgid "Return to groups"
+msgstr ""
+
 #: src/ui/app_window/sidebar_panel.py:580
 msgid "Ended slideshows"
 msgstr ""
@@ -4791,6 +4891,10 @@ msgstr ""
 msgid "Click or click-drag to add points, click near the start to close, Enter to confirm, Escape to cancel"
 msgstr ""
 
+#: src/ui/app_window/window_launcher.py:1124
+msgid "Help & Config Error"
+msgstr ""
+
 #: src/ui/app_window/window_launcher.py:1138
 msgid "No media selected"
 msgstr ""
@@ -4998,11 +5102,6 @@ msgstr ""
 
 #: src/ui/auth/password_admin_window.py:348
 msgid "Save Settings"
-msgstr ""
-
-#: src/ui/auth/password_admin_window.py:352 src/ui/compare/hf_model_manager_window_qt.py:96
-#: src/ui/files/directory_picker_dialog.py:61
-msgid "Close"
 msgstr ""
 
 #: src/ui/auth/password_admin_window.py:394
@@ -6997,6 +7096,14 @@ msgstr ""
 msgid "max"
 msgstr ""
 
+#: src/ui/compare/filter_builder_panel_qt.py:69
+msgid "W"
+msgstr ""
+
+#: src/ui/compare/filter_builder_panel_qt.py:78
+msgid "H"
+msgstr ""
+
 #: src/ui/compare/filter_builder_panel_qt.py:100 src/ui/compare/filter_builder_panel_qt.py:247
 msgid "contains"
 msgstr ""
@@ -7220,6 +7327,10 @@ msgstr ""
 msgid "Invalid model configuration"
 msgstr ""
 
+#: src/ui/compare/hf_model_manager_window_qt.py:519
+msgid "Model failed to initialize (can_run=False)."
+msgstr ""
+
 #: src/ui/compare/hf_model_manager_window_qt.py:638
 msgid "HF Hub Search"
 msgstr ""
@@ -7286,6 +7397,10 @@ msgstr ""
 
 #: src/ui/compare/hf_model_manager_window_qt.py:773
 msgid "Recommended for HF model repos with config.json and processor files."
+msgstr ""
+
+#: src/ui/compare/hf_model_manager_window_qt.py:786
+msgid "{0} (optional)"
 msgstr ""
 
 #: src/ui/compare/hf_model_manager_window_qt.py:800
@@ -8534,6 +8649,10 @@ msgstr ""
 msgid "Images not found"
 msgstr ""
 
+#: src/ui/files/file_actions_window_qt.py:642
+msgid "Copied filename: {0}"
+msgstr ""
+
 #: src/ui/files/file_actions_window_qt.py:727
 msgid "moves only"
 msgstr ""
@@ -9000,6 +9119,10 @@ msgstr ""
 msgid "Select parent directory for target directories"
 msgstr ""
 
+#: src/ui/files/marked_file_mover_qt.py:736
+msgid "Error opening hotkey actions window: "
+msgstr ""
+
 #: src/ui/files/marked_file_mover_qt.py:743
 msgid ""
 "WARNING: This action sets hotkey actions that will be used for future file operations. You may have accidentally "
@@ -9028,6 +9151,10 @@ msgstr ""
 
 #: src/ui/files/marked_file_mover_qt.py:860
 msgid "Save PDF as"
+msgstr ""
+
+#: src/ui/files/marked_file_mover_qt.py:862
+msgid "PDF files"
 msgstr ""
 
 #: src/ui/files/marked_file_mover_qt.py:878

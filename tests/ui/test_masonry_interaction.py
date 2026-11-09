@@ -7,12 +7,20 @@ from PySide6.QtCore import Qt
 
 from tests.ui.app_window_fixtures import make_png
 from utils.constants import ViewMode
+from utils.translations import _
 
 
 def _enter_masonry(win, qtbot) -> None:
     win.toggle_masonry_view()
     qtbot.waitUntil(lambda: win.view_mode == ViewMode.MASONRY, timeout=2000)
     qtbot.waitUntil(lambda: len(win.masonry_browser._tiles) > 0, timeout=3000)
+
+
+def _page_label(page, pages, start, end, total) -> str:
+    """Expected multi-page label text (page and file numbers are 1-based)."""
+    return _("Page {0} / {1}  •  files {2}–{3} of {4}  •  PgUp / PgDn to navigate").format(
+        page, pages, start, end, total
+    )
 
 
 @pytest.fixture
@@ -72,14 +80,14 @@ class TestMasonryPagination:
         win, _ = window_with_dir
         _enter_masonry(win, qtbot)
         qtbot.waitUntil(
-            lambda: "Page 1 / 2" in win.masonry_browser._page_label.text(),
+            lambda: win.masonry_browser._page_label.text() == _page_label(1, 2, 1, 2, 3),
             timeout=2000,
         )
 
         _fire_pgdown_shortcut(win)
 
         qtbot.waitUntil(
-            lambda: "Page 2 / 2" in win.masonry_browser._page_label.text(),
+            lambda: win.masonry_browser._page_label.text() == _page_label(2, 2, 3, 3, 3),
             timeout=2000,
         )
         assert len(win.masonry_browser._tiles) == 1
@@ -92,14 +100,14 @@ class TestMasonryPagination:
         _enter_masonry(win, qtbot)
         _fire_pgdown_shortcut(win)
         qtbot.waitUntil(
-            lambda: "Page 2 / 2" in win.masonry_browser._page_label.text(),
+            lambda: win.masonry_browser._page_label.text() == _page_label(2, 2, 3, 3, 3),
             timeout=2000,
         )
 
         _fire_pgup_shortcut(win)
 
         qtbot.waitUntil(
-            lambda: "Page 1 / 2" in win.masonry_browser._page_label.text(),
+            lambda: win.masonry_browser._page_label.text() == _page_label(1, 2, 1, 2, 3),
             timeout=2000,
         )
         assert len(win.masonry_browser._tiles) == 2
@@ -138,7 +146,7 @@ class TestMasonryPagination:
 
             _enter_masonry(win, qtbot)
             qtbot.waitUntil(
-                lambda: "Page 3 / 3" in win.masonry_browser._page_label.text(),
+                lambda: win.masonry_browser._page_label.text() == _page_label(3, 3, 5, 5, 5),
                 timeout=2000,
             )
             assert any(t.filepath.endswith("img05.png") for t in win.masonry_browser._tiles)

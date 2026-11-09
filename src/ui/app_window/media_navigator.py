@@ -88,7 +88,7 @@ class MediaNavigator:
                 self.create_media(previous_media)
                 return True
             except Exception as e:
-                self._app.notification_ctrl.handle_error(str(e), title="Exception")
+                self._app.notification_ctrl.handle_error(str(e), title=_("Exception"))
                 return False
 
         return self._cm.show_prev_media(show_alert=show_alert)
@@ -114,7 +114,7 @@ class MediaNavigator:
                 return True
             except Exception as e:
                 traceback.print_exc()
-                self._app.notification_ctrl.handle_error(str(e), title="Exception")
+                self._app.notification_ctrl.handle_error(str(e), title=_("Exception"))
                 return False
 
         return self._cm.show_next_media(show_alert=show_alert)
@@ -418,7 +418,7 @@ class MediaNavigator:
             self._app.notification_ctrl.alert(_("Invalid index"), str(e))
             return False
         except Exception as e:
-            self._app.notification_ctrl.handle_error(str(e), title="Go To Index Error")
+            self._app.notification_ctrl.handle_error(str(e), title=_("Go To Index Error"))
             return False
 
         return False
@@ -476,7 +476,7 @@ class MediaNavigator:
             logger.debug(f"Search file path: {search_path}")
         if search_path is not None and search_path.strip() != "":
             if os.path.isfile(search_path):
-                self.create_media(search_path, extra_text="(search media)")
+                self.create_media(search_path, extra_text=_("(search media)"))
             else:
                 logger.warning(search_path)
                 self._app.notification_ctrl.handle_error(

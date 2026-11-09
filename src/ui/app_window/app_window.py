@@ -1261,19 +1261,23 @@ class AppWindow(FramelessWindowMixin, SmartMainWindow):
     def check_many_files(
         self,
         window: "AppWindow",
-        action: str = "do this action",
+        action: Optional[str] = None,
         threshold: int = 2000,
     ) -> bool:
         """
         Check if a window has too many files and prompt the user.
 
+        *action* is a translated phrase completing "it may take a while to ...".
+
         Returns True if user cancels, False if user wants to proceed.
         """
+        if action is None:
+            action = _("do this action")
         if not window.file_browser.has_confirmed_dir() and window.file_browser.is_slow_total_files(threshold=threshold):
             ok = self.notification_ctrl.alert(
                 _("Many Files"),
-                f"There are a lot of files in {window.base_dir} and it may take a while"
-                f" to {action}.\n\nWould you like to proceed?",
+                _("There are a lot of files in {0} and it may take a while to {1}.\n\n"
+                  "Would you like to proceed?").format(window.base_dir, action),
                 kind="askokcancel",
             )
             if not ok:

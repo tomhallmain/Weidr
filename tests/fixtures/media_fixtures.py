@@ -30,6 +30,13 @@ def _teardown_media_frame(frame) -> None:
     except Exception:
         pass
     try:
+        embed = getattr(frame, "_video_embed", None)
+        if embed is not None:
+            embed.stop()
+            embed.hide_host()
+    except Exception:
+        pass
+    try:
         if getattr(frame, "_gif_movie", None) is not None:
             frame._teardown_gif_movie()
     except Exception:

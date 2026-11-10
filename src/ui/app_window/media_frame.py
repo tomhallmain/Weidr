@@ -26,6 +26,7 @@ from lib.blur_overlay_qt import BlurOverlay
 from lib.zoomable_graphics_view_qt import ZoomableGraphicsView
 from ui.app_style import AppStyle
 from ui.app_window.media_controls_overlay import MediaControlsOverlay, OVERLAY_HEIGHT, SPEED_OPTIONS
+from ui.app_window.vlc_video_embed import VlcVideoEmbed, place_tool_window
 from utils.config import config
 from utils.logging_setup import get_logger
 from image.frame_cache import FrameCache, has_imported_pypdfium2, has_imported_pyppeteer
@@ -122,8 +123,6 @@ class VideoUI:
         self.has_cues = bool(has_cues)
 
 
-
-
 class _ImageDecodeWorkerSignals(QObject):
     decoded = Signal(int, str, object)  # request_id, path, QImage
     failed = Signal(int, str, str)  # request_id, path, message
@@ -153,7 +152,8 @@ class _ImageDecodeWorker(QThread):
 class MediaFrame(QFrame):
     """
     Display media (static images with pan/zoom via QGraphicsView, animated rasters via QMovie,
-    video via VLC). Provides winId() for VLC embedding (used by muse/playback.py).
+    video via VLC). On Windows the picture is drawn into VlcVideoEmbed, which
+    follows this frame onto another display.
     """
     seek_requested = Signal(int)
     play_pause_requested = Signal()
@@ -242,6 +242,7 @@ class MediaFrame(QFrame):
         self._controls_overlay.volume_changed.connect(self.volume_requested.emit)
         self._controls_overlay.mute_toggled.connect(self.mute_requested.emit)
         self._controls_overlay.speed_changed.connect(self.speed_requested.emit)
+        self._video_embed = VlcVideoEmbed(self)
 
         self._blur_overlay = BlurOverlay(self)
         self._blur_overlay.attach(self)
@@ -758,7 +759,7 @@ class MediaFrame(QFrame):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        self._position_overlay()
+        self._follow_video_window()
         if self._pdf_viewer is not None:
             self._pdf_viewer.reposition_label()
         if not self.media_displayed or isinstance(self._video_ui, VideoUI):
@@ -912,18 +913,22 @@ class MediaFrame(QFrame):
         self._playback_timer.start()
 
     def ensure_video_frame(self):
-        """Set the window id for VLC video output."""
+        """Bind libvlc's video output to the native window it should draw into."""
         if not _VLC_AVAILABLE or not self.vlc_media_player:
             return
-        wid = int(self.winId()) if self.winId() else 0
+        wid = self._video_embed.prepare_hwnd()
         if not wid:
             return
+        self._bind_vlc_window(wid)
+
+    def _bind_vlc_window(self, wid: int) -> None:
         if platform.system() == "Windows":
             self.vlc_media_player.set_hwnd(wid)
         elif platform.system() == "Darwin":
             self.vlc_media_player.set_nsobject(wid)
         else:
             self.vlc_media_player.set_xwindow(wid)
+        self._video_embed.bound_hwnd = int(wid)
 
     def detach_vlc_output(self) -> None:
         """Disconnect VLC's video renderer from this widget's native window handle.
@@ -946,6 +951,8 @@ class MediaFrame(QFrame):
                 logger.debug("detach_vlc_output: set_xwindow(0) called on Linux")
         except Exception as exc:
             logger.warning("detach_vlc_output: failed — %s", exc)
+        self._video_embed.bound_hwnd = 0
+        self._video_embed.hide_host()
 
     def video_display(self):
         """Start video playback (after ensure_video_frame)."""
@@ -970,29 +977,35 @@ class MediaFrame(QFrame):
         self.dispose_vlc()
         super().closeEvent(event)
 
+    def _stop_vlc_player(self, player) -> bool:
+        """Stop player. True when stop() returned.
+
+        libvlc_media_player_stop() is synchronous in libvlc 3.x: it blocks
+        until the internal decode loop exits. For WEBM files without a Cues
+        element that loop can stall forever. stop() runs on a daemon thread
+        with a timeout; on timeout the player is replaced and this returns
+        False so the UI stays responsive.
+        """
+        thread = threading.Thread(target=player.stop, daemon=True)
+        thread.start()
+        thread.join(timeout=3.0)
+        if thread.is_alive():
+            logger.warning(
+                "VLC stop() timed out for %s — Matroska container likely missing "
+                "Cues element; abandoning hung player and creating a fresh instance",
+                self.path,
+            )
+            if self.path and os.path.splitext(self.path)[1].lower() in MATROSKA_EXTENSIONS:
+                _matroska_missing_cues_paths.add(self.path)
+            self._hung_stop_thread = thread
+            self._replace_vlc_player()
+            return False
+        return True
+
     def video_stop(self):
         if _VLC_AVAILABLE and self.vlc_media_player:
             player = self.vlc_media_player
-            # libvlc_media_player_stop() is synchronous in libvlc 3.x: it blocks
-            # until the internal decode loop exits.  For WEBM files without a Cues
-            # (seek-index) element, VLC performs a sequential scan and that loop can
-            # stall indefinitely — deadlocking the UI thread.  Run stop() in a daemon
-            # thread and give it a generous timeout; if it hangs, abandon the player
-            # and create a fresh one so the application stays responsive.
-            _t = threading.Thread(target=player.stop, daemon=True)
-            _t.start()
-            _t.join(timeout=3.0)
-            if _t.is_alive():
-                logger.warning(
-                    "VLC stop() timed out for %s — Matroska container likely missing "
-                    "Cues element; abandoning hung player and creating a fresh instance",
-                    self.path,
-                )
-                if self.path and os.path.splitext(self.path)[1].lower() in MATROSKA_EXTENSIONS:
-                    _matroska_missing_cues_paths.add(self.path)
-                self._hung_stop_thread = _t
-                self._replace_vlc_player()
-            else:
+            if self._stop_vlc_player(player):
                 try:
                     player.set_media(None)
                 except Exception:
@@ -1004,6 +1017,9 @@ class MediaFrame(QFrame):
                 pass
             self.vlc_media = None
         self._video_ui = None
+        self._video_embed.bound_hwnd = 0
+        self._video_embed.hide_host()
+        self._video_embed.discard_retired()
         self.unsetCursor()
         self.on_playback_stopped()
         self._playback_timer.stop()
@@ -1023,6 +1039,7 @@ class MediaFrame(QFrame):
         except Exception:
             self.vlc_media_player = None
 
+
     def dispose_vlc_for_test_teardown(self) -> None:
         """
         Non-blocking VLC teardown for pytest.
@@ -1034,12 +1051,15 @@ class MediaFrame(QFrame):
             return
         self._vlc_disposed = True
         self._playback_timer.stop()
+        self._video_embed.stop()
         if _VLC_AVAILABLE and self.vlc_media_player:
             try:
                 if platform.system() == "Windows":
                     self.vlc_media_player.set_hwnd(0)
             except Exception:
                 pass
+            self._video_embed.bound_hwnd = 0
+            self._video_embed.hide_host()
             try:
                 self.vlc_media_player.release()
             except Exception:
@@ -1069,6 +1089,7 @@ class MediaFrame(QFrame):
             return
         self._vlc_disposed = True
         self._playback_timer.stop()
+        self._video_embed.stop()
         try:
             self.video_stop()
         except Exception:
@@ -1081,6 +1102,8 @@ class MediaFrame(QFrame):
                     self.vlc_media_player.set_hwnd(0)
             except Exception:
                 pass
+            self._video_embed.bound_hwnd = 0
+            self._video_embed.hide_host()
             try:
                 self.vlc_media_player.release()
             except Exception:
@@ -1529,8 +1552,19 @@ class MediaFrame(QFrame):
     def _position_overlay(self):
         """Place the controls overlay at the bottom of the frame in global coords."""
         h = OVERLAY_HEIGHT
-        bottom_left = self.mapToGlobal(QPoint(0, self.height() - h))
-        self._controls_overlay.setGeometry(bottom_left.x(), bottom_left.y(), self.width(), h)
+        place_tool_window(
+            self._controls_overlay,
+            self,
+            QPoint(0, self.height() - h),
+            self.width(),
+            h,
+        )
+
+    def _follow_video_window(self):
+        """Keep the video surface and the controls bar aligned with this frame."""
+        self._video_embed.sync_geometry()
+        self._video_embed.note_screen()
+        self._position_overlay()
 
     def _ensure_window_filter(self):
         if self._window_filter_installed:
@@ -1543,21 +1577,24 @@ class MediaFrame(QFrame):
     def eventFilter(self, watched, event):
         etype = event.type()
         if etype in (QEvent.Type.Move, QEvent.Type.Resize, QEvent.Type.WindowStateChange):
-            self._position_overlay()
+            self._follow_video_window()
         return super().eventFilter(watched, event)
 
     def moveEvent(self, event):
         super().moveEvent(event)
-        self._position_overlay()
+        self._follow_video_window()
 
     def showEvent(self, event):
         super().showEvent(event)
         self._ensure_window_filter()
+        self._video_embed.attach_screen_tracking()
+        self._video_embed.restore_if_bound()
         self._position_overlay()
 
     def hideEvent(self, event):
         super().hideEvent(event)
         self._mouse_inside = False
+        self._video_embed.hide_host()
         self._controls_overlay.dismiss()
 
     def _poll_mouse_position(self):
@@ -1566,6 +1603,8 @@ class MediaFrame(QFrame):
         app = QApplication.instance()
         top_window = self.window()
         active_window = app.activeWindow() if app is not None else None
+        if self._video_embed.is_host(active_window):
+            active_window = top_window
 
         if self._has_visible_child_dialog(top_window):
             self._mouse_inside = False
@@ -1597,6 +1636,7 @@ class MediaFrame(QFrame):
             # Movement within the media area is the activity signal.
             # If the cursor stays still, the overlay auto-hides.
             if moved:
+                self._video_embed.sync_geometry()
                 self._position_overlay()
                 self._controls_overlay.show_overlay()
         elif not inside and self._mouse_inside:
@@ -1663,7 +1703,7 @@ class MediaFrame(QFrame):
 
     def get_media_frame_handle(self):
         """Return window id for VLC embedding (muse/playback.py)."""
-        wid = self.winId()
+        wid = self._video_embed.playback_handle() or self.winId()
         return int(wid) if wid else None
 
     # ------------------------------------------------------------------

@@ -190,10 +190,6 @@ class MediaFrame(QFrame):
         self._graphics_view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._graphics_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._graphics_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._graphics_view.setStyleSheet(f"background-color: {AppStyle.MEDIA_BG};")
-        # Viewport auto-fills opaquely before drawBackground() runs, masking
-        # any alpha in the brush set below -- disable it.
-        self._graphics_view.viewport().setAutoFillBackground(False)
         self._graphics_view.set_interaction_enabled(False)
         self._scene = QGraphicsScene(self)
         self._graphics_view.setScene(self._scene)
@@ -293,13 +289,19 @@ class MediaFrame(QFrame):
         color = background_color or AppStyle.MEDIA_BG
         opacity = AppStyle.get_background_opacity()
         rgba = AppStyle.hex_to_rgba(color, opacity)
+        # One fill for this frame. Video hides the graphics view, so the area
+        # beside the picture is just this color. The view used to paint the
+        # same translucent color again, which stacked the opacity and made
+        # images darker than the configured value.
         self.setStyleSheet(f"background-color: {rgba};")
-        self._graphics_view.setStyleSheet(f"background-color: {rgba};")
-        # The QSS above only paints the view's frame, not the viewport where
-        # the scene renders -- that needs the background brush instead.
-        qcolor = QColor(color)
-        qcolor.setAlphaF(opacity)
-        self._graphics_view.setBackgroundBrush(QBrush(qcolor))
+        view = self._graphics_view
+        view.setFrameShape(QFrame.Shape.NoFrame)
+        view.setStyleSheet("background: transparent; border: none;")
+        view.setBackgroundBrush(QBrush(Qt.BrushStyle.NoBrush))
+        viewport = view.viewport()
+        viewport.setAutoFillBackground(False)
+        viewport.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, False)
+        viewport.setStyleSheet("background: transparent;")
 
     def _next_request_id(self) -> int:
         self._image_request_id += 1
@@ -878,6 +880,7 @@ class MediaFrame(QFrame):
         has_cues = path not in _matroska_missing_cues_paths
         self._video_ui = VideoUI(path, has_video=has_video, has_cues=has_cues)
         self.path = path
+        self._video_embed.note_new_media()
         # Normal video: attach window handle so libvlc renders into this widget.
         # Audio-only or freeze_frame: skip window handle — no video surface needed.
         if has_video and not freeze_frame:
@@ -1635,9 +1638,9 @@ class MediaFrame(QFrame):
             self._mouse_inside = True
             # Movement within the media area is the activity signal.
             # If the cursor stays still, the overlay auto-hides.
+            # Geometry stays with the window's move and resize events: repeating
+            # it here lifts the video over other windows and flashes the bar.
             if moved:
-                self._video_embed.sync_geometry()
-                self._position_overlay()
                 self._controls_overlay.show_overlay()
         elif not inside and self._mouse_inside:
             self._mouse_inside = False
@@ -1679,6 +1682,8 @@ class MediaFrame(QFrame):
                 self.update_playback_progress(current_ms, duration_ms)
             self.set_playback_paused(not bool(self.vlc_media_player.is_playing()))
             self._sync_overlay_volume_state()
+            # Shrink the host to the picture once VLC reports a frame size.
+            self._video_embed.sync_geometry()
             return
         if self._gif_movie is not None and self._gif_is_animated:
             self._update_gif_overlay_progress()

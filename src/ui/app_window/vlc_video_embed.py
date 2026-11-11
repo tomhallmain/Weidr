@@ -19,7 +19,7 @@ from __future__ import annotations
 import platform
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QPoint, QTimer, Qt
+from PySide6.QtCore import QPoint, QRect, QTimer, Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication, QWidget
 
@@ -130,8 +130,15 @@ def _move_hwnd(hwnd: int, x: int, y: int, width: int, height: int) -> bool:
             ctypes.c_uint,
         ]
         user32.SetWindowPos.restype = ctypes.c_bool
+        # NOZORDER: a geometry sync must not lift the video over dialogs.
+        # NOACTIVATE: the move must not take focus from the window under the cursor.
+        swp_nozorder = 0x0004
         swp_noactivate = 0x0010
-        return bool(user32.SetWindowPos(hwnd, None, x, y, width, height, swp_noactivate))
+        return bool(
+            user32.SetWindowPos(
+                hwnd, None, x, y, width, height, swp_nozorder | swp_noactivate
+            )
+        )
     except Exception as exc:
         logger.warning("Could not move the video window: %s", exc)
         return False
@@ -209,6 +216,8 @@ class VlcVideoEmbed:
         self._screen = None
         self._rebind_in_progress = False
         self._screen_bound = False
+        self._video_size: tuple[int, int] | None = None
+        self._placed_global: QRect | None = None
         self._timer = QTimer(frame)
         self._timer.setSingleShot(True)
         self._timer.setInterval(_REBIND_DELAY_MS)
@@ -247,13 +256,22 @@ class VlcVideoEmbed:
             self._screen = screen
         return wid
 
+    def note_new_media(self) -> None:
+        """Drop the previous picture size so the next file is measured on its own."""
+        self._video_size = None
+        self._placed_global = None
+
     def sync_geometry(self) -> None:
         host = self.host
         if host is None or not host.isVisible():
             return
+        target = self._target_global_rect()
+        if target == self._placed_global:
+            return
         self._place(host, show=False)
 
     def hide_host(self) -> None:
+        self._placed_global = None
         if self.host is not None:
             self.host.hide()
 
@@ -326,15 +344,54 @@ class VlcVideoEmbed:
             self.host = VlcVideoHost(self._frame)
         return self.host
 
+    def _video_pixel_size(self) -> tuple[int, int] | None:
+        """Decoded frame size, remembered once VLC has reported it."""
+        player = getattr(self._frame, "vlc_media_player", None)
+        if player is not None:
+            try:
+                width, height = player.video_get_size(0)
+            except Exception:
+                width, height = 0, 0
+            if width > 0 and height > 0:
+                self._video_size = (int(width), int(height))
+        return self._video_size
+
+    def _content_rect(self) -> QRect:
+        """Frame-local rectangle the picture occupies, aspect preserved and centred.
+
+        The host covers only this rectangle. The rest of the media frame stays
+        the frame's own background, which is what shows beside a portrait video.
+        """
+        frame = self._frame
+        full = QRect(0, 0, max(frame.width(), 1), max(frame.height(), 1))
+        size = self._video_pixel_size()
+        if size is None:
+            return full
+        vid_w, vid_h = size
+        scale = min(full.width() / vid_w, full.height() / vid_h)
+        disp_w = max(1, int(vid_w * scale))
+        disp_h = max(1, int(vid_h * scale))
+        return QRect(
+            (full.width() - disp_w) // 2,
+            (full.height() - disp_h) // 2,
+            disp_w,
+            disp_h,
+        )
+
+    def _target_global_rect(self) -> QRect:
+        rect = self._content_rect()
+        return QRect(self._frame.mapToGlobal(rect.topLeft()), rect.size())
+
     def _place(self, host: VlcVideoHost, *, show: bool) -> None:
         frame = self._frame
+        rect = self._content_rect()
         if show:
             host.show()
-        place_tool_window(
-            host, frame, QPoint(0, 0), max(frame.width(), 1), max(frame.height(), 1)
-        )
-        if not host.isVisible():
+        place_tool_window(host, frame, rect.topLeft(), rect.width(), rect.height())
+        self._placed_global = QRect(frame.mapToGlobal(rect.topLeft()), rect.size())
+        if not host.isVisible() or not show:
             return
+        # Only the first show changes stacking. Later syncs keep dialogs on top.
         host.raise_()
         overlay = frame._controls_overlay
         if overlay.isVisible():

@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QSizePolicy,
 )
-from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, Signal
+from PySide6.QtCore import Qt, QTimer, QAbstractAnimation, QPropertyAnimation, QEasingCurve, Signal
 from PySide6.QtGui import QPainter, QColor
 
 from ui.app_style import AppStyle
@@ -293,6 +293,15 @@ class MediaControlsOverlay(QWidget):
 
     def show_overlay(self):
         if not self._has_track:
+            return
+        # The mouse poll calls this on every cursor move. Raising and restarting
+        # the fade each time flashes the bar and pulls it above other windows.
+        fading_in = (
+            self._fade_anim.state() == QAbstractAnimation.State.Running
+            and float(self._fade_anim.endValue() or 0) >= 1.0
+        )
+        if self.isVisible() and (self.windowOpacity() >= 0.99 or fading_in):
+            self._restart_autohide()
             return
         self.show()
         self.raise_()

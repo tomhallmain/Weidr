@@ -106,3 +106,24 @@ class TestDisplayChange:
         assert host.geometry().topLeft() == top_left
         assert host.width() == media_frame.width()
         assert ("time", 1500) in calls
+
+    @pytest.mark.skipif(platform.system() != "Windows", reason="HWND rebuild is Windows-only")
+    def test_a_portrait_video_covers_only_the_picture(self, media_frame):
+        from PySide6.QtCore import QPoint
+
+        media_frame.vlc_media_player.video_get_size = lambda _track: (100, 200)
+        media_frame._video_embed.prepare_hwnd()
+
+        host = media_frame._video_embed.host
+        frame_w = media_frame.width()
+        frame_h = media_frame.height()
+        scale = min(frame_w / 100, frame_h / 200)
+        picture_w = max(1, int(100 * scale))
+        picture_h = max(1, int(200 * scale))
+        origin = media_frame.mapToGlobal(
+            QPoint((frame_w - picture_w) // 2, (frame_h - picture_h) // 2)
+        )
+        assert host.geometry().topLeft() == origin
+        assert host.width() == picture_w
+        assert host.height() == picture_h
+        assert picture_w < frame_w or picture_h < frame_h

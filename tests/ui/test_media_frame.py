@@ -126,3 +126,30 @@ class TestMalformedWebmVlcStop:
 
         qtbot.waitUntil(lambda: media_frame.media_displayed, timeout=3000)
         assert media_frame.media_displayed
+
+
+class TestMediaBackground:
+    def test_opacity_is_painted_once(self, media_frame):
+        """The graphics view must not stack a second copy of the frame fill.
+
+        Video hides that view, so a second translucent fill made images darker
+        than the area beside a video at the same background_opacity.
+        """
+        from PySide6.QtCore import Qt
+        from ui.app_style import AppStyle
+
+        previous = AppStyle.get_background_opacity()
+        AppStyle.set_background_opacity(0.2)
+        try:
+            media_frame.set_background_color("#1e1c26")
+            view = media_frame._graphics_view
+            assert "rgba(30, 28, 38, 51)" in media_frame.styleSheet()
+            assert "transparent" in view.styleSheet()
+            assert view.backgroundBrush().style() == Qt.BrushStyle.NoBrush
+            assert view.viewport().autoFillBackground() is False
+            assert (
+                view.viewport().testAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent)
+                is False
+            )
+        finally:
+            AppStyle.set_background_opacity(previous)

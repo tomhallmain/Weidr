@@ -6,9 +6,12 @@ The cache trades freshness for I/O, so what is pinned here is the shape of that
 trade: a hit serves without touching the disk, a miss populates, a failed read
 is never written, and the load/store round trip neither loses entries nor
 persists over a cache that was never loaded.
+
+Encryption is replaced by plain file I/O so no key material is touched.
 """
 
 from datetime import datetime
+import json
 import os
 import threading
 
@@ -30,6 +33,30 @@ PLANTED_MTIME = 1_700_000_123.0
 @pytest.fixture(autouse=True)
 def enable_cache(monkeypatch):
     monkeypatch.setattr(config, "enable_file_metadata_cache", True)
+
+
+@pytest.fixture(autouse=True)
+def plain_encryption(monkeypatch):
+    """Store/load the cache file as plain bytes."""
+    import utils.encryptor as enc
+
+    def _encrypt(data, service_name, app_identifier, output_path, *a, **kw):
+        with open(output_path, "wb") as f:
+            f.write(data)
+
+    def _decrypt(path, service_name, app_identifier):
+        with open(path, "rb") as f:
+            return f.read()
+
+    monkeypatch.setattr(enc, "encrypt_data_to_file", _encrypt)
+    monkeypatch.setattr(enc, "decrypt_data_from_file", _decrypt)
+
+
+def _stored_entries() -> dict:
+    with open(fmc_mod._cache_file_path(), "rb") as f:
+        payload = json.loads(f.read().decode("utf-8"))
+    assert payload["version"] == fmc_mod.FORMAT_VERSION
+    return payload["entries"]
 
 
 @pytest.fixture
@@ -202,18 +229,29 @@ class TestPersistence:
 
         assert reloaded.get(png)["size"] == os.stat(png).st_size
 
-    def test_storing_marks_the_info_cache_changed(self, cache, png):
-        """app_info_cache only flushes when it believes something changed, so
-        handing it an object it already holds would persist nothing."""
-        SortableFile(png)
-        cache.store()
+    def test_the_file_lives_in_the_cache_dir(self):
+        assert os.path.dirname(fmc_mod._cache_file_path()) == os.environ["WEIDR_CACHE_DIR"]
+
+    def test_storing_leaves_app_info_cache_alone(self, cache, png):
+        """The entries go to their own file; the main cache neither holds them
+        nor needs a store because of them."""
         app_info_cache._has_changes = False
+        SortableFile(png)
 
-        cache.update_stat(png, ctime=PLANTED_CTIME, mtime=PLANTED_MTIME, size=99)
         cache.store()
 
-        assert app_info_cache.has_changes is True
-        assert app_info_cache.get_meta(CACHE_KEY)[png]["size"] == 99
+        assert app_info_cache.has_changes is False
+        assert app_info_cache.get_meta(CACHE_KEY) is None
+        assert _stored_entries()[png]["size"] == os.stat(png).st_size
+
+    def test_a_copy_left_in_app_info_cache_is_dropped_on_load(self, png):
+        app_info_cache.set_meta(CACHE_KEY, {png: {"size": 1, "ctime": 0.0, "mtime": 0.0}})
+
+        instance = FileMetadataCache()
+        instance.load()
+
+        assert app_info_cache.get_meta(CACHE_KEY) is None
+        assert instance.get(png) is None
 
     def test_a_second_load_keeps_what_is_already_in_memory(self, cache, png):
         """Every window calls load(); a later one must not drop what an
@@ -224,26 +262,71 @@ class TestPersistence:
 
         assert cache.get(png) is not None
 
-    def test_an_unloaded_cache_refuses_to_store(self, png):
+    def test_entries_recorded_before_load_win_over_the_file(self, cache, png):
+        cache.update_stat(png, ctime=0.0, mtime=0.0, size=1)
+        cache.store()
+        fresh = FileMetadataCache()
+        fresh.update_stat(png, ctime=0.0, mtime=0.0, size=2)
+
+        fresh.load()
+
+        assert fresh.get(png)["size"] == 2
+
+    def test_an_unloaded_cache_refuses_to_store(self, cache, png):
         """A partial dict written over the full one would lose entries."""
-        app_info_cache.set_meta(CACHE_KEY, {png: {"size": 1, "ctime": 0.0, "mtime": 0.0}})
+        cache.update_stat(png, ctime=0.0, mtime=0.0, size=1)
+        cache.store()
         never_loaded = FileMetadataCache()
         never_loaded.update_stat("/other.png", ctime=0.0, mtime=0.0, size=2)
 
         never_loaded.store()
 
-        assert app_info_cache.get_meta(CACHE_KEY) == {
-            png: {"size": 1, "ctime": 0.0, "mtime": 0.0}
-        }
+        assert _stored_entries() == {png: {"ctime": 0.0, "mtime": 0.0, "size": 1}}
 
-    def test_a_clean_cache_does_not_rewrite(self, cache, png):
+    def test_a_clean_cache_does_not_write(self, cache):
+        cache.store()
+
+        assert not os.path.exists(fmc_mod._cache_file_path())
+
+    def test_a_failed_encryption_keeps_changes_and_writes_no_plaintext(self, cache, png, monkeypatch):
+        import utils.encryptor as enc
+
+        def _fail(*a, **kw):
+            raise RuntimeError("no keys")
+
+        monkeypatch.setattr(enc, "encrypt_data_to_file", _fail)
         SortableFile(png)
-        cache.store()
-        app_info_cache._has_changes = False
 
         cache.store()
 
-        assert app_info_cache.has_changes is False
+        cache_dir = os.path.dirname(fmc_mod._cache_file_path())
+        assert [n for n in os.listdir(cache_dir) if "file_metadata_cache" in n] == []
+        assert cache._dirty is True
+
+    def test_an_unreadable_file_starts_empty(self, png):
+        path = fmc_mod._cache_file_path()
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "wb") as f:
+            f.write(b"not json")
+
+        instance = FileMetadataCache()
+        instance.load()
+
+        assert instance.entry_count() == 0
+        instance.update_stat(png, ctime=0.0, mtime=0.0, size=3)
+        instance.store()
+        assert _stored_entries()[png]["size"] == 3
+
+    def test_an_unknown_format_is_ignored(self):
+        path = fmc_mod._cache_file_path()
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "wb") as f:
+            f.write(json.dumps({"version": 999, "entries": {"/a.png": {"size": 1}}}).encode("utf-8"))
+
+        instance = FileMetadataCache()
+        instance.load()
+
+        assert instance.entry_count() == 0
 
     def test_the_entry_ceiling_is_enforced_on_store(self, cache, monkeypatch):
         monkeypatch.setattr(cache, "MAX_ENTRIES", 10)
@@ -252,7 +335,7 @@ class TestPersistence:
 
         cache.store()
 
-        stored = app_info_cache.get_meta(CACHE_KEY)
+        stored = _stored_entries()
         assert len(stored) == 10
         # The tail is kept: insertion order stands in for recency.
         assert "/f24.png" in stored
@@ -274,10 +357,9 @@ class TestConcurrency:
         Unlocked, the snapshot raises "dictionary changed size during
         iteration" partway through a scan.
 
-        set_meta is stubbed out so the test measures the snapshot alone rather
-        than app_info_cache's own value comparison.
+        The file write is stubbed out so the test measures the snapshot alone.
         """
-        monkeypatch.setattr(app_info_cache, "set_meta", lambda key, value: None)
+        monkeypatch.setattr(fmc_mod, "_write_encrypted", lambda data, destination: None)
 
         stop = threading.Event()
         errors = []

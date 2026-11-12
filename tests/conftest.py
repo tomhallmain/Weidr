@@ -299,6 +299,15 @@ def reset_app_globals():
         except Exception:
             pass
 
+        # File metadata cache — process-wide entries keyed by path. Without the
+        # reset, an earlier test's load() leaves it loaded and a later store()
+        # writes that test's entries into the next test's cache directory.
+        try:
+            from files.file_metadata_cache import file_metadata_cache
+            file_metadata_cache.reset()
+        except Exception:
+            pass
+
         # Pipeline run history and active-run registry — process-wide
         try:
             from compare.pipeline_run_history import pipeline_run_history

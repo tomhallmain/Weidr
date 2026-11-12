@@ -177,8 +177,6 @@ class CacheController:
         from compare.pipeline_run_history import pipeline_run_history
 
         pipeline_run_history.store()
-        # Must precede the has_changes check: this is what marks the info cache
-        # changed when only file metadata was collected this interval.
         from files.file_metadata_cache import file_metadata_cache
 
         file_metadata_cache.store()

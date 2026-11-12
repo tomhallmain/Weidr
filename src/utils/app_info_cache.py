@@ -473,6 +473,16 @@ class AppInfoCache(InflationMonitor):
                 self._cache[AppInfoCache.META_INFO_KEY][key] = value
                 self._has_changes = True
 
+    def remove_meta(self, key) -> bool:
+        """Delete a meta entry. True when there was one to delete."""
+        with self._lock:
+            info = self._cache.get(AppInfoCache.META_INFO_KEY)
+            if not info or key not in info:
+                return False
+            del info[key]
+            self._has_changes = True
+            return True
+
     def get_meta(self, key, default_val=None):
         with self._lock:
             if AppInfoCache.META_INFO_KEY not in self._cache or key not in self._cache[AppInfoCache.META_INFO_KEY]:

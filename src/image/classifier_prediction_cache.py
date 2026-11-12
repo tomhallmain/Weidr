@@ -48,10 +48,13 @@ def model_signature(settings: Dict[str, Any]) -> str:
 
 
 class ClassifierPredictionCache:
-    # Rows are a few hundred bytes serialized (path, two mtimes, one score per
-    # category), and the whole file is rewritten on store, so this is a size
-    # budget. Oldest rows are dropped first.
+    # Size budgets, enforced on store; oldest rows are dropped first. A row
+    # holds one score per category, so its size follows the model: a few
+    # hundred bytes for a 3-class model, tens of KB for a 1000-class ImageNet
+    # one. MAX_ENTRIES alone would let 200,000 ImageNet rows reach gigabytes in
+    # memory and on disk; MAX_SCORES caps the total score count across rows.
     MAX_ENTRIES = 200_000
+    MAX_SCORES = 1_000_000
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -232,11 +235,21 @@ class ClassifierPredictionCache:
                     del rows[media_key]
                     continue
                 flat.append((cached_at, model_key, media_key, snap, row.peek_value()))
-        if len(flat) > self.MAX_ENTRIES:
-            flat.sort(key=lambda t: t[0])
-            for _cached_at, model_key, media_key, _snap, _scores in flat[:-self.MAX_ENTRIES]:
+        total_scores = sum(len(t[4] or ()) for t in flat)
+        if len(flat) > self.MAX_ENTRIES or total_scores > self.MAX_SCORES:
+            # Newest first; the first row that no longer fits ends the kept set.
+            flat.sort(key=lambda t: t[0], reverse=True)
+            kept_scores = 0
+            keep = len(flat)
+            for i, (_cached_at, _model_key, _media_key, _snap, scores) in enumerate(flat):
+                n = len(scores or ())
+                if i >= self.MAX_ENTRIES or kept_scores + n > self.MAX_SCORES:
+                    keep = i
+                    break
+                kept_scores += n
+            for _cached_at, model_key, media_key, _snap, _scores in flat[keep:]:
                 self._rows[model_key].pop(media_key, None)
-            flat = flat[-self.MAX_ENTRIES:]
+            flat = flat[:keep]
         models: Dict[str, list] = {}
         for cached_at, model_key, media_key, snap, scores in flat:
             models.setdefault(model_key, []).append({

@@ -301,6 +301,39 @@ class TestPredictionCachePersistence:
         assert cache.get("image:m", "sig", "org/model", paths[0]) is None
         assert cache.get("image:m", "sig", "org/model", paths[2]) == SCORES
 
+    def test_store_trims_oldest_rows_to_the_score_budget(self, tmp_path, plain_encryption, monkeypatch):
+        """A row's size follows the model's category count, so the row cap alone
+        does not bound a many-class model's cache."""
+        monkeypatch.setattr(ClassifierPredictionCache, "MAX_SCORES", 2500)
+        wide = {f"class_{i}": 0.001 for i in range(1000)}
+        cache = ClassifierPredictionCache()
+        cache.load()
+        paths = []
+        for i in range(3):
+            p = tmp_path / f"w{i}.png"
+            p.write_bytes(b"x")
+            paths.append(str(p))
+            cache.put("image:imagenet", "sig", "org/model", str(p), wide)
+            time.sleep(0.01)
+        cache.store()
+        assert cache.entry_count() == 2
+        assert cache.get("image:imagenet", "sig", "org/model", paths[0]) is None
+        assert cache.get("image:imagenet", "sig", "org/model", paths[2]) == wide
+
+        fresh = ClassifierPredictionCache()
+        fresh.load()
+        assert fresh.entry_count() == 2
+
+    def test_rows_within_both_budgets_are_all_kept(self, tmp_path, plain_encryption):
+        cache = ClassifierPredictionCache()
+        cache.load()
+        for i in range(5):
+            p = tmp_path / f"s{i}.png"
+            p.write_bytes(b"x")
+            cache.put("image:m", "sig", "org/model", str(p), SCORES)
+        cache.store()
+        assert cache.entry_count() == 5
+
     def test_load_keeps_rows_added_before_load(self, files, plain_encryption):
         media, model = files
         writer = ClassifierPredictionCache()

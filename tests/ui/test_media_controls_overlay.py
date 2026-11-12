@@ -340,3 +340,19 @@ class TestVisibility:
         overlay.on_playback_stopped()
 
         assert overlay.isHidden() is True
+
+
+class TestRepeatedShow:
+    def test_a_fade_out_in_progress_is_reversed(self, overlay):
+        """Moving the mouse just after the autohide fired must bring the bar back."""
+        overlay.on_track_changed()
+        overlay.show_overlay()
+        overlay._fade_anim.stop()
+        overlay.setWindowOpacity(1.0)
+        overlay._fade_out()
+        assert float(overlay._fade_anim.endValue()) == 0.0
+
+        overlay.show_overlay()
+
+        assert float(overlay._fade_anim.endValue()) == 1.0
+        assert overlay._autohide_timer.isActive() is True

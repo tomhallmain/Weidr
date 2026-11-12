@@ -17,6 +17,8 @@ from PySide6.QtCore import QPoint, QRect, QSize, Qt, QTimer
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
+from ui.app_window.vlc_picture_geometry import fit_rect, picture_from, read_video_track_shape
+from ui.app_window.vlc_video_embed import place_tool_window
 from utils.logging_setup import get_logger
 from utils.translations import _
 
@@ -44,6 +46,8 @@ class VideoCropOverlay(QWidget):
     Positioned to cover exactly the video content area within the media frame
     (accounting for letterboxing).  The user drags to select a region; Enter
     confirms and fires ``on_confirmed(x, y, w, h)`` in video pixels, Escape closes.
+    ``inv_scale`` maps overlay x to video pixels; ``inv_scale_y`` maps y and
+    defaults to the same value. They differ for a non-square sample aspect ratio.
     """
 
     def __init__(
@@ -53,6 +57,7 @@ class VideoCropOverlay(QWidget):
         vid_h: int,
         inv_scale: float,
         on_confirmed: Callable[[int, int, int, int], None],
+        inv_scale_y: float | None = None,
     ) -> None:
         super().__init__(
             None,
@@ -64,6 +69,7 @@ class VideoCropOverlay(QWidget):
         self._vid_w = vid_w
         self._vid_h = vid_h
         self._inv_scale = inv_scale
+        self._inv_scale_y = inv_scale if inv_scale_y is None else inv_scale_y
         self._on_confirmed = on_confirmed
         self._anchor: QPoint | None = None
         self._sel: QRect | None = None
@@ -109,11 +115,12 @@ class VideoCropOverlay(QWidget):
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             sel = self._sel
             if sel and sel.width() > 1 and sel.height() > 1:
-                inv = self._inv_scale
-                x = max(0, int(sel.x() * inv))
-                y = max(0, int(sel.y() * inv))
-                w = min(self._vid_w - x, max(1, int(sel.width() * inv)))
-                h = min(self._vid_h - y, max(1, int(sel.height() * inv)))
+                inv_x = self._inv_scale
+                inv_y = self._inv_scale_y
+                x = max(0, int(sel.x() * inv_x))
+                y = max(0, int(sel.y() * inv_y))
+                w = min(self._vid_w - x, max(1, int(sel.width() * inv_x)))
+                h = min(self._vid_h - y, max(1, int(sel.height() * inv_y)))
                 self.close()
                 self._on_confirmed(x, y, w, h)
             return
@@ -145,18 +152,18 @@ def _launch_video_rect_selector(
         app.notification_ctrl.toast(_("Could not determine video dimensions"))
         return
 
-    # VLC scales the video to fit the media frame while preserving aspect ratio
-    # (uniform scale, centred, with black bars on the short axis).
+    # The picture is fitted and centred in the media frame with its displayed
+    # shape (SAR and orientation applied); the selection maps back to the
+    # auto-rotated pixel grid the ffmpeg filters work in.
+    picture = picture_from(int(vid_w), int(vid_h), read_video_track_shape(player))
     mf_w, mf_h = media_frame.width(), media_frame.height()
-    disp_scale = min(mf_w / vid_w, mf_h / vid_h)
-    disp_w = int(vid_w * disp_scale)
-    disp_h = int(vid_h * disp_scale)
-    origin = media_frame.mapToGlobal(QPoint(
-        (mf_w - disp_w) // 2,
-        (mf_h - disp_h) // 2,
-    ))
+    disp_x, disp_y, disp_w, disp_h = fit_rect(
+        mf_w, mf_h, picture.display_w, picture.display_h
+    )
+    origin = media_frame.mapToGlobal(QPoint(disp_x, disp_y))
     geo = QRect(origin, QSize(disp_w, disp_h))
-    inv_scale = 1.0 / disp_scale   # overlay pixels → video pixels
+    inv_scale_x = picture.frame_w / disp_w   # overlay pixels → video pixels
+    inv_scale_y = picture.frame_h / disp_h
 
     def _do_action(x: int, y: int, w: int, h: int) -> None:
         def _run() -> None:
@@ -183,10 +190,17 @@ def _launch_video_rect_selector(
         start_thread(_run, use_asyncio=False)
 
     logger.debug(
-        "launch_video_rect_selector: vid=%dx%d disp=%dx%d inv_scale=%.4f geo=%s",
-        vid_w, vid_h, disp_w, disp_h, inv_scale, geo,
+        "launch_video_rect_selector: vid=%dx%d frame=%dx%d disp=%dx%d inv_scale=%.4f,%.4f geo=%s",
+        vid_w, vid_h, picture.frame_w, picture.frame_h, disp_w, disp_h,
+        inv_scale_x, inv_scale_y, geo,
     )
-    overlay = VideoCropOverlay(geo, vid_w, vid_h, inv_scale, _do_action)
+    overlay = VideoCropOverlay(
+        geo, picture.frame_w, picture.frame_h, inv_scale_x, _do_action,
+        inv_scale_y=inv_scale_y,
+    )
+    # setGeometry alone can clamp the window onto the first display; this
+    # repeats the placement in physical pixels on Windows.
+    place_tool_window(overlay, media_frame, QPoint(disp_x, disp_y), disp_w, disp_h)
     _set_active(overlay)
     app.notification_ctrl.toast(toast_msg)
 

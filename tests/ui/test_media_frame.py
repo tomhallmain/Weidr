@@ -153,3 +153,35 @@ class TestMediaBackground:
             )
         finally:
             AppStyle.set_background_opacity(previous)
+
+
+class TestGraphicsViewFill:
+    def test_the_view_is_transparent_before_a_theme_is_applied(self, media_frame):
+        from PySide6.QtCore import Qt
+
+        view = media_frame._graphics_view
+        assert "transparent" in view.styleSheet()
+        assert view.backgroundBrush().style() == Qt.BrushStyle.NoBrush
+        assert view.viewport().autoFillBackground() is False
+
+
+class TestOverlayFollowsFrame:
+    def test_a_frame_that_moved_without_an_event_is_followed(self, media_frame, monkeypatch):
+        from PySide6.QtCore import QRect
+
+        calls = []
+        monkeypatch.setattr(media_frame, "_follow_video_window", lambda: calls.append("follow"))
+        media_frame._overlay_anchor = QRect(-5000, -5000, 1, 1)
+
+        media_frame._follow_if_frame_moved()
+
+        assert calls == ["follow"]
+
+    def test_a_frame_that_stayed_put_is_not_placed_again(self, media_frame, monkeypatch):
+        media_frame._position_overlay()
+        calls = []
+        monkeypatch.setattr(media_frame, "_follow_video_window", lambda: calls.append("follow"))
+
+        media_frame._follow_if_frame_moved()
+
+        assert calls == []

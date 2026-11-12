@@ -296,11 +296,11 @@ class MediaControlsOverlay(QWidget):
             return
         # The mouse poll calls this on every cursor move. Raising and restarting
         # the fade each time flashes the bar and pulls it above other windows.
-        fading_in = (
-            self._fade_anim.state() == QAbstractAnimation.State.Running
-            and float(self._fade_anim.endValue() or 0) >= 1.0
-        )
-        if self.isVisible() and (self.windowOpacity() >= 0.99 or fading_in):
+        # A fade-out in progress is reversed, even while still nearly opaque.
+        animating = self._fade_anim.state() == QAbstractAnimation.State.Running
+        fading_in = animating and float(self._fade_anim.endValue() or 0) >= 1.0
+        fully_shown = not animating and self.windowOpacity() >= 0.99
+        if self.isVisible() and (fully_shown or fading_in):
             self._restart_autohide()
             return
         self.show()

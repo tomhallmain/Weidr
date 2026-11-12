@@ -152,8 +152,8 @@ class _ImageDecodeWorker(QThread):
 class MediaFrame(QFrame):
     """
     Display media (static images with pan/zoom via QGraphicsView, animated rasters via QMovie,
-    video via VLC). On Windows the picture is drawn into VlcVideoEmbed, which
-    follows this frame onto another display.
+    video via VLC). libvlc draws into VlcVideoEmbed's host, sized to the picture;
+    on Windows that host also follows this frame onto another display.
     """
     seek_requested = Signal(int)
     play_pause_requested = Signal()
@@ -191,6 +191,7 @@ class MediaFrame(QFrame):
         self._graphics_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._graphics_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._graphics_view.set_interaction_enabled(False)
+        self._make_graphics_view_transparent()
         self._scene = QGraphicsScene(self)
         self._graphics_view.setScene(self._scene)
         self._pixmap_item = QGraphicsPixmapItem()
@@ -247,6 +248,7 @@ class MediaFrame(QFrame):
         self._window_filter_installed = False
         self._mouse_inside = False
         self._last_cursor_pos = None
+        self._overlay_anchor: QRect | None = None
         self._last_known_volume = 100
         self._last_known_muted = False
 
@@ -289,11 +291,13 @@ class MediaFrame(QFrame):
         color = background_color or AppStyle.MEDIA_BG
         opacity = AppStyle.get_background_opacity()
         rgba = AppStyle.hex_to_rgba(color, opacity)
-        # One fill for this frame. Video hides the graphics view, so the area
-        # beside the picture is just this color. The view used to paint the
-        # same translucent color again, which stacked the opacity and made
-        # images darker than the configured value.
+        # The frame's fill is the only one: video hides the graphics view, so
+        # images and the area beside a video show the same configured opacity.
         self.setStyleSheet(f"background-color: {rgba};")
+        self._make_graphics_view_transparent()
+
+    def _make_graphics_view_transparent(self) -> None:
+        """Let the frame's fill show through; a second translucent fill would stack."""
         view = self._graphics_view
         view.setFrameShape(QFrame.Shape.NoFrame)
         view.setStyleSheet("background: transparent; border: none;")
@@ -857,7 +861,7 @@ class MediaFrame(QFrame):
             self._apply_image_scale_mode()
 
     def show_video(self, path, freeze_frame: bool = False):
-        """Play video in this frame (VLC embeds via winId()).
+        """Play video in this frame (VLC draws into VlcVideoEmbed's host).
 
         When freeze_frame is True the caller has already displayed a static
         image; VLC plays audio only (video output suppressed via :no-video)
@@ -925,13 +929,17 @@ class MediaFrame(QFrame):
         self._bind_vlc_window(wid)
 
     def _bind_vlc_window(self, wid: int) -> None:
+        self._set_vlc_drawable(wid)
+        self._video_embed.bound_hwnd = int(wid)
+
+    def _set_vlc_drawable(self, wid: int) -> None:
+        """Point libvlc at a native window (HWND, NSView or X11 id); 0 detaches."""
         if platform.system() == "Windows":
             self.vlc_media_player.set_hwnd(wid)
         elif platform.system() == "Darwin":
             self.vlc_media_player.set_nsobject(wid)
         else:
             self.vlc_media_player.set_xwindow(wid)
-        self._video_embed.bound_hwnd = int(wid)
 
     def detach_vlc_output(self) -> None:
         """Disconnect VLC's video renderer from this widget's native window handle.
@@ -943,15 +951,8 @@ class MediaFrame(QFrame):
             logger.debug("detach_vlc_output: skipped (VLC unavailable or no player)")
             return
         try:
-            if platform.system() == "Windows":
-                self.vlc_media_player.set_hwnd(0)
-                logger.debug("detach_vlc_output: set_hwnd(0) called on Windows")
-            elif platform.system() == "Darwin":
-                self.vlc_media_player.set_nsobject(0)
-                logger.debug("detach_vlc_output: set_nsobject(0) called on macOS")
-            else:
-                self.vlc_media_player.set_xwindow(0)
-                logger.debug("detach_vlc_output: set_xwindow(0) called on Linux")
+            self._set_vlc_drawable(0)
+            logger.debug("detach_vlc_output: drawable reset on %s", platform.system())
         except Exception as exc:
             logger.warning("detach_vlc_output: failed — %s", exc)
         self._video_embed.bound_hwnd = 0
@@ -994,9 +995,10 @@ class MediaFrame(QFrame):
         thread.join(timeout=3.0)
         if thread.is_alive():
             logger.warning(
-                "VLC stop() timed out for %s — Matroska container likely missing "
-                "Cues element; abandoning hung player and creating a fresh instance",
-                self.path,
+                _(
+                    "VLC stop() timed out for {0} — Matroska container likely missing "
+                    "Cues element; abandoning hung player and creating a fresh instance"
+                ).format(self.path)
             )
             if self.path and os.path.splitext(self.path)[1].lower() in MATROSKA_EXTENSIONS:
                 _matroska_missing_cues_paths.add(self.path)
@@ -1057,8 +1059,7 @@ class MediaFrame(QFrame):
         self._video_embed.stop()
         if _VLC_AVAILABLE and self.vlc_media_player:
             try:
-                if platform.system() == "Windows":
-                    self.vlc_media_player.set_hwnd(0)
+                self._set_vlc_drawable(0)
             except Exception:
                 pass
             self._video_embed.bound_hwnd = 0
@@ -1100,9 +1101,9 @@ class MediaFrame(QFrame):
 
         if _VLC_AVAILABLE and self.vlc_media_player:
             try:
-                # Detach video output from this window handle before release.
-                if platform.system() == "Windows":
-                    self.vlc_media_player.set_hwnd(0)
+                # Detach before release on every platform: on macOS libvlc
+                # holds the NSView, which Qt frees with the host.
+                self._set_vlc_drawable(0)
             except Exception:
                 pass
             self._video_embed.bound_hwnd = 0
@@ -1555,6 +1556,7 @@ class MediaFrame(QFrame):
     def _position_overlay(self):
         """Place the controls overlay at the bottom of the frame in global coords."""
         h = OVERLAY_HEIGHT
+        self._overlay_anchor = QRect(self.mapToGlobal(QPoint(0, 0)), self.size())
         place_tool_window(
             self._controls_overlay,
             self,
@@ -1568,6 +1570,17 @@ class MediaFrame(QFrame):
         self._video_embed.sync_geometry()
         self._video_embed.note_screen()
         self._position_overlay()
+
+    def _follow_if_frame_moved(self):
+        """Re-align when this frame moved on screen without a move event.
+
+        A parent container moving inside the window shifts the frame without a
+        moveEvent here or on the window. Nothing is placed while the frame
+        stays put, so the bar does not flash.
+        """
+        anchor = QRect(self.mapToGlobal(QPoint(0, 0)), self.size())
+        if anchor != self._overlay_anchor:
+            self._follow_video_window()
 
     def _ensure_window_filter(self):
         if self._window_filter_installed:
@@ -1638,9 +1651,8 @@ class MediaFrame(QFrame):
             self._mouse_inside = True
             # Movement within the media area is the activity signal.
             # If the cursor stays still, the overlay auto-hides.
-            # Geometry stays with the window's move and resize events: repeating
-            # it here lifts the video over other windows and flashes the bar.
             if moved:
+                self._follow_if_frame_moved()
                 self._controls_overlay.show_overlay()
         elif not inside and self._mouse_inside:
             self._mouse_inside = False

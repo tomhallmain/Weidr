@@ -416,6 +416,78 @@ class TestLaunchVideoCropOverlay:
         assert overlay.isVisible()
 
 
+class TestLaunchVideoCropPictureShape:
+    """The overlay follows the displayed shape; selections map to ffmpeg's pixel grid."""
+
+    def _make_frame(self, vid_w, vid_h, mf_w, mf_h, *, sar=(1, 1), orientation=0):
+        video = SimpleNamespace(
+            width=vid_w, height=vid_h, sar_num=sar[0], sar_den=sar[1], orientation=orientation
+        )
+        track = SimpleNamespace(
+            type=1, id=0, u=SimpleNamespace(video=SimpleNamespace(contents=video))
+        )
+        frame = MagicMock()
+        player = frame.vlc_media_player
+        player.video_get_size.return_value = (vid_w, vid_h)
+        player.video_get_track.return_value = 0
+        player.get_media.return_value.tracks_get.return_value = [track]
+        frame.width.return_value = mf_w
+        frame.height.return_value = mf_h
+        frame.mapToGlobal.side_effect = lambda p: QPoint(p.x(), p.y())
+        return frame
+
+    def _launch(self, qtbot, frame, monkeypatch):
+        received = []
+        monkeypatch.setattr(
+            _mod, "VideoCropOverlay",
+            lambda geo, vw, vh, inv, cb, inv_scale_y=None: received.append(
+                (geo, vw, vh, inv, inv_scale_y)
+            ) or MagicMock(),
+        )
+        launch_video_crop(frame, "/fake/video.mp4", MagicMock())
+        return received[0]
+
+    def test_a_rotated_clip_gets_a_portrait_overlay(self, qtbot, monkeypatch):
+        frame = self._make_frame(1920, 1080, 540, 960, orientation=6)
+        geo, vid_w, vid_h, inv_x, inv_y = self._launch(qtbot, frame, monkeypatch)
+        assert (geo.width(), geo.height()) == (540, 960)
+        assert (vid_w, vid_h) == (1080, 1920)
+        assert (inv_x, inv_y) == (2.0, 2.0)
+
+    def test_anamorphic_pixels_scale_x_and_y_separately(self, qtbot, monkeypatch):
+        frame = self._make_frame(720, 576, 768, 576, sar=(16, 15))
+        geo, vid_w, vid_h, inv_x, inv_y = self._launch(qtbot, frame, monkeypatch)
+        assert (geo.width(), geo.height()) == (768, 576)
+        assert (vid_w, vid_h) == (720, 576)
+        assert inv_x == pytest.approx(720 / 768)
+        assert inv_y == pytest.approx(1.0)
+
+    def test_the_overlay_is_placed_in_physical_pixels(self, qtbot, monkeypatch):
+        placed = []
+        monkeypatch.setattr(
+            _mod, "place_tool_window",
+            lambda widget, frame, pos, w, h: placed.append((pos, w, h)),
+        )
+        frame = self._make_frame(1920, 1080, 960, 600)
+        self._launch(qtbot, frame, monkeypatch)
+        assert placed == [(QPoint(0, 30), 960, 540)]
+
+    def test_separate_y_scale_maps_the_selection(self, qtbot):
+        received = []
+        overlay = VideoCropOverlay(
+            QRect(0, 0, 768, 576), 720, 576, 720 / 768,
+            lambda x, y, w, h: received.append((x, y, w, h)),
+            inv_scale_y=1.0,
+        )
+        _mod._set_active(overlay)
+        qtbot.addWidget(overlay)
+        _press(overlay, QPoint(0, 0))
+        _move(overlay, QPoint(767, 575))
+        _release(overlay, QPoint(767, 575))
+        _key(overlay, Qt.Key.Key_Return)
+        assert received == [(0, 0, 720, 576)]
+
+
 # ---------------------------------------------------------------------------
 # launch_video_box — reuses _launch_video_rect_selector, same as launch_video_crop
 # ---------------------------------------------------------------------------

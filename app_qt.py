@@ -178,6 +178,8 @@ def main():
     qt_app = QApplication(sys.argv)
     qt_app.setApplicationName("Weidr")
     qt_app.setStyleSheet(AppStyle.get_stylesheet())
+    from ui.app_window.vlc_video_embed import warn_if_wayland
+    warn_if_wayland()
 
     # Application icon
     icon_path = os.path.join(resource_root(), "assets", "icon.png")

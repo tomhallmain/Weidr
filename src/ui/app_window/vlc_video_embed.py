@@ -1,29 +1,42 @@
 """
-Windows video surface for libvlc.
+Native surface libvlc draws into, sized to the picture.
 
-The main window is frameless and translucent. VLC's Direct3D swap chain is a
-child of the HWND it was given at playback start. Moving the app from a
-1080p monitor onto a 4K HDMI TV (different size and Windows scale, often a
-different refresh rate) does not move that surface: Qt paints images on the
-TV, and the video stays on the first display.
+The host covers only the rectangle the picture occupies, so the media
+frame's own (translucent) background shows beside a portrait video instead
+of libvlc's black bars. It stays hidden until libvlc has a video output.
 
-Qt's own setGeometry clamps a tool window into the screen it was created on,
-so a position meant for the TV (to the right of, or above, the primary) lands
-at the top of display 1. This module places an opaque window with the physical
-pixel rectangle Windows already uses for the media frame, then rebuilds
-playback so the swap chain is created on that display.
+On Windows the host is a separate opaque tool window. The main window is
+frameless and translucent, and VLC's Direct3D swap chain is a child of the
+HWND it was given at playback start: moving the app from a 1080p monitor
+onto a 4K TV with a different Windows scale does not move that surface, so
+the video stays on the first display. Qt's own setGeometry clamps a tool
+window into the screen it was created on, so the host is placed with the
+physical pixel rectangle Windows uses for the media frame, and playback is
+rebuilt so the swap chain is created on the new display.
+
+On other platforms the host is a native child widget of the media frame. It
+moves with the window, so no placement or rebuild is needed.
 """
 
 from __future__ import annotations
 
 import platform
+import time
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QPoint, QRect, QTimer, Qt
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QContextMenuEvent, QMouseEvent, QWheelEvent
 from PySide6.QtWidgets import QApplication, QWidget
 
+from ui.app_window.vlc_picture_geometry import (
+    VideoTrackShape,
+    VlcPicture,
+    fit_rect,
+    read_picture,
+    read_video_track_shape,
+)
 from utils.logging_setup import get_logger
+from utils.translations import _
 
 if TYPE_CHECKING:
     from ui.app_window.media_frame import MediaFrame
@@ -33,6 +46,53 @@ logger = get_logger("vlc_video_embed")
 # Long enough for Windows to finish the DPI change that a 1080p-to-4K move
 # triggers, short enough that the picture is not left on the previous monitor.
 _REBIND_DELAY_MS = 150
+
+# The host is opaque black until libvlc presents a picture, so it stays
+# hidden until VLC has a video output. Polled faster than the 250 ms playback
+# tick so the picture is not held back. The timeout shows the host anyway in
+# case has_vout() never reports one for a stream libvlc is still drawing.
+_REVEAL_POLL_MS = 30
+_REVEAL_TIMEOUT_MS = 3000
+
+
+_wayland_warning_logged = False
+
+
+def warn_if_wayland() -> bool:
+    """Log once when Qt runs on Wayland. True when the warning was logged.
+
+    libvlc 3 embeds video on Linux only into an X11 window (set_xwindow), and
+    Wayland does not let an app position its own top-level windows, which the
+    controls bar and crop overlay rely on. Under XWayland (QT_QPA_PLATFORM=xcb)
+    both work.
+    """
+    global _wayland_warning_logged
+    if _wayland_warning_logged or platform.system() != "Linux":
+        return False
+    app = QApplication.instance()
+    if app is None or not str(app.platformName()).startswith("wayland"):
+        return False
+    _wayland_warning_logged = True
+    logger.warning(
+        _(
+            "Qt is running on Wayland: videos cannot be embedded in the window and "
+            "the playback controls cannot be placed over the media. Start the app "
+            "with QT_QPA_PLATFORM=xcb to use XWayland."
+        )
+    )
+    return True
+
+
+def _refresh_macos_gl_view(host: QWidget, rect: QRect) -> None:
+    """Make libvlc's macOS video view rebuild its drawable after the host is shown.
+
+    libvlc draws through an NSOpenGLView placed inside the host. Unhiding the
+    host does not change that view's frame, so its GL context can keep the
+    drawable it got while hidden and show nothing until the next resize. A
+    one-pixel resize and back makes it reshape.
+    """
+    host.setGeometry(rect.adjusted(0, 0, 1, 0))
+    host.setGeometry(rect)
 
 
 def _same_screen(left, right) -> bool:
@@ -92,7 +152,7 @@ def _local_physical_rect(frame, local_pos: QPoint, width: int, height: int):
             max(1, int(round(height * ratio))),
         )
     except Exception as exc:
-        logger.warning("Could not read the media frame position: %s", exc)
+        logger.warning(_("Could not read the media frame position: {0}").format(exc))
         return None
 
 
@@ -140,7 +200,7 @@ def _move_hwnd(hwnd: int, x: int, y: int, width: int, height: int) -> bool:
             )
         )
     except Exception as exc:
-        logger.warning("Could not move the video window: %s", exc)
+        logger.warning(_("Could not move the video window: {0}").format(exc))
         return False
 
 
@@ -169,19 +229,32 @@ def _ensure_ws_clip_children(hwnd: int) -> None:
             return
         set_long(hwnd, -16, style | clip_children)
     except Exception as exc:
-        logger.warning("Could not set WS_CLIPCHILDREN on the video window: %s", exc)
+        logger.warning(
+            _("Could not set WS_CLIPCHILDREN on the video window: {0}").format(exc)
+        )
+
+
+def _host_is_tool_window() -> bool:
+    """Windows needs a separate window to follow the app across displays."""
+    return platform.system() == "Windows"
 
 
 class VlcVideoHost(QWidget):
-    """Opaque window libvlc draws into. Not translucent, so DWM can move it."""
+    """Opaque native surface libvlc draws into.
 
-    def __init__(self, parent=None):
-        super().__init__(
-            parent,
-            Qt.WindowType.Tool
-            | Qt.WindowType.FramelessWindowHint
-            | Qt.WindowType.WindowDoesNotAcceptFocus,
-        )
+    As a tool window (Windows) it is not translucent, so DWM can move it. As a
+    child widget, mouse events it ignores propagate to the media frame.
+    """
+
+    def __init__(self, parent=None, *, tool_window: bool = True):
+        flags = Qt.WindowType.Widget
+        if tool_window:
+            flags = (
+                Qt.WindowType.Tool
+                | Qt.WindowType.FramelessWindowHint
+                | Qt.WindowType.WindowDoesNotAcceptFocus
+            )
+        super().__init__(parent, flags)
         self.setObjectName("vlcVideoHost")
         self.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, True)
         self.setAttribute(Qt.WidgetAttribute.WA_DontCreateNativeAncestors, True)
@@ -196,13 +269,68 @@ class VlcVideoHost(QWidget):
         self.setPalette(palette)
         self.hide()
 
+    def _forward_to_owner(self, event) -> None:
+        """Resend input to the media frame, mapped into its coordinates.
+
+        A tool window is a top-level widget, so Qt does not propagate events
+        it ignores to its parent: without this, right-click (context menu),
+        middle-click (delete) and the wheel (navigate) do nothing over the
+        video. Sent to the frame, an ignored event propagates up to AppWindow.
+        A child host gets that propagation from Qt and is not forwarded.
+        """
+        owner = self.parentWidget()
+        if owner is None or not self.isWindow():
+            event.ignore()
+            return
+        if isinstance(event, QContextMenuEvent):
+            global_pos = event.globalPos()
+            resent = QContextMenuEvent(
+                event.reason(), owner.mapFromGlobal(global_pos), global_pos, event.modifiers()
+            )
+        elif isinstance(event, QWheelEvent):
+            global_pos = event.globalPosition()
+            resent = QWheelEvent(
+                owner.mapFromGlobal(global_pos),
+                global_pos,
+                event.pixelDelta(),
+                event.angleDelta(),
+                event.buttons(),
+                event.modifiers(),
+                event.phase(),
+                event.inverted(),
+            )
+        else:
+            global_pos = event.globalPosition()
+            resent = QMouseEvent(
+                event.type(),
+                owner.mapFromGlobal(global_pos),
+                global_pos,
+                event.button(),
+                event.buttons(),
+                event.modifiers(),
+            )
+        QApplication.sendEvent(owner, resent)
+        event.setAccepted(resent.isAccepted())
+
     def mousePressEvent(self, event):
         owner = self.parentWidget()
         if owner is not None:
             window = owner.window()
             window.activateWindow()
             owner.setFocus(Qt.FocusReason.MouseFocusReason)
-        super().mousePressEvent(event)
+        self._forward_to_owner(event)
+
+    def mouseReleaseEvent(self, event):
+        self._forward_to_owner(event)
+
+    def mouseDoubleClickEvent(self, event):
+        self._forward_to_owner(event)
+
+    def wheelEvent(self, event):
+        self._forward_to_owner(event)
+
+    def contextMenuEvent(self, event):
+        self._forward_to_owner(event)
 
 
 class VlcVideoEmbed:
@@ -216,23 +344,31 @@ class VlcVideoEmbed:
         self._screen = None
         self._rebind_in_progress = False
         self._screen_bound = False
-        self._video_size: tuple[int, int] | None = None
-        self._placed_global: QRect | None = None
+        self._picture: VlcPicture | None = None
+        self._track_shape: VideoTrackShape | None = None
+        self._placed_key: tuple[QRect, float] | None = None
         self._timer = QTimer(frame)
         self._timer.setSingleShot(True)
         self._timer.setInterval(_REBIND_DELAY_MS)
         self._timer.timeout.connect(self._rebind)
+        self._awaiting_picture = False
+        self._reveal_deadline = 0.0
+        self._reveal_timer = QTimer(frame)
+        self._reveal_timer.setInterval(_REVEAL_POLL_MS)
+        self._reveal_timer.timeout.connect(self._reveal_when_ready)
 
     def stop(self) -> None:
         self._timer.stop()
+        self._reveal_timer.stop()
+        self._awaiting_picture = False
 
     def is_host(self, widget) -> bool:
         return widget is not None and widget is self.host
 
     def playback_handle(self):
-        """HWND of the host once it exists, else None. The frame winId is the fallback."""
+        """Native handle of the host once it exists, else None. The frame winId is the fallback."""
         host = self.host
-        if host is None or platform.system() != "Windows":
+        if host is None:
             return None
         wid = host.winId()
         return int(wid) if wid else None
@@ -240,15 +376,14 @@ class VlcVideoEmbed:
     def prepare_hwnd(self) -> int:
         """Native window libvlc should draw into. 0 when there is none yet.
 
-        On Windows this is the opaque host. Elsewhere it is the frame itself,
-        which already follows the window on those platforms.
+        This is the host: a tool window on Windows, a native child widget of
+        the frame elsewhere.
         """
-        frame = self._frame
-        if platform.system() != "Windows":
-            wid = frame.winId()
-            return int(wid) if wid else 0
         host = self._ensure_host()
-        self._place(host, show=True)
+        # A hidden host is positioned now and shown by _reveal_when_ready.
+        self._place(host, show=False)
+        if not host.isVisible():
+            self._start_reveal()
         wid = int(host.winId()) if host.winId() else 0
         _ensure_ws_clip_children(wid)
         screen = self._screen_of_frame()
@@ -257,28 +392,67 @@ class VlcVideoEmbed:
         return wid
 
     def note_new_media(self) -> None:
-        """Drop the previous picture size so the next file is measured on its own."""
-        self._video_size = None
-        self._placed_global = None
+        """Drop the previous picture shape so the next file is measured on its own."""
+        self._picture = None
+        self._track_shape = None
+        self._placed_key = None
 
     def sync_geometry(self) -> None:
         host = self.host
         if host is None or not host.isVisible():
             return
-        target = self._target_global_rect()
-        if target == self._placed_global:
+        if self._placement_key(self._content_rect()) == self._placed_key:
             return
         self._place(host, show=False)
 
     def hide_host(self) -> None:
-        self._placed_global = None
+        """Hide the host. A pending reveal resumes in restore_if_bound."""
+        self._placed_key = None
+        self._reveal_timer.stop()
         if self.host is not None:
             self.host.hide()
 
     def restore_if_bound(self) -> None:
         """Show the host again after the frame was hidden during playback."""
-        if self.bound_hwnd and self.host is not None:
-            self._place(self.host, show=True)
+        if not self.bound_hwnd or self.host is None:
+            return
+        if self._awaiting_picture:
+            self._place(self.host, show=False)
+            self._start_reveal()
+            return
+        self._place(self.host, show=True)
+
+    def _start_reveal(self) -> None:
+        self._awaiting_picture = True
+        self._reveal_deadline = time.monotonic() + _REVEAL_TIMEOUT_MS / 1000.0
+        self._reveal_timer.start()
+
+    def _has_video_output(self) -> bool:
+        player = getattr(self._frame, "vlc_media_player", None)
+        if player is None:
+            return False
+        try:
+            has_vout = int(player.has_vout() or 0) > 0
+        except Exception:
+            has_vout = False
+        return has_vout and self._video_picture() is not None
+
+    def _reveal_when_ready(self) -> None:
+        """Show the host once libvlc has a video output to present into it."""
+        host = self.host
+        if not self._awaiting_picture or host is None or not self.bound_hwnd:
+            self._awaiting_picture = False
+            self._reveal_timer.stop()
+            return
+        if not self._frame.isVisible():
+            # showEvent -> restore_if_bound restarts the poll.
+            self._reveal_timer.stop()
+            return
+        if not self._has_video_output() and time.monotonic() < self._reveal_deadline:
+            return
+        self._awaiting_picture = False
+        self._reveal_timer.stop()
+        self._place(host, show=True)
 
     def discard_retired(self) -> None:
         hung = self._frame._hung_stop_thread
@@ -341,20 +515,27 @@ class VlcVideoEmbed:
 
     def _ensure_host(self) -> VlcVideoHost:
         if self.host is None:
-            self.host = VlcVideoHost(self._frame)
+            self.host = VlcVideoHost(self._frame, tool_window=_host_is_tool_window())
         return self.host
 
-    def _video_pixel_size(self) -> tuple[int, int] | None:
-        """Decoded frame size, remembered once VLC has reported it."""
+    def _video_picture(self) -> VlcPicture | None:
+        """Displayed picture shape, remembered once VLC has reported a size.
+
+        The decoded size is re-read on every call because a stream can change
+        resolution. The track's SAR and orientation are read once per media.
+        """
         player = getattr(self._frame, "vlc_media_player", None)
-        if player is not None:
-            try:
-                width, height = player.video_get_size(0)
-            except Exception:
-                width, height = 0, 0
-            if width > 0 and height > 0:
-                self._video_size = (int(width), int(height))
-        return self._video_size
+        if player is None:
+            return self._picture
+        picture = read_picture(player, self._track_shape)
+        if picture is not None and self._track_shape is None:
+            # A reported size means the decoder is running and the track is listed.
+            self._track_shape = read_video_track_shape(player)
+            if self._track_shape is not None:
+                picture = read_picture(player, self._track_shape)
+        if picture is not None:
+            self._picture = picture
+        return self._picture
 
     def _content_rect(self) -> QRect:
         """Frame-local rectangle the picture occupies, aspect preserved and centred.
@@ -363,32 +544,41 @@ class VlcVideoEmbed:
         the frame's own background, which is what shows beside a portrait video.
         """
         frame = self._frame
-        full = QRect(0, 0, max(frame.width(), 1), max(frame.height(), 1))
-        size = self._video_pixel_size()
-        if size is None:
-            return full
-        vid_w, vid_h = size
-        scale = min(full.width() / vid_w, full.height() / vid_h)
-        disp_w = max(1, int(vid_w * scale))
-        disp_h = max(1, int(vid_h * scale))
-        return QRect(
-            (full.width() - disp_w) // 2,
-            (full.height() - disp_h) // 2,
-            disp_w,
-            disp_h,
-        )
+        full_w, full_h = max(frame.width(), 1), max(frame.height(), 1)
+        picture = self._video_picture()
+        if picture is None:
+            return QRect(0, 0, full_w, full_h)
+        return QRect(*fit_rect(full_w, full_h, picture.display_w, picture.display_h))
 
-    def _target_global_rect(self) -> QRect:
-        rect = self._content_rect()
-        return QRect(self._frame.mapToGlobal(rect.topLeft()), rect.size())
+    def _placement_key(self, rect: QRect) -> tuple[QRect, float]:
+        """Logical global rectangle plus scale: the physical rectangle can change
+        with the scale alone, e.g. when the window lands on a display of another
+        Windows scale at the same logical position."""
+        frame = self._frame
+        global_rect = QRect(frame.mapToGlobal(rect.topLeft()), rect.size())
+        return global_rect, float(frame.devicePixelRatio() or 1.0)
+
+    def _apply_geometry(self, host: VlcVideoHost, rect: QRect) -> None:
+        if host.isWindow():
+            place_tool_window(host, self._frame, rect.topLeft(), rect.width(), rect.height())
+        else:
+            host.setGeometry(rect)
 
     def _place(self, host: VlcVideoHost, *, show: bool) -> None:
         frame = self._frame
         rect = self._content_rect()
-        if show:
+        # Positioned while still hidden, so it does not appear at its last
+        # rectangle first.
+        self._apply_geometry(host, rect)
+        if show and host.isHidden():
             host.show()
-        place_tool_window(host, frame, rect.topLeft(), rect.width(), rect.height())
-        self._placed_global = QRect(frame.mapToGlobal(rect.topLeft()), rect.size())
+            if host.isWindow():
+                # Showing can apply Qt's clamp onto the first display again;
+                # the native move after it wins.
+                self._apply_geometry(host, rect)
+            elif platform.system() == "Darwin":
+                _refresh_macos_gl_view(host, rect)
+        self._placed_key = self._placement_key(rect)
         if not host.isVisible() or not show:
             return
         # Only the first show changes stacking. Later syncs keep dialogs on top.
@@ -439,7 +629,7 @@ class VlcVideoEmbed:
         except Exception:
             paused = False
         self.sync_geometry()
-        logger.info("Rebuilding video output for the display the window was moved to")
+        logger.info(_("Rebuilding video output for the display the window was moved to"))
         stopped_clean = frame._stop_vlc_player(player)
         self._retire_host(destroy=stopped_clean)
         player = frame.vlc_media_player
@@ -451,7 +641,7 @@ class VlcVideoEmbed:
         try:
             media = frame.vlc_instance.media_new(frame.path)
         except Exception as exc:
-            logger.warning("Could not reopen video after a display change: %s", exc)
+            logger.warning(_("Could not reopen video after a display change: {0}").format(exc))
             self._rebind_in_progress = False
             frame._playback_timer.start()
             return
@@ -463,7 +653,7 @@ class VlcVideoEmbed:
             except Exception:
                 pass
         if player.play() == -1:
-            logger.warning("Failed to resume video after a display change")
+            logger.warning(_("Failed to resume video after a display change"))
         else:
             if position_ms > 0:
                 try:

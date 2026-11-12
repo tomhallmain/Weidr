@@ -127,3 +127,250 @@ class TestDisplayChange:
         assert host.width() == picture_w
         assert host.height() == picture_h
         assert picture_w < frame_w or picture_h < frame_h
+
+
+class TestRevealAfterFirstPicture:
+    def test_the_host_stays_hidden_until_vlc_has_a_video_output(self, media_frame):
+        player = media_frame.vlc_media_player
+        player.has_vout = lambda: 0
+        player.video_get_size = lambda _track: (0, 0)
+        embed = media_frame._video_embed
+
+        embed.bound_hwnd = embed.prepare_hwnd()
+        embed._reveal_when_ready()
+
+        assert embed.host.isHidden() is True
+        assert embed._reveal_timer.isActive() is True
+
+        player.has_vout = lambda: 1
+        player.video_get_size = lambda _track: (100, 200)
+        embed._reveal_when_ready()
+
+        assert embed.host.isHidden() is False
+        assert embed._reveal_timer.isActive() is False
+        assert embed.host.height() <= media_frame.height()
+
+    def test_stopping_playback_cancels_a_pending_reveal(self, media_frame):
+        media_frame.vlc_media_player.has_vout = lambda: 0
+        embed = media_frame._video_embed
+        embed.bound_hwnd = embed.prepare_hwnd()
+
+        media_frame.detach_vlc_output()
+        embed._reveal_when_ready()
+
+        assert embed.host.isHidden() is True
+        assert embed._reveal_timer.isActive() is False
+        assert embed._awaiting_picture is False
+
+
+class _TrackMedia:
+    """Media stand-in listing one video track, as python-vlc's tracks_get() does."""
+
+    def __init__(self, width, height, *, sar=(1, 1), orientation=0):
+        from types import SimpleNamespace
+
+        video = SimpleNamespace(
+            width=width, height=height, sar_num=sar[0], sar_den=sar[1], orientation=orientation
+        )
+        self._track = SimpleNamespace(
+            type=1, id=0, u=SimpleNamespace(video=SimpleNamespace(contents=video))
+        )
+
+    def tracks_get(self):
+        return iter([self._track])
+
+
+class TestPictureShape:
+    def test_a_rotated_phone_clip_gets_a_portrait_host(self, media_frame):
+        player = media_frame.vlc_media_player
+        player.video_get_size = lambda _track: (1920, 1080)
+        player.get_media = lambda: _TrackMedia(1920, 1080, orientation=6)
+        player.video_get_track = lambda: 0
+        media_frame.resize(640, 480)
+
+        embed = media_frame._video_embed
+        embed.prepare_hwnd()
+
+        host = embed.host
+        assert host.height() > host.width()
+        assert host.height() == media_frame.height()
+
+    def test_a_new_file_reads_its_own_track(self, media_frame):
+        player = media_frame.vlc_media_player
+        player.video_get_size = lambda _track: (1920, 1080)
+        player.get_media = lambda: _TrackMedia(1920, 1080, orientation=6)
+        player.video_get_track = lambda: 0
+        embed = media_frame._video_embed
+        embed.prepare_hwnd()
+
+        embed.note_new_media()
+        player.get_media = lambda: _TrackMedia(1920, 1080)
+        embed.prepare_hwnd()
+
+        assert embed.host.width() > embed.host.height()
+
+
+class TestHostKind:
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Windows uses a tool window")
+    def test_other_platforms_draw_into_a_child_of_the_frame(self, media_frame):
+        from PySide6.QtCore import Qt
+
+        embed = media_frame._video_embed
+        wid = embed.prepare_hwnd()
+
+        host = embed.host
+        assert host.isWindow() is False
+        assert host.parentWidget() is media_frame
+        assert host.testAttribute(Qt.WidgetAttribute.WA_NativeWindow) is True
+        assert wid == int(host.winId())
+        assert media_frame.get_media_frame_handle() == wid
+
+
+def _revealed_host(media_frame):
+    player = media_frame.vlc_media_player
+    player.has_vout = lambda: 1
+    player.video_get_size = lambda _track: (1920, 1080)
+    embed = media_frame._video_embed
+    embed.bound_hwnd = embed.prepare_hwnd()
+    embed._reveal_when_ready()
+    return embed
+
+
+class TestPlacement:
+    def test_the_host_is_positioned_before_it_is_shown(self, media_frame, monkeypatch):
+        player = media_frame.vlc_media_player
+        player.has_vout = lambda: 1
+        player.video_get_size = lambda _track: (1920, 1080)
+        embed = media_frame._video_embed
+        embed.bound_hwnd = embed.prepare_hwnd()
+        hidden_at_placement = []
+        original = embed._apply_geometry
+
+        def _record(host, rect):
+            hidden_at_placement.append(host.isHidden())
+            original(host, rect)
+
+        monkeypatch.setattr(embed, "_apply_geometry", _record)
+        embed._reveal_when_ready()
+
+        assert hidden_at_placement and hidden_at_placement[0] is True
+        assert embed.host.isHidden() is False
+
+    def test_a_scale_change_alone_places_the_host_again(self, media_frame, monkeypatch):
+        embed = _revealed_host(media_frame)
+        calls = []
+        monkeypatch.setattr(embed, "_apply_geometry", lambda host, rect: calls.append(rect))
+
+        embed.sync_geometry()
+        assert calls == []
+
+        monkeypatch.setattr(media_frame, "devicePixelRatio", lambda: 2.5)
+        embed.sync_geometry()
+        assert len(calls) == 1
+
+
+class _EventRecorder:
+    def __init__(self, widget):
+        from PySide6.QtCore import QObject
+
+        recorder = self
+
+        class _Filter(QObject):
+            def eventFilter(self, _watched, event):
+                recorder.types.append(event.type())
+                return False
+
+        self.types = []
+        self._filter = _Filter()
+        widget.installEventFilter(self._filter)
+
+
+class TestInputOverTheVideo:
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Only the tool-window host forwards")
+    def test_wheel_context_menu_and_middle_click_reach_the_frame(self, media_frame):
+        from PySide6.QtCore import QEvent, QPoint, QPointF, Qt
+        from PySide6.QtGui import QContextMenuEvent, QMouseEvent, QWheelEvent
+        from PySide6.QtWidgets import QApplication
+
+        host = _revealed_host(media_frame).host
+        recorder = _EventRecorder(media_frame)
+        centre = QPointF(host.width() / 2, host.height() / 2)
+        global_centre = QPointF(host.mapToGlobal(centre.toPoint()))
+
+        QApplication.sendEvent(host, QWheelEvent(
+            centre, global_centre, QPoint(), QPoint(0, 120),
+            Qt.MouseButton.NoButton, Qt.KeyboardModifier.NoModifier,
+            Qt.ScrollPhase.NoScrollPhase, False,
+        ))
+        QApplication.sendEvent(host, QContextMenuEvent(
+            QContextMenuEvent.Reason.Mouse, centre.toPoint(), global_centre.toPoint(),
+            Qt.KeyboardModifier.NoModifier,
+        ))
+        QApplication.sendEvent(host, QMouseEvent(
+            QEvent.Type.MouseButtonPress, centre, global_centre,
+            Qt.MouseButton.MiddleButton, Qt.MouseButton.MiddleButton,
+            Qt.KeyboardModifier.NoModifier,
+        ))
+
+        assert QEvent.Type.Wheel in recorder.types
+        assert QEvent.Type.ContextMenu in recorder.types
+        assert QEvent.Type.MouseButtonPress in recorder.types
+
+
+class TestWaylandWarning:
+    def _patch(self, monkeypatch, system, platform_name):
+        from types import SimpleNamespace
+
+        import ui.app_window.vlc_video_embed as embed_mod
+
+        monkeypatch.setattr(embed_mod, "_wayland_warning_logged", False)
+        monkeypatch.setattr(embed_mod.platform, "system", lambda: system)
+        app = SimpleNamespace(platformName=lambda: platform_name)
+        monkeypatch.setattr(embed_mod, "QApplication", SimpleNamespace(instance=lambda: app))
+        return embed_mod
+
+    def test_wayland_is_warned_about_once(self, monkeypatch):
+        embed_mod = self._patch(monkeypatch, "Linux", "wayland")
+        assert embed_mod.warn_if_wayland() is True
+        assert embed_mod.warn_if_wayland() is False
+
+    def test_xwayland_and_other_systems_are_not_warned_about(self, monkeypatch):
+        embed_mod = self._patch(monkeypatch, "Linux", "xcb")
+        assert embed_mod.warn_if_wayland() is False
+        embed_mod = self._patch(monkeypatch, "Darwin", "wayland")
+        assert embed_mod.warn_if_wayland() is False
+
+
+class TestTeardown:
+    def test_the_drawable_is_reset_before_release_on_every_platform(self, media_frame):
+        calls = []
+        player = media_frame.vlc_media_player
+        for name in ("set_hwnd", "set_nsobject", "set_xwindow"):
+            setattr(player, name, lambda wid, name=name: calls.append((name, int(wid or 0))))
+
+        media_frame.dispose_vlc_for_test_teardown()
+
+        expected = {"Windows": "set_hwnd", "Darwin": "set_nsobject"}.get(
+            platform.system(), "set_xwindow"
+        )
+        assert calls == [(expected, 0)]
+
+
+class TestMacosReveal:
+    @pytest.mark.skipif(platform.system() != "Darwin", reason="macOS GL view refresh")
+    def test_showing_the_host_resizes_it_once_and_back(self, media_frame, monkeypatch):
+        embed = media_frame._video_embed
+        player = media_frame.vlc_media_player
+        player.has_vout = lambda: 1
+        player.video_get_size = lambda _track: (1920, 1080)
+        embed.bound_hwnd = embed.prepare_hwnd()
+        host = embed.host
+        sizes = []
+        original = host.setGeometry
+        monkeypatch.setattr(host, "setGeometry", lambda rect: (sizes.append(rect.width()), original(rect)))
+
+        embed._reveal_when_ready()
+
+        assert len(sizes) >= 3
+        assert sizes[-2] == sizes[-1] + 1
+        assert host.isHidden() is False

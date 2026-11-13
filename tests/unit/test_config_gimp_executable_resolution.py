@@ -131,6 +131,67 @@ class TestValidateAndFindGimpStoresResolvedPath:
         assert cfg._build_persisted_config_dict()["gimp_exe_loc"] == "gimp-3.0"
 
 
+class TestFindGimpWindows:
+    """Per-user ("Install for me only") GIMP lives under %LOCALAPPDATA%\\Programs,
+    not Program Files.  The official layout is the same otherwise:
+    ``GIMP 3\\bin\\gimp-3.x.exe``.
+    """
+
+    def test_program_dirs_include_localappdata_programs(self, cfg, tmp_path, monkeypatch):
+        monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+        assert os.path.join(str(tmp_path), "Programs") in cfg._windows_gimp_program_dirs()
+
+    def test_program_dirs_fall_back_to_home_appdata(self, cfg, tmp_path, monkeypatch):
+        home = tmp_path / "home"
+        home.mkdir()
+        monkeypatch.delenv("LOCALAPPDATA", raising=False)
+        monkeypatch.setenv("USERPROFILE", str(home))
+        monkeypatch.setenv("HOME", str(home))
+        expected = os.path.join(str(home), "AppData", "Local", "Programs")
+        assert expected in cfg._windows_gimp_program_dirs()
+
+    def test_finds_per_user_gimp_when_program_files_has_none(self, cfg, tmp_path, monkeypatch):
+        user_bin = tmp_path / "Programs" / "GIMP 3" / "bin"
+        user_bin.mkdir(parents=True)
+        exe = user_bin / "gimp-3.2.exe"
+        exe.write_text("")
+        monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+
+        def only_this_install(_self, path):
+            return os.path.normcase(os.path.abspath(path)) == os.path.normcase(str(exe))
+
+        with patch.object(_cfg_module.Config, "_is_valid_gimp_installation", only_this_install):
+            assert cfg._find_gimp_windows() == str(exe)
+
+    def test_user_gimp3_beats_older_system_gimp2(self, cfg, tmp_path):
+        system = tmp_path / "Program Files"
+        user = tmp_path / "Programs"
+        old = system / "GIMP 2" / "bin" / "gimp-2.10.exe"
+        new = user / "GIMP 3" / "bin" / "gimp-3.2.exe"
+        old.parent.mkdir(parents=True)
+        new.parent.mkdir(parents=True)
+        old.write_text("")
+        new.write_text("")
+        with patch.object(_cfg_module.Config, "_windows_gimp_program_dirs",
+                          return_value=[str(system), str(user)]), \
+             patch.object(_cfg_module.Config, "_is_valid_gimp_installation", return_value=True):
+            assert cfg._find_gimp_windows() == str(new)
+
+    def test_same_version_prefers_program_files_over_user_install(self, cfg, tmp_path):
+        system = tmp_path / "Program Files"
+        user = tmp_path / "Programs"
+        system_exe = system / "GIMP 3" / "bin" / "gimp-3.2.exe"
+        user_exe = user / "GIMP 3" / "bin" / "gimp-3.2.exe"
+        system_exe.parent.mkdir(parents=True)
+        user_exe.parent.mkdir(parents=True)
+        system_exe.write_text("")
+        user_exe.write_text("")
+        with patch.object(_cfg_module.Config, "_windows_gimp_program_dirs",
+                          return_value=[str(system), str(user)]), \
+             patch.object(_cfg_module.Config, "_is_valid_gimp_installation", return_value=True):
+            assert cfg._find_gimp_windows() == str(system_exe)
+
+
 class TestGimpVersionProbeExecutable:
     """On Windows, GIMP 3.2's GUI exe prints --version to its own console window,
     leaving captured stdout empty; the gimp-console sibling is probed instead."""

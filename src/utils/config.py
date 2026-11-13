@@ -646,10 +646,33 @@ class Config:
         else:
             return self._find_gimp_unix()
 
+    @staticmethod
+    def _windows_gimp_program_dirs():
+        """Directories that may contain a ``GIMP <major>`` install folder.
+
+        The official Windows installer offers "Install for me only", which uses
+        the same ``GIMP 3\\bin\\gimp-3.x.exe`` layout as a machine-wide install
+        but under ``%LOCALAPPDATA%\\Programs`` (for example
+        ``C:\\Users\\<name>\\AppData\\Local\\Programs\\GIMP 3\\bin``).
+        """
+        local_app_data = os.environ.get("LOCALAPPDATA")
+        if not local_app_data:
+            local_app_data = os.path.join(os.path.expanduser("~"), "AppData", "Local")
+        return [
+            r"C:\Program Files",
+            r"C:\Program Files (x86)",
+            os.path.join(local_app_data, "Programs"),
+        ]
+
     def _find_gimp_windows(self):
-        """Find GIMP installation on Windows."""
+        """Find GIMP installation on Windows.
+
+        Newer majors are preferred across every root, so a per-user GIMP 3 is
+        chosen ahead of an older GIMP 2 left in Program Files.  Within one
+        version, a machine-wide install is preferred over the per-user one.
+        """
         possible_paths = []
-        program_dirs = [r"C:\Program Files", r"C:\Program Files (x86)"]
+        program_dirs = [d for d in self._windows_gimp_program_dirs() if os.path.isdir(d)]
         # GIMP major versions to check (prioritize newer versions)
         gimp_major_versions = ["3", "2"]  # GIMP 3.x first, then 2.x
         # GIMP minor versions to check (in order of preference)
@@ -657,12 +680,10 @@ class Config:
             "2": ["10", "9", "8", "7", "6", "5", "4", "3", "2", "1", "0"],  # GIMP 2.x versions
             "3": ["2", "1", "0"]    # GIMP 3.x versions
         }
-        
-        for program_dir in program_dirs:
-            if not os.path.exists(program_dir):
-                continue
-            for major_ver in gimp_major_versions:
-                for minor_ver in gimp_minor_versions[major_ver]:
+
+        for major_ver in gimp_major_versions:
+            for minor_ver in gimp_minor_versions[major_ver]:
+                for program_dir in program_dirs:
                     gimp_dir = f"GIMP {major_ver}"
                     bin_path = os.path.join(program_dir, gimp_dir, "bin", f"gimp-{major_ver}.{minor_ver}.exe")
                     if os.path.exists(bin_path):

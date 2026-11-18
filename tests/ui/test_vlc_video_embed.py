@@ -163,28 +163,21 @@ class TestRevealAfterFirstPicture:
         assert embed._awaiting_picture is False
 
 
-class _TrackMedia:
-    """Media stand-in listing one video track, as python-vlc's tracks_get() does."""
+def _list_one_video_track(monkeypatch, width, height, *, sar=(1, 1), orientation=0):
+    """Make every media list one video track of this shape."""
+    import ui.app_window.vlc_picture_geometry as geometry
+    from ui.app_window.vlc_picture_geometry import VideoTrackShape
 
-    def __init__(self, width, height, *, sar=(1, 1), orientation=0):
-        from types import SimpleNamespace
-
-        video = SimpleNamespace(
-            width=width, height=height, sar_num=sar[0], sar_den=sar[1], orientation=orientation
-        )
-        self._track = SimpleNamespace(
-            type=1, id=0, u=SimpleNamespace(video=SimpleNamespace(contents=video))
-        )
-
-    def tracks_get(self):
-        return iter([self._track])
+    shape = VideoTrackShape(width, height, sar[0], sar[1], orientation)
+    monkeypatch.setattr(geometry, "list_video_tracks", lambda _media: [(0, shape)])
 
 
 class TestPictureShape:
-    def test_a_rotated_phone_clip_gets_a_portrait_host(self, media_frame):
+    def test_a_rotated_phone_clip_gets_a_portrait_host(self, media_frame, monkeypatch):
         player = media_frame.vlc_media_player
         player.video_get_size = lambda _track: (1920, 1080)
-        player.get_media = lambda: _TrackMedia(1920, 1080, orientation=6)
+        player.get_media = lambda: object()
+        _list_one_video_track(monkeypatch, 1920, 1080, orientation=6)
         player.video_get_track = lambda: 0
         media_frame.resize(640, 480)
 
@@ -195,16 +188,17 @@ class TestPictureShape:
         assert host.height() > host.width()
         assert host.height() == media_frame.height()
 
-    def test_a_new_file_reads_its_own_track(self, media_frame):
+    def test_a_new_file_reads_its_own_track(self, media_frame, monkeypatch):
         player = media_frame.vlc_media_player
         player.video_get_size = lambda _track: (1920, 1080)
-        player.get_media = lambda: _TrackMedia(1920, 1080, orientation=6)
+        player.get_media = lambda: object()
+        _list_one_video_track(monkeypatch, 1920, 1080, orientation=6)
         player.video_get_track = lambda: 0
         embed = media_frame._video_embed
         embed.prepare_hwnd()
 
         embed.note_new_media()
-        player.get_media = lambda: _TrackMedia(1920, 1080)
+        _list_one_video_track(monkeypatch, 1920, 1080)
         embed.prepare_hwnd()
 
         assert embed.host.width() > embed.host.height()

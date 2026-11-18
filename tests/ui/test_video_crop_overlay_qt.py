@@ -23,9 +23,11 @@ from PySide6.QtGui import QKeyEvent, QMouseEvent
 from PySide6.QtWidgets import QApplication
 
 import ui.app_window.video_crop_overlay_qt as _mod
+import ui.app_window.vlc_picture_geometry as geometry
 from ui.app_window.video_crop_overlay_qt import (
     VideoCropOverlay, launch_video_crop, launch_video_box, launch_video_background_box,
 )
+from ui.app_window.vlc_picture_geometry import VideoTrackShape
 
 
 # ---------------------------------------------------------------------------
@@ -419,18 +421,13 @@ class TestLaunchVideoCropOverlay:
 class TestLaunchVideoCropPictureShape:
     """The overlay follows the displayed shape; selections map to ffmpeg's pixel grid."""
 
-    def _make_frame(self, vid_w, vid_h, mf_w, mf_h, *, sar=(1, 1), orientation=0):
-        video = SimpleNamespace(
-            width=vid_w, height=vid_h, sar_num=sar[0], sar_den=sar[1], orientation=orientation
-        )
-        track = SimpleNamespace(
-            type=1, id=0, u=SimpleNamespace(video=SimpleNamespace(contents=video))
-        )
+    def _make_frame(self, monkeypatch, vid_w, vid_h, mf_w, mf_h, *, sar=(1, 1), orientation=0):
+        shape = VideoTrackShape(vid_w, vid_h, sar[0], sar[1], orientation)
+        monkeypatch.setattr(geometry, "list_video_tracks", lambda _media: [(0, shape)])
         frame = MagicMock()
         player = frame.vlc_media_player
         player.video_get_size.return_value = (vid_w, vid_h)
         player.video_get_track.return_value = 0
-        player.get_media.return_value.tracks_get.return_value = [track]
         frame.width.return_value = mf_w
         frame.height.return_value = mf_h
         frame.mapToGlobal.side_effect = lambda p: QPoint(p.x(), p.y())
@@ -448,14 +445,14 @@ class TestLaunchVideoCropPictureShape:
         return received[0]
 
     def test_a_rotated_clip_gets_a_portrait_overlay(self, qtbot, monkeypatch):
-        frame = self._make_frame(1920, 1080, 540, 960, orientation=6)
+        frame = self._make_frame(monkeypatch, 1920, 1080, 540, 960, orientation=6)
         geo, vid_w, vid_h, inv_x, inv_y = self._launch(qtbot, frame, monkeypatch)
         assert (geo.width(), geo.height()) == (540, 960)
         assert (vid_w, vid_h) == (1080, 1920)
         assert (inv_x, inv_y) == (2.0, 2.0)
 
     def test_anamorphic_pixels_scale_x_and_y_separately(self, qtbot, monkeypatch):
-        frame = self._make_frame(720, 576, 768, 576, sar=(16, 15))
+        frame = self._make_frame(monkeypatch, 720, 576, 768, 576, sar=(16, 15))
         geo, vid_w, vid_h, inv_x, inv_y = self._launch(qtbot, frame, monkeypatch)
         assert (geo.width(), geo.height()) == (768, 576)
         assert (vid_w, vid_h) == (720, 576)
@@ -468,7 +465,7 @@ class TestLaunchVideoCropPictureShape:
             _mod, "place_tool_window",
             lambda widget, frame, pos, w, h: placed.append((pos, w, h)),
         )
-        frame = self._make_frame(1920, 1080, 960, 600)
+        frame = self._make_frame(monkeypatch, 1920, 1080, 960, 600)
         self._launch(qtbot, frame, monkeypatch)
         assert placed == [(QPoint(0, 30), 960, 540)]
 

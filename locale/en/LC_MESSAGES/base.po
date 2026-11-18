@@ -11658,3 +11658,63 @@ msgstr "Early prevalidation failed for {0}"
 #: src/ui/app_window/early_prevalidation_runner.py:191
 msgid "Early prevalidation callback failed."
 msgstr "Early prevalidation callback failed."
+
+#: src/compare/pipeline_context.py:156
+msgid "No base stem could be determined for {0}; preferred source file lookup skipped."
+msgstr "No base stem could be determined for {0}; preferred source file lookup skipped."
+
+#: src/compare/pipeline_context.py:166
+msgid "No preferred source file {0} for {1}; stem group skipped."
+msgstr "No preferred source file {0} for {1}; stem group skipped."
+
+#: src/compare/pipeline_context.py:173
+msgid "Several preferred source files {0} ({1}); stem group skipped."
+msgstr "Several preferred source files {0} ({1}); stem group skipped."
+
+#: src/compare/pipeline_context.py:181
+msgid "Preferred source file {0} has a media type this pipeline does not apply to; stem group skipped."
+msgstr "Preferred source file {0} has a media type this pipeline does not apply to; stem group skipped."
+
+#: src/compare/classifier_pipeline_runner.py:333
+msgid "Preferred source"
+msgstr "Preferred source"
+
+#: src/compare/classifier_pipeline_runner.py:426
+msgid "Preferred source file is category '{0}'; GENERATE skipped."
+msgstr "Preferred source file is category '{0}'; GENERATE skipped."
+
+#: src/compare/classifier_pipeline.py:336
+msgid "preferred_target_category '{0}' is set but category_map is empty."
+msgstr "preferred_target_category '{0}' is set but category_map is empty."
+
+#: src/compare/classifier_pipeline.py:344
+msgid "preferred_target_category '{0}' must differ from seed_category."
+msgstr "preferred_target_category '{0}' must differ from seed_category."
+
+#: src/compare/classifier_pipeline.py:350
+msgid "preferred_target_category '{0}' requires dedupe_stem_groups."
+msgstr "preferred_target_category '{0}' requires dedupe_stem_groups."
+
+#: src/compare/classifier_pipeline.py:340
+msgid "preferred_target_category '{0}' is not a key in category_map."
+msgstr "preferred_target_category '{0}' is not a key in category_map."
+
+#: src/compare/pipeline_run_report.py:151
+msgid "{0} (seed: {1})"
+msgstr "{0} (seed: {1})"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:521
+msgid "Preferred source category: {cat} ({suffix})"
+msgstr "Preferred source category: {cat} ({suffix})"
+
+#: src/ui/compare/classifier_pipelines_tab_qt.py:834
+msgid "Preferred source file evaluated in place of {0}"
+msgstr "Preferred source file evaluated in place of {0}"
+
+#: src/ui/compare/classifier_pipeline_editor_qt.py:2112
+msgid "Evaluate and generate from each stem group's file of this category instead of the seed. Stem groups without that file are skipped. Requires stem group deduplication."
+msgstr "Evaluate and generate from each stem group's file of this category instead of the seed. Stem groups without that file are skipped. Requires stem group deduplication."
+
+#: src/ui/compare/classifier_pipeline_editor_qt.py:2117
+msgid "Preferred source category:"
+msgstr "Preferred source category:"

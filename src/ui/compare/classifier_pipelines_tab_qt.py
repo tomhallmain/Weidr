@@ -517,6 +517,10 @@ class ClassifierPipelinesTab(QWidget):
             suffix_note = f" ({seed_suffix})" if seed_suffix else ""
             details.append(_("Seed category: {cat}{suffix}").format(
                 cat=pipeline.seed_category, suffix=suffix_note))
+        if pipeline.preferred_target_category:
+            details.append(_("Preferred source category: {cat} ({suffix})").format(
+                cat=pipeline.preferred_target_category,
+                suffix=pipeline.preferred_target_suffix()))
 
         disabled_note = ClassifierPipelinesTab._disabled_nodes_note(pipeline)
         if disabled_note:
@@ -803,7 +807,7 @@ class ClassifierPipelinesTab(QWidget):
         base_directory = os.path.dirname(media_path)
 
         def _worker():
-            from compare.classifier_pipeline_runner import run_pipeline
+            from compare.classifier_pipeline_runner import run_pipeline_with_context
             from files.related_image import clear_base_stem_dir_cache, clear_generate_gate_cache
             from utils.constants import ClassifierActionType
 
@@ -813,16 +817,25 @@ class ClassifierPipelinesTab(QWidget):
                 # assume_seed: the user picked this image, so it is the seed of
                 # its stem group by definition — keeps the seed_category guard
                 # effective even when the filename doesn't look like a seed.
-                result = run_pipeline(
+                outcome = run_pipeline_with_context(
                     pipeline, media_path, callbacks,
                     base_directory=base_directory, assume_seed=True,
                 )
+                result = outcome.action
                 _dispatch_generate_batch()   # flush generate remainder
+                context = outcome.context
+                evaluated_path = context.evaluated_path if context is not None else media_path
                 summary = _("Pipeline '{name}' on {file}: {action}").format(
                     name=pipeline.name,
-                    file=os.path.basename(media_path),
+                    file=os.path.basename(evaluated_path),
                     action=result.value if isinstance(result, ClassifierActionType) else _("(no action)"),
                 )
+                if context is not None and context.substituted:
+                    summary += "\n" + _("Preferred source file evaluated in place of {0}").format(
+                        os.path.basename(media_path)
+                    )
+                elif context is not None and context.skip_reason is not None:
+                    summary += "\n" + context.skip_reason
                 if all_generates:
                     summary += "\n" + _("{n} generation request(s) queued").format(
                         n=len(all_generates)

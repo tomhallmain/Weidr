@@ -19,6 +19,7 @@ from typing import Optional
 from compare.action_callbacks import ActionCallbacks
 from compare.debounced_generate_queue import DebouncedGenerateQueue
 from compare.dynamic_media_sampling import FrameSampling, match_media
+from compare.pipeline_context import PipelineContext, PipelineFileResult, build_pipeline_context
 from compare.pipeline_decision_record import build_decision_record
 from compare.pipeline_run_report import PipelineRunReport
 from compare.classifier_pipeline import (
@@ -213,6 +214,16 @@ def run_pipeline(
     pipeline: ClassifierPipeline,
     image_path: str,
     callbacks: ActionCallbacks,
+    **kwargs,
+) -> Optional[ClassifierActionType]:
+    """run_pipeline_with_context for callers that only need the action."""
+    return run_pipeline_with_context(pipeline, image_path, callbacks, **kwargs).action
+
+
+def run_pipeline_with_context(
+    pipeline: ClassifierPipeline,
+    image_path: str,
+    callbacks: ActionCallbacks,
     *,
     base_directory: Optional[str] = None,
     report: Optional[PipelineRunReport] = None,
@@ -220,10 +231,10 @@ def run_pipeline(
     processed_stems: Optional[set] = None,
     dry_run: bool = False,
     assume_seed: bool = False,
-) -> Optional[ClassifierActionType]:
+) -> PipelineFileResult:
     """
-    Walk the pipeline nodes and return the ClassifierActionType to fire, or
-    None for no action.
+    Walk the pipeline nodes and return the ClassifierActionType to fire (None
+    for no action) with the run's PipelineContext.
 
     Execution halts at the first EXECUTE / ACCEPT / REJECT outcome, or when
     all nodes have been visited (in which case ``default_action`` applies).
@@ -277,51 +288,78 @@ def run_pipeline(
         single-media runs ("Run Current"), where the user's chosen image is
         the seed by definition — this keeps the seed_category guard effective
         for filenames that don't look like seeds (e.g. suffixed derivatives).
+
+    preferred_target_category
+        When set on the pipeline, the working-directory file named base stem +
+        that category's suffix is evaluated in place of *image_path*, on every
+        node and action, and the stem group is done afterwards whichever member
+        was reached. Without such a file (or with several, or one of a media
+        type the pipeline does not apply to) the group is skipped and marked
+        done. The seed-category guard then covers the whole group, and GENERATE
+        for the preferred suffix is skipped as well.
     """
     if not pipeline.is_active or not pipeline.nodes:
         if config.debug:
             logger.debug("Pipeline %r: skipped (inactive or no nodes) for %s", pipeline.name, image_path)
-        return None
-    if not pipeline.media_type_allowed(image_path):
+        return PipelineFileResult()
+    substitution = bool(pipeline.preferred_target_suffix())
+    # With substitution the gate applies to the preferred file, checked once it
+    # is resolved: that is the file the nodes run on.
+    if not substitution and not pipeline.media_type_allowed(image_path):
         if config.debug:
             logger.debug("Pipeline %r: media type not allowed for %s", pipeline.name, image_path)
-        return None
+        return PipelineFileResult()
 
     base_stem: Optional[str] = extract_filename_base_stem(image_path)
-    image_file_stem = os.path.splitext(os.path.basename(image_path))[0]
-    # Kept separate from is_seed below: conditions asking "does this file have
-    # an original?" need the filename fact, not assume_seed's caller intent,
-    # which exists only to keep the seed-category GENERATE guard effective.
-    is_seed_by_name = (
-        base_stem is not None and image_file_stem.lower() == base_stem.lower()
-    )
-    is_seed = assume_seed or is_seed_by_name
+
+    if processed_stems is not None and base_stem and base_stem in processed_stems:
+        if config.debug:
+            logger.debug("Pipeline %r: stem %r already processed, skipping %s", pipeline.name, base_stem, image_path)
+        return PipelineFileResult()
+
+    context = build_pipeline_context(pipeline, image_path, base_stem, assume_seed=assume_seed)
+    evaluated_path = context.evaluated_path
     if config.debug:
-        logger.debug("Pipeline %r: evaluating %s (base_stem=%r, is_seed=%s)", pipeline.name, image_path, base_stem, is_seed)
+        logger.debug(
+            "Pipeline %r: reached %s (base_stem=%r, seed_by_name=%s, assume_seed=%s), evaluating %s",
+            pipeline.name, image_path, base_stem, context.reached_is_seed_by_name,
+            assume_seed, evaluated_path,
+        )
+
+    if context.skip_reason is not None:
+        if config.debug:
+            logger.debug("Pipeline %r: %s", pipeline.name, context.skip_reason)
+        if report:
+            report.add("INFO", _("Preferred source"), image_path, context.skip_reason,
+                       data={"preferred_source_skip": True})
+        if processed_stems is not None and base_stem:
+            processed_stems.add(base_stem)
+        return PipelineFileResult(context=context)
 
     # Stem-group skip and validity gate.
     should_mark_done = False
     if processed_stems is not None and base_stem:
-        if base_stem in processed_stems:
-            if config.debug:
-                logger.debug("Pipeline %r: stem %r already processed, skipping %s", pipeline.name, base_stem, image_path)
-            return None
-
-        should_evaluate, should_mark_done = _resolve_stem_group(
-            image_path, base_stem, is_seed, require_filed_seed=_can_generate(pipeline),
-        )
-        if not should_evaluate:
-            if config.debug:
-                logger.debug("Pipeline %r: stem group resolve says skip %s", pipeline.name, image_path)
-            processed_stems.add(base_stem)
-            return None
+        if substitution:
+            # The preferred file's presence is already established; whether
+            # the seed is filed does not matter for it.
+            should_mark_done = True
+        else:
+            should_evaluate, should_mark_done = _resolve_stem_group(
+                image_path, base_stem, context.reached_is_seed_by_name or assume_seed,
+                require_filed_seed=_can_generate(pipeline),
+            )
+            if not should_evaluate:
+                if config.debug:
+                    logger.debug("Pipeline %r: stem group resolve says skip %s", pipeline.name, image_path)
+                processed_stems.add(base_stem)
+                return PipelineFileResult(context=context)
 
     node_results: dict[str, bool] = {}
     node_scores: dict[str, object] = {}
     node_order = [n.name for n in pipeline.nodes]
     nodes_by_name = {n.name: n for n in pipeline.nodes}
 
-    def _finish(action: Optional[ClassifierActionType]) -> Optional[ClassifierActionType]:
+    def _finish(action: Optional[ClassifierActionType]) -> PipelineFileResult:
         """Capture the decision record, then hand the action back to the caller.
 
         Every terminal path routes through here so a new outcome type cannot
@@ -333,22 +371,16 @@ def run_pipeline(
             try:
                 report.add_decision(
                     build_decision_record(
-                        pipeline.name, image_path, action, node_results, node_scores
+                        pipeline.name, evaluated_path, action, node_results, node_scores,
+                        context=context,
                     )
                 )
             except Exception:
                 # Recording is an audit aid; never let it break the run.
                 logger.exception(
-                    "Pipeline %r: failed to record decision for %s", pipeline.name, image_path
+                    "Pipeline %r: failed to record decision for %s", pipeline.name, evaluated_path
                 )
-        return action
-
-    # Suffix that seeds cover, derived from pipeline.seed_category + category_map.
-    # Empty string means the seed-category guard is disabled for this run.
-    seed_suffix = (
-        pipeline.category_map.get(pipeline.seed_category, "")
-        if pipeline.seed_category else ""
-    )
+        return PipelineFileResult(action=action, context=context, evaluated=True)
 
     current_name: Optional[str] = node_order[0]
     last_etc_action: Optional[ClassifierActionType] = None  # last EXECUTE_AND_CONTINUE action
@@ -363,51 +395,52 @@ def run_pipeline(
                 report.add(
                     "INFO",
                     node.name,
-                    image_path,
+                    evaluated_path,
                     _("Node {0} is disabled — skipped").format(node.name),
                 )
             idx = node_order.index(current_name)
             current_name = node_order[idx + 1] if idx + 1 < len(node_order) else None
             continue
 
-        # Seed-category guard: when the image is a seed and the pipeline declares
-        # which category seeds belong to, skip GENERATE for that category without
-        # running the node condition.
-        if (
-            is_seed and seed_suffix
-            and node.on_match.action_type == ClassifierActionType.GENERATE
-            and node.on_match.action_modifier == seed_suffix
-        ):
+        # GENERATE guards: skip GENERATE for a category the group already has
+        # (the seed's, or the preferred file's) without running the condition.
+        guard = (
+            context.skips_generate(node.on_match.action_modifier)
+            if node.on_match.action_type == ClassifierActionType.GENERATE else None
+        )
+        if guard is not None:
             result, score = False, None
+            category = (
+                context.seed_category if guard == "seed" else context.preferred_target_category
+            )
             if config.debug:
                 logger.debug(
-                    "Pipeline %r: node %r — seed is category %r, GENERATE skipped",
-                    pipeline.name, node.name, pipeline.seed_category,
+                    "Pipeline %r: node %r — group already has category %r (%s guard), GENERATE skipped",
+                    pipeline.name, node.name, category, guard,
                 )
             if report:
-                report.add(
-                    "INFO",
-                    node.name,
-                    image_path,
-                    _("Seed image is assigned to category '{0}'; GENERATE skipped.").format(
-                        pipeline.seed_category
-                    ),
-                    data={"seed_category_skip": True},
-                )
+                if guard == "seed":
+                    detail = _("Seed image is assigned to category '{0}'; GENERATE skipped.").format(category)
+                    data = {"seed_category_skip": True}
+                else:
+                    detail = _("Preferred source file is category '{0}'; GENERATE skipped.").format(category)
+                    data = {"preferred_target_skip": True}
+                report.add("INFO", node.name, evaluated_path, detail, data=data)
         else:
             try:
                 result, score = _evaluate_condition(
-                    node.condition, image_path, node_results, node_scores, base_directory,
+                    node.condition, evaluated_path, node_results, node_scores, base_directory,
                     node_name=node.name, report=report,
                     pipeline_categories=list(pipeline.category_map.values()),
-                    is_seed=is_seed_by_name,
+                    is_seed=context.evaluated_is_seed_by_name,
                     output_root=pipeline.output_root,
                     sampling=pipeline.frame_sampling(),
+                    context=context,
                 )
             except Exception:
                 logger.exception(
                     "Pipeline %r: error in node %r on %s — treating as no-match",
-                    pipeline.name, node.name, image_path,
+                    pipeline.name, node.name, evaluated_path,
                 )
                 result, score = False, None
 
@@ -431,7 +464,7 @@ def run_pipeline(
                 outcome.action_type,
                 outcome.action_modifier or None,
                 pipeline.name,
-                image_path,
+                evaluated_path,
                 callbacks,
                 base_directory,
                 generate_queue=generate_queue,
@@ -448,7 +481,7 @@ def run_pipeline(
                 outcome.action_type,
                 outcome.action_modifier or None,
                 pipeline.name,
-                image_path,
+                evaluated_path,
                 callbacks,
                 base_directory,
                 generate_queue=generate_queue,
@@ -472,7 +505,7 @@ def run_pipeline(
                 pipeline.default_reject_action,
                 None,
                 pipeline.name,
-                image_path,
+                evaluated_path,
                 callbacks,
                 base_directory,
                 generate_queue=generate_queue,
@@ -494,13 +527,13 @@ def run_pipeline(
     if config.debug:
         logger.debug(
             "Pipeline %r: all nodes exhausted for %s — default_action=%s",
-            pipeline.name, image_path, pipeline.default_action,
+            pipeline.name, evaluated_path, pipeline.default_action,
         )
     _dispatch_action(
         pipeline.default_action,
         None,
         pipeline.name,
-        image_path,
+        evaluated_path,
         callbacks,
         base_directory,
         generate_queue=generate_queue,
@@ -612,6 +645,7 @@ def _evaluate_condition(
     is_seed: bool = False,
     output_root: str = "",
     sampling: Optional[FrameSampling] = None,
+    context: Optional[PipelineContext] = None,
 ) -> tuple[bool, object]:
     """Return (matched, score). Score is a raw float where available, else None.
 
@@ -626,6 +660,8 @@ def _evaluate_condition(
     assume_seed-influenced one used for the seed-category GENERATE guard:
     whether a file has an original is a fact about the file, not a caller's
     intent about how to treat it.
+
+    *context* is the run's PipelineContext, None for a single-node run.
     """
 
     if isinstance(condition, AlwaysCondition):
@@ -696,7 +732,8 @@ def _evaluate_condition(
 
     if isinstance(condition, RelatedImageCondition):
         return _eval_related_image(condition, image_path, base_directory,
-                                   node_name=node_name, output_root=output_root)
+                                   node_name=node_name, output_root=output_root,
+                                   context=context)
 
     if isinstance(condition, VarianceFromOriginalCondition):
         return _eval_variance_from_original(condition, image_path, is_seed)
@@ -705,12 +742,13 @@ def _evaluate_condition(
         return _eval_composite(condition, image_path, node_results, node_scores, base_directory,
                                report=report, pipeline_categories=pipeline_categories,
                                is_seed=is_seed, node_name=node_name, output_root=output_root,
-                               sampling=sampling)
+                               sampling=sampling, context=context)
 
     if isinstance(condition, GroupCondition):
         return _eval_group(condition, node_name, image_path, node_results, node_scores,
                            base_directory, report=report, pipeline_categories=pipeline_categories,
-                           is_seed=is_seed, output_root=output_root, sampling=sampling)
+                           is_seed=is_seed, output_root=output_root, sampling=sampling,
+                           context=context)
 
     if isinstance(condition, GroupChildResultCondition):
         key = f"{condition.group_node_name}/{condition.child_node_name}"
@@ -1241,8 +1279,13 @@ def _eval_related_image(
     *,
     node_name: str = "",
     output_root: str = "",
+    context: Optional[PipelineContext] = None,
 ) -> tuple[bool, object]:
     from files.related_image import should_run_generate_action
+    # The preferred file is itself a derivative of the seed in the working
+    # directory, so the upstream-source block would stop every generation
+    # from it. Its own derivatives are still counted.
+    gate_kwargs = {"ignore_upstream_source": True} if context is not None and context.substituted else {}
     if condition.search_directory:
         search_directory = _resolved_search_directory(condition.search_directory, output_root, node_name)
         if search_directory is None:
@@ -1256,7 +1299,8 @@ def _eval_related_image(
         return False, None
     for search_dir in dirs:
         if not should_run_generate_action(
-            image_path, condition.edit_suffix, search_dir, condition.count_threshold
+            image_path, condition.edit_suffix, search_dir, condition.count_threshold,
+            **gate_kwargs,
         ):
             return False, None
     return True, None
@@ -1355,6 +1399,7 @@ def _eval_group(
     is_seed: bool = False,
     output_root: str = "",
     sampling: Optional[FrameSampling] = None,
+    context: Optional[PipelineContext] = None,
 ) -> tuple[bool, object]:
     """Evaluate every child node and store results under '<outer>/<child>' keys."""
     for child in condition.nodes:
@@ -1364,6 +1409,7 @@ def _eval_group(
                 child.condition, image_path, node_results, node_scores, base_directory,
                 node_name=key, report=report, pipeline_categories=pipeline_categories,
                 is_seed=is_seed, output_root=output_root, sampling=sampling,
+                context=context,
             )
         except Exception:
             logger.exception(
@@ -1399,12 +1445,13 @@ def _eval_composite(
     node_name: str = "",
     output_root: str = "",
     sampling: Optional[FrameSampling] = None,
+    context: Optional[PipelineContext] = None,
 ) -> tuple[bool, object]:
     sub_results = [
         _evaluate_condition(sub, image_path, node_results, node_scores, base_directory,
                             node_name=node_name, report=report,
                             pipeline_categories=pipeline_categories, is_seed=is_seed,
-                            output_root=output_root, sampling=sampling)[0]
+                            output_root=output_root, sampling=sampling, context=context)[0]
         for sub in condition.sub_conditions
     ]
     op = condition.operator

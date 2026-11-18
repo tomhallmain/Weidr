@@ -115,6 +115,13 @@ class ClassifierPipeline:
     # a ClassifierRankCondition seed guard in the node.  Must be a key present in
     # category_map (validated by validate()).  Empty string = feature disabled.
     seed_category: str = ""
+    # The category whose file, not the seed, is the source each stem group is
+    # evaluated on: a key of category_map, its value being the suffix. When
+    # set, a run replaces the file it reached with the working-directory file
+    # named base stem + that suffix, and skips the group when there is no such
+    # file. Kept apart from seed_category, which still names what the seed
+    # itself represents. Empty string = feature disabled.
+    preferred_target_category: str = ""
     # File order for batch runs (see utils.constants.SortBy).  None = no sort --
     # gather_files' raw, unordered glob result is used as-is, which is the
     # fastest option for a large directory since it skips wrapping/sorting
@@ -220,6 +227,8 @@ class ClassifierPipeline:
           image_classifier_manager is not yet loaded)
         - LookaheadCondition names resolve
         - seed_category, when set, must be a key in category_map
+        - preferred_target_category, when set, must be a key in category_map,
+          differ from seed_category, and have dedupe_stem_groups on
         """
         errors: list[str] = []
         if not self.name.strip():
@@ -238,6 +247,9 @@ class ClassifierPipeline:
                         self.seed_category
                     )
                 )
+
+        if self.preferred_target_category:
+            errors.extend(self._preferred_target_category_errors())
 
         if self.output_root and not is_rooted_path(self.output_root):
             errors.append(
@@ -315,6 +327,35 @@ class ClassifierPipeline:
                         )
 
         return errors
+
+    def _preferred_target_category_errors(self) -> list[str]:
+        category = self.preferred_target_category
+        errors: list[str] = []
+        if not self.category_map:
+            errors.append(
+                _("preferred_target_category '{0}' is set but category_map is empty.").format(category)
+            )
+        elif category not in self.category_map:
+            errors.append(
+                _("preferred_target_category '{0}' is not a key in category_map.").format(category)
+            )
+        if category == self.seed_category:
+            errors.append(
+                _("preferred_target_category '{0}' must differ from seed_category.").format(category)
+            )
+        if not self.dedupe_stem_groups:
+            # Without it every member of a stem group would evaluate the same
+            # preferred file again and generate from it again.
+            errors.append(
+                _("preferred_target_category '{0}' requires dedupe_stem_groups.").format(category)
+            )
+        return errors
+
+    def preferred_target_suffix(self) -> str:
+        """Suffix of preferred_target_category, or "" when the feature is off."""
+        if not self.preferred_target_category:
+            return ""
+        return self.category_map.get(self.preferred_target_category, "")
 
     def _validate_condition(self, condition, node_name: str,
                             defined_before: set[str]) -> list[str]:
@@ -620,8 +661,14 @@ class ClassifierPipeline:
         Scoped to pipelines that can generate: that is where the ordering changes
         which actions are dispatched, and warning on every saved pipeline for a
         difference most of them cannot exhibit would be noise.
+
+        Not raised with preferred_target_category set: every stem group is then
+        evaluated on its preferred file and marked done, whichever member is
+        reached first, so the order cannot change what is generated.
         """
         if not self.dedupe_stem_groups:
+            return
+        if self.preferred_target_suffix():
             return
         if self.run_sort_by is SortBy.RELATED_IMAGE:
             return
@@ -764,6 +811,8 @@ class ClassifierPipeline:
             d["category_map"] = dict(self.category_map)
         if self.seed_category:
             d["seed_category"] = self.seed_category
+        if self.preferred_target_category:
+            d["preferred_target_category"] = self.preferred_target_category
         if self.run_sort_by:
             # The member name: SortBy values are translated text, which would
             # tie the saved pipeline to the locale it was saved under.
@@ -821,6 +870,7 @@ class ClassifierPipeline:
             ),
             category_map=raw_map,
             seed_category=d.get("seed_category", ""),
+            preferred_target_category=d.get("preferred_target_category", ""),
             run_sort_by=_opt_sort_by(d.get("run_sort_by")),
             move_to_working_dir=d.get("move_to_working_dir", True),
             dedupe_stem_groups=d.get("dedupe_stem_groups", True),

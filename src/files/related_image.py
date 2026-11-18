@@ -556,12 +556,14 @@ def should_run_generate_action(
     edit_suffix: str,
     search_dir: str,
     count_threshold: int = 1,
+    ignore_upstream_source: bool = False,
 ) -> bool:
     """
     Return True when a generate action should fire for image_path.
 
     Returns False immediately if image_path is itself a downstream image of another file
-    that is present in search_dir. A related-image pointer to a source outside search_dir
+    that is present in search_dir, unless *ignore_upstream_source* is set (for a file
+    chosen as a generation source although it is a derivative). A related-image pointer to a source outside search_dir
     does not block generation -- only downstream-ness relative to the current directory
     matters. Otherwise counts how many downstream images of image_path in search_dir have
     a stem ending with edit_suffix, edit_suffix followed directly by an integer, or
@@ -575,7 +577,7 @@ def should_run_generate_action(
     dir_entries = _scan_dir_cached(search_dir)
 
     related_path, _ = get_related_image_path(image_path, check_extra_directories=None)
-    if related_path is not None:
+    if related_path is not None and not ignore_upstream_source:
         related_basename = os.path.basename(related_path)
         source_in_search_dir = any(
             fp == related_path

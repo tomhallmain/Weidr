@@ -54,8 +54,14 @@ def build_decision_record(
     action: Optional[object],
     node_results: dict,
     node_scores: dict,
+    *,
+    context=None,
 ) -> dict:
     """Build one file's decision record.
+
+    *image_path* is the evaluated file. When *context* (a PipelineContext)
+    shows it replaced the reached file, the record also carries
+    ``reached_path``, ``seed_path`` and ``preferred_path``.
 
     *action* is the ClassifierActionType that fired (or None for no action);
     it is stored by value so the record stays JSON-serializable.
@@ -76,10 +82,15 @@ def build_decision_record(
             "matched": bool(matched),
             "score": _json_safe_score(node_scores.get(node_name)),
         }
-    return {
+    record = {
         "version": DECISION_RECORD_VERSION,
         "pipeline_name": pipeline_name,
         "path": image_path,
         "action": getattr(action, "value", None),
         "node_verdicts": verdicts,
     }
+    if context is not None and context.substituted:
+        record["reached_path"] = context.reached_path
+        record["seed_path"] = context.seed_path
+        record["preferred_path"] = context.preferred_path
+    return record

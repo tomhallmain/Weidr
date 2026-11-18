@@ -65,7 +65,11 @@ class PipelineRunReport:
 
     @staticmethod
     def _is_seed_category_skip(msg: PipelineMessage) -> bool:
-        return isinstance(msg.data, dict) and bool(msg.data.get("seed_category_skip"))
+        """A GENERATE skipped because the stem group already has the category
+        (the seed's, or the preferred source file's): fires once per group."""
+        return isinstance(msg.data, dict) and bool(
+            msg.data.get("seed_category_skip") or msg.data.get("preferred_target_skip")
+        )
 
     @staticmethod
     def _severity_heading(severity: str) -> str:
@@ -127,18 +131,24 @@ class PipelineRunReport:
         image_path: str,
         action: Optional[Any],
         messages_since: int = 0,
+        seed_path: Optional[str] = None,
     ) -> str:
         """Return a compact one-or-few-line summary for a single seed image.
 
         *messages_since* should be the ``message_count()`` captured immediately
         before ``run_pipeline`` was called for this image, so that only messages
         produced during that call are included.
+
+        *seed_path*, when given, is the stem group's seed and *image_path* the
+        preferred source file evaluated in its place; both are named.
         """
         try:
             action_label = action.get_translation()
         except AttributeError:
             action_label = _("(no action)")
         image_name = os.path.basename(image_path)
+        if seed_path is not None:
+            image_name = _("{0} (seed: {1})").format(image_name, os.path.basename(seed_path))
         with self._lock:
             recent = self._messages[messages_since:]
         # Seed-category-skip notes fire on every seed image, so surfacing them

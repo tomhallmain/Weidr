@@ -242,6 +242,38 @@ def write_pipeline_run_dump(
         return None
 
 
+def _seed_summary(
+    report, image_path: str, outcome, messages_since: int, substitution_enabled: bool,
+) -> Optional[str]:
+    """One summary per stem group the run handled, or None for this file.
+
+    With a preferred source file configured (*substitution_enabled*), a group
+    is handled by whichever member the run reaches first: summarize when its
+    nodes ran on the preferred file (naming the seed too) or when it was
+    skipped for lack of one. Members skipped by the group's done mark carry no
+    context and get none, even the seed. Without it, the seed's own run stands
+    for the group.
+    """
+    context = outcome.context
+    if substitution_enabled:
+        if context is None:
+            return None
+        if outcome.evaluated:
+            return report.format_seed_summary(
+                context.evaluated_path, outcome.action, messages_since,
+                seed_path=context.seed_path,
+            )
+        if context.skip_reason is not None:
+            return report.format_seed_summary(image_path, outcome.action, messages_since)
+        return None
+    from files.related_image import extract_filename_base_stem
+    base_stem = extract_filename_base_stem(image_path)
+    file_stem = os.path.splitext(os.path.basename(image_path))[0]
+    if base_stem and file_stem.lower() == base_stem.lower():
+        return report.format_seed_summary(image_path, outcome.action, messages_since)
+    return None
+
+
 def run_pipeline_over_directories(
     pipeline: "ClassifierPipeline",
     directories: Sequence[str],
@@ -285,12 +317,11 @@ def run_pipeline_over_directories(
 
     from compare.action_callbacks import ActionCallbacks
     from compare.base_compare import gather_files
-    from compare.classifier_pipeline_runner import run_pipeline
+    from compare.classifier_pipeline_runner import run_pipeline_with_context
     from compare.pipeline_run_report import PipelineRunReport, PipelineRunStats
     from files.related_image import (
         clear_base_stem_dir_cache,
         clear_generate_gate_cache,
-        extract_filename_base_stem,
     )
     from utils.constants import ClassifierActionType
 
@@ -375,23 +406,22 @@ def run_pipeline_over_directories(
                     continue
             try:
                 msg_snapshot = report.message_count()
-                result = run_pipeline(
+                outcome = run_pipeline_with_context(
                     pipeline, image_path, callbacks,
                     base_directory=directory, report=report,
                     processed_stems=processed_stems,
                 )
+                result = outcome.action
                 total += 1
                 key = result.value if isinstance(result, ClassifierActionType) else "(no action)"
                 actions[key] = actions.get(key, 0) + 1
                 if not config.debug:
-                    base_stem = extract_filename_base_stem(image_path)
-                    file_stem = os.path.splitext(os.path.basename(image_path))[0]
-                    if base_stem and file_stem.lower() == base_stem.lower():
-                        logger.info(
-                            "Pipeline %r: %s",
-                            pipeline.name,
-                            report.format_seed_summary(image_path, result, msg_snapshot),
-                        )
+                    summary = _seed_summary(
+                        report, image_path, outcome, msg_snapshot,
+                        bool(pipeline.preferred_target_suffix()),
+                    )
+                    if summary:
+                        logger.info("Pipeline %r: %s", pipeline.name, summary)
             except Exception:
                 errors += 1
                 logger.exception("Pipeline run error on %s", image_path)

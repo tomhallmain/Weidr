@@ -2007,6 +2007,17 @@ class TestDedupeSortOrderWarning:
         p = ClassifierPipeline(name="p", nodes=[node], dedupe_stem_groups=True)
         assert p.validate_warnings() == []
 
+    def test_no_warning_with_preferred_target_category(self):
+        """The preferred file is evaluated whichever group member comes first,
+        so the run order cannot cause duplicates."""
+        from utils.constants import SortBy
+        p = self._generating_pipeline(
+            dedupe_stem_groups=True, run_sort_by=None,
+            category_map={"Apple": "_apple", "Coherent": "_coherent"},
+            preferred_target_category="Coherent",
+        )
+        assert not any(SortBy.RELATED_IMAGE.get_text() in w for w in p.validate_warnings())
+
     def test_warning_does_not_block_validate(self):
         p = self._generating_pipeline(dedupe_stem_groups=True, run_sort_by=None)
         assert p.validate_warnings() != []

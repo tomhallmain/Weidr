@@ -2106,7 +2106,16 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         )
         self._seed_category_combo.currentTextChanged.connect(self._on_field_changed)
         form.addRow(_("Seed category:"), self._seed_category_combo)
-        self._refresh_seed_category_combo(p.seed_category)
+
+        self._preferred_target_category_combo = QComboBox()
+        self._preferred_target_category_combo.setToolTip(
+            _("Evaluate and generate from each stem group's file of this category "
+              "instead of the seed. Stem groups without that file are skipped. "
+              "Requires stem group deduplication.")
+        )
+        self._preferred_target_category_combo.currentTextChanged.connect(self._on_field_changed)
+        form.addRow(_("Preferred source category:"), self._preferred_target_category_combo)
+        self._refresh_seed_category_combo(p.seed_category, p.preferred_target_category)
 
         self._run_sort_by_combo = QComboBox()
         self._run_sort_by_combo.setToolTip(
@@ -2370,19 +2379,27 @@ class ClassifierPipelineEditorDialog(SmartDialog):
             self._output_root_edit.setText(d)
 
     def _on_category_map_changed(self) -> None:
-        current = self._seed_category_combo.currentText()
-        self._refresh_seed_category_combo(current)
+        self._refresh_seed_category_combo(
+            self._seed_category_combo.currentData() or "",
+            self._preferred_target_category_combo.currentData() or "",
+        )
         self._on_field_changed()
 
-    def _refresh_seed_category_combo(self, select: str = "") -> None:
-        self._seed_category_combo.blockSignals(True)
-        self._seed_category_combo.clear()
-        self._seed_category_combo.addItem(_("(none)"), "")
-        for category in self._category_map_editor.get_items():
-            self._seed_category_combo.addItem(category, category)
-        idx = self._seed_category_combo.findData(select)
-        self._seed_category_combo.setCurrentIndex(idx if idx >= 0 else 0)
-        self._seed_category_combo.blockSignals(False)
+    def _refresh_seed_category_combo(self, select: str = "", select_preferred: str = "") -> None:
+        """Refill both category combos from the category map."""
+        categories = self._category_map_editor.get_items()
+        for combo, selected in (
+            (self._seed_category_combo, select),
+            (self._preferred_target_category_combo, select_preferred),
+        ):
+            combo.blockSignals(True)
+            combo.clear()
+            combo.addItem(_("(none)"), "")
+            for category in categories:
+                combo.addItem(category, category)
+            idx = combo.findData(selected)
+            combo.setCurrentIndex(idx if idx >= 0 else 0)
+            combo.blockSignals(False)
 
     # ------------------------------------------------------------------
     # Node list
@@ -3088,6 +3105,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         final.generation_type = self._gen_type_combo.currentData()
         final.category_map = self._category_map_editor.get_items()
         final.seed_category = self._seed_category_combo.currentData() or ""
+        final.preferred_target_category = self._preferred_target_category_combo.currentData() or ""
         final.run_sort_by = self._run_sort_by_combo.currentData()
         final.dedupe_stem_groups = self._dedupe_stem_groups_cb.isChecked()
         final.dynamic_content_sample_ratio = round(self._sample_ratio_spin.value(), 4)

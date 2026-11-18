@@ -67,6 +67,26 @@ class TestShouldRunGenerateActionDerivativeCheck:
                 result = should_run_generate_action(IMAGE, "_edit", SEARCH_DIR)
         assert result is False
 
+    def test_ignore_upstream_source_lifts_the_block(self):
+        """A file chosen as generation source although it is a derivative of a
+        file in search_dir is not blocked by that source."""
+        entries = [("/base/parent.jpg", None)]
+        with _patch_related("/base/parent.jpg"):
+            with _patch_scan_dir(entries):
+                result = should_run_generate_action(
+                    IMAGE, "_edit", SEARCH_DIR, ignore_upstream_source=True
+                )
+        assert result is True
+
+    def test_ignore_upstream_source_still_counts_own_derivatives(self):
+        entries = [("/base/parent.jpg", None), ("/base/source_edit.jpg", IMAGE)]
+        with _patch_related("/base/parent.jpg"):
+            with _patch_scan_dir(entries):
+                result = should_run_generate_action(
+                    IMAGE, "_edit", SEARCH_DIR, ignore_upstream_source=True
+                )
+        assert result is False
+
     def test_non_derivative_proceeds_to_downstream_check(self):
         """No related path → derivative check passes; zero downstream → True."""
         with _patch_related(None):

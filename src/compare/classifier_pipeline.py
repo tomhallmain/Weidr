@@ -101,7 +101,7 @@ class ClassifierPipeline:
     # current global generation mode at run time.
     generation_type: Optional[ImageGenerationType] = None
     # When True (default), GENERATE actions include the current working directory as
-    # the target directory in the sd-runner request so generated files land there.
+    # the target directory in the Teikr request so generated files land there.
     move_to_working_dir: bool = True
     # Optional mapping of human-readable category name → filesystem suffix.
     # e.g. {"Apple": "_apple", "Banana": "_banana"}

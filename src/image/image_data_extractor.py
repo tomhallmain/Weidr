@@ -580,7 +580,7 @@ class ImageDataExtractor:
 
     def extract_positive_prompt_for_rerun(self, image_path: str) -> tuple[str, str]:
         """
-        Positive/negative strings for rerun-prompt editing and SD Runner requests.
+        Positive/negative strings for rerun-prompt editing and Teikr requests.
 
         Prefer ``SDR_OriginalPositiveTags`` from top-level image metadata when set;
         otherwise use the same positive extraction as :meth:`extract_prompts_all_strategies`.

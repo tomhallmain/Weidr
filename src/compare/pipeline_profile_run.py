@@ -2,9 +2,9 @@
 tab's "Run on Profile" button does, without its dialogs.
 
 The tab asks two questions before a run: a confirmation, which a caller
-here has already answered by asking for the run, and "SD Runner is not
+here has already answered by asking for the run, and "Teikr is not
 reachable, continue anyway?", which the caller answers up front with
-continue_without_sd_runner. Everything else follows the tab: the same
+continue_without_teikr. Everything else follows the tab: the same
 profile, directories, last-profile record, generation type fallback, batch
 call and completion notification.
 """
@@ -121,7 +121,7 @@ class PipelineProfileRuns:
 
     def start(
         self, pipeline_name: str, profile_name: Optional[str], *,
-        continue_without_sd_runner: bool,
+        continue_without_teikr: bool,
         fallback_generation_type,
         hide_callback: Optional[Callable],
         notify_callback: Optional[Callable],
@@ -137,7 +137,7 @@ class PipelineProfileRuns:
         with self._start_lock:
             return self._start(
                 pipeline_name, profile_name,
-                continue_without_sd_runner=continue_without_sd_runner,
+                continue_without_teikr=continue_without_teikr,
                 fallback_generation_type=fallback_generation_type,
                 hide_callback=hide_callback, notify_callback=notify_callback,
                 blur_callback=blur_callback,
@@ -145,7 +145,7 @@ class PipelineProfileRuns:
 
     def resume(
         self, run_id: Optional[str], *,
-        continue_without_sd_runner: bool,
+        continue_without_teikr: bool,
         fallback_generation_type,
         hide_callback: Optional[Callable],
         notify_callback: Optional[Callable],
@@ -183,7 +183,7 @@ class PipelineProfileRuns:
             return self._launch(
                 pipeline, check.record.profile_name, list(check.record.directories),
                 warnings=warnings, resume_from=run_id,
-                continue_without_sd_runner=continue_without_sd_runner,
+                continue_without_teikr=continue_without_teikr,
                 fallback_generation_type=fallback_generation_type,
                 hide_callback=hide_callback, notify_callback=notify_callback,
                 blur_callback=blur_callback,
@@ -218,7 +218,7 @@ class PipelineProfileRuns:
         return {"runs": [r.to_public_dict() for r in records]}
 
     def _start(
-        self, pipeline_name, profile_name, *, continue_without_sd_runner,
+        self, pipeline_name, profile_name, *, continue_without_teikr,
         fallback_generation_type, hide_callback, notify_callback, blur_callback,
     ) -> dict:
         if self._runner.is_running():
@@ -242,7 +242,7 @@ class PipelineProfileRuns:
         return self._launch(
             pipeline, profile_name, directories,
             warnings=history_warnings(pipeline.name, directories), resume_from=None,
-            continue_without_sd_runner=continue_without_sd_runner,
+            continue_without_teikr=continue_without_teikr,
             fallback_generation_type=fallback_generation_type,
             hide_callback=hide_callback, notify_callback=notify_callback,
             blur_callback=blur_callback,
@@ -250,7 +250,7 @@ class PipelineProfileRuns:
 
     def _launch(
         self, pipeline, profile_name, directories, *, warnings, resume_from,
-        continue_without_sd_runner, fallback_generation_type,
+        continue_without_teikr, fallback_generation_type,
         hide_callback, notify_callback, blur_callback,
     ) -> dict:
         from compare import pipeline_run_service
@@ -258,15 +258,15 @@ class PipelineProfileRuns:
 
         warnings = list(warnings)
         if pipeline.has_generate_action():
-            from extensions.sd_runner_client import SDRunnerClient
-            if not SDRunnerClient.is_reachable():
-                if not continue_without_sd_runner:
+            from extensions.teikr_client import TeikrClient
+            if not TeikrClient.is_reachable():
+                if not continue_without_teikr:
                     raise ValueError(
-                        f"pipeline {pipeline.name!r} has GENERATE actions but SD Runner is not "
-                        "reachable; pass continue_without_sd_runner=true to run anyway"
+                        f"pipeline {pipeline.name!r} has GENERATE actions but Teikr is not "
+                        "reachable; pass continue_without_teikr=true to run anyway"
                     )
                 warnings.append(
-                    "SD Runner is not reachable: generated images won't be produced "
+                    "Teikr is not reachable: generated images won't be produced "
                     "unless it starts before the run completes"
                 )
 

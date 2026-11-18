@@ -26,7 +26,7 @@ from utils.translations import _
 
 
 class RerunPromptAdjustmentWindow(SmartDialog):
-    """Edit prompts before sending a redo-prompt request to SD Runner."""
+    """Edit prompts before sending a redo-prompt request to Teikr."""
 
     def __init__(
         self,
@@ -53,7 +53,7 @@ class RerunPromptAdjustmentWindow(SmartDialog):
 
         hint = QLabel(
             _(
-                "Adjust prompts before rerunning. Changes are sent to SD Runner "
+                "Adjust prompts before rerunning. Changes are sent to Teikr "
                 "for this run only."
             )
         )

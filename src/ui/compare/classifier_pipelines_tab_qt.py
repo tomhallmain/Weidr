@@ -648,18 +648,18 @@ class ClassifierPipelinesTab(QWidget):
                         directories: list, profile_name: str, *,
                         resume_from: Optional[str] = None) -> None:
         """Run *pipeline* over *directories* on a worker thread, after asking
-        whether to continue when it generates and SD Runner is unreachable.
+        whether to continue when it generates and Teikr is unreachable.
         The caller has validated the pipeline and confirmed the run, including
         any overlap with runs already in progress. *resume_from* continues
         that unfinished run; *directories* are then its recorded ones."""
         if pipeline.has_generate_action():
-            from extensions.sd_runner_client import SDRunnerClient
-            if not SDRunnerClient.is_reachable():
+            from extensions.teikr_client import TeikrClient
+            if not TeikrClient.is_reachable():
                 if not qt_alert(
                     parent,
-                    _("SD Runner Not Available"),
+                    _("Teikr Not Available"),
                     _(
-                        "This pipeline has GENERATE actions but the SD Runner is not "
+                        "This pipeline has GENERATE actions but Teikr is not "
                         "reachable.\n\nGenerated images will not be produced unless SD "
                         "Runner is started before the run completes.\n\nContinue anyway?"
                     ),
@@ -761,13 +761,13 @@ class ClassifierPipelinesTab(QWidget):
             ClassifierPipelinesTab._current_media_confirmed[pipeline.name] = signature
 
         if pipeline.has_generate_action():
-            from extensions.sd_runner_client import SDRunnerClient
-            if not SDRunnerClient.is_reachable():
+            from extensions.teikr_client import TeikrClient
+            if not TeikrClient.is_reachable():
                 if not qt_alert(
                     self,
-                    _("SD Runner Not Available"),
+                    _("Teikr Not Available"),
                     _(
-                        "This pipeline has GENERATE actions but the SD Runner is not "
+                        "This pipeline has GENERATE actions but Teikr is not "
                         "reachable.\n\nGenerated images will not be produced unless SD "
                         "Runner is started before the run completes.\n\nContinue anyway?"
                     ),
@@ -885,7 +885,7 @@ class ClassifierPipelinesTab(QWidget):
 
             if generates:
                 try:
-                    from extensions.sd_runner_client import SDRunnerClient
+                    from extensions.teikr_client import TeikrClient
                     from utils.constants import ImageGenerationType
                     try:
                         gen_type = ImageGenerationType(generation_type_value)
@@ -900,7 +900,7 @@ class ClassifierPipelinesTab(QWidget):
                         }
                         for g in generates
                     ]
-                    SDRunnerClient().run_batch(gen_type, batch_args)
+                    TeikrClient().run_batch(gen_type, batch_args)
                     gen_count = len(generates)
                 except Exception:
                     logger.exception("Rerun: generate batch dispatch failed")

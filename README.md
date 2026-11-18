@@ -62,7 +62,7 @@ Releasing is `app-release <checkout>`, a separate tool (installed with pipx) tha
 Not included in the build, as when running from source:
 - Cairo: SVG conversion needs the Cairo shared library. Run `python scripts/install_native_extras.py` from the checkout. It is not bundled.
 - libVLC: the same script installs VLC for video playback.
-- GIMP, diff-pdf, sd-runner and other external programs.
+- GIMP, diff-pdf, Teikr and other external programs.
 - Model weights: downloaded to the Hugging Face cache on first use.
 - `requirements-optional.txt` packages (OCR, PEEK), except the MCP server's `mcp`, which is included; post-quantum encryption only with `--with-oqs`.
 
@@ -90,7 +90,7 @@ The UI can be used as a media file browser. The following features are available
     <li>Quickly find directories via recent directory picker window</li>
     <li>Stores session info about seen directories (useful for directories with many media files)</li>
     <li>Can be set up to run on user-defined list of files in place of a directory</li>
-    <li><a href="https://github.com/tomhallmain/sd-runner" target="_blank">sd-runner</a> integration for image generation</li>
+    <li><a href="https://github.com/tomhallmain/Teikr" target="_blank">Teikr</a> integration for image generation</li>
     <li><a href="https://github.com/tomhallmain/refacdir" target="_blank">refacdir</a> intgration for file operations</li>
     <li>Find related images and prompts from embedded Stable Diffusion workflows</li>
     <li>Sort files by related images and prompts</li>
@@ -205,7 +205,7 @@ A classifier action pipeline is a saved, multi-step decision tree that works out
 
 Once built in the **Pipelines** tab, a pipeline can be run three ways: **Run Current** applies it to the displayed file only, **Run** applies it across every directory in the selected Directory Profile, and **Rerun Last** repeats a previous run. A pipeline scoped to a profile can also join the prevalidation pass, so it applies as you browse instead of on demand.
 
-A matching node can fire any of the standard actions — skip, hide, notify, blur, rotate, add mark, move, copy, delete — or scramble the image, or hand it to sd-runner for generation. Batch runs report what was evaluated and which actions fired, and write a JSON record of the run beside it; that record is what **Rerun Last** reads back, so a large sort can be reviewed before it is repeated.
+A matching node can fire any of the standard actions — skip, hide, notify, blur, rotate, add mark, move, copy, delete — or scramble the image, or hand it to Teikr for generation. Batch runs report what was evaluated and which actions fired, and write a JSON record of the run beside it; that record is what **Rerun Last** reads back, so a large sort can be reviewed before it is repeated.
 
 ---
 

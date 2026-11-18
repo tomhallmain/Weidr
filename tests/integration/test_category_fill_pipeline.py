@@ -293,7 +293,7 @@ class TestVariantInWorkingDir:
 
     def test_double_underscore_truncated_suffix_skips_apple(self, layout):
         """
-        SD-runner style names use a double-underscore separator and a truncated
+        Teikr style names use a double-underscore separator and a truncated
         category word (e.g. __appl for _apple) with no related-image metadata.
         RelatedImageCondition must still treat the working dir as covered.
         """
@@ -327,7 +327,7 @@ class TestVariantInWorkingDir:
         assert "_apple"  in     modifiers
         assert "_banana" in     modifiers
 
-    def test_sd_runner_variants_in_working_dir_generate_only_missing(self, layout):
+    def test_teikr_variants_in_working_dir_generate_only_missing(self, layout):
         """
         Manual test layout (operations5): seed with __appl, __cher, and __cher_2
         in the working dir should generate banana only.

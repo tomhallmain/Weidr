@@ -12,13 +12,13 @@ from utils.constants import ImageGenerationType
 from utils.logging_setup import get_logger
 from utils.repo_paths import is_compiled
 from utils.translations import _
-logger = get_logger("sd_runner_client")
+logger = get_logger("teikr_client")
 
-#: Name this application reports to SD Runner. Shown there as the origin of any
+#: Name this application reports to Teikr. Shown there as the origin of any
 #: run this client starts, in the progress label and the runs window.
 CLIENT_NAME = "weidr"
 
-#: SD Runner bounds an id it receives to 64 characters; anything past that is
+#: Teikr bounds an id it receives to 64 characters; anything past that is
 #: cut there rather than here, where it would go unnoticed.
 MAX_CLIENT_ID_LEN = 64
 
@@ -26,18 +26,18 @@ MAX_CLIENT_ID_LEN = 64
 def _default_client_id() -> str:
     """A name for this client that is stable across restarts.
 
-    SD Runner can only fall back to the peer host, and both ends of a loopback
+    Teikr can only fall back to the peer host, and both ends of a loopback
     connection share one address -- so an id that is not sent is an origin that
     says nothing. Sending one is what makes that fallback irrelevant.
 
-    An explicit ``sd_runner_client_id`` in config wins. Otherwise the name is
+    An explicit ``teikr_client_id`` in config wins. Otherwise the name is
     qualified by a digest of this install's root, so a second copy on the same
     machine reports something different while a restart of this one reports the
     same thing it did before. The PID is deliberately not part of it: a request
     staged by one session can be promoted in the next, and it should still be
     attributed to the same client when it is.
     """
-    configured = getattr(config, "sd_runner_client_id", None)
+    configured = getattr(config, "teikr_client_id", None)
     if configured:
         return str(configured).strip()[:MAX_CLIENT_ID_LEN]
     # A onefile build runs from an unpack folder that is new per build; the
@@ -47,12 +47,12 @@ def _default_client_id() -> str:
     return f"{CLIENT_NAME}-{digest}"[:MAX_CLIENT_ID_LEN]
 
 
-class SDRunnerClient:
+class TeikrClient:
     COMMAND_CLOSE_SERVER = 'close server'
     COMMAND_CLOSE_CONNECTION = 'close connection'
     COMMAND_VALIDATE = 'validate'
 
-    def __init__(self, host='localhost', port=config.sd_runner_client_port, client_id=None):
+    def __init__(self, host='localhost', port=config.teikr_client_port, client_id=None):
         self._host = host
         self._port = port
         self._conn = None
@@ -65,7 +65,7 @@ class SDRunnerClient:
         self._worker_lock = threading.Lock()
 
     def start(self, max_retries: int = 1, retry_delay: float = 0.5) -> None:
-        """Connect to the SD runner server, retrying on ConnectionRefusedError.
+        """Connect to the Teikr server, retrying on ConnectionRefusedError.
 
         Retries handle the case where the server is still starting up or is
         briefly unavailable after a crash.  Non-connection errors are raised
@@ -76,22 +76,22 @@ class SDRunnerClient:
             try:
                 self._conn = Client(
                     (self._host, self._port),
-                    authkey=str.encode(config.sd_runner_client_password),
+                    authkey=str.encode(config.teikr_client_password),
                 )
-                logger.info("Started SDRunner Client")
+                logger.info("Started Teikr Client")
                 return
             except ConnectionRefusedError as e:
                 last_error = e
                 if attempt < max_retries - 1:
                     logger.warning(
-                        f"SD Runner connection refused (attempt {attempt + 1}/{max_retries}),"
+                        f"Teikr connection refused (attempt {attempt + 1}/{max_retries}),"
                         f" retrying in {retry_delay}s..."
                     )
                     time.sleep(retry_delay)
             except Exception as e:
-                logger.error(f"Failed to connect to SD Runner: {e}")
+                logger.error(f"Failed to connect to Teikr: {e}")
                 raise
-        logger.error(f"Failed to connect to SD Runner after {max_retries} attempts: {last_error}")
+        logger.error(f"Failed to connect to Teikr after {max_retries} attempts: {last_error}")
         raise last_error
 
     def send(self, msg):
@@ -103,38 +103,38 @@ class SDRunnerClient:
         if isinstance(msg, dict) and 'client_id' not in msg:
             msg = {**msg, 'client_id': self._client_id}
         if config.debug:
-            logger.debug(f"Sending {msg} to SD Runner")
+            logger.debug(f"Sending {msg} to Teikr")
         self._conn.send(msg)
         return self._conn.recv()
 
     def close(self):
         try:
-            self._conn.send(SDRunnerClient.COMMAND_CLOSE_CONNECTION)
+            self._conn.send(TeikrClient.COMMAND_CLOSE_CONNECTION)
             self._conn.close()
             self._conn = None
-            logger.info("Closed SD Runner Client")
+            logger.info("Closed Teikr Client")
         except Exception as e:
-            logger.error(f"Failed to close SD Runner Client: {e}")
+            logger.error(f"Failed to close Teikr Client: {e}")
             raise e
 
     def validate_connection(self):
         try:
-            resp = self.send(SDRunnerClient.COMMAND_VALIDATE)
+            resp = self.send(TeikrClient.COMMAND_VALIDATE)
             if resp != 'valid':
                 self.close()
-                raise Exception(f'SD Runner connection failed validation: {resp}')
+                raise Exception(f'Teikr connection failed validation: {resp}')
         except Exception as e:
             self.close()
-            raise Exception(f'Failed to connect to SD Runner: {e}')
+            raise Exception(f'Failed to connect to Teikr: {e}')
 
     @staticmethod
     def is_reachable() -> bool:
-        """Return True if the SD Runner server is up and responds to a validate command.
+        """Return True if the Teikr server is up and responds to a validate command.
 
         Opens a fresh connection, sends the validate command, and closes cleanly.
         Never raises; all failures return False.
         """
-        client = SDRunnerClient()
+        client = TeikrClient()
         try:
             client.start(max_retries=1)
             client.validate_connection()
@@ -219,8 +219,8 @@ class SDRunnerClient:
             resp = self.send(command)
             if "error" in resp:
                 self.close()
-                raise Exception(f'SD Runner failed to start run {_type} on file {base_image}\n{resp["error"]}: {resp["data"]}')
-            logger.info(f"SD Runner started run {_type} on file {base_image}")
+                raise Exception(f'Teikr failed to start run {_type} on file {base_image}\n{resp["error"]}: {resp["data"]}')
+            logger.info(f"Teikr started run {_type} on file {base_image}")
             self.close()
             return resp['data'] if "data" in resp else None
         except Exception as e:
@@ -228,7 +228,7 @@ class SDRunnerClient:
                 self.close()
             except Exception as e2:
                pass
-            raise Exception(f'Failed to start run on SD Runner: {e}')
+            raise Exception(f'Failed to start run on Teikr: {e}')
 
     def run(
         self,
@@ -276,8 +276,8 @@ class SDRunnerClient:
             resp = self.send(command)
             if "error" in resp:
                 self.close()
-                raise Exception(f'SD Runner failed to start run {_type} on directory {directory_path}\n{resp["error"]}: {resp["data"]}')
-            logger.info(f"SD Runner started run {_type} on directory {directory_path}")
+                raise Exception(f'Teikr failed to start run {_type} on directory {directory_path}\n{resp["error"]}: {resp["data"]}')
+            logger.info(f"Teikr started run {_type} on directory {directory_path}")
             self.close()
             return resp['data'] if "data" in resp else None
         except Exception as e:
@@ -285,7 +285,7 @@ class SDRunnerClient:
                 self.close()
             except Exception:
                 pass
-            raise Exception(f'Failed to start run on SD Runner: {e}')
+            raise Exception(f'Failed to start run on Teikr: {e}')
 
     def run_on_directory(self, _type, directory_path, append=False):
         """
@@ -328,7 +328,7 @@ class SDRunnerClient:
             resp = self.send({'command': 'run_batch', 'requests': batch})
             if 'error' in resp:
                 raise Exception(
-                    f'SD Runner batch error: {resp["error"]}: {resp.get("data")}'
+                    f'Teikr batch error: {resp["error"]}: {resp.get("data")}'
                 )
             count = resp.get('count', len(requests))
             if config.debug:
@@ -340,9 +340,9 @@ class SDRunnerClient:
                     f"  {img}  [{', '.join(s for s in suffixes if s)}]"
                     for img, suffixes in by_image.items()
                 )
-                logger.info("SD Runner queued %d %s request(s):\n%s", count, _type.value, lines)
+                logger.info("Teikr queued %d %s request(s):\n%s", count, _type.value, lines)
             else:
-                logger.info("SD Runner queued %d batch generation request(s)", count)
+                logger.info("Teikr queued %d batch generation request(s)", count)
             return count
         finally:
             self.close()
@@ -355,7 +355,7 @@ class SDRunnerClient:
             self._worker_thread.join(timeout=2.0)
         if self._conn is not None:
             try:
-                self._conn.send(SDRunnerClient.COMMAND_CLOSE_SERVER)
+                self._conn.send(TeikrClient.COMMAND_CLOSE_SERVER)
                 self._conn.close()
             except Exception:
                 pass

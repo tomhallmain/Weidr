@@ -2,9 +2,9 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: 1.0\n"
-"POT-Creation-Date: 2026-11-09 17:36-0500\n"
-"PO-Revision-Date: 2026-11-09 17:36-0500\n"
-"Last-Translator: Translator Name <translator@example.com>\n"
+"POT-Creation-Date: 2026-11-17 23:52-0500\n"
+"PO-Revision-Date: 2026-11-17 23:52-0500\n"
+"Last-Translator: Thomas Hall <tomhall.main@gmail.com>\n"
 "Language-Team: fr Team <<EMAIL>>\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Cette version ne correspond plus à son code source. Voir le journal pour "
 "plus de détails."
 
-#: extensions/sd_runner_client.py:151
+#: extensions/teikr_client.py:151
 msgid "Image does not contain a prompt to redo!"
 msgstr "L'image ne contient pas d'invite à refaire !"
 
@@ -2392,6 +2392,24 @@ msgstr "Vidéo ({0})"
 msgid "Video"
 msgstr "Vidéo"
 
+#: src/ui/custom_title_bar.py:160
+msgid "Minimize"
+msgstr "Minimiser"
+
+#: src/ui/custom_title_bar.py:165 src/ui/custom_title_bar.py:296
+msgid "Maximize"
+msgstr "Maximiser"
+
+#: src/ui/auth/password_admin_window.py:352
+#: src/ui/compare/hf_model_manager_window_qt.py:96
+#: src/ui/custom_title_bar.py:170 src/ui/files/directory_picker_dialog.py:61
+msgid "Close"
+msgstr "Fermer"
+
+#: src/ui/custom_title_bar.py:293
+msgid "Restore"
+msgstr "Restaurer"
+
 #: src/ui/help_and_config_qt.py:40
 msgid "Help and Config"
 msgstr "Aide et configuration"
@@ -3503,10 +3521,24 @@ msgstr ""
 msgid "Browsing mode set."
 msgstr "Mode de navigation défini."
 
+#: src/ui/app_window/app_window.py:1275
+msgid "do this action"
+msgstr "effectuez cette action"
+
 #: src/ui/app_window/app_window.py:1278
 #: src/ui/app_window/window_launcher.py:1155
 msgid "Many Files"
 msgstr "Plusieurs fichiers"
+
+#: src/ui/app_window/app_window.py:1279
+msgid ""
+"There are a lot of files in {0} and it may take a while to {1}.\n"
+"\n"
+"Would you like to proceed?"
+msgstr ""
+"Il y a beaucoup de fichiers dans {0} et cela peut prendre du temps pour {1}.\n"
+"\n"
+"Voulez-vous continuer ?"
 
 #: src/ui/app_window/app_window.py:1385
 msgid "No files found in directory after refresh."
@@ -3870,6 +3902,10 @@ msgstr "Ajouter des marques"
 msgid "Including marks: {0}"
 msgstr "Y compris les marques : {0}"
 
+#: src/ui/app_window/file_marks_controller.py:215
+msgid "Marked Files Window Error"
+msgstr "Erreur de la fenêtre Fichiers marqués"
+
 #: src/ui/app_window/file_marks_controller.py:296
 msgid "No file action set actions selected."
 msgstr ""
@@ -3892,6 +3928,11 @@ msgstr "Définir les marques à partir des images en aval"
 #: src/ui/app_window/search_controller.py:736
 msgid "Waiting for a directory selection."
 msgstr "En attente de la sélection d'un répertoire."
+
+#: src/ui/app_window/file_marks_controller.py:405
+#: src/ui/app_window/search_controller.py:749
+msgid "find related media"
+msgstr "trouver les médias associés"
 
 #: src/ui/app_window/file_marks_controller.py:407
 #: src/ui/app_window/search_controller.py:751
@@ -4779,6 +4820,16 @@ msgstr ""
 "Lancement d'un test de simulation de la randomisation des noms de fichiers "
 "pour {0} — voir {1}"
 
+#: src/ui/app_window/masonry_browser.py:537
+msgid "Showing all {0} files"
+msgstr "Affichage de tous les {0} fichiers"
+
+#: src/ui/app_window/masonry_browser.py:540
+#: tests/ui/test_masonry_interaction.py:21
+msgid "Page {0} / {1}  •  files {2}–{3} of {4}  •  PgUp / PgDn to navigate"
+msgstr ""
+"Page {0} / {1}  •  fichiers {2}–{3} sur {4}  •  PgUp / PgDn pour naviguer"
+
 #: src/ui/app_window/media_controls_overlay.py:143
 msgid "Playback speed"
 msgstr "Vitesse de lecture"
@@ -4859,6 +4910,11 @@ msgstr "Échec de l'enregistrement de l'image GIF."
 msgid "No time-based media is currently active."
 msgstr "Aucun média à horaire déterminé n'est actuellement en cours."
 
+#: src/ui/app_window/media_navigator.py:91
+#: src/ui/app_window/media_navigator.py:117
+msgid "Exception"
+msgstr "Exception"
+
 #: src/ui/app_window/media_navigator.py:142
 #: src/ui/app_window/media_navigator.py:162
 msgid "Directory is still loading; no files available yet."
@@ -4894,6 +4950,14 @@ msgstr "La navigation par index n'est disponible qu'en mode Parcourir."
 #: src/ui/app_window/media_navigator.py:418
 msgid "Invalid index"
 msgstr "Index invalide"
+
+#: src/ui/app_window/media_navigator.py:421
+msgid "Go To Index Error"
+msgstr "Erreur d'accès à l'index"
+
+#: src/ui/app_window/media_navigator.py:479
+msgid "(search media)"
+msgstr "(rechercher des médias)"
 
 #: src/ui/app_window/media_navigator.py:483
 msgid "Somehow, the search file is invalid"
@@ -4992,6 +5056,26 @@ msgstr ""
 #: src/ui/app_window/search_controller.py:436
 msgid "Are you sure you want to proceed?"
 msgstr "Êtes-vous sûr de vouloir continuer ?"
+
+#: src/ui/app_window/search_controller.py:468
+msgid "Search file is not a valid file for base dir."
+msgstr ""
+"Le fichier de recherche n'est pas un fichier valide pour le répertoire de "
+"base."
+
+#: src/ui/app_window/search_controller.py:469
+msgid "Invalid search file"
+msgstr "Fichier de recherche invalide"
+
+#: src/ui/app_window/search_controller.py:484
+msgid "Negative search file is not a valid file for base dir."
+msgstr ""
+"Le fichier de recherche négative n’est pas un fichier valide pour le "
+"répertoire de base."
+
+#: src/ui/app_window/search_controller.py:485
+msgid "Invalid negative search file"
+msgstr "Fichier de recherche négative invalide"
 
 #: src/ui/app_window/search_controller.py:520
 #: src/ui/app_window/search_controller.py:551
@@ -5347,6 +5431,34 @@ msgstr "---- SUPPRIMER ----"
 msgid "Permanently delete the current media file from disk."
 msgstr "Supprimer définitivement le fichier multimédia actuel du disque dur."
 
+#: src/ui/app_window/sidebar_panel.py:466
+msgid "Toggle media view"
+msgstr "Basculer la vue média"
+
+#: src/ui/app_window/sidebar_panel.py:471
+msgid "Replace with search media"
+msgstr "Remplacer par les médias de recherche"
+
+#: src/ui/app_window/sidebar_panel.py:478
+msgid "Previous group"
+msgstr "Groupe précédent"
+
+#: src/ui/app_window/sidebar_panel.py:483
+msgid "Next group"
+msgstr "Groupe suivant"
+
+#: src/ui/app_window/sidebar_panel.py:488
+msgid "Random purge"
+msgstr "Purge aléatoire"
+
+#: src/ui/app_window/sidebar_panel.py:493
+msgid "View ungrouped files"
+msgstr "Afficher les fichiers non groupés"
+
+#: src/ui/app_window/sidebar_panel.py:503
+msgid "Return to groups"
+msgstr "Retour aux groupes"
+
 #: src/ui/app_window/sidebar_panel.py:580
 msgid "Ended slideshows"
 msgstr "Diaporamas terminés"
@@ -5592,6 +5704,10 @@ msgstr ""
 "Cliquez ou faites glisser pour ajouter des points, cliquez près du début "
 "pour fermer, Entrée pour confirmer, Échap pour annuler"
 
+#: src/ui/app_window/window_launcher.py:1124
+msgid "Help & Config Error"
+msgstr "Erreur d'aide & de configuration"
+
 #: src/ui/app_window/window_launcher.py:1138
 msgid "No media selected"
 msgstr "Aucun média n'a été sélectionné"
@@ -5827,12 +5943,6 @@ msgstr "Exporter le cache au format JSON"
 #: src/ui/auth/password_admin_window.py:348
 msgid "Save Settings"
 msgstr "Sauvegarder les paramètres"
-
-#: src/ui/auth/password_admin_window.py:352
-#: src/ui/compare/hf_model_manager_window_qt.py:96
-#: src/ui/custom_title_bar.py:170 src/ui/files/directory_picker_dialog.py:61
-msgid "Close"
-msgstr "Fermer"
 
 #: src/ui/auth/password_admin_window.py:394
 msgid "Password protection settings saved."
@@ -7248,12 +7358,12 @@ msgstr "Déplacer généré vers le répertoire de travail"
 
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2045
 msgid ""
-"When enabled, GENERATE actions pass the current working directory to sd-"
-"runner so generated files land there instead of the default output folder."
+"When enabled, GENERATE actions pass the current working directory to Teikr "
+"so generated files land there instead of the default output folder."
 msgstr ""
-"Lorsqu'il est activé, les actions GENERATE transmettent le répertoire de "
-"travail actuel à sd-runner afin que les fichiers générés soient placés là au"
-" lieu du dossier de sortie par défaut."
+"Lorsqu'elles sont activées, les actions GENERATE transmettent le répertoire "
+"de travail actuel à Teikr afin que les fichiers générés y soient enregistrés"
+" plutôt que dans le dossier de sortie par défaut."
 
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2061
 #: src/ui/compare/classifier_pipeline_editor_qt.py:3071
@@ -7860,21 +7970,21 @@ msgstr ""
 #: src/ui/compare/classifier_pipelines_tab_qt.py:660
 #: src/ui/compare/classifier_pipelines_tab_qt.py:768
 #: tests/ui/test_classifier_pipelines_tab_qt.py:995
-msgid "SD Runner Not Available"
-msgstr "SD Runner non disponible"
+msgid "Teikr Not Available"
+msgstr "Teikr non disponible"
 
 #: src/ui/compare/classifier_pipelines_tab_qt.py:662
 #: src/ui/compare/classifier_pipelines_tab_qt.py:770
 msgid ""
-"This pipeline has GENERATE actions but the SD Runner is not reachable.\n"
+"This pipeline has GENERATE actions but Teikr is not reachable.\n"
 "\n"
-"Generated images will not be produced unless SD Runner is started before the run completes.\n"
+"Generated images will not be produced unless Teikr is started before the run completes.\n"
 "\n"
 "Continue anyway?"
 msgstr ""
-"Ce pipeline contient des actions GENERATE, mais SD Runner n'est pas accessible.\n"
+"Ce pipeline contient des actions GENERATE, mais Teikr n'est pas accessible.\n"
 "\n"
-"Les images générées ne seront pas produites tant que SD Runner n'est pas démarré avant la fin de l'exécution.\n"
+"Les images générées ne seront pas produites tant que Teikr n'est pas démarré avant la fin de l'exécution.\n"
 "\n"
 "Continuer quand même ?"
 
@@ -8268,6 +8378,14 @@ msgstr "min"
 msgid "max"
 msgstr "max"
 
+#: src/ui/compare/filter_builder_panel_qt.py:69
+msgid "W"
+msgstr "W"
+
+#: src/ui/compare/filter_builder_panel_qt.py:78
+msgid "H"
+msgstr "H"
+
 #: src/ui/compare/filter_builder_panel_qt.py:100
 #: src/ui/compare/filter_builder_panel_qt.py:247
 msgid "contains"
@@ -8538,6 +8656,10 @@ msgstr ""
 msgid "Invalid model configuration"
 msgstr "Configuration du modèle non valable"
 
+#: src/ui/compare/hf_model_manager_window_qt.py:519
+msgid "Model failed to initialize (can_run=False)."
+msgstr "Échec de l'initialisation du modèle (can_run=False)."
+
 #: src/ui/compare/hf_model_manager_window_qt.py:638
 msgid "HF Hub Search"
 msgstr "Recherche dans le centre HF"
@@ -8608,6 +8730,10 @@ msgid "Recommended for HF model repos with config.json and processor files."
 msgstr ""
 "Recommandé pour les repos d'algorithmes HF avec config.json et les fichiers "
 "de traitement."
+
+#: src/ui/compare/hf_model_manager_window_qt.py:786
+msgid "{0} (optional)"
+msgstr "{0} (facultatif)"
 
 #: src/ui/compare/hf_model_manager_window_qt.py:800
 msgid "Model Name"
@@ -10025,6 +10151,10 @@ msgstr "Erreur dans l'action du fichier"
 msgid "Images not found"
 msgstr "Images non trouvées"
 
+#: src/ui/files/file_actions_window_qt.py:642
+msgid "Copied filename: {0}"
+msgstr "Nom de fichier copié: {0}"
+
 #: src/ui/files/file_actions_window_qt.py:727
 msgid "moves only"
 msgstr "mouvements uniquement"
@@ -10556,6 +10686,10 @@ msgstr "Suppression de {0} fichiers marqués."
 msgid "Select parent directory for target directories"
 msgstr "Sélection du répertoire parent pour les répertoires cibles"
 
+#: src/ui/files/marked_file_mover_qt.py:736
+msgid "Error opening hotkey actions window: "
+msgstr "Erreur lors de l'ouverture de la fenêtre des actions de raccourci : "
+
 #: src/ui/files/marked_file_mover_qt.py:743
 msgid ""
 "WARNING: This action sets hotkey actions that will be used for future file "
@@ -10595,6 +10729,10 @@ msgstr "Échec de la création du GIF d'interpolation : {0}"
 #: src/ui/files/marked_file_mover_qt.py:860
 msgid "Save PDF as"
 msgstr "Enregistrer le PDF sous"
+
+#: src/ui/files/marked_file_mover_qt.py:862
+msgid "PDF files"
+msgstr "fichiers PDF"
 
 #: src/ui/files/marked_file_mover_qt.py:878
 msgid "Failed to create PDF from marked files."
@@ -11349,11 +11487,11 @@ msgstr "Ajustement de la nouvelle demande"
 
 #: src/ui/image/rerun_prompt_adjustment_window_qt.py:56
 msgid ""
-"Adjust prompts before rerunning. Changes are sent to SD Runner for this run "
+"Adjust prompts before rerunning. Changes are sent to Teikr for this run "
 "only."
 msgstr ""
 "Ajustez les invites avant de réexécuter. Les modifications sont envoyées à "
-"SD Runner uniquement pour cette exécution."
+"Teikr uniquement pour cette exécution."
 
 #: src/ui/image/rerun_prompt_adjustment_window_qt.py:66
 msgid "Positive prompt"
@@ -11807,140 +11945,10 @@ msgstr "Maj"
 msgid "Alt"
 msgstr "Alt"
 
-#: src/ui/custom_title_bar.py:160
-msgid "Minimize"
-msgstr "Minimiser"
+#: src/compare/early_prevalidation.py:118
+msgid "Early prevalidation failed for {0}"
+msgstr "La prévalidation préliminaire a échoué pour {0}"
 
-#: src/ui/custom_title_bar.py:165 src/ui/custom_title_bar.py:296
-msgid "Maximize"
-msgstr "Maximiser"
-
-#: src/ui/custom_title_bar.py:293
-msgid "Restore"
-msgstr "Restaurer"
-
-#: src/ui/app_window/app_window.py:1275
-msgid "do this action"
-msgstr "effectuez cette action"
-
-#: src/ui/app_window/app_window.py:1279
-msgid ""
-"There are a lot of files in {0} and it may take a while to {1}.\n"
-"\n"
-"Would you like to proceed?"
-msgstr ""
-"Il y a beaucoup de fichiers dans {0} et cela peut prendre du temps pour {1}.\n"
-"\n"
-"Voulez-vous continuer ?"
-
-#: src/ui/app_window/file_marks_controller.py:215
-msgid "Marked Files Window Error"
-msgstr "Erreur de la fenêtre Fichiers marqués"
-
-#: src/ui/app_window/file_marks_controller.py:405
-#: src/ui/app_window/search_controller.py:749
-msgid "find related media"
-msgstr "trouver les médias associés"
-
-#: src/ui/app_window/masonry_browser.py:537
-msgid "Showing all {0} files"
-msgstr "Affichage de tous les {0} fichiers"
-
-#: src/ui/app_window/masonry_browser.py:540
-#: tests/ui/test_masonry_interaction.py:21
-msgid "Page {0} / {1}  •  files {2}–{3} of {4}  •  PgUp / PgDn to navigate"
-msgstr ""
-"Page {0} / {1}  •  fichiers {2}–{3} sur {4}  •  PgUp / PgDn pour naviguer"
-
-#: src/ui/app_window/media_navigator.py:91
-#: src/ui/app_window/media_navigator.py:117
-msgid "Exception"
-msgstr "Exception"
-
-#: src/ui/app_window/media_navigator.py:421
-msgid "Go To Index Error"
-msgstr "Erreur d'accès à l'index"
-
-#: src/ui/app_window/media_navigator.py:479
-msgid "(search media)"
-msgstr "(rechercher des médias)"
-
-#: src/ui/app_window/search_controller.py:468
-msgid "Search file is not a valid file for base dir."
-msgstr ""
-"Le fichier de recherche n'est pas un fichier valide pour le répertoire de "
-"base."
-
-#: src/ui/app_window/search_controller.py:469
-msgid "Invalid search file"
-msgstr "Fichier de recherche invalide"
-
-#: src/ui/app_window/search_controller.py:484
-msgid "Negative search file is not a valid file for base dir."
-msgstr ""
-"Le fichier de recherche négative n’est pas un fichier valide pour le "
-"répertoire de base."
-
-#: src/ui/app_window/search_controller.py:485
-msgid "Invalid negative search file"
-msgstr "Fichier de recherche négative invalide"
-
-#: src/ui/app_window/sidebar_panel.py:466
-msgid "Toggle media view"
-msgstr "Basculer la vue média"
-
-#: src/ui/app_window/sidebar_panel.py:471
-msgid "Replace with search media"
-msgstr "Remplacer par les médias de recherche"
-
-#: src/ui/app_window/sidebar_panel.py:478
-msgid "Previous group"
-msgstr "Groupe précédent"
-
-#: src/ui/app_window/sidebar_panel.py:483
-msgid "Next group"
-msgstr "Groupe suivant"
-
-#: src/ui/app_window/sidebar_panel.py:488
-msgid "Random purge"
-msgstr "Purge aléatoire"
-
-#: src/ui/app_window/sidebar_panel.py:493
-msgid "View ungrouped files"
-msgstr "Afficher les fichiers non groupés"
-
-#: src/ui/app_window/sidebar_panel.py:503
-msgid "Return to groups"
-msgstr "Retour aux groupes"
-
-#: src/ui/app_window/window_launcher.py:1124
-msgid "Help & Config Error"
-msgstr "Erreur d'aide & de configuration"
-
-#: src/ui/compare/filter_builder_panel_qt.py:69
-msgid "W"
-msgstr "W"
-
-#: src/ui/compare/filter_builder_panel_qt.py:78
-msgid "H"
-msgstr "H"
-
-#: src/ui/compare/hf_model_manager_window_qt.py:519
-msgid "Model failed to initialize (can_run=False)."
-msgstr "Échec de l'initialisation du modèle (can_run=False)."
-
-#: src/ui/compare/hf_model_manager_window_qt.py:786
-msgid "{0} (optional)"
-msgstr "{0} (facultatif)"
-
-#: src/ui/files/file_actions_window_qt.py:642
-msgid "Copied filename: {0}"
-msgstr "Nom de fichier copié: {0}"
-
-#: src/ui/files/marked_file_mover_qt.py:736
-msgid "Error opening hotkey actions window: "
-msgstr "Erreur lors de l'ouverture de la fenêtre des actions de raccourci : "
-
-#: src/ui/files/marked_file_mover_qt.py:862
-msgid "PDF files"
-msgstr "fichiers PDF"
+#: src/ui/app_window/early_prevalidation_runner.py:191
+msgid "Early prevalidation callback failed."
+msgstr "Échec de la procédure de rappel de prévalidation préliminaire."

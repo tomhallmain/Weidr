@@ -144,8 +144,8 @@ def make_generate_batch_state(
             for path, suffix, tdir in batch
         ]
         try:
-            from extensions.sd_runner_client import SDRunnerClient
-            SDRunnerClient().run_batch(generation_type, batch_args)
+            from extensions.teikr_client import TeikrClient
+            TeikrClient().run_batch(generation_type, batch_args)
         except Exception:
             logger.exception(
                 "Intermediate generate batch failed; items in all_generates for rerun"

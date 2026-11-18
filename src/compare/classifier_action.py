@@ -1368,7 +1368,7 @@ class ClassifierAction:
                             if Utils.calculate_hash(image_path) == Utils.calculate_hash(target_path):
                                 # The file already exists in target, so we need to remove it from the source
                                 # NOTE: this is a hack to avoid an error that sometimes happens where a file gets stranded
-                                # possibly due to the sd-runner application re-saving it after the move, but it could 
+                                # possibly due to the Teikr application re-saving it after the move, but it could 
                                 # technically happen for other more valid reasons. Ideally need to identify why this error
                                 # occurs and fix it.
                                 try:

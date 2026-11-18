@@ -21,7 +21,7 @@ def _record_cache_clears(monkeypatch):
 def test_sends_the_request_then_clears_the_source_directory_caches(monkeypatch):
     cleared = _record_cache_clears(monkeypatch)
 
-    with patch("extensions.sd_runner_client.SDRunnerClient") as client_cls:
+    with patch("extensions.teikr_client.TeikrClient") as client_cls:
         image_generation.request_image_generation(
             ImageGenerationType.CONTROL_NET, "/media/a.png", append=True,
             prompt_overrides=("pos", "neg"), edit_suffix="_x", target_dir="/out",
@@ -37,7 +37,7 @@ def test_sends_the_request_then_clears_the_source_directory_caches(monkeypatch):
 def test_without_prompt_overrides_no_prompts_are_sent(monkeypatch):
     _record_cache_clears(monkeypatch)
 
-    with patch("extensions.sd_runner_client.SDRunnerClient") as client_cls:
+    with patch("extensions.teikr_client.TeikrClient") as client_cls:
         image_generation.request_image_generation(ImageGenerationType.CONTROL_NET, "/media/a.png")
 
     kwargs = client_cls.return_value.run.call_args.kwargs
@@ -49,8 +49,8 @@ def test_without_prompt_overrides_no_prompts_are_sent(monkeypatch):
 def test_caches_are_left_alone_when_the_request_fails(monkeypatch):
     cleared = _record_cache_clears(monkeypatch)
 
-    with patch("extensions.sd_runner_client.SDRunnerClient") as client_cls:
-        client_cls.return_value.run.side_effect = RuntimeError("sd-runner unreachable")
+    with patch("extensions.teikr_client.TeikrClient") as client_cls:
+        client_cls.return_value.run.side_effect = RuntimeError("Teikr unreachable")
         with pytest.raises(RuntimeError):
             image_generation.request_image_generation(ImageGenerationType.CONTROL_NET, "/media/a.png")
 

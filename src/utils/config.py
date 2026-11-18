@@ -332,8 +332,8 @@ class Config:
         self.pipeline_generate_batch_size = 150
         self.pipeline_scramble_batch_size = 100
         self.show_negative_prompt = True
-        self.sd_runner_client_port = 6000
-        self.sd_runner_client_password = "<PASSWORD>"
+        self.teikr_client_port = 6000
+        self.teikr_client_password = "<PASSWORD>"
         self.refacdir_client_port = 6001
         self.refacdir_client_password = "<PASSWORD>"
         self.mcp_server_host = "localhost"
@@ -396,7 +396,7 @@ class Config:
                             "clip_model",
                             "clap_model",
                             "file_paths_json_path",
-                            "sd_runner_client_password",
+                            "teikr_client_password",
                             "refacdir_client_password",
                             "mcp_server_host",
                             "mcp_server_token",
@@ -485,7 +485,7 @@ class Config:
                             "peek_max_video_duration_seconds",
                             "compare_embedding_dynamic_media_max_samples",
                             "vjepa2_num_frames",
-                            "sd_runner_client_port",
+                            "teikr_client_port",
                             "refacdir_client_port",
                             "mcp_server_port")
             self.set_values(float,
@@ -891,6 +891,11 @@ class Config:
         if "image_classifier_h5_models" in self.dict and "image_classifier_models" not in self.dict:
             self.dict["image_classifier_models"] = self.dict["image_classifier_h5_models"]
             logger.info("Migrated 'image_classifier_h5_models' → 'image_classifier_models'")
+        for suffix in ("port", "password"):
+            old_key, new_key = f"sd_runner_client_{suffix}", f"teikr_client_{suffix}"
+            if old_key in self.dict and new_key not in self.dict:
+                self.dict[new_key] = self.dict[old_key]
+                logger.info("Migrated '%s' → '%s'", old_key, new_key)
         if "image_browse_recursive" in self.dict and "browse_recursive" not in self.dict:
             self.dict["browse_recursive"] = self.dict["image_browse_recursive"]
             logger.info("Migrated 'image_browse_recursive' → 'browse_recursive'")

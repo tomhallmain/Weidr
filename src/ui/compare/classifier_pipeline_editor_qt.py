@@ -2043,7 +2043,7 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         self._move_to_working_dir_cb.setChecked(p.move_to_working_dir)
         self._move_to_working_dir_cb.setToolTip(
             _("When enabled, GENERATE actions pass the current working directory "
-              "to sd-runner so generated files land there instead of the default output folder.")
+              "to Teikr so generated files land there instead of the default output folder.")
         )
         _active_row_layout.addWidget(self._move_to_working_dir_cb)
         _active_row_layout.addStretch(1)
@@ -2503,13 +2503,13 @@ class ClassifierPipelineEditorDialog(SmartDialog):
         from image.image_ops import ImageOps
 
         def _generate(path, edit_suffix=None, target_dir=None):
-            from extensions.sd_runner_client import SDRunnerClient
+            from extensions.teikr_client import TeikrClient
             args = {"image": path, "append": False}
             if edit_suffix:
                 args["edit_suffix"] = edit_suffix
             if target_dir:
                 args["target_dir"] = target_dir
-            SDRunnerClient().run_batch(ImageGenerationType.IMAGE_EDIT, [args])
+            TeikrClient().run_batch(ImageGenerationType.IMAGE_EDIT, [args])
 
         return ActionCallbacks(
             hide_callback=self._app_actions.hide_media,

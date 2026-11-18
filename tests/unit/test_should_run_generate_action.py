@@ -213,7 +213,7 @@ class TestShouldRunGenerateActionSuffixCount:
         assert result is True
 
     def test_double_underscore_truncated_suffix_counts(self):
-        """SD-runner style names (double underscore + truncated word) block generation."""
+        """Teikr style names (double underscore + truncated word) block generation."""
         entries = [
             ("/base/CUI_17820535380315060.png", None),
             ("/base/CUI_17820535380315060__appl.png", None),

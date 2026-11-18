@@ -2,9 +2,9 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: 1.0\n"
-"POT-Creation-Date: 2026-11-09 17:36-0500\n"
-"PO-Revision-Date: 2026-11-09 17:36-0500\n"
-"Last-Translator: Translator Name <translator@example.com>\n"
+"POT-Creation-Date: 2026-11-17 23:52-0500\n"
+"PO-Revision-Date: 2026-11-17 23:52-0500\n"
+"Last-Translator: Thomas Hall <tomhall.main@gmail.com>\n"
 "Language-Team: zh Team <<EMAIL>>\n"
 "Language: zh\n"
 "MIME-Version: 1.0\n"
@@ -16,7 +16,7 @@ msgstr ""
 msgid "This build no longer matches its source code. See the log for details."
 msgstr "此构建已不再匹配其源代码。请查看日志了解详情。"
 
-#: extensions/sd_runner_client.py:151
+#: extensions/teikr_client.py:151
 msgid "Image does not contain a prompt to redo!"
 msgstr "图像不包含重做提示！"
 
@@ -2269,6 +2269,24 @@ msgstr "视频 ({0})"
 msgid "Video"
 msgstr "视频"
 
+#: src/ui/custom_title_bar.py:160
+msgid "Minimize"
+msgstr "最小化"
+
+#: src/ui/custom_title_bar.py:165 src/ui/custom_title_bar.py:296
+msgid "Maximize"
+msgstr "最大化"
+
+#: src/ui/auth/password_admin_window.py:352
+#: src/ui/compare/hf_model_manager_window_qt.py:96
+#: src/ui/custom_title_bar.py:170 src/ui/files/directory_picker_dialog.py:61
+msgid "Close"
+msgstr "关闭"
+
+#: src/ui/custom_title_bar.py:293
+msgid "Restore"
+msgstr "恢复"
+
 #: src/ui/help_and_config_qt.py:40
 msgid "Help and Config"
 msgstr "帮助和配置"
@@ -3330,10 +3348,24 @@ msgstr "已恢复 {0} 个已移回文件的比较结果状态"
 msgid "Browsing mode set."
 msgstr "浏览模式设置 。"
 
+#: src/ui/app_window/app_window.py:1275
+msgid "do this action"
+msgstr "执行此操作"
+
 #: src/ui/app_window/app_window.py:1278
 #: src/ui/app_window/window_launcher.py:1155
 msgid "Many Files"
 msgstr "许多文件"
+
+#: src/ui/app_window/app_window.py:1279
+msgid ""
+"There are a lot of files in {0} and it may take a while to {1}.\n"
+"\n"
+"Would you like to proceed?"
+msgstr ""
+"在 {0} 中有很多文件，可能需要一段时间才能 {1}。\n"
+"\n"
+"您想继续吗？"
 
 #: src/ui/app_window/app_window.py:1385
 msgid "No files found in directory after refresh."
@@ -3689,6 +3721,10 @@ msgstr "添加标记"
 msgid "Including marks: {0}"
 msgstr "包括标记：{0}"
 
+#: src/ui/app_window/file_marks_controller.py:215
+msgid "Marked Files Window Error"
+msgstr "标记文件窗口错误"
+
 #: src/ui/app_window/file_marks_controller.py:296
 msgid "No file action set actions selected."
 msgstr "未选择针对设置操作的文件操作。"
@@ -3710,6 +3746,11 @@ msgstr "从下游图像设置标记"
 #: src/ui/app_window/search_controller.py:736
 msgid "Waiting for a directory selection."
 msgstr "正在等待目录选择。"
+
+#: src/ui/app_window/file_marks_controller.py:405
+#: src/ui/app_window/search_controller.py:749
+msgid "find related media"
+msgstr "查找相关媒体"
 
 #: src/ui/app_window/file_marks_controller.py:407
 #: src/ui/app_window/search_controller.py:751
@@ -4574,6 +4615,15 @@ msgstr "在 {0} 下对文件名进行随机化 — 参见 {1}"
 msgid "Randomize filenames dry run started for {0} — see {1}"
 msgstr "已为 {0} 启动文件名随机化预演 — 请参阅 {1}"
 
+#: src/ui/app_window/masonry_browser.py:537
+msgid "Showing all {0} files"
+msgstr "显示所有{0}文件"
+
+#: src/ui/app_window/masonry_browser.py:540
+#: tests/ui/test_masonry_interaction.py:21
+msgid "Page {0} / {1}  •  files {2}–{3} of {4}  •  PgUp / PgDn to navigate"
+msgstr "第 {0} / {1} 页  •  文件 {2}–{3} / {4}  •  PgUp / PgDn 进行导航"
+
 #: src/ui/app_window/media_controls_overlay.py:143
 msgid "Playback speed"
 msgstr "播放速度"
@@ -4651,6 +4701,11 @@ msgstr "未能保存GIF帧图像。"
 msgid "No time-based media is currently active."
 msgstr "目前没有基于时间的媒体处于活动状态。"
 
+#: src/ui/app_window/media_navigator.py:91
+#: src/ui/app_window/media_navigator.py:117
+msgid "Exception"
+msgstr "异常"
+
 #: src/ui/app_window/media_navigator.py:142
 #: src/ui/app_window/media_navigator.py:162
 msgid "Directory is still loading; no files available yet."
@@ -4683,6 +4738,14 @@ msgstr "索引导航仅在浏览模式下可用。"
 #: src/ui/app_window/media_navigator.py:418
 msgid "Invalid index"
 msgstr "无效索引"
+
+#: src/ui/app_window/media_navigator.py:421
+msgid "Go To Index Error"
+msgstr "转到索引错误"
+
+#: src/ui/app_window/media_navigator.py:479
+msgid "(search media)"
+msgstr "(搜索媒体)"
 
 #: src/ui/app_window/media_navigator.py:483
 msgid "Somehow, the search file is invalid"
@@ -4778,6 +4841,22 @@ msgstr "未设置基本目录，将使用当前基本目录： "
 #: src/ui/app_window/search_controller.py:436
 msgid "Are you sure you want to proceed?"
 msgstr "你确定要继续吗?"
+
+#: src/ui/app_window/search_controller.py:468
+msgid "Search file is not a valid file for base dir."
+msgstr "搜索文件不是基目录的有效文件。"
+
+#: src/ui/app_window/search_controller.py:469
+msgid "Invalid search file"
+msgstr "无效的搜索文件"
+
+#: src/ui/app_window/search_controller.py:484
+msgid "Negative search file is not a valid file for base dir."
+msgstr "负向搜索文件不是基目录的有效文件。"
+
+#: src/ui/app_window/search_controller.py:485
+msgid "Invalid negative search file"
+msgstr "无效的负面搜索文件"
 
 #: src/ui/app_window/search_controller.py:520
 #: src/ui/app_window/search_controller.py:551
@@ -5099,6 +5178,34 @@ msgstr "---- 删除 ----"
 msgid "Permanently delete the current media file from disk."
 msgstr "永久删除当前媒体文件从磁盘。"
 
+#: src/ui/app_window/sidebar_panel.py:466
+msgid "Toggle media view"
+msgstr "切换媒体视图"
+
+#: src/ui/app_window/sidebar_panel.py:471
+msgid "Replace with search media"
+msgstr "用搜索媒体替换"
+
+#: src/ui/app_window/sidebar_panel.py:478
+msgid "Previous group"
+msgstr "上一个组"
+
+#: src/ui/app_window/sidebar_panel.py:483
+msgid "Next group"
+msgstr "下一组"
+
+#: src/ui/app_window/sidebar_panel.py:488
+msgid "Random purge"
+msgstr "随机清理"
+
+#: src/ui/app_window/sidebar_panel.py:493
+msgid "View ungrouped files"
+msgstr "查看未分组的文件"
+
+#: src/ui/app_window/sidebar_panel.py:503
+msgid "Return to groups"
+msgstr "返回群组"
+
 #: src/ui/app_window/sidebar_panel.py:580
 msgid "Ended slideshows"
 msgstr "结束幻灯片放映"
@@ -5331,6 +5438,10 @@ msgid ""
 "confirm, Escape to cancel"
 msgstr "单击或单击拖动以添加点，在起点附近单击以闭合，Enter确认，Escape取消"
 
+#: src/ui/app_window/window_launcher.py:1124
+msgid "Help & Config Error"
+msgstr "帮助 & 配置错误"
+
 #: src/ui/app_window/window_launcher.py:1138
 msgid "No media selected"
 msgstr "未选择任何媒体"
@@ -5558,12 +5669,6 @@ msgstr "以 JSON 格式导出缓存"
 #: src/ui/auth/password_admin_window.py:348
 msgid "Save Settings"
 msgstr "保存设置"
-
-#: src/ui/auth/password_admin_window.py:352
-#: src/ui/compare/hf_model_manager_window_qt.py:96
-#: src/ui/custom_title_bar.py:170 src/ui/files/directory_picker_dialog.py:61
-msgid "Close"
-msgstr "关闭"
 
 #: src/ui/auth/password_admin_window.py:394
 msgid "Password protection settings saved."
@@ -6872,9 +6977,9 @@ msgstr "将生成的移动到工作目录"
 
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2045
 msgid ""
-"When enabled, GENERATE actions pass the current working directory to sd-"
-"runner so generated files land there instead of the default output folder."
-msgstr "启用后，GENERATE 操作会将当前工作目录传递给 sd-runner，以便生成的文件放置在该目录，而不是默认的输出文件夹中。"
+"When enabled, GENERATE actions pass the current working directory to Teikr "
+"so generated files land there instead of the default output folder."
+msgstr "启用此选项后，GENERATE 操作会将当前工作目录传递给 Teikr，因此生成的文件将保存在该目录下，而非默认的输出文件夹中。"
 
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2061
 #: src/ui/compare/classifier_pipeline_editor_qt.py:3071
@@ -7432,21 +7537,21 @@ msgstr ""
 #: src/ui/compare/classifier_pipelines_tab_qt.py:660
 #: src/ui/compare/classifier_pipelines_tab_qt.py:768
 #: tests/ui/test_classifier_pipelines_tab_qt.py:995
-msgid "SD Runner Not Available"
-msgstr "SD Runner 不可用"
+msgid "Teikr Not Available"
+msgstr "Teikr 不可用"
 
 #: src/ui/compare/classifier_pipelines_tab_qt.py:662
 #: src/ui/compare/classifier_pipelines_tab_qt.py:770
 msgid ""
-"This pipeline has GENERATE actions but the SD Runner is not reachable.\n"
+"This pipeline has GENERATE actions but Teikr is not reachable.\n"
 "\n"
-"Generated images will not be produced unless SD Runner is started before the run completes.\n"
+"Generated images will not be produced unless Teikr is started before the run completes.\n"
 "\n"
 "Continue anyway?"
 msgstr ""
-"此管道包含GENERATE操作，但SD Runner无法访问。\n"
+"此管道包含GENERATE操作，但Teikr无法访问。\n"
 "\n"
-"除非在运行完成之前启动SD Runner，否则不会生成生成的图像。\n"
+"除非在运行完成之前启动Teikr，否则不会生成生成的图像。\n"
 "\n"
 "仍然要继续吗？"
 
@@ -7831,6 +7936,14 @@ msgstr "最低"
 msgid "max"
 msgstr "最大"
 
+#: src/ui/compare/filter_builder_panel_qt.py:69
+msgid "W"
+msgstr "W"
+
+#: src/ui/compare/filter_builder_panel_qt.py:78
+msgid "H"
+msgstr "H"
+
 #: src/ui/compare/filter_builder_panel_qt.py:100
 #: src/ui/compare/filter_builder_panel_qt.py:247
 msgid "contains"
@@ -8084,6 +8197,10 @@ msgstr "背景类别“{0}”也必须列在“类别”中。"
 msgid "Invalid model configuration"
 msgstr "无效的模型配置"
 
+#: src/ui/compare/hf_model_manager_window_qt.py:519
+msgid "Model failed to initialize (can_run=False)."
+msgstr "模型初始化失败 (can_run=False)。"
+
 #: src/ui/compare/hf_model_manager_window_qt.py:638
 msgid "HF Hub Search"
 msgstr "HF Hub 搜索"
@@ -8152,6 +8269,10 @@ msgstr "下载和安装"
 #: src/ui/compare/hf_model_manager_window_qt.py:773
 msgid "Recommended for HF model repos with config.json and processor files."
 msgstr "推荐用于包含 config.json 和处理器文件的大语言模型仓库。"
+
+#: src/ui/compare/hf_model_manager_window_qt.py:786
+msgid "{0} (optional)"
+msgstr "{0}（可选）"
 
 #: src/ui/compare/hf_model_manager_window_qt.py:800
 msgid "Model Name"
@@ -9524,6 +9645,10 @@ msgstr "文件动作错误"
 msgid "Images not found"
 msgstr "未找到图像"
 
+#: src/ui/files/file_actions_window_qt.py:642
+msgid "Copied filename: {0}"
+msgstr "已复制的文件名: {0}"
+
 #: src/ui/files/file_actions_window_qt.py:727
 msgid "moves only"
 msgstr "仅移动"
@@ -10020,6 +10145,10 @@ msgstr "删除{0} 标记的文件 。"
 msgid "Select parent directory for target directories"
 msgstr "选择目标目录的父目录"
 
+#: src/ui/files/marked_file_mover_qt.py:736
+msgid "Error opening hotkey actions window: "
+msgstr "打开热键操作窗口时出错： "
+
 #: src/ui/files/marked_file_mover_qt.py:743
 msgid ""
 "WARNING: This action sets hotkey actions that will be used for future file "
@@ -10053,6 +10182,10 @@ msgstr "创建插值 GIF 失败：{0}"
 #: src/ui/files/marked_file_mover_qt.py:860
 msgid "Save PDF as"
 msgstr "将 PDF 保存为"
+
+#: src/ui/files/marked_file_mover_qt.py:862
+msgid "PDF files"
+msgstr "PDF文件"
 
 #: src/ui/files/marked_file_mover_qt.py:878
 msgid "Failed to create PDF from marked files."
@@ -10781,9 +10914,9 @@ msgstr "重新运行提示调整"
 
 #: src/ui/image/rerun_prompt_adjustment_window_qt.py:56
 msgid ""
-"Adjust prompts before rerunning. Changes are sent to SD Runner for this run "
+"Adjust prompts before rerunning. Changes are sent to Teikr for this run "
 "only."
-msgstr "在重新运行之前调整提示。更改仅在此运行中发送到 SD Runner。"
+msgstr "在重新运行之前调整提示。更改仅在此运行中发送到 Teikr。"
 
 #: src/ui/image/rerun_prompt_adjustment_window_qt.py:66
 msgid "Positive prompt"
@@ -11234,135 +11367,10 @@ msgstr "Shift"
 msgid "Alt"
 msgstr "Alt"
 
-#: src/ui/custom_title_bar.py:160
-msgid "Minimize"
-msgstr "最小化"
+#: src/compare/early_prevalidation.py:118
+msgid "Early prevalidation failed for {0}"
+msgstr "{0} 的早期预验证失败"
 
-#: src/ui/custom_title_bar.py:165 src/ui/custom_title_bar.py:296
-msgid "Maximize"
-msgstr "最大化"
-
-#: src/ui/custom_title_bar.py:293
-msgid "Restore"
-msgstr "恢复"
-
-#: src/ui/app_window/app_window.py:1275
-msgid "do this action"
-msgstr "执行此操作"
-
-#: src/ui/app_window/app_window.py:1279
-msgid ""
-"There are a lot of files in {0} and it may take a while to {1}.\n"
-"\n"
-"Would you like to proceed?"
-msgstr ""
-"在 {0} 中有很多文件，可能需要一段时间才能 {1}。\n"
-"\n"
-"您想继续吗？"
-
-#: src/ui/app_window/file_marks_controller.py:215
-msgid "Marked Files Window Error"
-msgstr "标记文件窗口错误"
-
-#: src/ui/app_window/file_marks_controller.py:405
-#: src/ui/app_window/search_controller.py:749
-msgid "find related media"
-msgstr "查找相关媒体"
-
-#: src/ui/app_window/masonry_browser.py:537
-msgid "Showing all {0} files"
-msgstr "显示所有{0}文件"
-
-#: src/ui/app_window/masonry_browser.py:540
-#: tests/ui/test_masonry_interaction.py:21
-msgid "Page {0} / {1}  •  files {2}–{3} of {4}  •  PgUp / PgDn to navigate"
-msgstr "第 {0} / {1} 页  •  文件 {2}–{3} / {4}  •  PgUp / PgDn 进行导航"
-
-#: src/ui/app_window/media_navigator.py:91
-#: src/ui/app_window/media_navigator.py:117
-msgid "Exception"
-msgstr "异常"
-
-#: src/ui/app_window/media_navigator.py:421
-msgid "Go To Index Error"
-msgstr "转到索引错误"
-
-#: src/ui/app_window/media_navigator.py:479
-msgid "(search media)"
-msgstr "(搜索媒体)"
-
-#: src/ui/app_window/search_controller.py:468
-msgid "Search file is not a valid file for base dir."
-msgstr "搜索文件不是基目录的有效文件。"
-
-#: src/ui/app_window/search_controller.py:469
-msgid "Invalid search file"
-msgstr "无效的搜索文件"
-
-#: src/ui/app_window/search_controller.py:484
-msgid "Negative search file is not a valid file for base dir."
-msgstr "负向搜索文件不是基目录的有效文件。"
-
-#: src/ui/app_window/search_controller.py:485
-msgid "Invalid negative search file"
-msgstr "无效的负面搜索文件"
-
-#: src/ui/app_window/sidebar_panel.py:466
-msgid "Toggle media view"
-msgstr "切换媒体视图"
-
-#: src/ui/app_window/sidebar_panel.py:471
-msgid "Replace with search media"
-msgstr "用搜索媒体替换"
-
-#: src/ui/app_window/sidebar_panel.py:478
-msgid "Previous group"
-msgstr "上一个组"
-
-#: src/ui/app_window/sidebar_panel.py:483
-msgid "Next group"
-msgstr "下一组"
-
-#: src/ui/app_window/sidebar_panel.py:488
-msgid "Random purge"
-msgstr "随机清理"
-
-#: src/ui/app_window/sidebar_panel.py:493
-msgid "View ungrouped files"
-msgstr "查看未分组的文件"
-
-#: src/ui/app_window/sidebar_panel.py:503
-msgid "Return to groups"
-msgstr "返回群组"
-
-#: src/ui/app_window/window_launcher.py:1124
-msgid "Help & Config Error"
-msgstr "帮助 & 配置错误"
-
-#: src/ui/compare/filter_builder_panel_qt.py:69
-msgid "W"
-msgstr "W"
-
-#: src/ui/compare/filter_builder_panel_qt.py:78
-msgid "H"
-msgstr "H"
-
-#: src/ui/compare/hf_model_manager_window_qt.py:519
-msgid "Model failed to initialize (can_run=False)."
-msgstr "模型初始化失败 (can_run=False)。"
-
-#: src/ui/compare/hf_model_manager_window_qt.py:786
-msgid "{0} (optional)"
-msgstr "{0}（可选）"
-
-#: src/ui/files/file_actions_window_qt.py:642
-msgid "Copied filename: {0}"
-msgstr "已复制的文件名: {0}"
-
-#: src/ui/files/marked_file_mover_qt.py:736
-msgid "Error opening hotkey actions window: "
-msgstr "打开热键操作窗口时出错： "
-
-#: src/ui/files/marked_file_mover_qt.py:862
-msgid "PDF files"
-msgstr "PDF文件"
+#: src/ui/app_window/early_prevalidation_runner.py:191
+msgid "Early prevalidation callback failed."
+msgstr "早期预验证回调失败。"

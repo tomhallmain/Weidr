@@ -1,4 +1,4 @@
-"""SearchController image generation worker (mocked SD runner)."""
+"""SearchController image generation worker (mocked Teikr)."""
 
 import os
 
@@ -6,20 +6,20 @@ from utils.constants import ImageGenerationType
 
 
 class TestSearchControllerImageGen:
-    def test_run_image_generation_invokes_sd_runner_in_worker(
+    def test_run_image_generation_invokes_teikr_in_worker(
         self, window_with_dir, qtbot, bypass_password, monkeypatch
     ):
         win, media_dir = window_with_dir
         media_path = win.file_browser.get_files()[0]
         run_calls = []
 
-        class FakeSDRunner:
+        class FakeTeikr:
             def run(self, gen_type, path, **kwargs):
                 run_calls.append((gen_type, path, kwargs))
 
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient",
-            FakeSDRunner,
+            "extensions.teikr_client.TeikrClient",
+            FakeTeikr,
         )
         monkeypatch.setattr(
             "ui.image.media_details.MediaDetails.get_image_specific_generation_mode",

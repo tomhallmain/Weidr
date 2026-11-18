@@ -433,14 +433,14 @@ class QtWindowMCPSession:
     # ------------------------------------------------------------------
     def run_pipeline(
         self, pipeline_name: str, profile_name: Optional[str] = None,
-        continue_without_sd_runner: bool = False,
+        continue_without_teikr: bool = False,
     ) -> dict:
         from compare.pipeline_profile_run import pipeline_runs
         from ui.image.media_details import MediaDetails
 
         return pipeline_runs.start(
             pipeline_name, profile_name,
-            continue_without_sd_runner=continue_without_sd_runner,
+            continue_without_teikr=continue_without_teikr,
             fallback_generation_type=MediaDetails.get_image_specific_generation_mode(),
             hide_callback=self._actions.hide_media,
             notify_callback=self._actions.title_notify,
@@ -456,14 +456,14 @@ class QtWindowMCPSession:
         return pipeline_runs.stop(run_id)
 
     def resume_pipeline(
-        self, run_id: Optional[str] = None, continue_without_sd_runner: bool = False,
+        self, run_id: Optional[str] = None, continue_without_teikr: bool = False,
     ) -> dict:
         from compare.pipeline_profile_run import pipeline_runs
         from ui.image.media_details import MediaDetails
 
         return pipeline_runs.resume(
             run_id,
-            continue_without_sd_runner=continue_without_sd_runner,
+            continue_without_teikr=continue_without_teikr,
             fallback_generation_type=MediaDetails.get_image_specific_generation_mode(),
             hide_callback=self._actions.hide_media,
             notify_callback=self._actions.title_notify,

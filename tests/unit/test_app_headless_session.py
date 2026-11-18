@@ -5,7 +5,7 @@ Covers the hide_media/run_image_generation domain actions that
 prevalidation/pipeline HIDE and GENERATE rules call through ActionCallbacks
 (unsupplied, a rule firing either would raise HeadlessActionUnavailable
 mid-navigation), navigation, marks, and compare-run orchestration. No model
-is loaded and no network is used: CompareManager.run and SDRunnerClient are
+is loaded and no network is used: CompareManager.run and TeikrClient are
 patched where a test reaches them.
 """
 
@@ -56,7 +56,7 @@ def test_generate_callback_generates_from_the_matched_file(tmp_path):
     other = str(tmp_path / "b.png")
     assert other != current
 
-    with patch("extensions.sd_runner_client.SDRunnerClient") as mock_client_cls:
+    with patch("extensions.teikr_client.TeikrClient") as mock_client_cls:
         session._actions.prevalidation_callbacks.generate_callback(other, "suffix", target_dir="/out")
 
     mock_client_cls.return_value.run.assert_called_once()
@@ -403,10 +403,10 @@ def test_run_pipeline_uses_the_non_navigating_hide_and_the_persisted_generation_
     monkeypatch.setattr(pipeline_profile_run.pipeline_runs, "start",
                         lambda name, profile, **kwargs: captured.update(kwargs, name=name, profile=profile))
 
-    session.run_pipeline("Sorter", "Photos", continue_without_sd_runner=True)
+    session.run_pipeline("Sorter", "Photos", continue_without_teikr=True)
 
     assert captured["name"] == "Sorter" and captured["profile"] == "Photos"
-    assert captured["continue_without_sd_runner"] is True
+    assert captured["continue_without_teikr"] is True
     assert captured["fallback_generation_type"] == ImageGenerationType.IP_ADAPTER
     assert captured["hide_callback"] == session._hide_media
 
@@ -422,10 +422,10 @@ def test_resume_pipeline_uses_the_same_callbacks_as_run_pipeline(tmp_path, monke
     monkeypatch.setattr(pipeline_profile_run.pipeline_runs, "resume",
                         lambda run_id, **kwargs: captured.update(kwargs, run_id=run_id))
 
-    session.resume_pipeline("r1", continue_without_sd_runner=True)
+    session.resume_pipeline("r1", continue_without_teikr=True)
 
     assert captured["run_id"] == "r1"
-    assert captured["continue_without_sd_runner"] is True
+    assert captured["continue_without_teikr"] is True
     assert captured["fallback_generation_type"] == ImageGenerationType.IP_ADAPTER
     assert captured["hide_callback"] == session._hide_media
 

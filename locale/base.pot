@@ -20,7 +20,7 @@ msgstr ""
 msgid "This build no longer matches its source code. See the log for details."
 msgstr ""
 
-#: extensions/sd_runner_client.py:151
+#: extensions/teikr_client.py:151
 msgid "Image does not contain a prompt to redo!"
 msgstr ""
 
@@ -6261,7 +6261,7 @@ msgstr ""
 
 #: src/ui/compare/classifier_pipeline_editor_qt.py:2045
 msgid ""
-"When enabled, GENERATE actions pass the current working directory to sd-runner so generated files land there instead "
+"When enabled, GENERATE actions pass the current working directory to Teikr so generated files land there instead "
 "of the default output folder."
 msgstr ""
 
@@ -6745,14 +6745,14 @@ msgstr ""
 
 #: src/ui/compare/classifier_pipelines_tab_qt.py:660 src/ui/compare/classifier_pipelines_tab_qt.py:768
 #: tests/ui/test_classifier_pipelines_tab_qt.py:995
-msgid "SD Runner Not Available"
+msgid "Teikr Not Available"
 msgstr ""
 
 #: src/ui/compare/classifier_pipelines_tab_qt.py:662 src/ui/compare/classifier_pipelines_tab_qt.py:770
 msgid ""
-"This pipeline has GENERATE actions but the SD Runner is not reachable.\n"
+"This pipeline has GENERATE actions but Teikr is not reachable.\n"
 "\n"
-"Generated images will not be produced unless SD Runner is started before the run completes.\n"
+"Generated images will not be produced unless Teikr is started before the run completes.\n"
 "\n"
 "Continue anyway?"
 msgstr ""
@@ -9854,7 +9854,7 @@ msgid "Rerun Prompt Adjustment"
 msgstr ""
 
 #: src/ui/image/rerun_prompt_adjustment_window_qt.py:56
-msgid "Adjust prompts before rerunning. Changes are sent to SD Runner for this run only."
+msgid "Adjust prompts before rerunning. Changes are sent to Teikr for this run only."
 msgstr ""
 
 #: src/ui/image/rerun_prompt_adjustment_window_qt.py:66

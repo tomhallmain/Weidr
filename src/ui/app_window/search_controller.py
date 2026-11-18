@@ -614,7 +614,7 @@ class SearchController:
         suppress_toast: bool = False,
         target_dir: Optional[str] = None,
     ) -> None:
-        """Trigger image generation via SD runner.
+        """Trigger image generation via Teikr.
 
         suppress_toast=True skips the completion toast; use for automated/batch
         contexts where title_notify already provides per-action feedback.
@@ -658,7 +658,7 @@ class SearchController:
 
     @require_password(ProtectedActions.RUN_IMAGE_GENERATION)
     def redo_image_edit_from_suffix(self, event=None) -> None:
-        """Re-send the source image to sd-runner as an IMAGE_EDIT with the same suffix."""
+        """Re-send the source image to Teikr as an IMAGE_EDIT with the same suffix."""
         from files.related_image import get_image_edit_redo_params
 
         media_path = self._get_media_path()
@@ -681,7 +681,7 @@ class SearchController:
         self, event=None, _type: Optional[str] = None, media_path: Optional[str] = None
     ) -> None:
         """Run image generation on all files in the directory."""
-        from extensions.sd_runner_client import SDRunnerClient
+        from extensions.teikr_client import TeikrClient
         from ui.image.media_details import MediaDetails
 
         if media_path is None:
@@ -692,7 +692,7 @@ class SearchController:
         if _type is None:
             _type = MediaDetails.get_image_specific_generation_mode()
 
-        sd_client = SDRunnerClient()
+        sd_client = TeikrClient()
 
         def _do_run() -> None:
             sd_client.run_on_directory(_type, directory_path)

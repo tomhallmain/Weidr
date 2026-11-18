@@ -66,20 +66,20 @@ class TestSetCurrentMediaRunSearch:
 
 
 class TestImageGenerationOnDirectory:
-    def test_run_image_generation_on_directory_invokes_sd_runner(
+    def test_run_image_generation_on_directory_invokes_teikr(
         self, window_with_dir, qtbot, bypass_password, monkeypatch
     ):
         win, media_dir = window_with_dir
         media_path = win.file_browser.get_files()[0]
         dir_calls = []
 
-        class FakeSDRunner:
+        class FakeTeikr:
             def run_on_directory(self, gen_type, directory_path):
                 dir_calls.append((gen_type, directory_path))
 
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient",
-            FakeSDRunner,
+            "extensions.teikr_client.TeikrClient",
+            FakeTeikr,
         )
         monkeypatch.setattr(
             "ui.image.media_details.MediaDetails.get_image_specific_generation_mode",

@@ -1,7 +1,7 @@
 """Unit tests for lib.sleep_prevention.
 
 Focused on the parts that were adjusted when porting the module from
-sd-runner: the app identifier this process files state under, the
+Teikr: the app identifier this process files state under, the
 app-independent shared state directory that lets several applications see
 each other's totals, and the refcount/effective-mask semantics.
 

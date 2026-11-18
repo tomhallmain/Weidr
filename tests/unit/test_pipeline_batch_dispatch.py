@@ -3,8 +3,8 @@ Unit tests for Phase 2 — intermediate generate batch dispatch.
 
 classifier_pipeline_batch.make_generate_batch_state is a factory that
 returns (all_generates, on_generate, dispatch_batch).  Tests exercise this
-factory directly without Qt or an SD Runner process by monkeypatching
-SDRunnerClient.run_batch.
+factory directly without Qt or an Teikr process by monkeypatching
+TeikrClient.run_batch.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ class TestFlushThreshold:
     def test_no_flush_before_batch_size(self, monkeypatch):
         mock_rb = MagicMock()
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient.run_batch", mock_rb
+            "extensions.teikr_client.TeikrClient.run_batch", mock_rb
         )
         _, on_gen, _ = _make_state(batch_size=5)
         for p in _paths(4):
@@ -44,7 +44,7 @@ class TestFlushThreshold:
     def test_flush_triggers_at_exactly_batch_size(self, monkeypatch):
         mock_rb = MagicMock()
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient.run_batch", mock_rb
+            "extensions.teikr_client.TeikrClient.run_batch", mock_rb
         )
         _, on_gen, _ = _make_state(batch_size=5)
         for p in _paths(5):
@@ -54,7 +54,7 @@ class TestFlushThreshold:
     def test_second_flush_at_second_batch_boundary(self, monkeypatch):
         mock_rb = MagicMock()
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient.run_batch", mock_rb
+            "extensions.teikr_client.TeikrClient.run_batch", mock_rb
         )
         _, on_gen, _ = _make_state(batch_size=3)
         for p in _paths(6):
@@ -64,7 +64,7 @@ class TestFlushThreshold:
     def test_batch_size_none_never_intermediate_flushes(self, monkeypatch):
         mock_rb = MagicMock()
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient.run_batch", mock_rb
+            "extensions.teikr_client.TeikrClient.run_batch", mock_rb
         )
         _, on_gen, _ = _make_state(batch_size=None)
         for p in _paths(1000):
@@ -80,7 +80,7 @@ class TestTerminalFlush:
     def test_remainder_flushed_on_dispatch_call(self, monkeypatch):
         mock_rb = MagicMock()
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient.run_batch", mock_rb
+            "extensions.teikr_client.TeikrClient.run_batch", mock_rb
         )
         _, on_gen, dispatch = _make_state(batch_size=10)
         for p in _paths(7):
@@ -92,7 +92,7 @@ class TestTerminalFlush:
     def test_dispatch_on_empty_is_noop(self, monkeypatch):
         mock_rb = MagicMock()
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient.run_batch", mock_rb
+            "extensions.teikr_client.TeikrClient.run_batch", mock_rb
         )
         _, _, dispatch = _make_state(batch_size=5)
         dispatch()
@@ -101,7 +101,7 @@ class TestTerminalFlush:
     def test_double_dispatch_does_not_resend(self, monkeypatch):
         mock_rb = MagicMock()
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient.run_batch", mock_rb
+            "extensions.teikr_client.TeikrClient.run_batch", mock_rb
         )
         _, on_gen, dispatch = _make_state(batch_size=10)
         for p in _paths(3):
@@ -118,7 +118,7 @@ class TestTerminalFlush:
 class TestAllGeneratesAccumulation:
     def test_all_generates_grows_across_flushes(self, monkeypatch):
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient.run_batch", MagicMock()
+            "extensions.teikr_client.TeikrClient.run_batch", MagicMock()
         )
         all_gen, on_gen, dispatch = _make_state(batch_size=3)
         for p in _paths(7):
@@ -128,7 +128,7 @@ class TestAllGeneratesAccumulation:
 
     def test_all_generates_contains_all_paths(self, monkeypatch):
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient.run_batch", MagicMock()
+            "extensions.teikr_client.TeikrClient.run_batch", MagicMock()
         )
         all_gen, on_gen, dispatch = _make_state(batch_size=2)
         paths = _paths(5)
@@ -139,7 +139,7 @@ class TestAllGeneratesAccumulation:
 
     def test_modifier_none_preserved(self, monkeypatch):
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient.run_batch", MagicMock()
+            "extensions.teikr_client.TeikrClient.run_batch", MagicMock()
         )
         all_gen, on_gen, dispatch = _make_state(batch_size=10)
         on_gen("/a.png", None)
@@ -148,7 +148,7 @@ class TestAllGeneratesAccumulation:
 
     def test_modifier_string_preserved(self, monkeypatch):
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient.run_batch", MagicMock()
+            "extensions.teikr_client.TeikrClient.run_batch", MagicMock()
         )
         all_gen, on_gen, dispatch = _make_state(batch_size=10)
         on_gen("/a.png", "v2")
@@ -164,7 +164,7 @@ class TestBatchArgsShape:
     def test_batch_args_has_image_key(self, monkeypatch):
         mock_rb = MagicMock()
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient.run_batch", mock_rb
+            "extensions.teikr_client.TeikrClient.run_batch", mock_rb
         )
         _, on_gen, dispatch = _make_state(batch_size=10)
         on_gen("/img.png")
@@ -175,7 +175,7 @@ class TestBatchArgsShape:
     def test_batch_args_append_is_false(self, monkeypatch):
         mock_rb = MagicMock()
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient.run_batch", mock_rb
+            "extensions.teikr_client.TeikrClient.run_batch", mock_rb
         )
         _, on_gen, dispatch = _make_state(batch_size=10)
         on_gen("/img.png")
@@ -186,7 +186,7 @@ class TestBatchArgsShape:
     def test_edit_suffix_present_when_modifier_given(self, monkeypatch):
         mock_rb = MagicMock()
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient.run_batch", mock_rb
+            "extensions.teikr_client.TeikrClient.run_batch", mock_rb
         )
         _, on_gen, dispatch = _make_state(batch_size=10)
         on_gen("/img.png", "v2")
@@ -197,7 +197,7 @@ class TestBatchArgsShape:
     def test_edit_suffix_absent_when_modifier_none(self, monkeypatch):
         mock_rb = MagicMock()
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient.run_batch", mock_rb
+            "extensions.teikr_client.TeikrClient.run_batch", mock_rb
         )
         _, on_gen, dispatch = _make_state(batch_size=10)
         on_gen("/img.png", None)
@@ -213,7 +213,7 @@ class TestBatchArgsShape:
 class TestFaultIsolation:
     def test_run_batch_exception_does_not_propagate_from_intermediate(self, monkeypatch):
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient.run_batch",
+            "extensions.teikr_client.TeikrClient.run_batch",
             MagicMock(side_effect=RuntimeError("connection refused")),
         )
         _, on_gen, _ = _make_state(batch_size=2)
@@ -222,7 +222,7 @@ class TestFaultIsolation:
 
     def test_run_batch_exception_does_not_propagate_from_terminal_flush(self, monkeypatch):
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient.run_batch",
+            "extensions.teikr_client.TeikrClient.run_batch",
             MagicMock(side_effect=RuntimeError("connection refused")),
         )
         _, on_gen, dispatch = _make_state(batch_size=10)
@@ -231,7 +231,7 @@ class TestFaultIsolation:
 
     def test_all_generates_still_populated_after_flush_exception(self, monkeypatch):
         monkeypatch.setattr(
-            "extensions.sd_runner_client.SDRunnerClient.run_batch",
+            "extensions.teikr_client.TeikrClient.run_batch",
             MagicMock(side_effect=RuntimeError("connection refused")),
         )
         all_gen, on_gen, dispatch = _make_state(batch_size=2)
@@ -400,7 +400,7 @@ class TestScrambleFaultIsolation:
 class TestOnFlush:
     def test_generate_on_flush_called_per_non_empty_flush(self, monkeypatch):
         from compare import classifier_pipeline_batch as pipeline_batch
-        monkeypatch.setattr("extensions.sd_runner_client.SDRunnerClient.run_batch", MagicMock())
+        monkeypatch.setattr("extensions.teikr_client.TeikrClient.run_batch", MagicMock())
         flushes = []
         _, on_gen, dispatch = pipeline_batch.make_generate_batch_state(
             None, 2, on_flush=lambda: flushes.append(True))
@@ -414,7 +414,7 @@ class TestOnFlush:
 
     def test_generate_on_flush_called_even_when_dispatch_fails(self, monkeypatch):
         from compare import classifier_pipeline_batch as pipeline_batch
-        monkeypatch.setattr("extensions.sd_runner_client.SDRunnerClient.run_batch",
+        monkeypatch.setattr("extensions.teikr_client.TeikrClient.run_batch",
                             MagicMock(side_effect=RuntimeError("down")))
         flushes = []
         _, on_gen, dispatch = pipeline_batch.make_generate_batch_state(

@@ -59,7 +59,7 @@ def batch_calls(monkeypatch):
 
 def _start(runs, pipeline_name="Sorter", profile_name="Photos", **overrides):
     kwargs = dict(
-        continue_without_sd_runner=False,
+        continue_without_teikr=False,
         fallback_generation_type=ImageGenerationType.IP_ADAPTER,
         hide_callback=None, notify_callback=None, blur_callback=None,
     )
@@ -131,7 +131,7 @@ def test_pipeline_failing_validation_is_refused_before_starting(installed, batch
               profiles=[DirectoryProfile("Photos", ["/p"])])
     runs = ppr.PipelineProfileRuns()
     with pytest.raises(ppr.pipeline_batch.PipelineValidationError) as info:
-        runs.start("Sorter", "Photos", continue_without_sd_runner=False,
+        runs.start("Sorter", "Photos", continue_without_teikr=False,
                    fallback_generation_type=None,
                    hide_callback=None, notify_callback=None, blur_callback=None)
     assert info.value.errors == ["Node n: something is wrong."]
@@ -139,19 +139,19 @@ def test_pipeline_failing_validation_is_refused_before_starting(installed, batch
     assert runs.status()["running"] is False
 
 
-def test_generate_pipeline_is_refused_while_sd_runner_is_unreachable(installed, batch_calls, monkeypatch):
-    from extensions import sd_runner_client
+def test_generate_pipeline_is_refused_while_teikr_is_unreachable(installed, batch_calls, monkeypatch):
+    from extensions import teikr_client
 
-    monkeypatch.setattr(sd_runner_client.SDRunnerClient, "is_reachable", staticmethod(lambda: False))
+    monkeypatch.setattr(teikr_client.TeikrClient, "is_reachable", staticmethod(lambda: False))
     installed(pipelines=[_Pipeline(generates=True)], profiles=[DirectoryProfile("Photos", ["/p"])])
     runs = ppr.PipelineProfileRuns()
     with pytest.raises(ValueError):
-        runs.start("Sorter", "Photos", continue_without_sd_runner=False,
+        runs.start("Sorter", "Photos", continue_without_teikr=False,
                    fallback_generation_type=None, hide_callback=None,
                    notify_callback=None, blur_callback=None)
     assert batch_calls == []
 
-    started = _start(runs, continue_without_sd_runner=True)
+    started = _start(runs, continue_without_teikr=True)
     assert started["warnings"]
     assert len(batch_calls) == 1
 
@@ -165,7 +165,7 @@ def test_unknown_or_missing_names_raise_value_error(installed, batch_calls, pipe
     installed(pipelines=[_Pipeline()], profiles=[DirectoryProfile("Photos", ["/p"])])
     with pytest.raises(ValueError):
         ppr.PipelineProfileRuns().start(
-            pipeline_name, profile_name, continue_without_sd_runner=False,
+            pipeline_name, profile_name, continue_without_teikr=False,
             fallback_generation_type=None, hide_callback=None,
             notify_callback=None, blur_callback=None,
         )
@@ -177,7 +177,7 @@ def test_second_run_is_refused_while_one_is_running(installed, batch_calls, monk
     runs = ppr.PipelineProfileRuns()
     monkeypatch.setattr(runs._runner, "is_running", lambda: True)
     with pytest.raises(ValueError):
-        runs.start("Sorter", "Photos", continue_without_sd_runner=False,
+        runs.start("Sorter", "Photos", continue_without_teikr=False,
                    fallback_generation_type=None, hide_callback=None,
                    notify_callback=None, blur_callback=None)
 
@@ -234,7 +234,7 @@ def _blocking_batch(monkeypatch, calls):
 
 
 def _kwargs(**overrides):
-    kwargs = dict(continue_without_sd_runner=False, fallback_generation_type=None,
+    kwargs = dict(continue_without_teikr=False, fallback_generation_type=None,
                   hide_callback=None, notify_callback=None, blur_callback=None)
     kwargs.update(overrides)
     return kwargs

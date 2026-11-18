@@ -241,10 +241,10 @@ class _FakeSession:
         self.calls.append(("set_prevalidations_running", enabled))
         self.prevalidations_running = enabled
 
-    def run_pipeline(self, pipeline_name, profile_name=None, continue_without_sd_runner=False):
+    def run_pipeline(self, pipeline_name, profile_name=None, continue_without_teikr=False):
         if pipeline_name == "Missing":
             raise ValueError("no pipeline named 'Missing'")
-        self.pipeline_runs.append((pipeline_name, profile_name, continue_without_sd_runner))
+        self.pipeline_runs.append((pipeline_name, profile_name, continue_without_teikr))
         return {"status": "started", "pipeline": pipeline_name, "profile": profile_name or "Photos",
                 "directories": ["/p"], "warnings": []}
 
@@ -257,10 +257,10 @@ class _FakeSession:
         self.pipeline_runs.append(("stop", run_id))
         return {"status": "stopping", "run_id": run_id or "r1"}
 
-    def resume_pipeline(self, run_id=None, continue_without_sd_runner=False):
+    def resume_pipeline(self, run_id=None, continue_without_teikr=False):
         if run_id == "unknown":
             raise ValueError("run 'unknown' cannot be resumed")
-        self.pipeline_runs.append(("resume", run_id, continue_without_sd_runner))
+        self.pipeline_runs.append(("resume", run_id, continue_without_teikr))
         return {"status": "started", "run_id": "r2", "resumed_from": run_id or "r1"}
 
     def pipeline_history(self):
@@ -678,7 +678,7 @@ class TestDispatch:
     def test_run_pipeline_passes_every_argument(self):
         ext, session = _extension()
         ext.dispatch("run_pipeline", {
-            "pipeline_name": "Sorter", "profile_name": "Videos", "continue_without_sd_runner": True,
+            "pipeline_name": "Sorter", "profile_name": "Videos", "continue_without_teikr": True,
         })
         assert session.pipeline_runs == [("Sorter", "Videos", True)]
 
@@ -706,7 +706,7 @@ class TestDispatch:
     def test_resume_pipeline_defaults_and_arguments(self):
         ext, session = _extension()
         assert ext.dispatch("resume_pipeline")["resumed_from"] == "r1"
-        ext.dispatch("resume_pipeline", {"run_id": "r7", "continue_without_sd_runner": True})
+        ext.dispatch("resume_pipeline", {"run_id": "r7", "continue_without_teikr": True})
         assert session.pipeline_runs == [("resume", None, False), ("resume", "r7", True)]
 
     def test_resume_pipeline_wraps_value_error_as_tool_error(self):

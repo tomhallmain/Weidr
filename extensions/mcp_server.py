@@ -1,7 +1,7 @@
 """Model Context Protocol front end.
 
 A front end for driving a running Weidr session -- browsing, marking,
-deleting/hiding files, triggering a compare or an sd-runner image-generation
+deleting/hiding files, triggering a compare or a Teikr image-generation
 request -- from an external agent.
 
 This module is deliberately mode-agnostic: it knows nothing about Qt or
@@ -275,7 +275,7 @@ def tool_descriptors() -> list:
         {
             "name": "run_image_generation",
             "description": (
-                "Ask sd-runner to generate from the current file. Returns once the "
+                "Ask Teikr to generate from the current file. Returns once the "
                 "request is queued, not once it has finished."
             ),
         },
@@ -356,8 +356,8 @@ def tool_descriptors() -> list:
                 "overlapping directories; read the pipeline_status resource for progress "
                 "and the final stats. Refused while any pipeline run (from the app or "
                 "here) is running on overlapping directories. A pipeline "
-                "with GENERATE actions is refused while SD Runner is unreachable unless "
-                "continue_without_sd_runner is true. See the pipelines and "
+                "with GENERATE actions is refused while Teikr is unreachable unless "
+                "continue_without_teikr is true. See the pipelines and "
                 "directory_profiles resources for names."
             ),
         },
@@ -377,7 +377,7 @@ def tool_descriptors() -> list:
                 "over the directories it recorded, skipping files it already processed. "
                 "run_id defaults to the newest resumable run (see the pipeline_history "
                 "resource). Refused if the pipeline was edited since that run. "
-                "continue_without_sd_runner works as for run_pipeline."
+                "continue_without_teikr works as for run_pipeline."
             ),
         },
         {
@@ -752,7 +752,7 @@ class MCPServerExtension:
                 return session.run_pipeline(
                     str(pipeline_name),
                     profile_name=arguments.get("profile_name") or None,
-                    continue_without_sd_runner=bool(arguments.get("continue_without_sd_runner", False)),
+                    continue_without_teikr=bool(arguments.get("continue_without_teikr", False)),
                 )
             except ValueError as e:
                 raise MCPToolError(str(e))
@@ -765,7 +765,7 @@ class MCPServerExtension:
             try:
                 return session.resume_pipeline(
                     arguments.get("run_id") or None,
-                    continue_without_sd_runner=bool(arguments.get("continue_without_sd_runner", False)),
+                    continue_without_teikr=bool(arguments.get("continue_without_teikr", False)),
                 )
             except ValueError as e:
                 raise MCPToolError(str(e))
@@ -1053,11 +1053,11 @@ class MCPServerExtension:
         @server.tool(name="run_pipeline", description=described["run_pipeline"])
         def run_pipeline(
             pipeline_name: str, profile_name: str | None = None,
-            continue_without_sd_runner: bool = False,
+            continue_without_teikr: bool = False,
         ) -> dict:
             return self.dispatch("run_pipeline", {
                 "pipeline_name": pipeline_name, "profile_name": profile_name,
-                "continue_without_sd_runner": continue_without_sd_runner,
+                "continue_without_teikr": continue_without_teikr,
             })
 
         @server.tool(name="stop_pipeline", description=described["stop_pipeline"])
@@ -1065,9 +1065,9 @@ class MCPServerExtension:
             return self.dispatch("stop_pipeline", {"run_id": run_id})
 
         @server.tool(name="resume_pipeline", description=described["resume_pipeline"])
-        def resume_pipeline(run_id: str | None = None, continue_without_sd_runner: bool = False) -> dict:
+        def resume_pipeline(run_id: str | None = None, continue_without_teikr: bool = False) -> dict:
             return self.dispatch("resume_pipeline", {
-                "run_id": run_id, "continue_without_sd_runner": continue_without_sd_runner,
+                "run_id": run_id, "continue_without_teikr": continue_without_teikr,
             })
 
         @server.tool(name="health_check", description=described["health_check"])

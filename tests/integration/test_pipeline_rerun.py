@@ -2,7 +2,7 @@
 Integration tests for Phase 4 — "Rerun Last" pipeline logic.
 
 Tests exercise find_latest_dump, the rerun worker, and idempotency without
-needing a real Qt window or SD Runner process.
+needing a real Qt window or Teikr process.
 """
 
 from __future__ import annotations
@@ -106,7 +106,7 @@ class TestFindLatestDump:
 # ---------------------------------------------------------------------------
 
 class TestRerunGenerates:
-    def test_dispatches_generates_to_sd_runner(self, tmp_path):
+    def test_dispatches_generates_to_teikr(self, tmp_path):
         from compare import classifier_pipeline_batch as pipeline_batch
 
         generates = [
@@ -119,7 +119,7 @@ class TestRerunGenerates:
         with (
             patch("utils.logging_setup.get_log_dir", return_value=tmp_path),
             patch(
-                "extensions.sd_runner_client.SDRunnerClient.run_batch", mock_rb
+                "extensions.teikr_client.TeikrClient.run_batch", mock_rb
             ),
         ):
             _write_dump(tmp_path, "Pipeline", "2026-06-24_14-32-11", dump)
@@ -135,8 +135,8 @@ class TestRerunGenerates:
                 }
                 for g in generates
             ]
-            from extensions.sd_runner_client import SDRunnerClient
-            SDRunnerClient().run_batch(gen_type, batch_args)
+            from extensions.teikr_client import TeikrClient
+            TeikrClient().run_batch(gen_type, batch_args)
 
         mock_rb.assert_called_once()
         _, called_args = mock_rb.call_args.args

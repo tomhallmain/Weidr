@@ -179,13 +179,13 @@ class HeadlessMCPSession:
     # ------------------------------------------------------------------
     def run_pipeline(
         self, pipeline_name: str, profile_name: Optional[str] = None,
-        continue_without_sd_runner: bool = False,
+        continue_without_teikr: bool = False,
     ) -> dict:
         from compare.pipeline_profile_run import pipeline_runs
 
         return pipeline_runs.start(
             pipeline_name, profile_name,
-            continue_without_sd_runner=continue_without_sd_runner,
+            continue_without_teikr=continue_without_teikr,
             fallback_generation_type=_persisted_image_generation_type(),
             hide_callback=self._hide_media,
             notify_callback=self._actions.title_notify,
@@ -201,13 +201,13 @@ class HeadlessMCPSession:
         return pipeline_runs.stop(run_id)
 
     def resume_pipeline(
-        self, run_id: Optional[str] = None, continue_without_sd_runner: bool = False,
+        self, run_id: Optional[str] = None, continue_without_teikr: bool = False,
     ) -> dict:
         from compare.pipeline_profile_run import pipeline_runs
 
         return pipeline_runs.resume(
             run_id,
-            continue_without_sd_runner=continue_without_sd_runner,
+            continue_without_teikr=continue_without_teikr,
             fallback_generation_type=_persisted_image_generation_type(),
             hide_callback=self._hide_media,
             notify_callback=self._actions.title_notify,

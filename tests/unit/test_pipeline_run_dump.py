@@ -2,7 +2,7 @@
 Unit tests for write_pipeline_run_dump (Phase 1 — dump schema extension).
 
 Verifies that the new `generates`, `scrambles`, and `generation_type_value`
-fields are written correctly without touching Qt or the SD Runner.
+fields are written correctly without touching Qt or Teikr.
 
 Isolation: app_info_cache, config, and get_log_dir are all redirected to
 per-test temp directories by the root conftest `isolated_singletons` fixture.

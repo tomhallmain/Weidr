@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Optional
 from PySide6.QtCore import QTimer
 
 from files.skip_aware_navigation import advance_past_skipped
+from ui.app_window.early_prevalidation_runner import EarlyPrevalidationRunner
 from ui.app_window.slideshow_dynamic_policy import (
     should_advance_slideshow_poll,
     skip_classic_slideshow_primary_tick,
@@ -58,6 +59,9 @@ class MediaNavigator:
         self._slideshow_dynamic_poll_timer.setInterval(250)
         self._slideshow_dynamic_poll_timer.timeout.connect(self._on_slideshow_dynamic_poll_tick)
         self._slideshow_media_started_monotonic: Optional[float] = None
+        self._early_prevalidation = EarlyPrevalidationRunner(
+            app_window, file_browser, compare_manager
+        )
 
     # ==================================================================
     # Navigation
@@ -451,6 +455,7 @@ class MediaNavigator:
         self._slideshow_media_started_monotonic = time.monotonic()
         self._sync_slideshow_dynamic_poll_timer()
         self._restart_classic_slideshow_primary_timer_if_running()
+        self._early_prevalidation.on_media_shown(media_path)
 
         text = basename if relative_filepath == "" else relative_filepath + "\n" + basename
         if extra_text is not None:
@@ -468,6 +473,7 @@ class MediaNavigator:
         self._app.media_path = None
         self._slideshow_media_started_monotonic = None
         self._slideshow_dynamic_poll_timer.stop()
+        self._early_prevalidation.cancel()
 
     def show_searched_media(self) -> None:
         """Display the media file found by the last search."""
@@ -542,6 +548,7 @@ class MediaNavigator:
             self._slideshow_media_started_monotonic = time.monotonic()
             self._restart_classic_slideshow_primary_timer_if_running()
             self._sync_slideshow_dynamic_poll_timer()
+            self._early_prevalidation.on_media_shown(self._app.media_path)
         else:
             message = _("Slideshows ended")
             self.stop_slideshow_timers()
@@ -552,6 +559,11 @@ class MediaNavigator:
         """Stop classic slideshow timers (e.g. when slideshow ends from sidebar or window close)."""
         self._slideshow_timer.stop()
         self._slideshow_dynamic_poll_timer.stop()
+        self._early_prevalidation.cancel()
+
+    def shutdown_early_prevalidation(self) -> None:
+        """Stop early prevalidation for good (window closing)."""
+        self._early_prevalidation.shutdown()
 
     def _sync_slideshow_dynamic_poll_timer(self) -> None:
         if not self._app.slideshow_config.slideshow_running:

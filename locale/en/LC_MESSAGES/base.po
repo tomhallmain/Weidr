@@ -11650,3 +11650,11 @@ msgstr "Error opening hotkey actions window: "
 #: src/ui/files/marked_file_mover_qt.py:862
 msgid "PDF files"
 msgstr "PDF files"
+
+#: src/compare/early_prevalidation.py:118
+msgid "Early prevalidation failed for {0}"
+msgstr "Early prevalidation failed for {0}"
+
+#: src/ui/app_window/early_prevalidation_runner.py:191
+msgid "Early prevalidation callback failed."
+msgstr "Early prevalidation callback failed."

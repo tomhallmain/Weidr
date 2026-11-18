@@ -24,7 +24,7 @@ from compare.compare_prompts import ComparePrompts
 from compare.compare_prompts_exact import ComparePromptsExact
 from compare.compare_size import CompareSize
 from compare.compare_models import CompareModels
-from compare.classifier_actions_manager import ClassifierActionsManager
+from compare.classifier_actions_manager import ClassifierActionsManager, prevalidation_action_skips
 from files.marked_files import MarkedFiles
 from utils.audio_media import is_audio_for_display
 from utils.media_utils import get_image_dimensions
@@ -35,6 +35,11 @@ from utils.translations import _
 from utils.ui_responsiveness import NullResponsiveness
 from utils.utils import Utils
 logger = get_logger("compare_wrapper")
+
+
+# skip_media's internal marker for a file that disappeared while waiting for
+# the prevalidation lock.
+_MEDIA_GONE = object()
 
 
 class RemovalUndoSnapshot:
@@ -243,27 +248,47 @@ class CompareWrapper:
         if self.prevalidations_running:
             if is_audio_for_display(media_path):
                 return False
+            lock = ClassifierActionsManager.evaluation_lock
             if ClassifierActionsManager.is_dynamic_prevalidation_media(media_path):
                 prevalidation_action = self._run_dynamic_prevalidation_with_spinner(media_path)
-            else:
-                prevalidation_action = ClassifierActionsManager.prevalidate_media(
-                    media_path,
-                    self.get_base_dir,
-                    self._app_actions.prevalidation_callbacks_with_mark,
-                )
+            elif lock.acquire(blocking=False):
+                try:
+                    prevalidation_action = ClassifierActionsManager.prevalidate_media(
+                        media_path,
+                        self.get_base_dir,
+                        self._app_actions.prevalidation_callbacks_with_mark,
+                    )
+                finally:
+                    lock.release()
                 self._responsiveness.yield_to_ui()
-            if prevalidation_action is not None:
-                if prevalidation_action == ClassifierActionType.BLUR:
-                    self._app_actions.request_media_blur(media_path)
-                return prevalidation_action not in (
-                    ClassifierActionType.NOTIFY,
-                    ClassifierActionType.BLUR,
-                    ClassifierActionType.GENERATE,
-                    # ROTATE corrects media_path in place -- the file at this same
-                    # path should still be shown (now right-side-up), not skipped.
-                    ClassifierActionType.ROTATE,
-                )
+            else:
+                # Another evaluation holds the lock (a slideshow's early
+                # prevalidation, possibly of this same file): wait for it on a
+                # worker so the window stays responsive.
+                prevalidation_action = self._run_dynamic_prevalidation_with_spinner(media_path)
+            if prevalidation_action is _MEDIA_GONE:
+                return True
+            if prevalidation_action == ClassifierActionType.BLUR:
+                self._app_actions.request_media_blur(media_path)
+            return prevalidation_action_skips(prevalidation_action)
         return False
+
+    def early_prevalidate(self, media_path, callbacks):
+        """Prevalidate *media_path* ahead of the slideshow reaching it (see
+        ``compare.early_prevalidation``). Runs on a worker thread, so the
+        caller supplies *callbacks* safe to call from there; BLUR is applied
+        by :meth:`skip_media` on arrival from the cached result."""
+        if not self.prevalidations_running or is_audio_for_display(media_path):
+            return None
+        return ClassifierActionsManager.prevalidate_media(
+            media_path,
+            self.get_base_dir,
+            callbacks,
+            early=True,
+        )
+
+    def is_hidden_media(self, media_path) -> bool:
+        return media_path in self.hidden_media
 
     def _run_dynamic_prevalidation_with_spinner(self, media_path):
         """
@@ -276,6 +301,10 @@ class CompareWrapper:
         event loop is running.  `title_notify` uses Qt signals and is likewise
         thread-safe.  `add_mark_if_not_present` writes shared state and must run
         on the main thread; collected paths are applied after the thread joins.
+
+        Also used for any file while another evaluation holds the lock. Returns
+        ``_MEDIA_GONE`` when the file no longer exists once the lock is taken
+        (an early prevalidation moved or deleted it meanwhile).
         """
         deferred_marks = []
 
@@ -288,13 +317,17 @@ class CompareWrapper:
 
         app_actions.start_loading_spinner(force=True)
         try:
-            result = self._responsiveness.run_off_thread(
-                lambda: ClassifierActionsManager.prevalidate_media(
-                    media_path,
-                    get_base_dir,
-                    callbacks,
-                )
-            )
+            def _evaluate():
+                with ClassifierActionsManager.evaluation_lock:
+                    if not os.path.isfile(media_path):
+                        return _MEDIA_GONE
+                    return ClassifierActionsManager.prevalidate_media(
+                        media_path,
+                        get_base_dir,
+                        callbacks,
+                    )
+
+            result = self._responsiveness.run_off_thread(_evaluate)
         finally:
             app_actions.stop_loading_spinner()
         for path in deferred_marks:

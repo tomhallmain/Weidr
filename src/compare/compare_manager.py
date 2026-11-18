@@ -719,6 +719,18 @@ class CompareManager:
             return self._primary_wrapper().skip_media(media_path)
         return False
 
+    def early_prevalidate(self, media_path: str, callbacks):
+        """Slideshow look-ahead prevalidation (delegated to primary wrapper)."""
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().early_prevalidate(media_path, callbacks)
+        return None
+
+    def is_hidden_media(self, media_path: str) -> bool:
+        """Whether *media_path* was hidden this session (delegated to primary wrapper)."""
+        if self._primary_wrapper() is not None:
+            return self._primary_wrapper().is_hidden_media(media_path)
+        return False
+
     def show_prev_group(self, event=None, file_browser=None):
         """Show previous group (delegated to primary wrapper)."""
         if self._primary_wrapper() is not None:

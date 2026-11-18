@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import sys
+import threading
 import time
 from typing import Dict, List, Optional
 
@@ -43,6 +44,26 @@ from utils.utils import Utils
 
 logger = get_logger("classifier_actions_manager")
 
+# Actions an early (slideshow look-ahead) prevalidation leaves for the normal
+# prevalidation on arrival: a copy keeps the source in place, so running it
+# early would let arrival copy again; a notification only makes sense while
+# the file is on screen.
+EARLY_DEFERRED_ACTION_TYPES = frozenset({ClassifierActionType.COPY, ClassifierActionType.NOTIFY})
+
+# Matched actions after which the file is still shown. ROTATE corrects the
+# file in place, so the file at the same path is shown right-side-up.
+DISPLAYED_PREVALIDATION_ACTIONS = frozenset({
+    ClassifierActionType.NOTIFY,
+    ClassifierActionType.BLUR,
+    ClassifierActionType.GENERATE,
+    ClassifierActionType.ROTATE,
+})
+
+
+def prevalidation_action_skips(action: Optional[ClassifierActionType]) -> bool:
+    """Whether a prevalidation result means the file is not shown."""
+    return action is not None and action not in DISPLAYED_PREVALIDATION_ACTIONS
+
 
 
 
@@ -57,6 +78,10 @@ class ClassifierActionsManager:
     classifier_actions: List['ClassifierAction'] = []
     prevalidated_cache: Dict[str, Optional[ClassifierActionType]] = {}
     user_prevalidation_overrides: set = set()
+    # Held for every prevalidate_media/advise_media call: evaluations share
+    # process-wide state (Lookahead.run_result) and models, so they never run
+    # concurrently. Reentrant so a caller can take it before calling in.
+    evaluation_lock = threading.RLock()
     directories_to_exclude: list[str] = []
     _prevalidations_initialized: bool = False
 
@@ -498,6 +523,7 @@ class ClassifierActionsManager:
         get_base_dir_func,
         callbacks: ActionCallbacks,
         force: bool = False,
+        early: bool = False,
     ) -> Optional[ClassifierActionType]:
         """Run active prevalidations for *media_path* while browsing *base_dir*.
 
@@ -533,7 +559,27 @@ class ClassifierActionsManager:
           ``user_prevalidation_overrides``, the function returns ``None`` immediately
           and no prevalidation runs. ``force=True`` bypasses this check (and the
           cache) to unconditionally re-evaluate the file.
+
+        - **Early mode** (``early=True``, a slideshow evaluating its next slide
+          before reaching it): a matching rule whose action is in
+          ``EARLY_DEFERRED_ACTION_TYPES`` is only dry-run, and prevalidation
+          pipelines are not run. Either way the result is returned without
+          being cached, so the normal call on arrival evaluates the file again
+          and executes what was left. Every other matched action executes now.
         """
+        with ClassifierActionsManager.evaluation_lock:
+            return ClassifierActionsManager._prevalidate_media_locked(
+                media_path, get_base_dir_func, callbacks, force=force, early=early
+            )
+
+    @staticmethod
+    def _prevalidate_media_locked(
+        media_path,
+        get_base_dir_func,
+        callbacks: ActionCallbacks,
+        force: bool = False,
+        early: bool = False,
+    ) -> Optional[ClassifierActionType]:
         # Lazy initialization - ensure prevalidations are initialized before first use
         if not ClassifierActionsManager._prevalidations_initialized:
             ClassifierActionsManager._prevalidations_post_init()
@@ -561,34 +607,27 @@ class ClassifierActionsManager:
 
         prevalidation_action = None
         matched_prevalidation: Optional[Prevalidation] = None
-        for prevalidation in ClassifierActionsManager.prevalidations:
-            if prevalidation.is_active and prevalidation.can_run:
-                if prevalidation.is_move_action() and prevalidation.action_modifier == base_dir:
-                    continue
-                if prevalidation.profile is not None and base_dir not in prevalidation.profile.directories:
-                    continue
-                if not prevalidation.media_type_allowed(media_path):
-                    continue
-                prevalidation_action = prevalidation.run_on_media_path(
-                    media_path,
-                    callbacks,
-                    base_directory=base_dir,
-                )
-                if prevalidation_action is not None:
-                    matched_prevalidation = prevalidation
-                    break
+        for prevalidation in ClassifierActionsManager.applicable_prevalidations(media_path, base_dir):
+            deferred = early and prevalidation.action in EARLY_DEFERRED_ACTION_TYPES
+            prevalidation_action = prevalidation.run_on_media_path(
+                media_path,
+                callbacks,
+                base_directory=base_dir,
+                dry_run=deferred,
+            )
+            if prevalidation_action is not None:
+                if deferred:
+                    return prevalidation_action
+                matched_prevalidation = prevalidation
+                break
 
-        if prevalidation_action is None:
+        if prevalidation_action is None and early:
+            if ClassifierActionsManager.applicable_prevalidation_pipelines(media_path, base_dir):
+                return None
+        elif prevalidation_action is None:
             try:
-                from compare.classifier_pipeline import ClassifierPipelines
                 from compare.classifier_pipeline_runner import run_pipeline
-                for pipeline in ClassifierPipelines.get_prevalidation_pipelines():
-                    if not pipeline.is_active:
-                        continue
-                    if pipeline.profile is not None and base_dir not in pipeline.profile.directories:
-                        continue
-                    if not pipeline.media_type_allowed(media_path):
-                        continue
+                for pipeline in ClassifierActionsManager.applicable_prevalidation_pipelines(media_path, base_dir):
                     pipeline_action = run_pipeline(
                         pipeline,
                         media_path,
@@ -614,6 +653,37 @@ class ClassifierActionsManager:
             ClassifierActionsManager.prevalidated_cache.pop(media_path, None)
             bucket.clear()
         return prevalidation_action
+
+    @staticmethod
+    def peek_session_cached_result(media_path: str) -> tuple[bool, Optional[ClassifierActionType]]:
+        """``(hit, action)`` from the in-memory result cache, without running
+        or initializing anything."""
+        if media_path in ClassifierActionsManager.prevalidated_cache:
+            return True, ClassifierActionsManager.prevalidated_cache[media_path]
+        return False, None
+
+    @staticmethod
+    def applicable_prevalidations(media_path: str, base_dir: Optional[str]) -> List['Prevalidation']:
+        """Prevalidations that would run for *media_path* while browsing *base_dir*,
+        in evaluation order (gating as described on :meth:`prevalidate_media`)."""
+        return [
+            prevalidation for prevalidation in ClassifierActionsManager.prevalidations
+            if prevalidation.is_active and prevalidation.can_run
+            and not (prevalidation.is_move_action() and prevalidation.action_modifier == base_dir)
+            and (prevalidation.profile is None or base_dir in prevalidation.profile.directories)
+            and prevalidation.media_type_allowed(media_path)
+        ]
+
+    @staticmethod
+    def applicable_prevalidation_pipelines(media_path: str, base_dir: Optional[str]) -> list:
+        """Prevalidation pipelines that would run for *media_path* while browsing *base_dir*."""
+        from compare.classifier_pipeline import ClassifierPipelines
+        return [
+            pipeline for pipeline in ClassifierPipelines.get_prevalidation_pipelines()
+            if pipeline.is_active
+            and (pipeline.profile is None or base_dir in pipeline.profile.directories)
+            and pipeline.media_type_allowed(media_path)
+        ]
 
     @staticmethod
     def has_move_prevalidation_for_base_dir(base_dir: str) -> bool:
@@ -670,6 +740,11 @@ class ClassifierActionsManager:
         ``(None, None)`` when nothing matches. The caller decides how to warn
         the user before displaying the file.
         """
+        with ClassifierActionsManager.evaluation_lock:
+            return ClassifierActionsManager._advise_media_locked(media_path, base_dir)
+
+    @staticmethod
+    def _advise_media_locked(media_path: str, base_dir: Optional[str]) -> tuple[Optional[ClassifierActionType], Optional[str]]:
         if not ClassifierActionsManager._prevalidations_initialized:
             ClassifierActionsManager._prevalidations_post_init()
 

@@ -301,6 +301,12 @@ class Config:
         # Run prevalidations on direct-display paths too (go-to-file, Home/End
         # in compare modes, related image / temp media canvas advisory check).
         self.prevalidate_on_direct_media_display = True
+        # Slideshow: prevalidate the upcoming slide while the current one is
+        # shown (costly candidates only), checking at most max_candidates files
+        # ahead; start_delay_seconds delays the start after a slide appears.
+        self.slideshow_early_prevalidation = True
+        self.slideshow_early_prevalidation_max_candidates = 10
+        self.slideshow_early_prevalidation_start_delay_seconds = 0.0
         # Dynamic media prevalidation sampling bounds.
         self.dynamic_media_min_sample_count = 4
         self.dynamic_media_max_sample_frames = 20
@@ -498,6 +504,14 @@ class Config:
                             "frame_extraction_last_frame_lookback_seconds",
                             "slideshow_dynamic_video_max_seconds",
                             "slideshow_dynamic_gif_max_seconds")
+            # Optional keys: a config.json written before they existed keeps the defaults.
+            for name, value_type in (
+                ("slideshow_early_prevalidation", bool),
+                ("slideshow_early_prevalidation_max_candidates", int),
+                ("slideshow_early_prevalidation_start_delay_seconds", float),
+            ):
+                if name in self.dict:
+                    self.set_values(value_type, name)
 
             self._rebuild_file_types()
 

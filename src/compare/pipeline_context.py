@@ -95,7 +95,7 @@ class PipelineContext:
             return self.reached_path
         if not self.base_stem:
             return None
-        matches = _direct_matches(self.working_dir, self.base_stem, self.base_stem)
+        matches = related_image.find_files_by_exact_stem(self.working_dir, self.base_stem)
         return matches[0] if matches else None
 
 
@@ -103,20 +103,6 @@ def _stem_equals(path: str, stem: Optional[str]) -> bool:
     if not stem:
         return False
     return os.path.splitext(os.path.basename(path))[0].lower() == stem.lower()
-
-
-def _direct_matches(directory: str, base_stem: str, wanted_stem: str) -> list[str]:
-    """Files directly in *directory* whose stem is exactly *wanted_stem*.
-
-    find_files_by_base_stem walks subdirectories as well, so its result is
-    narrowed to the directory's own entries.
-    """
-    norm_dir = os.path.normcase(os.path.normpath(directory))
-    return [
-        f for f in related_image.find_files_by_base_stem([directory], base_stem, use_cache=True)
-        if os.path.normcase(os.path.normpath(os.path.dirname(os.path.abspath(f)))) == norm_dir
-        and _stem_equals(f, wanted_stem)
-    ]
 
 
 def build_pipeline_context(
@@ -159,7 +145,7 @@ def build_pipeline_context(
 
     working_dir = os.path.dirname(os.path.abspath(reached_path))
     wanted_stem = base_stem + preferred_suffix
-    matches = _direct_matches(working_dir, base_stem, wanted_stem)
+    matches = related_image.find_files_by_exact_stem(working_dir, wanted_stem)
     if not matches:
         return PipelineContext(
             **fields,

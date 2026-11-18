@@ -845,6 +845,10 @@ _base_stem_dir_cache: dict[str, tuple[list[tuple[str, str]], list[str], float]] 
 # across an entire run is O(n) rather than O(n·m).
 # Cleared alongside _base_stem_dir_cache on invalidation.
 _base_stem_dir_cursor: dict[str, tuple[int, str]] = {}
+# Per-directory index for find_files_by_exact_stem: lower-cased stem → file
+# names directly in the directory (no subdirectories), with the time it was
+# built. Same TTL as above; cleared alongside _base_stem_dir_cache.
+_exact_stem_dir_cache: dict[str, tuple[dict[str, list[str]], float]] = {}
 
 
 def clear_base_stem_dir_cache(search_dir: str | None = None) -> None:
@@ -858,9 +862,37 @@ def clear_base_stem_dir_cache(search_dir: str | None = None) -> None:
     if search_dir is None:
         _base_stem_dir_cache.clear()
         _base_stem_dir_cursor.clear()
+        _exact_stem_dir_cache.clear()
     else:
         _base_stem_dir_cache.pop(search_dir, None)
         _base_stem_dir_cursor.pop(search_dir, None)
+        _exact_stem_dir_cache.pop(search_dir, None)
+
+
+def find_files_by_exact_stem(directory: str, stem: str) -> list[str]:
+    """Paths of files directly in *directory* whose stem equals *stem*,
+    ignoring case, sorted by name.
+
+    Indexes only the directory's own entries, once per directory until the
+    TTL expires or clear_base_stem_dir_cache() evicts it. A recursive
+    find_files_by_base_stem cache would hold every file of every nested
+    subdirectory again for each directory a run passes through.
+    """
+    cached = _exact_stem_dir_cache.get(directory)
+    if cached is None or (time.time() - cached[1]) > _BASE_STEM_CACHE_TTL:
+        index: dict[str, list[str]] = {}
+        try:
+            with os.scandir(directory) as it:
+                for entry in it:
+                    if entry.is_file():
+                        index.setdefault(os.path.splitext(entry.name)[0].lower(), []).append(entry.name)
+        except OSError:
+            logger.exception("Error scanning %r for exact stem index", directory)
+        for names in index.values():
+            names.sort(key=str.lower)
+        cached = (index, time.time())
+        _exact_stem_dir_cache[directory] = cached
+    return [os.path.join(directory, name) for name in cached[0].get(stem.lower(), ())]
 
 
 def find_files_by_base_stem(

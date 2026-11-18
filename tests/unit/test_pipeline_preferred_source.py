@@ -26,7 +26,11 @@ from compare.classifier_pipeline_batch import _seed_summary
 from compare.classifier_pipeline_runner import run_pipeline, run_pipeline_with_context
 from compare.pipeline_context import build_pipeline_context
 from compare.pipeline_run_report import PipelineRunReport
-from files.related_image import clear_base_stem_dir_cache, clear_generate_gate_cache
+from files.related_image import (
+    clear_base_stem_dir_cache,
+    clear_generate_gate_cache,
+    find_files_by_exact_stem,
+)
 from utils.constants import ClassifierActionType
 from utils.translations import _
 
@@ -129,6 +133,24 @@ class TestSerialization:
     def test_suffix_follows_category_map(self):
         assert _pipeline().preferred_target_suffix() == "_coherent"
         assert _pipeline(preferred="").preferred_target_suffix() == ""
+
+
+# ---------------------------------------------------------------------------
+# Exact-stem index
+# ---------------------------------------------------------------------------
+
+class TestFindFilesByExactStem:
+    def test_direct_entries_only_case_insensitive(self, tmp_path):
+        upper, lower = _files(tmp_path, BASE + "_Coherent.png", BASE + "_coherent.jpg")
+        _files(tmp_path, os.path.join("sub", BASE + "_coherent.webp"), BASE + "_coherent_2.png")
+        assert sorted(find_files_by_exact_stem(str(tmp_path), BASE + "_COHERENT")) == sorted([upper, lower])
+
+    def test_index_reused_until_cleared(self, tmp_path):
+        assert find_files_by_exact_stem(str(tmp_path), BASE) == []
+        (seed,) = _files(tmp_path, BASE + ".png")
+        assert find_files_by_exact_stem(str(tmp_path), BASE) == []
+        clear_base_stem_dir_cache(str(tmp_path))
+        assert find_files_by_exact_stem(str(tmp_path), BASE) == [seed]
 
 
 # ---------------------------------------------------------------------------

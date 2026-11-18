@@ -10,7 +10,13 @@ files, and libvlc fills the difference with black bars.
 
 from __future__ import annotations
 
+import ctypes
+import functools
 from dataclasses import dataclass
+
+from utils.logging_setup import get_logger
+
+logger = get_logger("vlc_picture_geometry")
 
 # libvlc_track_type_t: libvlc_track_video
 _VIDEO_TRACK_TYPE = 1
@@ -46,37 +52,108 @@ class VlcPicture:
     frame_h: int
 
 
-def _track_shape(track) -> VideoTrackShape | None:
+class _LibvlcVideoTrack(ctypes.Structure):
+    """Leading fields of libvlc_video_track_t (projection and pose follow, unread)."""
+
+    _fields_ = (
+        ("height", ctypes.c_uint),
+        ("width", ctypes.c_uint),
+        ("sar_num", ctypes.c_uint),
+        ("sar_den", ctypes.c_uint),
+        ("frame_rate_num", ctypes.c_uint),
+        ("frame_rate_den", ctypes.c_uint),
+        ("orientation", ctypes.c_int),
+    )
+
+
+class _LibvlcMediaTrack(ctypes.Structure):
+    """libvlc_media_track_t as libvlc 3 lays it out.
+
+    python-vlc 3.0.21203's MediaTrack declares the audio/video/subtitle union
+    as three separate pointers, so its ``video`` field reads i_bitrate and the
+    padding after it. Dereferencing that is an access violation for any track
+    with a nonzero bitrate, which kills the process. ``details`` is the union:
+    one pointer, cast by ``type``.
+    """
+
+    _fields_ = (
+        ("codec", ctypes.c_uint32),
+        ("original_fourcc", ctypes.c_uint32),
+        ("id", ctypes.c_int),
+        ("type", ctypes.c_int),
+        ("profile", ctypes.c_int),
+        ("level", ctypes.c_int),
+        ("details", ctypes.c_void_p),
+        ("bitrate", ctypes.c_uint),
+        ("language", ctypes.c_char_p),
+        ("description", ctypes.c_char_p),
+    )
+
+
+_TrackArray = ctypes.POINTER(ctypes.POINTER(_LibvlcMediaTrack))
+
+
+@functools.lru_cache(maxsize=1)
+def _libvlc_track_functions():
+    """(tracks_get, tracks_release) bound with the layout above."""
+    import vlc
+
+    tracks_get = ctypes.CFUNCTYPE(
+        ctypes.c_uint, ctypes.c_void_p, ctypes.POINTER(_TrackArray)
+    )(("libvlc_media_tracks_get", vlc.dll))
+    tracks_release = ctypes.CFUNCTYPE(None, _TrackArray, ctypes.c_uint)(
+        ("libvlc_media_tracks_release", vlc.dll)
+    )
+    return tracks_get, tracks_release
+
+
+def shapes_from_track_array(array, count: int) -> list[tuple[int, VideoTrackShape]]:
+    """(track id, shape) of each video track in a libvlc track array."""
+    shapes = []
+    for index in range(count):
+        entry = array[index]
+        if not entry:
+            continue
+        track = entry.contents
+        if track.type != _VIDEO_TRACK_TYPE or not track.details:
+            continue
+        video = _LibvlcVideoTrack.from_address(track.details)
+        shapes.append((
+            int(track.id),
+            VideoTrackShape(
+                width=int(video.width),
+                height=int(video.height),
+                sar_num=int(video.sar_num),
+                sar_den=int(video.sar_den),
+                orientation=int(video.orientation),
+            ),
+        ))
+    return shapes
+
+
+def list_video_tracks(media) -> list[tuple[int, VideoTrackShape]]:
+    """(track id, shape) of each video track libvlc lists for a python-vlc Media.
+
+    Calls libvlc directly: python-vlc's Media.tracks_get() reads the track
+    struct with the wrong layout (see _LibvlcMediaTrack) and never releases
+    the array.
+    """
+    handle = getattr(media, "_as_parameter_", None)
+    if not isinstance(handle, ctypes.c_void_p) or not handle:
+        raise TypeError("not a libvlc media handle: {0!r}".format(media))
+    tracks_get, tracks_release = _libvlc_track_functions()
+    array = _TrackArray()
+    count = int(tracks_get(handle, ctypes.byref(array)))
+    if count <= 0 or not array:
+        return []
     try:
-        kind = getattr(track, "type", None)
-        kind = getattr(kind, "value", kind)
-        if kind is None or int(kind) != _VIDEO_TRACK_TYPE:
-            return None
-        # python-vlc builds differ: the union member is either on the track
-        # or under ``u``, as a struct or a pointer to one.
-        video = getattr(track, "video", None)
-        if video is None:
-            video = getattr(getattr(track, "u", None), "video", None)
-        video = getattr(video, "contents", video)
-        if video is None:
-            return None
-        return VideoTrackShape(
-            width=int(getattr(video, "width", 0) or 0),
-            height=int(getattr(video, "height", 0) or 0),
-            sar_num=int(getattr(video, "sar_num", 0) or 0),
-            sar_den=int(getattr(video, "sar_den", 0) or 0),
-            orientation=int(getattr(video, "orientation", 0) or 0),
-        )
-    except Exception:
-        return None
+        return shapes_from_track_array(array, count)
+    finally:
+        tracks_release(array, count)
 
 
 def read_video_track_shape(player) -> VideoTrackShape | None:
-    """Shape fields of the playing video track, or None before libvlc lists it.
-
-    python-vlc's Media.tracks_get() does not release the array libvlc returns,
-    so callers should cache the result per media rather than poll it.
-    """
+    """Shape fields of the playing video track, or None before libvlc lists it."""
     try:
         media = player.get_media()
     except Exception:
@@ -88,19 +165,14 @@ def read_video_track_shape(player) -> VideoTrackShape | None:
     except Exception:
         selected = None
     try:
-        tracks = list(media.tracks_get() or ())
-    except Exception:
+        tracks = list_video_tracks(media)
+    except Exception as exc:
+        logger.debug("read_video_track_shape: could not list tracks: %s", exc)
         return None
-    first = None
-    for track in tracks:
-        shape = _track_shape(track)
-        if shape is None:
-            continue
-        if selected is not None and getattr(track, "id", None) == selected:
+    for track_id, shape in tracks:
+        if selected is not None and track_id == selected:
             return shape
-        if first is None:
-            first = shape
-    return first
+    return tracks[0][1] if tracks else None
 
 
 def _reported_already_turned(width: int, height: int, track: VideoTrackShape) -> bool:

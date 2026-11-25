@@ -302,7 +302,7 @@ class Config:
         # in compare modes, related image / temp media canvas advisory check).
         self.prevalidate_on_direct_media_display = True
         # Slideshow: prevalidate the upcoming slide while the current one is
-        # shown (costly candidates only), checking at most max_candidates files
+        # shown (dynamic media only), checking at most max_candidates files
         # ahead; start_delay_seconds delays the start after a slide appears.
         self.slideshow_early_prevalidation = True
         self.slideshow_early_prevalidation_max_candidates = 10

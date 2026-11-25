@@ -1,9 +1,10 @@
 """Early prevalidation: during a slideshow, prevalidate the upcoming slide while
 the current one is still on screen, so advancing does not wait on it.
 
-Only costly candidates are evaluated: dynamic media (frame sampling) and files
-an applicable prevalidation checks with a model. The walk ends at the first
-cheap candidate or the first candidate that would be shown. Results reach the
+Only dynamic media (video, GIF, paged documents: frame sampling) with an
+applicable prevalidation is evaluated. Static images are left to the normal
+prevalidation on arrival, model checks included. The walk ends at the first
+other candidate or the first candidate that would be shown. Results reach the
 normal prevalidation on arrival through its own caches and the file system (a
 moved or deleted file is gone); ``prevalidate_media(early=True)`` leaves COPY,
 NOTIFY and prevalidation pipelines to that arrival pass.
@@ -39,34 +40,19 @@ class EarlyRunResult:
     stopped_at: Optional[str] = None
 
 
-def prevalidation_is_costly(prevalidation) -> bool:
-    """True when *prevalidation* runs a model: prototype, text embedding,
-    image/audio classifier, or a lookahead (always a text-embedding check).
-    Prompt metadata, filename and base-stem checks only read names, metadata
-    or the file system."""
-    return bool(
-        prevalidation.use_prototype
-        or prevalidation.use_embedding
-        or prevalidation.use_image_classifier
-        or prevalidation.lookahead_names
-    )
-
-
 def is_costly_candidate(media_path: str, base_dir: Optional[str]) -> bool:
-    """Whether prevalidating *media_path* while browsing *base_dir* is worth
-    doing ahead of time. Reads only the rule configuration, never the file."""
+    """Whether to prevalidate *media_path* ahead of time while browsing
+    *base_dir*: dynamic media with an applicable prevalidation. Reads only
+    the path and the rule configuration, never the file."""
     if is_audio_for_display(media_path):
         return False
     if base_dir in ClassifierActionsManager.directories_to_exclude:
         return False
     if media_path in ClassifierActionsManager.user_prevalidation_overrides:
         return False
-    applicable = ClassifierActionsManager.applicable_prevalidations(media_path, base_dir)
-    if not applicable:
+    if not ClassifierActionsManager.is_dynamic_prevalidation_media(media_path):
         return False
-    if ClassifierActionsManager.is_dynamic_prevalidation_media(media_path):
-        return True
-    return any(prevalidation_is_costly(p) for p in applicable)
+    return bool(ClassifierActionsManager.applicable_prevalidations(media_path, base_dir))
 
 
 def upcoming_candidates(files: Sequence[str], current_index: int, max_candidates: int) -> List[str]:

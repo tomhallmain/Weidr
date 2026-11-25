@@ -13,7 +13,6 @@ from compare.classifier_pipeline import ClassifierPipelines, PrevalidationPipeli
 from compare.early_prevalidation import (
     StopReason,
     is_costly_candidate,
-    prevalidation_is_costly,
     run_early_prevalidation,
     upcoming_candidates,
 )
@@ -136,18 +135,7 @@ class TestPrevalidateMediaEarly:
 
 
 class TestCost:
-    def test_model_checks_are_costly(self):
-        for flag in ("use_embedding", "use_image_classifier", "use_prototype"):
-            assert prevalidation_is_costly(_prevalidation("p", ClassifierActionType.SKIP, **{flag: True}))
-        assert prevalidation_is_costly(
-            _prevalidation("p", ClassifierActionType.SKIP, lookahead_names=["la"]))
-
-    def test_name_and_metadata_checks_are_cheap(self):
-        assert not prevalidation_is_costly(_prevalidation(
-            "p", ClassifierActionType.SKIP,
-            use_prompts=True, use_filename_contains=True, use_base_stem_match=True))
-
-    def test_static_image_costly_only_with_model_rule(self):
+    def test_static_image_is_never_a_candidate(self):
         cheap = _prevalidation("cheap", ClassifierActionType.SKIP, use_filename_contains=True)
         costly = _prevalidation("costly", ClassifierActionType.SKIP, use_image_classifier=True)
         with tempfile.TemporaryDirectory() as root:
@@ -155,7 +143,16 @@ class TestCost:
             with _isolated([cheap]):
                 assert not is_costly_candidate(image, root)
             with _isolated([cheap, costly]):
-                assert is_costly_candidate(image, root)
+                assert not is_costly_candidate(image, root)
+
+    def test_dynamic_media_with_applicable_rule_is_a_candidate(self):
+        import compare.classifier_actions_manager as cam_module
+
+        cheap = _prevalidation("cheap", ClassifierActionType.SKIP, use_filename_contains=True)
+        with tempfile.TemporaryDirectory() as root:
+            video = _media(root, "a.mp4")
+            with patch.object(cam_module.config, "enable_videos", True), _isolated([cheap]):
+                assert is_costly_candidate(video, root)
 
     def test_nothing_applicable_is_cheap(self):
         with tempfile.TemporaryDirectory() as root:
@@ -261,7 +258,8 @@ class TestRunEarlyPrevalidation:
 class TestSkipMediaWaitsForLock:
     """skip_media while another thread (an early prevalidation) holds the
     evaluation lock: it waits off the calling thread, and a file moved away
-    meanwhile is skipped without being evaluated."""
+    meanwhile is skipped without being evaluated. With the lock free, a file
+    already moved away is skipped the same way."""
 
     def _wrapper(self):
         from types import SimpleNamespace
@@ -324,3 +322,23 @@ class TestSkipMediaWaitsForLock:
                 thread.join()
             assert skipped is True
             prevalidate.assert_not_called()
+
+    def test_file_gone_with_free_lock_is_skipped(self):
+        with tempfile.TemporaryDirectory() as root:
+            media = _media(root, "a.jpg")
+            Path(media).unlink()
+            wrapper = self._wrapper()
+            with patch.object(ClassifierActionsManager, "prevalidate_media") as prevalidate:
+                skipped = wrapper.skip_media(media)
+            assert skipped is True
+            prevalidate.assert_not_called()
+
+    def test_existing_file_with_free_lock_is_evaluated(self):
+        with tempfile.TemporaryDirectory() as root:
+            media = _media(root, "a.jpg")
+            wrapper = self._wrapper()
+            with patch.object(ClassifierActionsManager, "prevalidate_media",
+                              return_value=None) as prevalidate:
+                skipped = wrapper.skip_media(media)
+            assert skipped is False
+            prevalidate.assert_called_once()

@@ -516,6 +516,22 @@ def _frames_are_visually_pseudostatic(
     return True
 
 
+def _pseudostatic_verdict(sampled_paths: List[str]) -> Tuple[Optional[bool], bool]:
+    """``(frames_are_pseudostatic, single_frame_stream)`` for the paths one
+    video sampling run produced.
+
+    One real JPEG frame means the decoder delivered only that frame (broken or
+    buffer-deadlocked stream): pseudostatic and a single-frame stream. Two or
+    more are compared visually. ``(None, False)`` when no real frame exists.
+    """
+    real = [p for p in sampled_paths if p.lower().endswith((".jpg", ".jpeg"))]
+    if len(real) >= 2:
+        return _frames_are_visually_pseudostatic(real), False
+    if len(real) == 1:
+        return True, True
+    return None, False
+
+
 def _read_frame_via_imageio(video_path: str, frame_index: int) -> Optional[np.ndarray]:
     """Fallback decode path using imageio (own FFmpeg pipeline) when OpenCV swscale fails."""
     try:
@@ -1475,15 +1491,11 @@ class FrameCache:
         if cache_key in cls.sampled_cache:
             cached = cls.sampled_cache[cache_key]
             if detect_pseudostatic:
+                # The cached run may come from a caller that did not ask for
+                # detection, so the verdict is taken from its frames here.
                 cached_stats = cls.media_stats_cache.get(media_path)
                 if cached_stats is None or cached_stats.frames_are_pseudostatic is None:
-                    real = [p for p in cached if p.lower().endswith((".jpg", ".jpeg"))]
-                    if len(real) >= 2:
-                        is_pseudo = _frames_are_visually_pseudostatic(real)
-                        if cached_stats is None:
-                            cached_stats = MediaStats()
-                            cls.media_stats_cache[media_path] = cached_stats
-                        cached_stats.frames_are_pseudostatic = is_pseudo
+                    cls._store_pseudostatic_verdict(media_path, *_pseudostatic_verdict(cached))
             return len(cached), iter(cached)
 
         if is_video or is_gif:
@@ -1646,7 +1658,6 @@ class FrameCache:
             first_real_frame: Optional[str] = None
             inline_check_done = False
             frames_pseudostatic: Optional[bool] = None
-            is_single_frame = False
             try:
                 for path in cls._iter_pyav_video_sample_paths(
                     video_path,
@@ -1673,27 +1684,12 @@ class FrameCache:
                 # Runs on natural exhaustion AND on early close() — ensures pseudostatic
                 # status is stored even when the consumer exits before the last frame.
                 if detect_pseudostatic:
+                    single_frame = False
                     if frames_pseudostatic is None:
-                        if inline_check_done:
-                            # First two frames were identical; confirm with a spread check.
-                            real = [p for p in accumulated if p.lower().endswith((".jpg", ".jpeg"))]
-                            if len(real) >= 2:
-                                frames_pseudostatic = _frames_are_visually_pseudostatic(real)
-                        elif first_real_frame is not None:
-                            # Only one real frame was ever decoded (buffer-deadlock / broken
-                            # stream).  Mark it pseudostatic AND flag it as a single-frame
-                            # stream so callers can distinguish this from visually-inferred
-                            # pseudostatic videos.
-                            frames_pseudostatic = True
-                            is_single_frame = True
-                    if frames_pseudostatic is not None:
-                        mstats = cls.media_stats_cache.get(video_path)
-                        if mstats is None:
-                            mstats = MediaStats()
-                            cls.media_stats_cache[video_path] = mstats
-                        mstats.frames_are_pseudostatic = frames_pseudostatic
-                        if is_single_frame:
-                            mstats.single_frame_stream = True
+                        # Not ruled out by the inline check: decide from every
+                        # frame decoded so far (spread check, or single frame).
+                        frames_pseudostatic, single_frame = _pseudostatic_verdict(accumulated)
+                    cls._store_pseudostatic_verdict(video_path, frames_pseudostatic, single_frame)
                 if completed:
                     cls.sampled_cache[cache_key] = accumulated
 
@@ -1877,7 +1873,6 @@ class FrameCache:
             first_real_frame: Optional[str] = None
             inline_check_done = False
             frames_pseudostatic: Optional[bool] = None
-            is_single_frame = False
             try:
                 for path in cls._iter_opencv_video_sample_paths(
                     cap,
@@ -1900,22 +1895,10 @@ class FrameCache:
                 completed = True
             finally:
                 if detect_pseudostatic:
+                    single_frame = False
                     if frames_pseudostatic is None:
-                        if inline_check_done:
-                            real = [p for p in accumulated if p.lower().endswith((".jpg", ".jpeg"))]
-                            if len(real) >= 2:
-                                frames_pseudostatic = _frames_are_visually_pseudostatic(real)
-                        elif first_real_frame is not None:
-                            frames_pseudostatic = True
-                            is_single_frame = True
-                    if frames_pseudostatic is not None:
-                        mstats = cls.media_stats_cache.get(video_path)
-                        if mstats is None:
-                            mstats = MediaStats()
-                            cls.media_stats_cache[video_path] = mstats
-                        mstats.frames_are_pseudostatic = frames_pseudostatic
-                        if is_single_frame:
-                            mstats.single_frame_stream = True
+                        frames_pseudostatic, single_frame = _pseudostatic_verdict(accumulated)
+                    cls._store_pseudostatic_verdict(video_path, frames_pseudostatic, single_frame)
                 cap.release()
                 if completed:
                     cls.sampled_cache[cache_key] = accumulated
@@ -2053,6 +2036,21 @@ class FrameCache:
             return None
 
         return SeekPosition(kind="ms", value=int(actual_index / fps * 1000))
+
+    @classmethod
+    def _store_pseudostatic_verdict(
+        cls, media_path: str, frames_are_pseudostatic: Optional[bool], single_frame_stream: bool
+    ) -> None:
+        """Record a :func:`_pseudostatic_verdict` result; a None verdict is not stored."""
+        if frames_are_pseudostatic is None:
+            return
+        mstats = cls.media_stats_cache.get(media_path)
+        if mstats is None:
+            mstats = MediaStats()
+            cls.media_stats_cache[media_path] = mstats
+        mstats.frames_are_pseudostatic = frames_are_pseudostatic
+        if single_frame_stream:
+            mstats.single_frame_stream = True
 
     @classmethod
     def is_pseudostatic_dynamic_media(cls, media_path: str) -> bool:

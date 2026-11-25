@@ -253,11 +253,17 @@ class CompareWrapper:
                 prevalidation_action = self._run_dynamic_prevalidation_with_spinner(media_path)
             elif lock.acquire(blocking=False):
                 try:
-                    prevalidation_action = ClassifierActionsManager.prevalidate_media(
-                        media_path,
-                        self.get_base_dir,
-                        self._app_actions.prevalidation_callbacks_with_mark,
-                    )
+                    # The listing can still hold a file that was just moved or
+                    # deleted. Evaluating it again would repeat a name-only
+                    # match and its MOVE into the occupied target.
+                    if not os.path.isfile(media_path):
+                        prevalidation_action = _MEDIA_GONE
+                    else:
+                        prevalidation_action = ClassifierActionsManager.prevalidate_media(
+                            media_path,
+                            self.get_base_dir,
+                            self._app_actions.prevalidation_callbacks_with_mark,
+                        )
                 finally:
                     lock.release()
                 self._responsiveness.yield_to_ui()

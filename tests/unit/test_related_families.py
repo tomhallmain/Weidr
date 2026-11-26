@@ -1,7 +1,8 @@
 """Unit tests for related-image family grouping and the all-suffixes filter.
 
 Covers group_related_families, family_has_all_suffixes,
-get_families_with_all_suffixes and parse_suffix_list.
+get_families_with_all_suffixes, get_families_with_missing_seed,
+get_related_family and parse_suffix_list.
 """
 
 import os
@@ -12,6 +13,8 @@ from PIL import Image, PngImagePlugin
 from files.related_image import (
     family_has_all_suffixes,
     get_families_with_all_suffixes,
+    get_families_with_missing_seed,
+    get_related_family,
     group_related_families,
     parse_suffix_list,
 )
@@ -32,6 +35,12 @@ def _make_png(path: str, related_image: str | None = None) -> str:
 @pytest.fixture(autouse=True)
 def _png_file_types(monkeypatch):
     monkeypatch.setattr(config, "file_types", [".png"])
+
+
+def _make_image(path: str) -> str:
+    """Write a metadata-free image in the format of path's extension."""
+    Image.new("RGB", (4, 4), (128, 128, 128)).save(path)
+    return path
 
 
 def _paths(tmp_path, *names):
@@ -98,6 +107,58 @@ class TestGroupRelatedFamilies:
         assert get_origin_basename(b, lookup, stop_at_boundary=True) == "bravo_seed.png"
 
 
+class TestGroupRelatedFamiliesFallbacks:
+    def test_metadata_outside_falls_back_to_filename_parent(self, tmp_path):
+        """A metadata reference outside the set (e.g. a LoadImage upload under
+        another name) does not hide a filename parent next to the file."""
+        seed = _make_png(str(tmp_path / "cat.png"))
+        edit = _make_png(
+            str(tmp_path / "cat_edit.png"),
+            related_image=str(tmp_path / "input" / "upload_123.png"))
+        assert group_related_families([seed, edit]) == {"cat.png": [seed, edit]}
+
+    def test_parent_with_other_extension(self, tmp_path):
+        seed = _make_png(str(tmp_path / "cat.png"))
+        edit = _make_image(str(tmp_path / "cat_edit.jpg"))
+        assert group_related_families([seed, edit]) == {"cat.png": [seed, edit]}
+
+    def test_parent_with_other_extension_ambiguous(self, tmp_path):
+        png = _make_png(str(tmp_path / "cat.png"))
+        bmp = _make_image(str(tmp_path / "cat.bmp"))
+        edit = _make_image(str(tmp_path / "cat_edit.jpg"))
+        assert group_related_families([png, bmp, edit]) == {
+            "cat.png": [png],
+            "cat.bmp": [bmp],
+            "cat_edit.jpg": [edit],
+        }
+
+    def test_same_extension_parent_preferred(self, tmp_path):
+        png = _make_png(str(tmp_path / "cat.png"))
+        jpg = _make_image(str(tmp_path / "cat.jpg"))
+        edit = _make_png(str(tmp_path / "cat_edit.png"))
+        assert group_related_families([png, jpg, edit]) == {
+            "cat.png": [png, edit],
+            "cat.jpg": [jpg],
+        }
+
+    def test_group_missing_seed_joins_siblings(self, tmp_path):
+        outside = str(tmp_path / "elsewhere" / "origin_image.png")
+        a = _make_png(str(tmp_path / "origin_image_edit.png"), related_image=outside)
+        b = _make_png(str(tmp_path / "origin_image_up.png"), related_image=outside)
+        assert group_related_families([a, b], group_missing_seed=True) == {
+            "origin_image.png": [a, b],
+        }
+
+    def test_group_missing_seed_keys_chain_by_outside_basename(self, tmp_path):
+        outside = str(tmp_path / "elsewhere" / "A.png")
+        b = _make_png(str(tmp_path / "bravo_seed.png"), related_image=outside)
+        b_edit = _make_png(str(tmp_path / "bravo_seed_edit.png"))
+        b_meta = _make_png(str(tmp_path / "ComfyUI_00009_.png"), related_image=b)
+        assert group_related_families([b, b_edit, b_meta], group_missing_seed=True) == {
+            "A.png": [b, b_edit, b_meta],
+        }
+
+
 class TestFamilyHasAllSuffixes:
     def test_seed_stem_does_not_count(self):
         # The seed's own "_edit" is part of its name, not a derivative marker.
@@ -152,6 +213,70 @@ class TestGetFamiliesWithAllSuffixes:
         edit = _make_png(str(tmp_path / "seed_image_edit.png"))
         paths = [seed, renamed, edit]
         assert get_families_with_all_suffixes(paths, ["edit", "upscale"]) == paths
+
+
+class TestGetFamiliesWithMissingSeed:
+    def test_marks_families_with_missing_seed_and_enough_members(self, tmp_path):
+        gone = str(tmp_path / "elsewhere" / "gone.png")
+        lone = str(tmp_path / "elsewhere" / "lone.png")
+        paths = [
+            _make_png(str(tmp_path / "cat.png")),
+            _make_png(str(tmp_path / "cat_edit.png")),
+            _make_png(str(tmp_path / "gone_edit.png"), related_image=gone),
+            _make_png(str(tmp_path / "ComfyUI_00001_.png"), related_image=gone),
+            _make_png(str(tmp_path / "lone_edit.png"), related_image=lone),
+        ]
+        stats: dict = {}
+        assert get_families_with_missing_seed(paths, stats=stats) == paths[2:4]
+        assert stats == {"families": 3, "matched_families": 1}
+
+    def test_min_members_threshold(self, tmp_path):
+        lone = str(tmp_path / "elsewhere" / "lone.png")
+        paths = [_make_png(str(tmp_path / "lone_edit.png"), related_image=lone)]
+        assert get_families_with_missing_seed(paths) == []
+        assert get_families_with_missing_seed(paths, min_members=1) == paths
+
+    def test_seed_inferred_from_filename_only_is_not_expected(self, tmp_path):
+        paths = _paths(tmp_path, "cat_edit.png", "cat_up.png")
+        assert get_families_with_missing_seed(paths) == []
+
+    def test_present_seed_under_other_extension_is_not_missing(self, tmp_path):
+        seed = _make_image(str(tmp_path / "cat.jpg"))
+        gone = str(tmp_path / "elsewhere" / "cat.png")
+        paths = [
+            seed,
+            _make_png(str(tmp_path / "cat_edit.png"), related_image=gone),
+            _make_png(str(tmp_path / "cat_up.png"), related_image=gone),
+        ]
+        assert get_families_with_missing_seed(paths) == []
+
+
+class TestGetRelatedFamily:
+    @pytest.fixture
+    def chain(self, tmp_path):
+        paths = _paths(tmp_path, "dog.png", "cat.png", "cat_edit.png", "cat_edit_up.png")
+        comfy = _make_png(str(tmp_path / "ComfyUI_00001_.png"), related_image=paths[2])
+        return [*paths, comfy]
+
+    @pytest.mark.parametrize("index", [1, 2, 3, 4])
+    def test_same_family_from_any_member(self, chain, index):
+        assert get_related_family(chain[index], chain) == chain[1:]
+
+    def test_singleton(self, chain):
+        assert get_related_family(chain[0], chain) == [chain[0]]
+
+    def test_missing_seed_family_of_expected_seed(self, tmp_path):
+        gone = str(tmp_path / "elsewhere" / "gone.png")
+        paths = [
+            _make_png(str(tmp_path / "gone_edit.png"), related_image=gone),
+            _make_png(str(tmp_path / "gone_up.png"), related_image=gone),
+            _make_png(str(tmp_path / "other.png")),
+        ]
+        assert get_related_family(paths[1], paths) == paths[:2]
+
+    def test_path_outside_list_is_included(self, tmp_path):
+        paths = _paths(tmp_path, "cat.png", "cat_edit.png")
+        assert get_related_family(paths[1], paths[:1]) == paths
 
 
 class TestParseSuffixList:

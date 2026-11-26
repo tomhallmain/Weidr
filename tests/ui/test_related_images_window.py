@@ -1,7 +1,7 @@
 """UI tests for RelatedImagesWindow and the all-windows downstream search.
 
 Covers the all-windows downstream search: window construction with all
-seven actions, result reporting into the persistent result area (including
+nine actions, result reporting into the persistent result area (including
 stopping after close), the FileMarksController all-windows aggregation
 (de-duplication, oversized-window skip, no-result path), and marking files
 in the current directory that have no related image in either direction.
@@ -70,8 +70,10 @@ class TestRelatedImagesWindow:
         rw = _open_window(win, qtbot)
         texts = [b.text() for b in rw.findChildren(QPushButton)]
         rw.close()
-        assert len(texts) == 8
+        assert len(texts) == 10
         assert _("Search all open windows for downstream images") in texts
+        assert _("Mark related image family of current image") in texts
+        assert _("Mark families with a missing seed in current directory") in texts
         assert _("Mark files without a related image in current directory") in texts
         assert _("Mark families with all suffixes") in texts
 
@@ -514,3 +516,120 @@ class TestMarkFamiliesWithAllSuffixes:
         assert MarkedFiles.file_marks == []
         assert toasts == [
             _("No image families with all of these suffixes found: {0}").format("edit")]
+
+
+class TestMarkFamiliesWithMissingSeed:
+    """mark_families_with_missing_seed_in_dir: marks mutation and reporting.
+    The selection itself is covered in test_related_families.py."""
+
+    _TARGET = "ui.app_window.file_marks_controller.get_families_with_missing_seed"
+
+    def test_marks_returned_files_and_reports(self, window_with_dir, qtbot):
+        win, media_dir = window_with_dir
+        files = win.file_browser.get_files()
+        reports: list = []
+
+        def _fake(paths, stats=None):
+            stats.update(families=4, matched_families=1)
+            return files[:2]
+
+        def _capture(message, action_label, data):
+            reports.append((message, action_label, data))
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(self._TARGET, _fake)
+            mp.setattr(win.file_marks_ctrl, "go_to_mark", lambda: None)
+            MarkedFiles.file_marks = []
+            win.app_actions.related_images_signals().result.connect(_capture)
+            try:
+                win.file_marks_ctrl.mark_families_with_missing_seed_in_dir()
+            finally:
+                win.app_actions.related_images_signals().result.disconnect(_capture)
+            marks = MarkedFiles.file_marks[:]
+            MarkedFiles.file_marks = []
+
+        assert marks == files[:2]
+        assert len(reports) == 1
+        message, action_label, data = reports[0]
+        assert action_label == _("Mark families with a missing seed")
+        assert message == _(
+            "{0} file(s) in {1} of {2} image families with a missing seed marked"
+        ).format(2, 1, 4)
+        assert data["found"] == 2
+        assert data["base_dir"] == media_dir
+
+    def test_nothing_found_leaves_marks_unchanged(self, window_with_dir, qtbot):
+        win, media_dir = window_with_dir
+        toasts: list = []
+        existing = win.file_browser.get_files()[:1]
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(self._TARGET, lambda paths, stats=None: [])
+            mp.setattr(win.notification_ctrl, "toast", lambda msg, **kw: toasts.append(msg))
+            MarkedFiles.file_marks = existing[:]
+            win.file_marks_ctrl.mark_families_with_missing_seed_in_dir()
+            marks = MarkedFiles.file_marks[:]
+            MarkedFiles.file_marks = []
+
+        assert marks == existing
+        assert toasts == [
+            _("No image families with a missing seed found in the current directory.")]
+
+
+class TestMarkRelatedFamilyOfCurrent:
+    """mark_related_family_of_current: marks mutation and reporting. Family
+    resolution is covered in test_related_families.py."""
+
+    _TARGET = "ui.app_window.file_marks_controller.get_related_family"
+
+    def test_marks_family_of_current_media_and_stays(self, window_with_dir, qtbot):
+        win, media_dir = window_with_dir
+        files = win.file_browser.get_files()
+        calls: list = []
+        reports: list = []
+
+        def _fake(path, paths):
+            calls.append(path)
+            return files[:2]
+
+        def _capture(message, action_label, data):
+            reports.append((action_label, data))
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(self._TARGET, _fake)
+            navigated: list = []
+            mp.setattr(win.file_marks_ctrl, "go_to_mark", lambda: navigated.append(True))
+            win.media_path = files[1]
+            MarkedFiles.file_marks = [files[-1]]
+            win.app_actions.related_images_signals().result.connect(_capture)
+            try:
+                win.file_marks_ctrl.mark_related_family_of_current()
+            finally:
+                win.app_actions.related_images_signals().result.disconnect(_capture)
+            marks = MarkedFiles.file_marks[:]
+            MarkedFiles.file_marks = []
+
+        assert calls == [files[1]]
+        assert marks == files[:2]
+        assert navigated == []
+        action_label, data = reports[0]
+        assert action_label == _("Mark related image family")
+        assert data["found"] == 2
+        assert data["source"] == files[1]
+
+    def test_single_member_family_leaves_marks_unchanged(self, window_with_dir, qtbot):
+        win, _media_dir = window_with_dir
+        files = win.file_browser.get_files()
+        toasts: list = []
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(self._TARGET, lambda path, paths: [path])
+            mp.setattr(win.notification_ctrl, "toast", lambda msg, **kw: toasts.append(msg))
+            win.media_path = files[0]
+            MarkedFiles.file_marks = []
+            win.file_marks_ctrl.mark_related_family_of_current()
+            marks = MarkedFiles.file_marks[:]
+
+        assert marks == []
+        assert toasts == [
+            _("The current image has no related images in the current directory.")]

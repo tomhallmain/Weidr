@@ -219,3 +219,35 @@ class TestMarkFamiliesWithAllSuffixesRealFiles:
         rw.close()
         assert names == set(ALPHA + THETA)
         assert str(len(ALPHA + THETA)) in result_text
+
+
+class TestMarkFamilyActionsRealFiles:
+    """The missing-seed and current-family actions on the same layout. Unlike
+    "Mark families with all suffixes", both group the derivatives of a missing
+    seed (gamma, and theta under theta_origin.png) into one family."""
+
+    def test_missing_seed_marks_gamma_and_theta(self, family_window):
+        win, _layout = family_window
+        win.file_marks_ctrl.mark_families_with_missing_seed_in_dir()
+        assert _names(MarkedFiles.file_marks) == set(GAMMA + THETA)
+
+    @pytest.mark.parametrize("current, expected", [
+        ("alpha_seed.png", ALPHA),
+        ("alpha_seed_edit_upscale.png", ALPHA),
+        ("ComfyUI_00002_.png", ALPHA),
+        ("gamma_source_misc.png", GAMMA),
+        ("ComfyUI_00003_.png", THETA),
+    ])
+    def test_current_family_from_any_member(self, family_window, current, expected):
+        win, layout = family_window
+        win.media_path = layout.path(current)
+        win.file_marks_ctrl.mark_related_family_of_current()
+        assert _names(MarkedFiles.file_marks) == set(expected)
+
+    def test_current_singleton_marks_nothing(self, family_window):
+        win, layout = family_window
+        existing = [layout.path("beta_seed.png")]
+        MarkedFiles.file_marks = existing[:]
+        win.media_path = layout.path("epsilon.png")
+        win.file_marks_ctrl.mark_related_family_of_current()
+        assert MarkedFiles.file_marks == existing

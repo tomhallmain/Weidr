@@ -31,7 +31,7 @@ Keybinding map  (■ = bound  · = free | cols: Shift | Ctrl | Ctrl+Shift)
     E  ■ ■ ■   R  ■ ■ ■
     F  ■ ■ ·   S  ■ ■ ■
     G  ■ ■ ■   T  ■ ■ ■
-    H  ■ ■ ·   U  ■ · ·
+    H  ■ ■ ·   U  ■ ■ ·
     I  ■ ■ ■   V  ■ ■ ·
     J  ■ ■ ·   W  ■ ■ ·
     K  ■ ■ ■   X  · ■ ·
@@ -179,6 +179,7 @@ class KeyBindingManager:
         # that action is now a button inside the related images window.
         self._bind("Ctrl+Shift+Y", app.window_launcher.open_related_images_window, guarded=False)
         self._bind("Alt+Y", app.file_marks_ctrl.set_marks_from_downstream_related_images_all_windows)
+        self._bind("Ctrl+U", app.file_marks_ctrl.mark_related_family_of_current, guarded=False)
         self._bind("Shift+H", app.window_launcher.get_help_and_config)
         self._bind("Shift+E", app.window_launcher.copy_prompt)
         self._bind(

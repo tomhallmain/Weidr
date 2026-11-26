@@ -111,7 +111,7 @@ class TestShortcutRegistration:
     def test_ctrl_keys_present(self, window):
         km = window.key_binding_mgr
         for key in ["Ctrl+H", "Ctrl+S", "Ctrl+Q", "Ctrl+B", "Ctrl+Tab",
-                    "Ctrl+C", "Ctrl+Z", "Ctrl+R"]:
+                    "Ctrl+C", "Ctrl+Z", "Ctrl+R", "Ctrl+U"]:
             assert _has_shortcut(km, key), f"{key!r} not registered"
 
     def test_shift_letter_keys_present(self, window):

@@ -44,7 +44,7 @@ class RelatedImagesWindow(SmartDialog):
 
     _MAX_RESULT_LINES = 3
 
-    def __init__(self, app_window, geometry: str = "620x500") -> None:
+    def __init__(self, app_window, geometry: str = "620x570") -> None:
         super().__init__(
             parent=app_window,
             position_parent=app_window,
@@ -98,6 +98,10 @@ class RelatedImagesWindow(SmartDialog):
              lambda: app.file_marks_ctrl.mark_files_without_related_images_in_dir()),
             (_("Search all open windows for downstream images"), "Alt+Y",
              lambda: app.file_marks_ctrl.set_marks_from_downstream_related_images_all_windows()),
+            (_("Mark related image family of current image"), "Ctrl+U",
+             lambda: app.file_marks_ctrl.mark_related_family_of_current()),
+            (_("Mark families with a missing seed in current directory"), "—",
+             lambda: app.file_marks_ctrl.mark_families_with_missing_seed_in_dir()),
         ]
 
         grid = QGridLayout()

@@ -120,8 +120,37 @@ def _ensure_related_path(entry) -> str:
     return entry.related_image_path or ""
 
 
+def _infer_parent_basename(
+    entry, basename_lookup: dict, visited: set, stem_lookup: dict | None
+) -> str | None:
+    """Parent of entry inferred from its filename: the stem with its trailing
+    variant suffix (_VARIANT_SUFFIX_RE) removed, with entry's extension.
+
+    With stem_lookup (stem -> basenames in basename_lookup), a parent with
+    another extension is accepted when no file has the same extension and
+    exactly one file has that stem; several are ambiguous and give None.
+    """
+    stem, ext = os.path.splitext(entry.basename)
+    m = _VARIANT_SUFFIX_RE.match(stem)
+    if not m:
+        return None
+    candidate = m.group(1) + ext
+    if candidate in basename_lookup and candidate not in visited:
+        return candidate
+    if stem_lookup is not None:
+        others = [b for b in stem_lookup.get(m.group(1), ()) if b not in visited]
+        if len(others) == 1:
+            return others[0]
+    return None
+
+
 def get_origin_basename(
-    entry, basename_lookup: dict, visited: set = None, stop_at_boundary: bool = False
+    entry,
+    basename_lookup: dict,
+    visited: set = None,
+    stop_at_boundary: bool = False,
+    stem_lookup: dict | None = None,
+    missing_seed_as_origin: bool = False,
 ) -> str:
     """
     Return the basename of the root origin image for entry within basename_lookup.
@@ -129,12 +158,16 @@ def get_origin_basename(
     Resolution order:
       1. Follow the metadata-stored related_image chain within the lookup.
          If the chain leads outside the lookup, return that basename as-is
-         (the chain is broken at the directory boundary) -- or, with
-         stop_at_boundary, the basename of the last entry inside the lookup,
-         so the result is always a key of basename_lookup.
+         (the chain is broken at the directory boundary). With
+         stop_at_boundary, the filename-pattern parent of the last entry
+         inside the lookup is tried first; failing that the result is that
+         entry's basename, or with missing_seed_as_origin the basename the
+         chain points to outside the lookup (the expected, missing seed).
       2. When no metadata chain exists, attempt filename-pattern inference by
          stripping a trailing variant suffix (_[A-Za-z0-9]{1,8}) to find a
-         parent in the lookup, then continue the chain from there.
+         parent in the lookup, then continue the chain from there. With
+         stem_lookup, the parent may have another extension (see
+         _infer_parent_basename).
       3. Return entry.basename if neither source is resolvable.
 
     entry must expose .basename (str), .related_image_path (str | None), and
@@ -145,45 +178,64 @@ def get_origin_basename(
         visited = set()
     visited.add(entry.basename)
 
+    def follow(basename: str) -> str:
+        return get_origin_basename(
+            basename_lookup[basename], basename_lookup, visited, stop_at_boundary,
+            stem_lookup, missing_seed_as_origin)
+
     related_path = _ensure_related_path(entry)
 
     if related_path:
         related_basename = os.path.basename(related_path)
         if related_basename not in visited and related_basename in basename_lookup:
-            return get_origin_basename(
-                basename_lookup[related_basename], basename_lookup, visited, stop_at_boundary)
-        if stop_at_boundary and related_basename not in basename_lookup:
-            return entry.basename
-        return related_basename
+            return follow(related_basename)
+        if not stop_at_boundary or related_basename in basename_lookup:
+            return related_basename
+        # The metadata names a file outside the set, e.g. a LoadImage input
+        # under another name while the seed sits next to entry.
+        parent = _infer_parent_basename(entry, basename_lookup, visited, stem_lookup)
+        if parent is not None:
+            return follow(parent)
+        return related_basename if missing_seed_as_origin else entry.basename
 
-    # No metadata chain — try stripping a variant suffix to infer a parent.
-    stem, ext = os.path.splitext(entry.basename)
-    m = _VARIANT_SUFFIX_RE.match(stem)
-    if m:
-        candidate = m.group(1) + ext
-        if candidate in basename_lookup and candidate not in visited:
-            return get_origin_basename(
-                basename_lookup[candidate], basename_lookup, visited, stop_at_boundary)
+    parent = _infer_parent_basename(entry, basename_lookup, visited, stem_lookup)
+    if parent is not None:
+        return follow(parent)
 
     return entry.basename
 
 
-def group_related_families(paths: list[str]) -> dict[str, list[str]]:
+def group_related_families(
+    paths: list[str], group_missing_seed: bool = False
+) -> dict[str, list[str]]:
     """Group *paths* into related-image families keyed by origin basename.
 
     A family is a seed image plus every path whose origin resolves to it via
     get_origin_basename (metadata chain first, then filename-pattern
-    inference). The seed is always one of *paths*: a chain that leaves the set
-    stops at its last member inside it, which becomes the seed. Members keep
-    their order from *paths*.
+    inference, where a parent with another extension counts when it is
+    unambiguous). Members keep their order from *paths*.
+
+    A chain that leaves the set stops at its last member inside it, which
+    becomes the seed. With group_missing_seed, such members are instead keyed
+    by the basename the chain points to outside the set, so derivatives of
+    one missing seed form one family; that key is then not a basename of
+    *paths*.
     """
     from files.sortable_file import SortableFile
     entries = [SortableFile(p) for p in paths]
     lookup = {e.basename: e for e in entries}
+    stem_lookup: dict[str, list[str]] = {}
+    for basename in lookup:
+        stem_lookup.setdefault(os.path.splitext(basename)[0], []).append(basename)
     families: dict[str, list[str]] = {}
     for e in entries:
-        origin = get_origin_basename(e, lookup, stop_at_boundary=True)
+        origin = get_origin_basename(
+            e, lookup, stop_at_boundary=True, stem_lookup=stem_lookup,
+            missing_seed_as_origin=group_missing_seed)
         families.setdefault(origin, []).append(e.full_file_path)
+        logger.debug(
+            "Related family: %s -> %s (metadata reference: %s, seed in set: %s)",
+            e.basename, origin, e.related_image_path or None, origin in lookup)
     return families
 
 
@@ -241,6 +293,47 @@ def get_families_with_all_suffixes(
         stats["matched_families"] = len(qualifying)
     matched = {p for members in qualifying for p in members}
     return [p for p in paths if p in matched]
+
+
+def get_families_with_missing_seed(
+    paths: list[str],
+    min_members: int = 2,
+    stats: dict | None = None,
+) -> list[str]:
+    """Return every member of each family in *paths* whose seed is expected
+    but not among *paths*, for families of at least *min_members* members.
+
+    A seed is expected when a metadata chain from inside *paths* points to a
+    file outside them and no filename-pattern parent exists inside them.
+
+    stats: when given, receives {"families": total family count,
+    "matched_families": qualifying family count}.
+    """
+    families = group_related_families(paths, group_missing_seed=True)
+    present = {os.path.basename(p) for p in paths}
+    qualifying = [
+        members for origin, members in families.items()
+        if origin not in present and len(members) >= min_members
+    ]
+    if stats is not None:
+        stats["families"] = len(families)
+        stats["matched_families"] = len(qualifying)
+    matched = {p for members in qualifying for p in members}
+    return [p for p in paths if p in matched]
+
+
+def get_related_family(path: str, paths: list[str]) -> list[str]:
+    """Return the family of *path* within *paths*: its seed and every related
+    image, whichever member *path* is. When the seed is missing, the family
+    is that of the expected seed. *path* is included even when *paths* lacks
+    it; members keep their order from *paths*.
+    """
+    if path not in paths:
+        paths = [*paths, path]
+    for members in group_related_families(paths, group_missing_seed=True).values():
+        if path in members:
+            return members
+    return [path]
 
 
 def parse_suffix_list(text: str) -> tuple[list[str], list[str]]:

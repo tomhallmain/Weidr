@@ -13,6 +13,8 @@ from files.related_image import (
     get_downstream_related_images,
     get_downstream_files_for_sources,
     get_families_with_all_suffixes,
+    get_families_with_missing_seed,
+    get_related_family,
     get_sources_with_downstream_in_dir,
     parse_suffix_list,
     validate_related_image_suffix,
@@ -754,6 +756,91 @@ class FileMarksController:
             message, label, found=len(family_files), base_dir=base_dir,
             scanned=len(source_paths), files=family_files)
         self.go_to_mark()
+        self._app.media_frame.setFocus()
+
+    @require_password(ProtectedActions.VIEW_MEDIA_DETAILS)
+    def mark_families_with_missing_seed_in_dir(self, event=None) -> None:
+        """Mark every image family in the current directory whose seed is
+        referenced by metadata but not in the directory, when the family has
+        at least two members."""
+        label = _("Mark families with a missing seed")
+        base_dir = self._app.get_base_dir()
+        source_paths = self._fb.filepaths
+        if not source_paths:
+            message = _("No files in current directory.")
+            self._app.notification_ctrl.toast(message)
+            self._notify_related_result(message, label, outcome="no_files")
+            return
+
+        stats: dict = {}
+        family_files = get_families_with_missing_seed(source_paths, stats=stats)
+
+        if not family_files:
+            message = _("No image families with a missing seed found in the current directory.")
+            self._app.notification_ctrl.toast(message)
+            self._notify_related_result(
+                message, label, found=0, base_dir=base_dir,
+                scanned=len(source_paths))
+            return
+
+        if not MarkedFiles.guard_mark_mutation(self._app.app_actions, label):
+            self._notify_related_result(
+                _("Cancelled: marks were not changed."), label,
+                outcome="blocked", base_dir=base_dir)
+            return
+
+        MarkedFiles.file_marks = family_files
+        message = _("{0} file(s) in {1} of {2} image families with a missing seed marked").format(
+            len(family_files), stats["matched_families"], stats["families"])
+        self._app.notification_ctrl.toast(message)
+        self._notify_related_result(
+            message, label, found=len(family_files), base_dir=base_dir,
+            scanned=len(source_paths), files=family_files)
+        self.go_to_mark()
+        self._app.media_frame.setFocus()
+
+    @require_password(ProtectedActions.VIEW_MEDIA_DETAILS)
+    def mark_related_family_of_current(self, event=None) -> None:
+        """Mark the whole related-image family of the current media within the
+        current directory, whichever member is shown. Marks are replaced and
+        the current media stays displayed."""
+        label = _("Mark related image family")
+        media_path = self._app.media_path
+        if not media_path:
+            message = _("No valid current media file.")
+            self._app.notification_ctrl.toast(message)
+            self._notify_related_result(message, label, outcome="no_media")
+            return
+
+        base_dir = self._app.get_base_dir()
+        source_paths = self._fb.filepaths
+        if not source_paths:
+            message = _("No files in current directory.")
+            self._app.notification_ctrl.toast(message)
+            self._notify_related_result(message, label, outcome="no_files")
+            return
+
+        family = get_related_family(media_path, source_paths)
+        if len(family) < 2:
+            message = _("The current image has no related images in the current directory.")
+            self._app.notification_ctrl.toast(message)
+            self._notify_related_result(
+                message, label, found=0, source=media_path, base_dir=base_dir,
+                scanned=len(source_paths))
+            return
+
+        if not MarkedFiles.guard_mark_mutation(self._app.app_actions, label):
+            self._notify_related_result(
+                _("Cancelled: marks were not changed."), label,
+                outcome="blocked", source=media_path, base_dir=base_dir)
+            return
+
+        MarkedFiles.file_marks = family
+        message = _("{0} file(s) of the related image family marked").format(len(family))
+        self._app.notification_ctrl.toast(message)
+        self._notify_related_result(
+            message, label, found=len(family), source=media_path,
+            base_dir=base_dir, scanned=len(source_paths), files=family)
         self._app.media_frame.setFocus()
 
     @require_password(ProtectedActions.RUN_FILE_ACTIONS)

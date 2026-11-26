@@ -67,6 +67,7 @@ _OPEN_IN_GIMP           = _("Open in GIMP")
 _RUN_IMAGE_GEN          = _("Run Image Generation")
 _RUN_IMAGE_GEN_DIR      = _("Run Image Generation on Directory")
 _REDO_EDIT_SUFFIX       = _("Redo image edit from suffix")
+_REDO_EDIT_SUFFIX_SELF  = _("Redo image edit from suffix on this image")
 _SAVE_WITHOUT_AUDIO     = _("Save copy without audio")
 _SAVE_WITHOUT_METADATA  = _("Save copy without metadata")
 _CUT_VIDEO              = _("Cut video at current position…")
@@ -82,7 +83,7 @@ _REAPPLY_SELECTION = _("Reapply Last Selection")
 _SET_RELATED  = _("Set Marked File as Related Image of Current")
 
 _VIDEO_ONLY = {_SAVE_WITHOUT_AUDIO, _SAVE_WITHOUT_METADATA, _CUT_VIDEO}
-_IMAGE_ONLY = {_RUN_IMAGE_GEN, _REDO_EDIT_SUFFIX}
+_IMAGE_ONLY = {_RUN_IMAGE_GEN, _REDO_EDIT_SUFFIX, _REDO_EDIT_SUFFIX_SELF}
 _DIR_SCOPED = {_RUN_IMAGE_GEN_DIR, _RUN_PREVALIDATIONS_DIR}
 
 
@@ -96,6 +97,7 @@ class TestImageMediaType:
         assert _OPEN_IN_GIMP in actions
         assert _RUN_IMAGE_GEN in actions
         assert _REDO_EDIT_SUFFIX in actions
+        assert _REDO_EDIT_SUFFIX_SELF in actions
         assert not _VIDEO_ONLY & set(actions)
         assert _DIR_SCOPED <= set(actions)
         assert _INTERACTIVE_CROP in actions

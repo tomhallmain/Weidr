@@ -618,6 +618,7 @@ def should_run_generate_action(
 
 def get_image_edit_redo_params(
     image_path: str,
+    require_related: bool = True,
 ) -> tuple[str | None, str | None]:
     """Return (related_path, edit_suffix) if image_path can be redone as an image edit.
 
@@ -639,7 +640,8 @@ def get_image_edit_redo_params(
     The suffix is the tail of the current stem beyond the related image's stem
     (e.g. source ``img.png``, edit ``img_edit.png`` → suffix ``_edit``).
     Returns (None, None) when no candidate source is available, or the suffix
-    condition is not met.
+    condition is not met. With ``require_related=False`` a missing source is
+    allowed: the result is then (None, <trailing variant suffix>).
     """
     related_path, found_on_disk = get_related_image_path(image_path)
 
@@ -661,18 +663,20 @@ def get_image_edit_redo_params(
             if len(source_matches) == 1:
                 related_path = source_matches[0]
 
-    if related_path is None:
+    if related_path is None and require_related:
         return None, None
 
     stem = os.path.splitext(os.path.basename(image_path))[0]
-    if not _VARIANT_SUFFIX_RE.match(stem):
+    m = _VARIANT_SUFFIX_RE.match(stem)
+    if not m:
         return None, None
 
-    related_stem = os.path.splitext(os.path.basename(related_path))[0]
-    if stem.lower().startswith(related_stem.lower()):
+    related_stem = (
+        os.path.splitext(os.path.basename(related_path))[0] if related_path else None
+    )
+    if related_stem and stem.lower().startswith(related_stem.lower()):
         edit_suffix = stem[len(related_stem):]
     else:
-        m = _VARIANT_SUFFIX_RE.match(stem)
         edit_suffix = stem[len(m.group(1)):]
 
     if suffix_is_numeric(edit_suffix):

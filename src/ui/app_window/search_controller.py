@@ -677,6 +677,29 @@ class SearchController:
         )
 
     @require_password(ProtectedActions.RUN_IMAGE_GENERATION)
+    def redo_image_edit_from_suffix_on_self(self, event=None) -> None:
+        """Send the current image itself to Teikr as an IMAGE_EDIT with its own
+        suffix, producing a further derivative of it. Its seed need not exist."""
+        from files.related_image import get_image_edit_redo_params
+
+        media_path = self._get_media_path()
+        if media_path is None:
+            return
+        _related_path, edit_suffix = get_image_edit_redo_params(
+            media_path, require_related=False
+        )
+        if not edit_suffix:
+            self._app.notification_ctrl.toast(
+                _("Not a valid image edit — no edit suffix found in the file name.")
+            )
+            return
+        self.run_image_generation(
+            _type=ImageGenerationType.IMAGE_EDIT,
+            media_path=media_path,
+            edit_suffix=edit_suffix,
+        )
+
+    @require_password(ProtectedActions.RUN_IMAGE_GENERATION)
     def run_image_generation_on_directory(
         self, event=None, _type: Optional[str] = None, media_path: Optional[str] = None
     ) -> None:

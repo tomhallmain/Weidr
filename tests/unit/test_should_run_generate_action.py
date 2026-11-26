@@ -498,3 +498,60 @@ class TestGetImageEditRedoParams:
             related, suffix = get_image_edit_redo_params(str(edit))
         assert related == stale
         assert suffix == "_edit"
+
+
+# ---------------------------------------------------------------------------
+# get_image_edit_redo_params(require_related=False) -- the "self" redo
+# ---------------------------------------------------------------------------
+
+def _patch_raw_related(related_path):
+    return patch(
+        "files.related_image.get_related_image_path",
+        return_value=(related_path, False),
+    )
+
+
+def _self_suffix(image_path):
+    return get_image_edit_redo_params(image_path, require_related=False)[1]
+
+
+class TestImageEditRedoWithoutRelated:
+    def test_suffix_past_metadata_related_stem(self, tmp_path):
+        with _patch_raw_related(str(tmp_path / "CUI_12345.png")):
+            assert _self_suffix(str(tmp_path / "CUI_12345_edit.png")) == "_edit"
+
+    def test_second_derivative_uses_last_edit_only(self, tmp_path):
+        """The related image of a second derivative is the first derivative."""
+        with _patch_raw_related(str(tmp_path / "CUI_12345_edit.png")):
+            assert _self_suffix(str(tmp_path / "CUI_12345_edit_inco.png")) == "_inco"
+
+    def test_seed_need_not_exist(self, tmp_path):
+        """A metadata reference counts even when it resolves to no file."""
+        with _patch_raw_related("/gone/elsewhere/CUI_12345.png"):
+            assert _self_suffix(str(tmp_path / "CUI_12345_edit.png")) == "_edit"
+
+    def test_no_metadata_and_no_source_uses_trailing_variant_suffix(self, tmp_path):
+        with _patch_raw_related(None):
+            related, suffix = get_image_edit_redo_params(
+                str(tmp_path / "CUI_12345_edit_inco.png"), require_related=False
+            )
+        assert related is None
+        assert suffix == "_inco"
+
+    def test_no_metadata_uses_same_dir_source_like_redo(self, tmp_path):
+        """The suffix is the one redo would use with the same source."""
+        (tmp_path / "CUI_12345.png").write_bytes(b"")
+        with _patch_raw_related(None):
+            assert _self_suffix(str(tmp_path / "CUI_12345_edit.png")) == "_edit"
+
+    def test_unrelated_metadata_name_uses_trailing_variant_suffix(self, tmp_path):
+        with _patch_raw_related("/input/upload_999.png"):
+            assert _self_suffix(str(tmp_path / "CUI_12345_edit.png")) == "_edit"
+
+    def test_numeric_suffix_rejected(self, tmp_path):
+        with _patch_raw_related(None):
+            assert _self_suffix(str(tmp_path / "source_12345.png")) is None
+
+    def test_no_variant_suffix_returns_none(self, tmp_path):
+        with _patch_raw_related(None):
+            assert _self_suffix(str(tmp_path / "plainimage.png")) is None

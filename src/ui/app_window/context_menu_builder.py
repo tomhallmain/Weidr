@@ -132,6 +132,10 @@ class ContextMenuBuilder:
                 _("Redo image edit from suffix"),
                 lambda: app.search_ctrl.redo_image_edit_from_suffix(),
             )
+            menu.addAction(
+                _("Redo image edit from suffix on this image"),
+                lambda: app.search_ctrl.redo_image_edit_from_suffix_on_self(),
+            )
         if media_type.is_interactive_crop_supported():
             menu.addAction(
                 _("Interactive Crop…"),
